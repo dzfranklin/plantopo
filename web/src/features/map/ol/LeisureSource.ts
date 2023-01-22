@@ -1,6 +1,6 @@
 import XYZ from "ol/source/XYZ";
 import TileGrid from "ol/tilegrid/TileGrid";
-import { osBrandStatement } from "./Brand";
+import { osBrandStatement } from "./OSBrand";
 
 // From <https://github.com/OrdnanceSurvey/os-api-branding>.
 
