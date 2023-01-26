@@ -30,7 +30,6 @@ config :plantopo, PlanTopoWeb.Endpoint,
   ]
 
 config :plantopo, PlanTopoWeb.OSProxy,
-  rewrite_to: "http://localhost:4003/",
   ip: {0, 0, 0, 0},
   port: 4003
 

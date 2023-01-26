@@ -1,14 +1,10 @@
 defmodule PlanTopoWeb.OSProxy do
   import Plug.Conn
-  alias PlanTopoWeb.Endpoint
   require Logger
 
-  def init(_) do
-    config = Application.fetch_env!(:plantopo, __MODULE__)
-    [rewrite_to: Keyword.fetch!(config, :rewrite_to) |> URI.parse()]
-  end
+  def init(_), do: []
 
-  def call(conn, opts) do
+  def call(conn, _opts) do
     case conn.method do
       "OPTIONS" ->
         conn
@@ -24,7 +20,16 @@ defmodule PlanTopoWeb.OSProxy do
           raise "Auth fail"
         end
 
-        rewrite_to = Keyword.fetch!(opts, :rewrite_to)
+        rewrite_to = %URI{
+          scheme:
+            case conn.scheme do
+              :http -> "http"
+              :https -> "https"
+            end,
+          host: conn.host,
+          port: conn.port
+        }
+
         reply = PlanTopo.OSProxy.fetch(conn.request_path, conn.query_params, rewrite_to)
 
         conn
@@ -58,7 +63,7 @@ defmodule PlanTopoWeb.OSProxy do
     conn
     |> put_resp_header("access-control-allow-methods", "OPTIONS, GET")
     |> put_resp_header("access-control-allow-headers", "Authorization")
-    |> put_resp_header("access-control-allow-origin", Endpoint.url())
+    |> put_resp_header("access-control-allow-origin", "*")
     |> put_resp_header("access-control-max-age", "86400")
     |> put_resp_header("cache-control", "public, max-age=86400")
     |> put_resp_header("vary", "Origin")
