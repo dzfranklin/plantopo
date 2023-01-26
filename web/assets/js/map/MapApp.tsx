@@ -6,18 +6,22 @@ import React, {
   useState,
 } from "react";
 import { Map as MapGL } from "maplibre-gl";
-import OSExplorerMap from "./OSExplorerMap";
+import OSExplorerMap, { osAttribLayerId } from "./OSExplorerMap";
 import LoadingIndicator from "./LoadingIndicator";
+import classNames from "../classNames";
 
 export default function MapApp() {
   const mapNodeRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapGL>();
+  // Whether we need to credit the ordnance survey
+  const [creditOS, setCreditOS] = useState(false);
   const [isMapLoading, setIsMapLoading] = useState(false);
-  useMap(mapRef, mapNodeRef, setIsMapLoading);
+  useMap(mapRef, mapNodeRef, setCreditOS, setIsMapLoading);
 
   return (
     <div className="w-full h-full grid grid-cols-[1fr] grid-rows-[1fr]">
       <LoadingIndicator isLoading={isMapLoading} />
+      <AttributionImages creditOS={creditOS} />
       <div ref={mapNodeRef} className="col-span-full row-span-full" />
     </div>
   );
@@ -26,6 +30,7 @@ export default function MapApp() {
 function useMap(
   mapRef: MutableRefObject<MapGL | undefined>,
   nodeRef: RefObject<HTMLDivElement>,
+  setCreditOS: (show: boolean) => void,
   setIsMapLoading: (isLoading: boolean) => void
 ) {
   const isLoading = useRef({
@@ -78,6 +83,14 @@ function useMap(
       map.on("dataabort", () => updateLoading({ gl: !map.areTilesLoaded() }));
       map.on("data", () => updateLoading({ gl: !map.areTilesLoaded() }));
 
+      map.on("data", () => {
+        if (map.getLayer(osAttribLayerId)) {
+          setCreditOS(true);
+        } else {
+          setCreditOS(false);
+        }
+      });
+
       const osMap = new OSExplorerMap({
         key: "todo",
         attachTo: map,
@@ -86,4 +99,18 @@ function useMap(
       });
     }
   }, []);
+}
+
+function AttributionImages(props: { creditOS: boolean }) {
+  return (
+    <div className="absolute bottom-0 left-0 z-10 pointer-events-none">
+      <div className="flex flex-row gap-2 h-[24px] m-[4px]">
+        <img src="/images/mapbox_logo.svg" className="h-full" />
+        <img
+          src="/images/os_logo.svg"
+          className={classNames("h-full", props.creditOS || "hidden")}
+        />
+      </div>
+    </div>
+  );
 }

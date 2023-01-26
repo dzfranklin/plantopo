@@ -18,7 +18,7 @@ proj4.defs(
 olProj4.register(proj4);
 
 const attribText = `Contains OS data &copy; Crown copyright and database rights ${new Date().getFullYear()}`;
-const attribLayerId = "os-explorer-attribution";
+export const osAttribLayerId = "os-explorer-attribution";
 
 export interface Options {
   key: string;
@@ -47,20 +47,13 @@ export default class OSExplorerMap {
     target.style.width = target.style.height = "1px";
     container.append(target);
 
-    const attribImg = document.createElement("img");
-    attribImg.src = "/images/os_logo.svg";
-    attribImg.alt = "Ordnance Survey";
-    attribImg.className =
-      "pointer-events-none absolute bottom-0 left-0 z-50 m-[8px] h-[24px] w-[90px]";
-    container.append(attribImg);
-
     // TODO: This is temporary so we can debug visually
     this.mapGL.getCanvas().style.opacity = "0.8";
 
     this.onceGLLoad(
       () =>
         this.mapGL.addLayer({
-          id: attribLayerId,
+          id: osAttribLayerId,
           type: "fill",
           source: {
             type: "geojson",
@@ -122,7 +115,7 @@ export default class OSExplorerMap {
   detach() {
     this.detached = true;
     this.container.remove();
-    this.onceGLLoad(() => this.mapGL.removeLayer(attribLayerId));
+    this.onceGLLoad(() => this.mapGL.removeLayer(osAttribLayerId));
   }
 
   private onceGLLoad(fn: () => void) {
