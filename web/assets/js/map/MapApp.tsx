@@ -1,23 +1,44 @@
-import React, { useRef, MutableRefObject, useEffect, RefObject } from "react";
+import React, {
+  useRef,
+  MutableRefObject,
+  useEffect,
+  RefObject,
+  useState,
+} from "react";
 import { Map as MapGL } from "maplibre-gl";
 import OSExplorerMap from "./OSExplorerMap";
+import LoadingIndicator from "./LoadingIndicator";
 
 export default function MapApp() {
   const mapNodeRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapGL>();
-  useMap(mapRef, mapNodeRef);
+  const [isMapLoading, setIsMapLoading] = useState(false);
+  useMap(mapRef, mapNodeRef, setIsMapLoading);
 
   return (
     <div className="w-full h-full grid grid-cols-[1fr] grid-rows-[1fr]">
-      <div ref={mapNodeRef} className="col-span-full row-span-full"></div>
+      <LoadingIndicator isLoading={isMapLoading} />
+      <div ref={mapNodeRef} className="col-span-full row-span-full" />
     </div>
   );
 }
 
 function useMap(
   mapRef: MutableRefObject<MapGL | undefined>,
-  nodeRef: RefObject<HTMLDivElement>
+  nodeRef: RefObject<HTMLDivElement>,
+  setIsMapLoading: (isLoading: boolean) => void
 ) {
+  const isLoading = useRef({
+    gl: false,
+    ol: false,
+  });
+  const updateLoading = (update) => {
+    const prevVal = isLoading.current.gl || isLoading.current.ol;
+    isLoading.current = { ...isLoading.current, ...update };
+    const newVal = isLoading.current.gl || isLoading.current.ol;
+    setIsMapLoading(newVal);
+  };
+
   useEffect(() => {
     if (!mapRef.current) {
       const map = new MapGL({
@@ -53,11 +74,15 @@ function useMap(
       map.dragRotate.disable();
       map.touchZoomRotate.disable();
 
+      map.on("dataloading", () => updateLoading({ gl: !map.areTilesLoaded() }));
+      map.on("dataabort", () => updateLoading({ gl: !map.areTilesLoaded() }));
+      map.on("data", () => updateLoading({ gl: !map.areTilesLoaded() }));
+
       const osMap = new OSExplorerMap({
         key: "todo",
         attachTo: map,
-        loadStart: () => {},
-        loadEnd: () => {},
+        loadStart: () => () => updateLoading({ ol: true }),
+        loadEnd: () => updateLoading({ ol: false }),
       });
     }
   }, []);
