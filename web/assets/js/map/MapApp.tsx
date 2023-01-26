@@ -50,7 +50,28 @@ function useMap(
         container: nodeRef.current!,
         minZoom: 6,
         maxZoom: 18,
-        style: "http://geder:4003/maps/vector/v1/vts/resources/styles?key",
+        // style: "http://geder:4003/maps/vector/v1/vts/resources/styles?key",
+        style: {
+          version: 8,
+          name: "Satellite",
+          sources: {
+            "mapbox.satellite": {
+              type: "raster",
+              tiles: [
+                "https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90",
+              ],
+              maxzoom: 21,
+              attribution: `© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>`,
+            },
+          },
+          layers: [
+            {
+              id: "mapbox.satellite",
+              source: "mapbox.satellite",
+              type: "raster",
+            },
+          ],
+        },
         maxBounds: [
           [-10.76418, 49.528423],
           [1.9134116, 61.331151],
@@ -59,15 +80,20 @@ function useMap(
         zoom: 13,
         maxPitch: 0, // OL doesn't support pitch
         keyboard: false,
-        transformRequest: (url) => {
-          if (url.startsWith("http://geder:4003/")) {
-            return {
-              url: url + "&srs=3857",
-              headers: { Authorization: "Bearer todo" },
-            };
-          } else {
-            return { url };
+        transformRequest: (urlS) => {
+          const url = new URL(urlS);
+          const params = url.searchParams;
+
+          if (url.host === "geder" && url.port === "4003") {
+            params.set("srs", "3857");
+            params.set("plantopoKey", "todo");
+          } else if (url.host === "api.mapbox.com") {
+            params.set("access_token", "TODO");
           }
+
+          return {
+            url: url.toString(),
+          };
         },
         hash: true,
       });
