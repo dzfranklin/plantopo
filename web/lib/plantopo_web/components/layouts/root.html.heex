@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" style="scrollbar-gutter: stable;">
+<html lang="en" class="w-full h-full">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,8 +10,16 @@
     <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
     </script>
+
+    <%= for src <- assigns[:extra_scripts] || [] do %>
+      <script defer phx-track-static type="text/javascript" src={src}>
+      </script>
+    <% end %>
+    <%= for href <- assigns[:extra_stylesheets] || [] do %>
+      <link phx-track-static rel="stylesheet" href={href} />
+    <% end %>
   </head>
-  <body class="bg-white antialiased">
+  <body class="w-full h-full antialiased bg-white">
     <%= @inner_content %>
   </body>
 </html>

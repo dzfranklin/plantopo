@@ -4,6 +4,7 @@ defmodule PlanTopo.Application do
   @moduledoc false
 
   use Application
+  require Logger
 
   @impl true
   def start(_type, _args) do
@@ -16,10 +17,10 @@ defmodule PlanTopo.Application do
       {Phoenix.PubSub, name: PlanTopo.PubSub},
       # Start Finch
       {Finch, name: PlanTopo.Finch},
+      {Cachex, name: PlanTopo.OSProxy.Cachex},
       # Start the Endpoint (http/https)
-      PlanTopoWeb.Endpoint
-      # Start a worker by calling: PlanTopo.Worker.start_link(arg)
-      # {PlanTopo.Worker, arg}
+      PlanTopoWeb.Endpoint,
+      os_proxy_spec()
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
@@ -34,5 +35,15 @@ defmodule PlanTopo.Application do
   def config_change(changed, _new, removed) do
     PlanTopoWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  defp os_proxy_spec do
+    config = Application.fetch_env!(:plantopo, PlanTopoWeb.OSProxy)
+    ip = Keyword.fetch!(config, :ip)
+    port = Keyword.fetch!(config, :port)
+
+    Logger.info("Running PlanTopoWeb.OSProxy on #{:inet.ntoa(ip)}:#{port}")
+
+    {Plug.Cowboy, scheme: :http, plug: PlanTopoWeb.OSProxy, options: [ip: ip, port: port]}
   end
 end

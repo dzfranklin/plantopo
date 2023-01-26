@@ -19,7 +19,7 @@ config :plantopo, PlanTopo.Repo,
 config :plantopo, PlanTopoWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {127, 0, 0, 1}, port: 4000],
+  http: [ip: {0, 0, 0, 0}, port: 4000],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
@@ -28,6 +28,11 @@ config :plantopo, PlanTopoWeb.Endpoint,
     esbuild: {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
   ]
+
+config :plantopo, PlanTopoWeb.OSProxy,
+  rewrite_to: "http://localhost:4003/",
+  ip: {0, 0, 0, 0},
+  port: 4003
 
 # ## SSL Support
 #
