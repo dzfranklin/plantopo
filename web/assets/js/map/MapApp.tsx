@@ -24,7 +24,7 @@ function useMap(
         container: nodeRef.current!,
         minZoom: 6,
         maxZoom: 18,
-        style: "http://localhost:4003/maps/vector/v1/vts/resources/styles?key",
+        style: "http://geder:4003/maps/vector/v1/vts/resources/styles?key",
         maxBounds: [
           [-10.76418, 49.528423],
           [1.9134116, 61.331151],
@@ -34,7 +34,7 @@ function useMap(
         maxPitch: 0, // OL doesn't support pitch
         keyboard: false,
         transformRequest: (url) => {
-          if (url.startsWith("http://localhost:4003/")) {
+          if (url.startsWith("http://geder:4003/")) {
             return {
               url: url + "&srs=3857",
               headers: { Authorization: "Bearer todo" },

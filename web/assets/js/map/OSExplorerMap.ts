@@ -82,7 +82,7 @@ export default class OSExplorerMap {
 
     const source = new XYZSource({
       url:
-        "http://localhost:4003/maps/raster/v1/zxy/Leisure_27700/{z}/{x}/{y}.png?key&plantopoKey=" +
+        "http://geder:4003/maps/raster/v1/zxy/Leisure_27700/{z}/{x}/{y}.png?key&plantopoKey=" +
         key,
       projection: "EPSG:27700",
       tileGrid,
