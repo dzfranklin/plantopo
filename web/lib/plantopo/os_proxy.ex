@@ -10,7 +10,7 @@ defmodule PlanTopo.OSProxy do
     case Cachex.get!(__MODULE__.Cachex, {path, query}) do
       nil ->
         {result, reply} = fetch_web(path, query, rewrite_to)
-        if result == :ok, do: Cachex.set!(__MODULE__.Cachex, {path, query}, result)
+        if result == :ok, do: Cachex.set!(__MODULE__.Cachex, {path, query}, reply)
         reply
 
       reply ->
