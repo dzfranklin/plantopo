@@ -4,8 +4,11 @@ import { createRoot } from "react-dom/client";
 import MapApp from "./map/MapApp";
 import React from "react";
 
-createRoot(document.getElementById("map-app")!).render(
+const rootNode = document.getElementById("map-app")!;
+const mapboxAccessToken = rootNode.dataset.mapboxAccessToken!;
+
+createRoot(rootNode).render(
   <React.StrictMode>
-    <MapApp />
+    <MapApp mapboxAccessToken={mapboxAccessToken} />
   </React.StrictMode>
 );

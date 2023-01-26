@@ -10,13 +10,23 @@ import OSExplorerMap, { osAttribLayerId } from "./OSExplorerMap";
 import LoadingIndicator from "./LoadingIndicator";
 import classNames from "../classNames";
 
-export default function MapApp() {
+export interface Props {
+  mapboxAccessToken: string;
+}
+
+export default function MapApp(props: Props) {
   const mapNodeRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapGL>();
   // Whether we need to credit the ordnance survey
   const [creditOS, setCreditOS] = useState(false);
   const [isMapLoading, setIsMapLoading] = useState(false);
-  useMap(mapRef, mapNodeRef, setCreditOS, setIsMapLoading);
+  useMap(
+    mapRef,
+    mapNodeRef,
+    setCreditOS,
+    setIsMapLoading,
+    props.mapboxAccessToken
+  );
 
   return (
     <div className="w-full h-full grid grid-cols-[1fr] grid-rows-[1fr]">
@@ -31,7 +41,8 @@ function useMap(
   mapRef: MutableRefObject<MapGL | undefined>,
   nodeRef: RefObject<HTMLDivElement>,
   setCreditOS: (show: boolean) => void,
-  setIsMapLoading: (isLoading: boolean) => void
+  setIsMapLoading: (isLoading: boolean) => void,
+  mapboxAccessToken: string
 ) {
   const isLoading = useRef({
     gl: false,
@@ -88,7 +99,7 @@ function useMap(
             params.set("srs", "3857");
             params.set("plantopoKey", "todo");
           } else if (url.host === "api.mapbox.com") {
-            params.set("access_token", "TODO");
+            params.set("access_token", mapboxAccessToken);
           }
 
           return {
