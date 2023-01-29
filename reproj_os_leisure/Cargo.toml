@@ -1,0 +1,24 @@
+[package]
+name = "reproj_os_leisure"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+color-eyre = "0.6.2"
+eyre = "0.6.8"
+gdal = "0.14.0"
+gdal-sys = "0.8.0"
+image = { version = "0.24.5", default-features = false, features = ["png"] }
+proj = "0.27.0"
+proj-sys = { version = "0.23.1", features = ["tiff"] }
+tile-grid = "0.3.0"
+
+[profile.dev.package.backtrace]
+opt-level = 3
+
+[patch.crates-io]
+# For tiff feature. See also <https://github.com/georust/proj/issues/149>
+proj = { git = "https://github.com/georust/proj.git", rev = "d7185a7152db99ff34775e76064bc52c3ef45bd5" }
+proj-sys = { git = "https://github.com/georust/proj.git", rev = "d7185a7152db99ff34775e76064bc52c3ef45bd5" }

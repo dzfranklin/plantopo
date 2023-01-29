@@ -1,3 +1,6 @@
 {
-    "elixirLS.projectDir": "./web"
+    "elixirLS.projectDir": "./web",
+    "rust-analyzer.linkedProjects": [
+        "./reproj_os_leisure/Cargo.toml"
+    ]
 }
