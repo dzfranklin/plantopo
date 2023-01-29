@@ -8,20 +8,22 @@ defmodule PlanTopo.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      # Start the Telemetry supervisor
-      PlanTopoWeb.Telemetry,
-      # Start the Ecto repository
-      PlanTopo.Repo,
-      # Start the PubSub system
-      {Phoenix.PubSub, name: PlanTopo.PubSub},
-      # Start Finch
-      {Finch, name: PlanTopo.Finch},
-      {Cachex, name: PlanTopo.OSProxy.Cachex},
-      # Start the Endpoint (http/https)
-      PlanTopoWeb.Endpoint,
-      os_proxy_spec()
-    ]
+    children =
+      [
+        # Start the Telemetry supervisor
+        PlanTopoWeb.Telemetry,
+        # Start the Ecto repository
+        PlanTopo.Repo,
+        # Start the PubSub system
+        {Phoenix.PubSub, name: PlanTopo.PubSub},
+        # Start Finch
+        {Finch, name: PlanTopo.Finch},
+        {Cachex, name: PlanTopo.OSProxy.Cachex},
+        # Start the Endpoint (http/https)
+        PlanTopoWeb.Endpoint,
+        os_proxy_spec()
+      ]
+      |> Enum.filter(&(!is_nil(&1)))
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
@@ -38,12 +40,15 @@ defmodule PlanTopo.Application do
   end
 
   defp os_proxy_spec do
-    config = Application.fetch_env!(:plantopo, PlanTopoWeb.OSProxy)
-    ip = Keyword.fetch!(config, :ip)
-    port = Keyword.fetch!(config, :port)
+    with {:ok, config} <- Application.fetch_env(:plantopo, PlanTopoWeb.OSProxy) do
+      ip = Keyword.fetch!(config, :ip)
+      port = Keyword.fetch!(config, :port)
 
-    Logger.info("Running PlanTopoWeb.OSProxy on #{:inet.ntoa(ip)}:#{port}")
+      Logger.info("Running PlanTopoWeb.OSProxy on #{:inet.ntoa(ip)}:#{port}")
 
-    {Plug.Cowboy, scheme: :http, plug: PlanTopoWeb.OSProxy, options: [ip: ip, port: port]}
+      {Plug.Cowboy, scheme: :http, plug: PlanTopoWeb.OSProxy, options: [ip: ip, port: port]}
+    else
+      :error -> nil
+    end
   end
 end
