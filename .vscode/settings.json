@@ -2,5 +2,9 @@
     "elixirLS.projectDir": "./web",
     "rust-analyzer.linkedProjects": [
         "./reproj_os_leisure/Cargo.toml"
-    ]
+    ],
+    "files.exclude": {
+        "/web/_build/**": true,
+        "/web/.elixir_ls/**": true,
+    }
 }
