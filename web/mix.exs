@@ -52,7 +52,8 @@ defmodule PlanTopo.MixProject do
       {:gettext, "~> 0.20"},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
-      {:cachex, "~> 3.5"}
+      {:cachex, "~> 3.5"},
+      {:rexbug, "~> 1.0"}
     ]
   end
 
