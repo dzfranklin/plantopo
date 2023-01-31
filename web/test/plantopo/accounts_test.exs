@@ -1,5 +1,5 @@
 defmodule PlanTopo.AccountsTest do
-  use PlanTopo.DataCase
+  use PlanTopo.DataCase, async: true
 
   alias PlanTopo.Accounts
 

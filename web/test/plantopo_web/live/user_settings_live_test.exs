@@ -1,5 +1,5 @@
 defmodule PlanTopoWeb.UserSettingsLiveTest do
-  use PlanTopoWeb.ConnCase
+  use PlanTopoWeb.ConnCase, async: true
 
   alias PlanTopo.Accounts
   import Phoenix.LiveViewTest

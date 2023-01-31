@@ -1,5 +1,5 @@
 defmodule PlanTopoWeb.UserConfirmationInstructionsLiveTest do
-  use PlanTopoWeb.ConnCase
+  use PlanTopoWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
   import PlanTopo.AccountsFixtures
