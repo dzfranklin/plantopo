@@ -9,7 +9,12 @@ defmodule PlanTopo.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      preferred_cli_env: [
+        test: :test,
+        "test.all": :test,
+        "test.e2e": :test_e2e
+      ]
     ]
   end
 
@@ -69,6 +74,8 @@ defmodule PlanTopo.MixProject do
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      # Shell out to mix so that we properly set MIX_ENV for test.e2e
+      "test.all": ["test", "cmd mix test.e2e"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.deploy": ["tailwind default --minify", "esbuild default --minify", "phx.digest"]
     ]
