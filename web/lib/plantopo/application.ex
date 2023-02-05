@@ -40,15 +40,13 @@ defmodule PlanTopo.Application do
   end
 
   defp os_proxy_spec do
-    with {:ok, config} <- Application.fetch_env(:plantopo, PlanTopoWeb.OSProxy) do
+    with config when not is_nil(config) <- Application.get_env(:plantopo, PlanTopoWeb.OSProxy) do
       ip = Keyword.fetch!(config, :ip)
       port = Keyword.fetch!(config, :port)
 
       Logger.info("Running PlanTopoWeb.OSProxy on #{:inet.ntoa(ip)}:#{port}")
 
       {Plug.Cowboy, scheme: :http, plug: PlanTopoWeb.OSProxy, options: [ip: ip, port: port]}
-    else
-      :error -> nil
     end
   end
 end
