@@ -1,7 +1,6 @@
 import Config
 
 # Configure your database
-#
 config :plantopo, PlanTopo.Repo,
   username: "postgres",
   password: "postgres",
