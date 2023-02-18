@@ -8,9 +8,6 @@ import { Map as MapGL } from "maplibre-gl";
 import { AppStore, initStore } from "./map/store";
 import { Provider } from "react-redux";
 
-import coreWasm from "../../../core/pkg/plantopo_core_bg.wasm";
-import initCore from "../../../core/pkg/plantopo_core";
-
 const rootNode = document.getElementById("map-app-root")!;
 
 const store = initStore(JSON.parse(rootNode.dataset.preloadedState!));
@@ -22,10 +19,6 @@ createRoot(rootNode).render(
     </Provider>
   </React.StrictMode>
 );
-
-async function setupCore() {
-  return await initCore("/assets/" + coreWasm);
-}
 
 declare global {
   interface Window {
