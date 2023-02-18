@@ -5,6 +5,24 @@ defmodule PlanTopoWeb.UserSettingsLive do
 
   def render(assigns) do
     ~H"""
+    <.header>Settings</.header>
+
+    <.simple_form
+      :let={f}
+      id="settings_form"
+      for={@settings_changeset}
+      phx-submit="update_settings"
+      phx-change="validate_settings"
+    >
+      <.inputs_for :let={s} form={f} field={:settings}>
+        <.input field={{s, :disable_animation}} type="checkbox" label="Disable animation" />
+      </.inputs_for>
+
+      <:actions>
+        <.button phx-disable-with="Saving...">Save settings</.button>
+      </:actions>
+    </.simple_form>
+
     <.header>Change Email</.header>
 
     <.simple_form
@@ -88,6 +106,7 @@ defmodule PlanTopoWeb.UserSettingsLive do
 
     socket =
       socket
+      |> assign(:settings_changeset, Accounts.change_user_settings(user))
       |> assign(:current_password, nil)
       |> assign(:email_form_current_password, nil)
       |> assign(:current_email, user.email)
@@ -96,6 +115,26 @@ defmodule PlanTopoWeb.UserSettingsLive do
       |> assign(:trigger_submit, false)
 
     {:ok, socket}
+  end
+
+  def handle_event("validate_settings", %{"user" => user_params}, socket) do
+    change = Accounts.change_user_settings(socket.assigns.current_user, user_params)
+    {:noreply, assign(socket, settings_changeset: change)}
+  end
+
+  def handle_event("update_settings", %{"user" => user_params}, socket) do
+    case Accounts.update_user_settings(socket.assigns.current_user, user_params) do
+      {:ok, user} ->
+        socket =
+          socket
+          |> assign(:current_user, user)
+          |> put_flash(:info, "Settings saved")
+
+        {:noreply, socket}
+
+      {:error, change} ->
+        {:noreply, assign(socket, :settings_changeset, change)}
+    end
   end
 
   def handle_event("validate_email", params, socket) do

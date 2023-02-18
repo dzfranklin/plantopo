@@ -1,4 +1,5 @@
 defmodule PlanTopo.Accounts.User do
+  alias PlanTopo.Accounts.UserSettings
   use Ecto.Schema
   import Ecto.Changeset
 
@@ -8,7 +9,15 @@ defmodule PlanTopo.Accounts.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
 
+    belongs_to :settings, UserSettings
+
     timestamps()
+  end
+
+  def settings_changeset(user, attrs) do
+    user
+    |> cast(attrs, [])
+    |> cast_assoc(:settings)
   end
 
   @doc """

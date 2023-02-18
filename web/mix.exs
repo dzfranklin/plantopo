@@ -24,7 +24,7 @@ defmodule PlanTopo.MixProject do
   def application do
     [
       mod: {PlanTopo.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :crypto]
     ]
   end
 
@@ -48,7 +48,7 @@ defmodule PlanTopo.MixProject do
       {:heroicons, "~> 0.5"},
       {:floki, ">= 0.30.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.7.2"},
-      {:esbuild, "~> 0.5", runtime: Mix.env() == :dev},
+      {:esbuild, "~> 0.6", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.1.8", runtime: Mix.env() == :dev},
       {:swoosh, "~> 1.3"},
       {:finch, "~> 0.13"},
@@ -58,6 +58,14 @@ defmodule PlanTopo.MixProject do
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:cachex, "~> 3.5"},
+      {:paginator, "~> 1.2"},
+      {:ex_aws, "~> 2.1.2"},
+      {:ex_aws_s3, "~> 2.0"},
+      {:hackney, "~> 1.18"},
+      {:sweet_xml, "~> 0.6"},
+      {:minio_server, "~> 0.3"},
+      {:locus, "~> 2.3"},
+      {:geo, "~> 3.4"},
       {:rexbug, "~> 1.0"}
     ]
   end

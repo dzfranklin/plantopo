@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en" class="w-full h-full">
   <head>
+    <script type="text/javascript">
+      <%= raw PlanTopoWeb.InjectUserSettings.inject(assigns[:current_user]) %>
+    </script>
+
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content={get_csrf_token()} />
@@ -11,35 +15,13 @@
     <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
     </script>
 
-    <%= for src <- assigns[:extra_scripts] || [] do %>
-      <script defer phx-track-static type="text/javascript" src={src}>
+    <%= if assigns[:map_app] do %>
+      <link phx-track-static rel="stylesheet" href={~p"/assets/map.css"} />
+      <script defer phx-track-static type="text/javascript" src={~p"/assets/map.js"}>
       </script>
-    <% end %>
-    <%= for href <- assigns[:extra_stylesheets] || [] do %>
-      <link phx-track-static rel="stylesheet" href={href} />
     <% end %>
   </head>
   <body class="w-full h-full antialiased bg-white">
-    <ul>
-      <%= if @current_user do %>
-        <li>
-          <%= @current_user.email %>
-        </li>
-        <li>
-          <.link href={~p"/users/settings"}>Settings</.link>
-        </li>
-        <li>
-          <.link href={~p"/users/log_out"} method="delete">Log out</.link>
-        </li>
-      <% else %>
-        <li>
-          <.link href={~p"/users/register"}>Register</.link>
-        </li>
-        <li>
-          <.link href={~p"/users/log_in"}>Log in</.link>
-        </li>
-      <% end %>
-    </ul>
     <%= @inner_content %>
   </body>
 </html>

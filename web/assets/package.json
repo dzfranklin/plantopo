@@ -1,14 +1,24 @@
 {
   "dependencies": {
     "@faker-js/faker": "^7.6.0",
+    "@headlessui/react": "^1.7.10",
+    "@heroicons/react": "^2.0.15",
     "@playwright/test": "^1.30.0",
+    "@redux-devtools/extension": "^3.2.5",
+    "@reduxjs/toolkit": "^1.9.2",
     "@types/react": "^18.0.27",
     "@types/react-dom": "^18.0.10",
+    "@types/uuid": "^9.0.0",
+    "framer-motion": "^9.0.2",
+    "immer": "^9.0.19",
     "maplibre-gl": "^2.4.0",
+    "nanoid": "^4.0.1",
     "ol": "^7.2.2",
     "proj4": "^2.8.1",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-redux": "^8.0.5",
+    "uuid": "^9.0.0"
   },
   "scripts": {}
 }

@@ -1,5 +1,21 @@
 import Config
 
+s3_config = [
+  access_key_id: "admin",
+  secret_access_key: "adminkey",
+  scheme: "http://",
+  region: "local",
+  host: "127.0.0.1",
+  port: 9010,
+  # Minio specific
+  minio_path: ".minio/test_e2e",
+  minio_executable: "minio",
+  ui: false
+]
+
+config :ex_aws, :s3, s3_config
+config :plantopo, :minio_server, s3_config
+
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1
 

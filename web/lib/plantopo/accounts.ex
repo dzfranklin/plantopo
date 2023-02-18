@@ -10,6 +10,10 @@ defmodule PlanTopo.Accounts do
 
   ## Database getters
 
+  def preload_settings(user_or_nil) do
+    Repo.preload(user_or_nil, :settings)
+  end
+
   @doc """
     Gets a user by email.
   """
@@ -52,6 +56,15 @@ defmodule PlanTopo.Accounts do
   end
 
   ## Settings
+
+  def change_user_settings(%User{} = user, attrs \\ %{}) do
+    User.settings_changeset(user, attrs)
+  end
+
+  def update_user_settings(%User{} = user, attrs \\ %{}) do
+    change_user_settings(user, attrs)
+    |> Repo.update()
+  end
 
   @doc """
     Returns an `%Ecto.Changeset{}` for changing the user email.

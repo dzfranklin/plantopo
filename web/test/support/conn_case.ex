@@ -50,6 +50,15 @@ defmodule PlanTopoWeb.ConnCase do
   end
 
   @doc """
+  Setup helper that puts the header Accept: application.json
+
+      setup: :accept_json
+  """
+  def accept_json(%{conn: conn}) do
+    %{conn: Plug.Conn.put_req_header(conn, "accept", "application/json")}
+  end
+
+  @doc """
   Logs the given `user` into the `conn`.
 
   It returns an updated `conn`.

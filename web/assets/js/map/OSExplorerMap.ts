@@ -48,7 +48,7 @@ export default class OSExplorerMap {
     container.append(target);
 
     // TODO: This is temporary so we can debug visually
-    this.mapGL.getCanvas().style.opacity = "0.8";
+    this.mapGL.getCanvas().style.opacity = "0";
 
     this.onceGLLoad(
       () =>
@@ -65,6 +65,8 @@ export default class OSExplorerMap {
           },
         } as any) // workaround type def bug
     );
+
+    // return;
 
     const tileGrid = new TileGrid({
       resolutions: [

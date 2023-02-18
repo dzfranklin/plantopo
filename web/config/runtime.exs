@@ -1,6 +1,11 @@
 import Config
 
-config :plantopo, mapbox_access_token: System.fetch_env!("PLANTOPO_MAPBOX_ACCESS_TOKEN")
+config :plantopo, :frontend_tokens,
+  mapbox: System.fetch_env!("PLANTOPO_MAPBOX_ACCESS_TOKEN"),
+  os: System.fetch_env!("PLANTOPO_OS_API_KEY")
+
+config :locus, :license_key, System.fetch_env!("PLANTOPO_MAXMIND_LICENSE_KEY")
+
 config :plantopo, PlanTopo.OSProxy, api_key: System.fetch_env!("PLANTOPO_OS_API_KEY")
 
 # config/runtime.exs is executed for all environments, including

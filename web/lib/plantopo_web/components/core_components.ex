@@ -53,7 +53,7 @@ defmodule PlanTopoWeb.CoreComponents do
       phx-remove={hide_modal(@id)}
       class="relative z-50 hidden"
     >
-      <div id={"#{@id}-bg"} class="fixed inset-0 bg-zinc-50/90 transition-opacity" aria-hidden="true" />
+      <div id={"#{@id}-bg"} class="fixed inset-0 transition-opacity bg-zinc-50/90" aria-hidden="true" />
       <div
         class="fixed inset-0 overflow-y-auto"
         aria-labelledby={"#{@id}-title"}
@@ -62,7 +62,7 @@ defmodule PlanTopoWeb.CoreComponents do
         aria-modal="true"
         tabindex="0"
       >
-        <div class="flex min-h-full items-center justify-center">
+        <div class="flex items-center justify-center min-h-full">
           <div class="w-full max-w-3xl p-4 sm:p-6 lg:py-8">
             <.focus_wrap
               id={"#{@id}-container"}
@@ -70,16 +70,16 @@ defmodule PlanTopoWeb.CoreComponents do
               phx-window-keydown={hide_modal(@on_cancel, @id)}
               phx-key="escape"
               phx-click-away={hide_modal(@on_cancel, @id)}
-              class="hidden relative rounded-2xl bg-white p-14 shadow-lg shadow-zinc-700/10 ring-1 ring-zinc-700/10 transition"
+              class="relative hidden transition bg-white shadow-lg rounded-2xl p-14 shadow-zinc-700/10 ring-1 ring-zinc-700/10"
             >
               <div class="absolute top-6 right-5">
                 <button
                   phx-click={hide_modal(@on_cancel, @id)}
                   type="button"
-                  class="-m-3 flex-none p-3 opacity-20 hover:opacity-40"
+                  class="flex-none p-3 -m-3 opacity-20 hover:opacity-40"
                   aria-label={gettext("close")}
                 >
-                  <Heroicons.x_mark solid class="h-5 w-5 stroke-current" />
+                  <Heroicons.x_mark solid class="w-5 h-5 stroke-current" />
                 </button>
               </div>
               <div id={"#{@id}-content"}>
@@ -96,13 +96,13 @@ defmodule PlanTopoWeb.CoreComponents do
                   </p>
                 </header>
                 <%= render_slot(@inner_block) %>
-                <div :if={@confirm != [] or @cancel != []} class="ml-6 mb-4 flex items-center gap-5">
+                <div :if={@confirm != [] or @cancel != []} class="flex items-center gap-5 mb-4 ml-6">
                   <.button
                     :for={confirm <- @confirm}
                     id={"#{@id}-confirm"}
                     phx-click={@on_confirm}
                     phx-disable-with
-                    class="py-2 px-3"
+                    class="px-3 py-2"
                   >
                     <%= render_slot(confirm) %>
                   </.button>
@@ -150,25 +150,20 @@ defmodule PlanTopoWeb.CoreComponents do
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
       class={[
-        "fixed hidden top-2 right-2 w-80 sm:w-96 z-50 rounded-lg p-3 shadow-md shadow-zinc-900/5 ring-1",
-        @kind == :info && "bg-emerald-50 text-emerald-800 ring-emerald-500 fill-cyan-900",
-        @kind == :error && "bg-rose-50 p-3 text-rose-900 shadow-md ring-rose-500 fill-rose-900"
+        "flash",
+        @kind == :info && "flash--info",
+        @kind == :error && "flash--error"
       ]}
       {@rest}
     >
-      <p :if={@title} class="flex items-center gap-1.5 text-[0.8125rem] font-semibold leading-6">
-        <Heroicons.information_circle :if={@kind == :info} mini class="h-4 w-4" />
-        <Heroicons.exclamation_circle :if={@kind == :error} mini class="h-4 w-4" />
+      <p :if={@title} class="flash-title">
+        <Heroicons.information_circle :if={@kind == :info} mini class="w-4 h-4" />
+        <Heroicons.exclamation_circle :if={@kind == :error} mini class="w-4 h-4" />
         <%= @title %>
       </p>
-      <p class="mt-2 text-[0.8125rem] leading-5"><%= msg %></p>
-      <button
-        :if={@close}
-        type="button"
-        class="group absolute top-2 right-1 p-2"
-        aria-label={gettext("close")}
-      >
-        <Heroicons.x_mark solid class="h-5 w-5 stroke-current opacity-40 group-hover:opacity-70" />
+      <p class="flash-body"><%= msg %></p>
+      <button :if={@close} type="button" class="flash-close" aria-label={gettext("close")}>
+        <Heroicons.x_mark solid class="flash-close-icon" />
       </button>
     </div>
     """
@@ -200,13 +195,26 @@ defmodule PlanTopoWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="space-y-8 bg-white mt-10">
+      <div class="mt-10 space-y-8 bg-white">
         <%= render_slot(@inner_block, f) %>
-        <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
+        <div :for={action <- @actions} class="flex items-center justify-between gap-6 mt-2">
           <%= render_slot(action, f) %>
         </div>
       </div>
     </.form>
+    """
+  end
+
+  attr :form, :any, required: true
+  attr :field, :any, required: true
+  attr :options, :any, default: [], doc: "Options to pass to Phoenix.HTML.Form.inputs_for"
+  slot :inner_block, required: true
+
+  def inputs_for(assigns) do
+    ~H"""
+    <%= Phoenix.HTML.Form.inputs_for @form, @field, @options, fn scope -> %>
+      <%= render_slot(@inner_block, scope) %>
+    <% end %>
     """
   end
 
@@ -312,7 +320,7 @@ defmodule PlanTopoWeb.CoreComponents do
       <select
         id={@id}
         name={@name}
-        class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm"
+        class="block w-full px-3 py-2 mt-1 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-zinc-500 focus:border-zinc-500 sm:text-sm"
         multiple={@multiple}
         {@rest}
       >
@@ -394,7 +402,7 @@ defmodule PlanTopoWeb.CoreComponents do
 
   def error(assigns) do
     ~H"""
-    <p class="phx-no-feedback:hidden mt-3 flex gap-3 text-sm leading-6 text-rose-600">
+    <p class="flex gap-3 mt-3 text-sm leading-6 phx-no-feedback:hidden text-rose-600">
       <Heroicons.exclamation_circle mini class="mt-0.5 h-5 w-5 flex-none fill-rose-500" />
       <%= render_slot(@inner_block) %>
     </p>
@@ -448,7 +456,7 @@ defmodule PlanTopoWeb.CoreComponents do
 
   def table(assigns) do
     ~H"""
-    <div id={@id} class="overflow-y-auto px-4 sm:overflow-visible sm:px-0">
+    <div id={@id} class="px-4 overflow-y-auto sm:overflow-visible sm:px-0">
       <table class="mt-11 w-[40rem] sm:w-full">
         <thead class="text-left text-[0.8125rem] leading-6 text-zinc-500">
           <tr>
@@ -456,7 +464,7 @@ defmodule PlanTopoWeb.CoreComponents do
             <th class="relative p-0 pb-4"><span class="sr-only"><%= gettext("Actions") %></span></th>
           </tr>
         </thead>
-        <tbody class="relative divide-y divide-zinc-100 border-t border-zinc-200 text-sm leading-6 text-zinc-700">
+        <tbody class="relative text-sm leading-6 border-t divide-y divide-zinc-100 border-zinc-200 text-zinc-700">
           <tr
             :for={row <- @rows}
             id={"#{@id}-#{Phoenix.Param.to_param(row)}"}
@@ -468,8 +476,8 @@ defmodule PlanTopoWeb.CoreComponents do
               class={["p-0", @row_click && "hover:cursor-pointer"]}
             >
               <div :if={i == 0}>
-                <span class="absolute h-full w-4 top-0 -left-4 group-hover:bg-zinc-50 sm:rounded-l-xl" />
-                <span class="absolute h-full w-4 top-0 -right-4 group-hover:bg-zinc-50 sm:rounded-r-xl" />
+                <span class="absolute top-0 w-4 h-full -left-4 group-hover:bg-zinc-50 sm:rounded-l-xl" />
+                <span class="absolute top-0 w-4 h-full -right-4 group-hover:bg-zinc-50 sm:rounded-r-xl" />
               </div>
               <div class="block py-4 pr-6">
                 <span class={["relative", i == 0 && "font-semibold text-zinc-900"]}>
@@ -478,7 +486,7 @@ defmodule PlanTopoWeb.CoreComponents do
               </div>
             </td>
             <td :if={@action != []} class="p-0 w-14">
-              <div class="relative whitespace-nowrap py-4 text-right text-sm font-medium">
+              <div class="relative py-4 text-sm font-medium text-right whitespace-nowrap">
                 <span
                   :for={action <- @action}
                   class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
@@ -538,7 +546,7 @@ defmodule PlanTopoWeb.CoreComponents do
         navigate={@navigate}
         class="text-sm font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
       >
-        <Heroicons.arrow_left solid class="w-3 h-3 stroke-current inline" />
+        <Heroicons.arrow_left solid class="inline w-3 h-3 stroke-current" />
         <%= render_slot(@inner_block) %>
       </.link>
     </div>

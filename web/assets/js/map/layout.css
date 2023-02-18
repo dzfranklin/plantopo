@@ -1,0 +1,34 @@
+#map-app-root {
+  width: 100%;
+  height: 100%;
+}
+
+.map-app {
+  width: 100%;
+  height: 100%;
+
+  display: grid;
+  grid-template-columns: minmax(250px, 1fr) minmax(250px, 1fr) 6fr;
+  grid-template-rows: 1fr min-content;
+}
+
+.credit-images {
+  grid-column: 3 / -1;
+  grid-row: 2 / span 1;
+  z-index: 1;
+}
+
+.map-base {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  z-index: 0;
+}
+
+.view-editor {
+  grid-column: 1 / span 2;
+  grid-row: 1 / -1;
+  z-index: 10;
+
+  background: var(--color-white);
+  border-right: 1px solid var(--color-gray-200);
+}

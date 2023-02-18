@@ -90,7 +90,7 @@ defmodule PlanTopoWeb.UserAuth do
   """
   def fetch_current_user(conn, _opts) do
     {user_token, conn} = ensure_user_token(conn)
-    user = user_token && Accounts.get_user_by_session_token(user_token)
+    user = user_token && get_user(user_token)
     assign(conn, :current_user, user)
   end
 
@@ -176,7 +176,7 @@ defmodule PlanTopoWeb.UserAuth do
     case session do
       %{"user_token" => user_token} ->
         Phoenix.Component.assign_new(socket, :current_user, fn ->
-          Accounts.get_user_by_session_token(user_token)
+          get_user(user_token)
         end)
 
       %{} ->
@@ -215,6 +215,23 @@ defmodule PlanTopoWeb.UserAuth do
     end
   end
 
+  @doc """
+  Used for routes that require the user to be authenticated
+  through the regular session mechanism.
+  """
+  def api_require_authenticated_user(conn, _opts) do
+    if conn.assigns[:current_user] do
+      conn
+    else
+      resp = PlanTopoWeb.ErrorJSON.render("401.json", {}) |> Jason.encode!()
+
+      conn
+      |> put_resp_header("content-type", "application/json")
+      |> send_resp(:unauthorized, resp)
+      |> halt()
+    end
+  end
+
   defp put_token_in_session(conn, token) do
     conn
     |> put_session(:user_token, token)
@@ -228,4 +245,9 @@ defmodule PlanTopoWeb.UserAuth do
   defp maybe_store_return_to(conn), do: conn
 
   defp signed_in_path(_conn), do: ~p"/"
+
+  defp get_user(token) do
+    Accounts.get_user_by_session_token(token)
+    |> Accounts.preload_settings()
+  end
 end

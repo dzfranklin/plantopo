@@ -1,5 +1,22 @@
 import Config
 
+s3_config = [
+  access_key_id: "admin",
+  secret_access_key: "adminkey",
+  scheme: "http://",
+  region: "local",
+  host: "127.0.0.1",
+  port: 9000,
+  # Minio specific
+  minio_path: ".minio/dev",
+  minio_executable: "minio",
+  console_address: ":9001",
+  ui: true
+]
+
+config :ex_aws, :s3, s3_config
+config :plantopo, :minio_server, s3_config
+
 # Configure your database
 config :plantopo, PlanTopo.Repo,
   username: "postgres",
@@ -22,7 +39,7 @@ config :plantopo, PlanTopoWeb.Endpoint,
   http: [ip: {0, 0, 0, 0}, port: 4000],
   check_origin: false,
   code_reloader: true,
-  debug_errors: true,
+  debug_errors: false,
   secret_key_base: "jdF2PrDJSIR0K1P2BPftQiWCBjwv1QiaLdxjOaRE7YQKv+rOHklskiPtS4feBJdn",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},

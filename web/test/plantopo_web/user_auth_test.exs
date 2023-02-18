@@ -269,4 +269,20 @@ defmodule PlanTopoWeb.UserAuthTest do
       refute conn.status
     end
   end
+
+  describe "api_require_authenticated_user/2" do
+    test "returns error message if user isn't authenticated", %{conn: conn} do
+      conn = conn |> UserAuth.api_require_authenticated_user([])
+      assert conn.halted
+      assert %{"errors" => %{"detail" => "Unauthorized"}} = json_response(conn, 401)
+    end
+
+    test "doesn't alter conn if user is authenticated", %{conn: conn, user: user} do
+      conn = conn |> assign(:current_user, user)
+      conn_after = conn |> UserAuth.api_require_authenticated_user([])
+      refute conn_after.halted
+      refute conn_after.status
+      assert conn_after == conn
+    end
+  end
 end

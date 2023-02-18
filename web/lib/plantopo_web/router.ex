@@ -15,12 +15,9 @@ defmodule PlanTopoWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+    plug :fetch_session
+    plug :fetch_current_user
   end
-
-  # Other scopes may use custom stacks.
-  # scope "/api", PlanTopoWeb do
-  #   pipe_through :api
-  # end
 
   ## Auth optional
   scope "/", PlanTopoWeb do
@@ -52,10 +49,11 @@ defmodule PlanTopoWeb.Router do
   end
 
   ## Auth required
+
   scope "/", PlanTopoWeb do
     pipe_through [:browser, :require_authenticated_user]
 
-    get "/map", MapController, :index
+    get "/map/:id", MapController, :show
 
     live_session :require_authenticated_user,
       on_mount: [{PlanTopoWeb.UserAuth, :ensure_authenticated}] do
@@ -63,6 +61,28 @@ defmodule PlanTopoWeb.Router do
       live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
     end
   end
+
+  scope "/api/", PlanTopoWeb do
+    pipe_through [:api, :api_require_authenticated_user]
+
+    post "/map/:id/view_at", MapApiController, :set_view_at
+    post "/map/view/save", MapApiController, :save_view
+    get "/map/view_sources", MapApiController, :list_view_sources
+  end
+
+  # scope "/api/map", PlanTopoWeb do
+  #   pipe_through [:api, :api_require_authenticated_user]
+
+  #   get "/view/default", MapApiController, :list_default_view
+  #   get "/view/user", MapApiController, :list_user_view
+  #   post "/view/user", MapApiController, :create_user_view
+  #   put "/view/user/:id", MapApiController, :update_user_view
+  #   delete "/view/user/:id", MapApiController, :delete_user_view
+  #   get "/view/default/:id/:ty/i.png", MapApiController, :get_default_view_preview
+  #   get "/view/user/:id/:ty/i.png", MapApiController, :get_user_view_preview
+
+  #   get "/source", MapApiController, :list_source
+  # end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:plantopo, :dev_routes) do

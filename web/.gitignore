@@ -32,3 +32,4 @@ plantopo-*.tar
 npm-debug.log
 /assets/node_modules/
 
+/.minio
