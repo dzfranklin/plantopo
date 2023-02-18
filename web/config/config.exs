@@ -35,7 +35,7 @@ config :esbuild,
   version: "0.17.7",
   default: [
     args:
-      ~w(js/app.js js/map.tsx --bundle --target=es2017 --jsx=automatic --jsx-dev --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+      ~w(js/app.js js/map.tsx --bundle --target=es2017 --jsx=automatic --jsx-dev --outdir=../priv/static/assets --external:/fonts/* --external:/images/* --loader:.wasm=file),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
