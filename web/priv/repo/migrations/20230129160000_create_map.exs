@@ -5,13 +5,14 @@ defmodule PlanTopo.Repo.Migrations.CreateMapSourceData do
     create table(:map_view_data_sources, primary_key: false) do
       add :id, :string, primary_key: true
       add :spec, :map
-      add :credit_os, :boolean
+      add :attribution, :string
 
       timestamps()
     end
 
     create table(:map_view_layer_sources) do
       add :name, :string
+      add :default_opacity, :float
       add :layer_specs, {:array, :map}
       add :glyphs, :string
       add :sprite, :string
@@ -27,18 +28,9 @@ defmodule PlanTopo.Repo.Migrations.CreateMapSourceData do
         primary_key: true
     end
 
-    create table(:map_views) do
-      add :owner_id, references(:users, on_delete: :delete_all)
-      add :name, :string
-      add :layers, {:array, :map}
-      timestamps()
-    end
-
-    create index(:map_views, [:owner_id])
-
     create table(:maps) do
       add :owner_id, references(:users, on_delete: :delete_all)
-      add :view_id, references(:map_views, on_delete: :nothing)
+      add :view_layers, :jsonb
       add :features, :map
       timestamps()
     end

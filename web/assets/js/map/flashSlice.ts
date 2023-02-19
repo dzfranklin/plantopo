@@ -8,7 +8,7 @@ interface FlashState {
   active?: Flash;
 }
 
-interface Flash {
+export interface Flash {
   kind: "info" | "error";
   title: string;
   body?: string;

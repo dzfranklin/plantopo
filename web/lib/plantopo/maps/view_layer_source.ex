@@ -5,6 +5,7 @@ defmodule PlanTopo.Maps.ViewLayerSource do
 
   schema "map_view_layer_sources" do
     field :name, :string
+    field :default_opacity, :float
     field :layer_specs, {:array, :map}
     field :glyphs, :string
     field :sprite, :string
@@ -18,7 +19,7 @@ defmodule PlanTopo.Maps.ViewLayerSource do
 
   def changeset(source \\ %__MODULE__{}, attrs) do
     source
-    |> cast(attrs, [:name, :layer_specs, :glyphs, :sprite])
+    |> cast(attrs, [:name, :default_opacity, :layer_specs, :glyphs, :sprite])
     |> cast_assoc(:dependencies)
     |> validate_required([:name, :layer_specs])
   end

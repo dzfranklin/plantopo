@@ -4,9 +4,9 @@ defmodule PlanTopo.Maps do
   """
 
   import Ecto.Query, warn: false
-  alias PlanTopo.{Maps, AuthError, Repo, Accounts.User}
-  alias __MODULE__.{ViewAt, ViewDataSource, ViewLayerSource, ViewLayer, View}
-  alias ExAws.S3
+  alias PlanTopo.AuthError, warn: false
+  alias PlanTopo.{Maps, Repo, Accounts.User}
+  alias __MODULE__.{ViewAt, ViewDataSource, ViewLayerSource}
   require Logger
 
   def get_map!(%User{id: user_id}, id) do
@@ -17,54 +17,17 @@ defmodule PlanTopo.Maps do
 
   def list_view_layer_sources(%User{}, except \\ []) do
     # TODO: Restrict based on user
-    Maps.ViewLayerSource
+    ViewLayerSource
     |> where([s], s.id not in ^except)
+    |> preload(:dependencies)
     |> Repo.all()
   end
 
   def list_view_data_sources(%User{}, except \\ []) do
     # TODO: Restrict based on user
-    Maps.ViewDataSource
+    ViewDataSource
     |> where([s], s.id not in ^except)
     |> Repo.all()
-  end
-
-  def create_view(%User{} = user, attrs) do
-    View.changeset(attrs)
-    |> View.change_owner(user)
-    |> Repo.insert()
-  end
-
-  def update_view(%User{} = user, id, attrs) do
-    view = get_view!(user, id)
-
-    # if view.owner_id != user do
-    #   raise AuthError
-    # end
-
-    view
-    |> View.changeset(attrs)
-    |> Repo.update()
-  end
-
-  def set_view!(%User{id: user_id}, %Maps.Map{} = map, view_id) do
-    if map.owner_id != user_id, do: raise(AuthError)
-
-    Maps.Map.changeset(map, %{view_id: view_id})
-    |> Repo.update!()
-  end
-
-  def get_view!(%User{id: user_id}, id) do
-    View
-    |> where([v], v.id == ^id and (v.owner_id == ^user_id or is_nil(v.owner_id)))
-    |> Repo.one!()
-  end
-
-  def get_view_full!(%User{id: user_id}, id) do
-    View
-    |> where([v], v.id == ^id and (v.owner_id == ^user_id or is_nil(v.owner_id)))
-    |> preload(layers: [source: :dependencies])
-    |> Repo.one()
   end
 
   def get_view_at(%User{id: user_id} = user, map_id, ip) do

@@ -22,7 +22,12 @@ defmodule PlanTopoWeb.InjectUserSettings do
         advanced: settings.advanced
       }
 
-      ~s[window.userSettings = #{Jason.encode!(settings, escape: :javascript_safe)}]
+      ~s[
+        window.userSettings = #{Jason.encode!(settings, escape: :javascript_safe)};
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          window.userSettings.disableAnimation = true;
+        }
+      ]
     end
   end
 end

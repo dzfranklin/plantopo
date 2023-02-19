@@ -10,45 +10,6 @@ defmodule PlanTopoWeb.MapApiController do
     send_resp(conn, :no_content, "")
   end
 
-  def save_view(conn, %{"data" => data}) do
-    user = conn.assigns.current_user
-    id = Map.get(data, "id")
-
-    view =
-      if Map.get(data, "id") do
-        Maps.update_view(user, id, data)
-      else
-        Maps.create_view(user, data)
-      end
-
-    with {:ok, view} <- view do
-      render(conn, :show_view, view: view)
-    end
-  end
-
-  def list_view_sources(conn, params) do
-    user = conn.assigns.current_user
-
-    known_layer_sources =
-      with {:ok, json} <- Map.fetch(params, "knownLayerSources") do
-        Jason.decode!(json)
-      else
-        :error -> []
-      end
-
-    known_data_sources =
-      with {:ok, json} <- Map.fetch(params, "knownDataSources") do
-        Jason.decode!(json)
-      else
-        :error -> []
-      end
-
-    layer_sources = Maps.list_view_layer_sources(user, known_layer_sources)
-    data_sources = Maps.list_view_data_sources(user, known_data_sources)
-
-    render(conn, :list_view_sources, layer_sources: layer_sources, data_sources: data_sources)
-  end
-
   # def list_default_view(conn, params) do
   #   page = Maps.list_default_views(params["cursor"])
   #   render(conn, :view_index, page: page, next: &url(~p"/api/map/view/default?cursor=#{&1}"))

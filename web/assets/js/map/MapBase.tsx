@@ -1,13 +1,16 @@
 import { useRef, useEffect } from "react";
-import { FlyToOptions as GLFlyToOptions, Map as MapGL } from "maplibre-gl";
+import * as ml from "maplibre-gl";
+import deepEqual from "react-fast-compare";
 import { useAppDispatch, useAppSelector, useAppStore } from "./hooks";
 import {
   flyTo,
   mapClick,
   reportViewAt,
+  selectGeolocation,
   selectGLStyle,
   selectTokens,
   selectViewAt,
+  ViewAt,
 } from "./mapSlice";
 import "../userSettings";
 import { startListening } from "./listener";
@@ -19,12 +22,12 @@ export interface Props {
 
 const FLY_TO_SPEED = 2.8;
 
-export default function MapApp(props: Props) {
+export default function MapBase(props: Props) {
   const store = useAppStore();
   const dispatch = useAppDispatch();
 
   const nodeRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<MapGL>();
+  const mapRef = useRef<ml.Map>();
 
   useEffect(() => {
     if (!mapRef.current) {
@@ -32,7 +35,7 @@ export default function MapApp(props: Props) {
       const tokens = selectTokens(state);
       const viewAt = selectViewAt(state);
 
-      const map = new MapGL({
+      const map = new ml.Map({
         container: nodeRef.current!,
         style: {
           version: 8,
@@ -65,10 +68,24 @@ export default function MapApp(props: Props) {
 
       startListening({
         actionCreator: flyTo,
-        effect: async (action, l) => {
-          const { center, zoom, pitch, bearing } = action.payload;
+        effect: async ({ payload }, l) => {
+          const map = mapRef.current!;
+          const current = selectViewAt(store.getState());
+          const { options, to } = payload;
 
-          let opts: GLFlyToOptions = {
+          let center = to.center || current.center;
+          let zoom = to.zoom || current.zoom;
+          let pitch = to.pitch || current.pitch;
+          let bearing = to.bearing || current.bearing;
+
+          if (
+            options.ignoreIfCenterVisible &&
+            map.getBounds().contains(center)
+          ) {
+            return;
+          }
+
+          let opts: ml.FlyToOptions = {
             center,
             zoom,
             pitch,
@@ -80,21 +97,25 @@ export default function MapApp(props: Props) {
             opts.duration = 0;
           }
 
-          mapRef.current?.flyTo(opts);
+          map.flyTo(opts);
         },
       });
 
       // Note that move is fired during any transition
       map.on("move", () => {
+        const state = store.getState();
+
         const center = map.getCenter();
-        dispatch(
-          reportViewAt({
-            center: [center.lng, center.lat],
-            zoom: map.getZoom(),
-            pitch: map.getPitch(),
-            bearing: map.getBearing(),
-          })
-        );
+        const at: ViewAt = {
+          center: [center.lng, center.lat],
+          zoom: map.getZoom(),
+          pitch: map.getPitch(),
+          bearing: map.getBearing(),
+        };
+        const prevAt = selectViewAt(state);
+        if (!deepEqual(at, prevAt)) {
+          dispatch(reportViewAt(at));
+        }
       });
 
       map.on("click", (evt) => {
@@ -133,5 +154,32 @@ export default function MapApp(props: Props) {
     console.debug("setStyle", style);
   }, [style]);
 
+  const geolocationValue = useAppSelector((s) => selectGeolocation(s).value);
+  const geolocationMarker = useRef<ml.Marker>();
+  useEffect(() => {
+    let marker = geolocationMarker.current;
+    if (!marker) {
+      const elem = document.createElement("div");
+      elem.className =
+        "w-[18px] h-[18px] bg-sky-600 rounded-full border border-[2px] border-white";
+      marker = new ml.Marker({ element: elem });
+      geolocationMarker.current = marker;
+    }
+
+    if (geolocationValue) {
+      marker.setLngLat(geolocationValue.position);
+      marker.addTo(mapRef.current);
+    } else {
+      marker.remove();
+    }
+  }, [geolocationValue]);
+
   return <div ref={nodeRef} className="map-base" />;
+}
+
+function computeMetersPerPixel(map: ml.Map) {
+  const y = map.getContainer().clientHeight / 2;
+  const a = map.unproject([0, y]);
+  const b = map.unproject([1, y]);
+  return a.distanceTo(b);
 }

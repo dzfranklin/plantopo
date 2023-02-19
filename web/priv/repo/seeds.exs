@@ -10,7 +10,7 @@
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
 alias PlanTopo.{Repo, Accounts, Maps}
-alias Maps.{ViewAt, ViewDataSource, ViewLayerSource, ViewLayer, View}
+alias Maps.{ViewDataSource, ViewLayerSource}
 
 {:ok, user} =
   Accounts.register_user(%{
@@ -21,15 +21,13 @@ alias Maps.{ViewAt, ViewDataSource, ViewLayerSource, ViewLayer, View}
 satellite_data =
   Repo.insert!(%ViewDataSource{
     id: "mapbox.satellite",
-    credit_os: false,
+    attribution: "mapbox",
     spec: %{
       type: "raster",
       tiles: [
         "https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.jpg90"
       ],
-      maxzoom: 21,
-      attribution:
-        ~S[© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>]
+      maxzoom: 21
     }
   })
 
@@ -40,22 +38,40 @@ satellite_layer_source =
     layer_specs: [
       %{
         id: "layer",
-        source: "mapbox.satellite",
+        source: satellite_data.id,
         type: "raster"
       }
     ]
   })
 
-Repo.insert!(%View{
-  owner_id: nil,
-  name: "Satellite",
-  layers: [
-    %{
-      source_id: satellite_layer_source.id,
-      prop_overrides: []
-    }
-  ]
-})
+mapbox_dem_data =
+  Repo.insert!(%ViewDataSource{
+    id: "mapbox.dem",
+    attribution: "mapbox",
+    spec: File.read!("priv/mapbox_dem_source.json") |> Jason.decode!()
+  })
+
+hillshade_layer_source =
+  Repo.insert(%ViewLayerSource{
+    name: "Hillshading",
+    default_opacity: 0.25,
+    dependencies: [mapbox_dem_data],
+    layer_specs: [
+      %{
+        id: "layer",
+        source: mapbox_dem_data.id,
+        type: "hillshade",
+        paint: %{
+          "hillshade-shadow-color": "rgba(0, 0, 0, 0.2)",
+          "hillshade-accent-color": "rgba(0, 0, 0, 0)",
+          "hillshade-highlight-color": "rgba(0, 0, 0, 0)"
+        }
+      }
+    ]
+  })
+
+# TODO: Layer sources should have fine-grained clip paths so that we can clip around the uk.
+# Or at least bboxes
 
 os_vector_layer_source =
   Maps.import_mapbox_style!(
@@ -64,64 +80,23 @@ os_vector_layer_source =
     fn %{"id" => "esri", "spec" => spec} ->
       %{
         "id" => "os.vector",
-        "credit_os" => true,
+        "attribution" => "os",
         "spec" => spec
       }
     end
   )
 
-Repo.insert!(%View{
-  owner_id: nil,
-  name: "Ordinance Survey Vector",
-  layers: [
-    %{
-      source_id: os_vector_layer_source.id,
-      prop_overrides: []
-    }
-  ]
-})
-
-hybrid_view =
-  Repo.insert!(%View{
-    owner_id: nil,
-    name: "Ordinance Survey Hybrid Vector",
-    layers: [
-      %{
-        source_id: satellite_layer_source.id,
-        prop_overrides: []
-      },
-      %{
-        source_id: os_vector_layer_source.id,
-        opacity: 0.12,
-        prop_overrides: [
-          %{
-            comment: "Covers up the area outside the bbox",
-            layer_id: "background",
-            property_category: "layout",
-            property_name: "visibility",
-            value: "none"
-          },
-          # %{
-          #   comment: "Ocean",
-          #   layer_id: "background",
-          #   property_cateogry: "paint",
-          #   property_name: "fill-opacity",
-          #   value: 0.6
-          # },
-          %{
-            layer_id: "European_land/1",
-            property_category: "paint",
-            property_name: "fill-opacity",
-            value: 0
-          }
-        ]
-      }
-    ]
-  })
-
 map =
   Repo.insert!(%Maps.Map{
     owner_id: user.id,
-    view_id: hybrid_view.id,
+    view_layers: [
+      %{
+        source_id: satellite_layer_source.id
+      },
+      %{
+        source_id: os_vector_layer_source.id,
+        opacity: 0.35
+      }
+    ],
     features: %{}
   })

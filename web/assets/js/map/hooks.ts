@@ -1,3 +1,4 @@
+import { useReducedMotion } from "framer-motion";
 import {
   TypedUseSelectorHook,
   useDispatch,

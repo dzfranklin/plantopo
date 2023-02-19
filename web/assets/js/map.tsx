@@ -4,29 +4,42 @@ import "../node_modules/maplibre-gl/dist/maplibre-gl.css";
 import { createRoot } from "react-dom/client";
 import MapApp from "./map/MapApp";
 import * as React from "react";
-import { Map as MapGL } from "maplibre-gl";
+import * as ml from "maplibre-gl";
 import { AppStore, initStore } from "./map/store";
 import { Provider } from "react-redux";
+import { MotionConfig, useReducedMotion } from "framer-motion";
+
+declare global {
+  interface Window {
+    appNode: HTMLElement;
+    _dbg: {
+      store: AppStore;
+      mapGL: ml.Map;
+    };
+  }
+}
+window._dbg = {} as any;
 
 const rootNode = document.getElementById("map-app-root")!;
+window.appNode = rootNode;
 
 const store = initStore(JSON.parse(rootNode.dataset.preloadedState!));
+window._dbg.store = store;
+
+const { disableAnimation } = window.userSettings;
 
 createRoot(rootNode).render(
   <React.StrictMode>
     <Provider store={store}>
-      <MapApp />
+      <MotionConfig
+        reducedMotion={disableAnimation ? "always" : "user"}
+        transition={{
+          type: "easeInOut",
+          duration: disableAnimation ? 0 : 0.25,
+        }}
+      >
+        <MapApp />
+      </MotionConfig>
     </Provider>
   </React.StrictMode>
 );
-
-declare global {
-  interface Window {
-    _dbg: {
-      store: AppStore;
-      mapGL: MapGL;
-    };
-  }
-}
-
-window._dbg = { store, mapGL: null as MapGL };

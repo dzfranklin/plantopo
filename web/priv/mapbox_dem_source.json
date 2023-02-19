@@ -1,0 +1,55 @@
+{
+  "type": "raster-dem",
+  "autoscale": true,
+  "bounds": [
+    -180,
+    -85,
+    180,
+    85
+  ],
+  "cacheControl": "max-age=43200,s-maxage=604800",
+  "center": [
+    0,
+    0,
+    3
+  ],
+  "encoding": "mapbox",
+  "filesize": 0,
+  "format": "png",
+  "id": "mapbox.mapbox-terrain-dem-v1",
+  "mapbox_logo": true,
+  "maxzoom": 14,
+  "minzoom": 0,
+  "modified": 1605833570000,
+  "name": "Mapbox Terrain-DEM v1",
+  "packs": {
+    "scheme": [
+      {
+        "indexzoom": 0,
+        "maxzoom": 5,
+        "minzoom": 0
+      },
+      {
+        "indexzoom": 6,
+        "maxzoom": 9,
+        "minzoom": 6
+      },
+      {
+        "indexzoom": 10,
+        "maxzoom": 12,
+        "minzoom": 10
+      },
+      {
+        "indexzoom": 11,
+        "maxzoom": 14,
+        "minzoom": 13
+      }
+    ]
+  },
+  "private": false,
+  "scheme": "xyz",
+  "tilejson": "2.2.0",
+  "tiles": [
+    "https://api.mapbox.com/v4/mapbox.mapbox-terrain-dem-v1/{z}/{x}/{y}.png"
+  ]
+}

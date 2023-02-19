@@ -2,11 +2,12 @@ defmodule PlanTopo.Maps.Map do
   use Ecto.Schema
   import Ecto.Changeset
   alias PlanTopo.{Accounts.User, Maps}
-  alias Maps.{View, ViewAt}
+  alias Maps.{ViewAt, ViewLayer}
 
   schema "maps" do
     belongs_to :owner, User
-    belongs_to :view, View
+
+    embeds_many :view_layers, ViewLayer
 
     # GeoJSON
     field :features, :map
@@ -25,6 +26,7 @@ defmodule PlanTopo.Maps.Map do
   def changeset(map \\ %__MODULE__{}, attrs) do
     map
     |> cast(attrs, [:view_id, :features])
-    |> validate_required([:view_id, :features])
+    |> cast_embed(:view_layers)
+    |> validate_required([:view_id, :features, :view_layers])
   end
 end

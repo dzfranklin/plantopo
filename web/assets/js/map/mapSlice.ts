@@ -2,51 +2,39 @@ import {
   createAction,
   createSelector,
   createSlice,
+  isAnyOf,
   PayloadAction,
 } from "@reduxjs/toolkit";
-import {
-  LayerSpecification as GLLayerSpecification,
-  SourceSpecification as GLSourceSpecification,
-  StyleSpecification as GLStyleSpecification,
-} from "maplibre-gl";
+import { v4 as uuid } from "uuid";
+import * as ml from "maplibre-gl";
 import type { RootState } from "./store";
 import * as api from "./api";
 import { startListening } from "./listener";
 import { flash } from "./flashSlice";
-import { castDraft } from "immer";
-import { v4 as uuid } from "uuid";
 
 const REPORT_VIEW_AT_DEBOUNCE_MS = 300;
 
 interface MapState {
   tokens: Tokens;
+  viewDataSources: {
+    [id: string]: ViewDataSource;
+  };
+  viewLayerSources: {
+    [id: number]: ViewLayerSource;
+  };
   map: {
     id: number;
-    viewAt: ViewAt;
-    viewDataSources: {
-      [id: string]: ViewDataSource;
-    };
-    viewLayerSources: {
-      [id: number]: ViewLayerSource;
-    };
-    view: View;
+    viewLayers: ViewLayer[];
     features: any; // TODO
   };
-  viewEditor: {
-    state: "closed" | "loading" | "active" | "save-wait";
-    unchanged?: View;
-  };
+  viewAt: ViewAt;
+  overrideViewLayers: ViewLayer[] | undefined;
+  geolocation: Geolocation;
 }
 
 interface Tokens {
   mapbox: string;
   os: string;
-}
-
-export interface View {
-  id: number | undefined;
-  name: string;
-  layers: ViewLayer[];
 }
 
 type LngLat = [number, number];
@@ -61,35 +49,26 @@ export interface ViewAt {
 
 export interface ViewDataSource {
   id: number;
-  creditOS: boolean;
-  spec: GLSourceSpecification;
+  attribution?: string;
+  spec: ml.SourceSpecification;
 }
 
 export interface ViewLayerSource {
   id: number;
   name: string;
+  defaultOpacity: number | null;
+  dependencies: string[];
+  icon: string;
   glyphs: string | null;
   sprite: string | null;
-  layerSpecs: GLLayerSpecification[];
+  layerSpecs: ml.LayerSpecification[];
 }
 
 export interface ViewLayer {
   id: string;
   sourceId: number;
   opacity: number;
-  propOverrides: PropOverride[];
 }
-
-type PropOverride = (
-  | { layerId: string; layerType: null }
-  | { layerType: string; layerId: null }
-) & {
-  id: string;
-  comment: string;
-  propertyName: string;
-  propertyCategory: "paint" | "layout";
-  value: any;
-};
 
 interface MapClick {
   geo: LngLat;
@@ -100,138 +79,121 @@ interface MapClick {
   }[];
 }
 
+interface Geolocation {
+  updating: boolean;
+  value?: {
+    accuracy: number;
+    position: LngLat;
+  };
+}
+
 export const mapSlice = createSlice({
   name: "map",
   initialState: {} as MapState,
   reducers: {
-    // The map instance is the source of truth for viewAt.
+    // The map instance is the source of truth
     reportViewAt(state, { payload }: PayloadAction<ViewAt>) {
-      state.map.viewAt = payload;
+      state.viewAt = payload;
     },
 
-    // View editor
-
-    editView(state, _action: PayloadAction<null>) {
-      state.viewEditor = {
-        state: "loading",
-        unchanged: state.map.view,
-      };
-    },
-
-    editViewLoaded(
+    overrideViewLayers(
       state,
-      {
-        payload,
-      }: PayloadAction<{
-        layerSources: { [_: number]: ViewLayerSource };
-        dataSources: { [_: string]: ViewDataSource };
-      }>
+      { payload }: PayloadAction<ViewLayer[] | undefined>
     ) {
-      state.map.viewLayerSources = {
-        ...state.map.viewLayerSources,
-        ...castDraft(payload.layerSources),
-      };
-      state.map.viewDataSources = {
-        ...state.map.viewDataSources,
-        ...castDraft(payload.dataSources),
-      };
-      state.viewEditor.state = "active";
-    },
-
-    closeViewEditor(state, { payload }: PayloadAction<{ discard: boolean }>) {
-      if (!payload.discard) {
-        state.viewEditor.state = "save-wait";
+      if (payload) {
+        state.overrideViewLayers = payload;
       } else {
-        state.map.view = state.viewEditor.unchanged!;
-        state.viewEditor.state = "closed";
+        state.overrideViewLayers = state.map.viewLayers;
       }
     },
-
-    closeViewEditorSaveFailed(state, _action: PayloadAction<null>) {
-      state.viewEditor.state = "active";
-    },
-
-    closeViewEditorSaveSucceeded(
+    updateOverrideViewLayer(
       state,
-      action: PayloadAction<{ newViewId?: number }>
+      { payload }: PayloadAction<{ layer: string; value: Partial<ViewLayer> }>
     ) {
-      if (action.payload.newViewId !== undefined) {
-        state.map.view.id = action.payload.newViewId;
+      const layer = state.overrideViewLayers.find(
+        (l) => l.id === payload.layer
+      );
+
+      for (const prop in payload.value) {
+        layer[prop] = payload.value[prop];
       }
-      state.viewEditor.state = "closed";
     },
-
-    setViewName(state, { payload }: PayloadAction<string>) {
-      state.map.view.name = payload;
+    removeOverrideViewLayer(state, { payload }: PayloadAction<string>) {
+      state.overrideViewLayers = state.overrideViewLayers.filter(
+        (l) => l.id !== payload
+      );
     },
-
-    addViewLayer(state, { payload }: PayloadAction<{ sourceId: number }>) {
-      const layer = {
+    addOverrideViewLayer(
+      state,
+      { payload: { sourceId } }: PayloadAction<{ sourceId: number }>
+    ) {
+      const source = state.viewLayerSources[sourceId];
+      state.overrideViewLayers.push({
         id: uuid(),
-        sourceId: payload.sourceId,
-        opacity: 1,
-        propOverrides: [],
-      };
-      state.map.view.layers = [layer, ...state.map.view.layers];
+        sourceId: sourceId,
+        opacity: source.defaultOpacity || 1.0,
+      });
+    },
+    clearOverrideViewLayers(state, _action: PayloadAction<undefined>) {
+      state.overrideViewLayers = undefined;
+    },
+    saveOverrideViewLayers(state, _action: PayloadAction<undefined>) {
+      state.map.viewLayers = state.overrideViewLayers;
+      state.overrideViewLayers = undefined;
     },
 
-    reorderViewLayers(state, { payload }: PayloadAction<string[]>) {
-      const layers = {};
-      for (const layer of state.map.view.layers) {
-        layers[layer.id] = layer;
-      }
-
-      let out = new Array(payload.length);
-      for (const idx in payload) {
-        const id = payload[idx];
-        const layer = layers[id];
-        if (layer === undefined) {
-          throw new Error(`reorderViewLayers: id not found: ${id}`);
-        }
-        out[idx] = layer;
-      }
-
-      state.map.view.layers = out;
+    setGeolocation(state, { payload }: PayloadAction<Geolocation>) {
+      state.geolocation = payload;
     },
-
-    setViewLayerOpacity(
-      state,
-      { payload }: PayloadAction<{ layer: string; value: number }>
-    ) {
-      const layer = state.map.view.layers.find((l) => l.id === payload.layer);
-      layer.opacity = payload.value;
+    clearGeolocation(state, _action: PayloadAction<undefined>) {
+      state.geolocation = { updating: false };
     },
   },
 });
 
 // Actions
 
+export const {
+  reportViewAt,
+  overrideViewLayers,
+  clearOverrideViewLayers,
+  clearGeolocation,
+  updateOverrideViewLayer,
+  saveOverrideViewLayers,
+  removeOverrideViewLayer,
+  addOverrideViewLayer,
+} = mapSlice.actions;
+
 // Intercepted by map
-export const flyTo = createAction<ViewAt>("map/flyTo");
+interface FlyToOptions {
+  ignoreIfCenterVisible?: boolean;
+}
+export const flyTo = createAction(
+  "map/flyTo",
+  (to: Partial<ViewAt>, options: FlyToOptions = {}) => ({
+    payload: { to, options },
+  })
+);
 
 // Emitted by map
 export const mapClick = createAction<MapClick>("map/mapClick");
 
-export const {
-  reportViewAt,
-  editView,
-  closeViewEditor,
-  setViewName,
-  addViewLayer,
-  reorderViewLayers,
-  setViewLayerOpacity,
-} = mapSlice.actions;
+export const requestGeolocation = createAction("map/requestGeolocation");
+export const zoomIn = createAction("map/zoomIn");
+export const zoomOut = createAction("map/zoomOut");
+export const requestFullscreen = createAction("map/requestFullscreen"); // Requires transient user activation
+export const exitFullscreen = createAction("map/exitFullscreen");
 
 // Listeners
 
 startListening({
   actionCreator: reportViewAt,
-  effect: async (action, l) => {
+  effect: async ({ payload }, l) => {
     const mapId = selectMapId(l.getState());
     l.cancelActiveListeners();
     try {
       await l.delay(REPORT_VIEW_AT_DEBOUNCE_MS);
-      api.reportViewAt(mapId, action.payload);
+      api.reportViewAt(mapId, payload);
     } catch (e) {
       if (e.code === "listener-cancelled") {
         // Handover responsibility to to the subsequent effect that cancelled us
@@ -243,185 +205,270 @@ startListening({
 });
 
 startListening({
-  actionCreator: editView,
-  effect: async (_action, l) => {
-    const state = l.getState();
-    const knownLayerSources = Object.values(selectViewLayerSources(state)).map(
-      (s) => s.id
-    );
-    const knownDataSources = Object.keys(selectViewDataSources(state));
-    const newData = await api.listViewSources(
-      knownLayerSources,
-      knownDataSources
-    );
-    l.dispatch(mapSlice.actions.editViewLoaded(newData));
+  actionCreator: zoomIn,
+  effect: (_action, l) => {
+    const current = selectViewAt(l.getState());
+    l.dispatch(flyTo({ zoom: Math.round(current.zoom + 1) }));
   },
 });
 
 startListening({
-  actionCreator: closeViewEditor,
-  effect: async (action, l) => {
-    if (!action.payload.discard) {
-      let view = select(l.getState()).map.view;
-      try {
-        let resp = await api.saveView(view);
+  actionCreator: zoomOut,
+  effect: (_action, l) => {
+    const current = selectViewAt(l.getState());
+    l.dispatch(flyTo({ zoom: Math.round(current.zoom - 1) }));
+  },
+});
 
-        let payload: { newViewId?: number } = {};
-        if (view.id === undefined) {
-          payload.newViewId = resp.id;
-        }
-        l.dispatch(mapSlice.actions.closeViewEditorSaveSucceeded(payload));
-      } catch (e) {
-        console.warn("Failed to save view", e);
-        l.dispatch(mapSlice.actions.closeViewEditorSaveFailed(null));
+startListening({
+  actionCreator: requestFullscreen,
+  effect: async (_action, l) => {
+    if (document.fullscreenElement) {
+      console.info("Suppressing requestFullscreen as already fullscreen");
+      return;
+    }
+
+    if (!document.fullscreenEnabled) {
+      l.dispatch(
+        flash({
+          kind: "error",
+          title: "Fullscreen disabled",
+          body: "Your browser indicated fullscreen is disabled",
+        })
+      );
+    }
+
+    try {
+      await window.appNode.requestFullscreen({ navigationUI: "hide" });
+    } catch (e) {
+      if (e instanceof TypeError) {
+        l.dispatch(
+          flash({
+            kind: "error",
+            title: "Error",
+            body: "Your browser refused to enter fullscreen mode",
+          })
+        );
+      } else {
+        throw e;
       }
     }
   },
 });
 
 startListening({
-  actionCreator: mapSlice.actions.closeViewEditorSaveSucceeded,
+  actionCreator: exitFullscreen,
   effect: async (_action, l) => {
-    l.dispatch(flash({ kind: "info", title: "View saved" }));
+    if (!document.fullscreenElement) {
+      console.info("Suppressing exitFullscreen as not fullscreen");
+      return;
+    }
+    await document.exitFullscreen();
   },
 });
 
 startListening({
-  actionCreator: mapSlice.actions.closeViewEditorSaveFailed,
+  matcher: isAnyOf(requestGeolocation, clearGeolocation),
+  effect: async (action, l) => {
+    if (action.type === clearGeolocation.type) {
+      l.cancelActiveListeners();
+      return;
+    }
+
+    const prev = selectGeolocation(l.getState());
+    l.dispatch(
+      mapSlice.actions.setGeolocation({
+        updating: true,
+        value: prev.value,
+      })
+    );
+
+    // Remember cancelling this listener cancels the fork, but the underlying
+    // request still runs to completion.
+    let result = await l.fork<GeolocationPosition>(
+      (_f) =>
+        new Promise((res, rej) => {
+          navigator.geolocation.getCurrentPosition(res, rej, {
+            maximumAge: 1000 * 60 * 60 * 24 * 7,
+            timeout: 1000 * 10,
+            enableHighAccuracy: true,
+          });
+        })
+    ).result;
+
+    if (result.status === "ok") {
+      const { accuracy, latitude, longitude } = result.value.coords;
+      const position: LngLat = [longitude, latitude];
+
+      l.dispatch(
+        mapSlice.actions.setGeolocation({
+          updating: false,
+          value: { accuracy, position },
+        })
+      );
+
+      l.dispatch(flyTo({ center: position }, { ignoreIfCenterVisible: true }));
+    } else if (result.status === "cancelled") {
+    } else if (result.status === "rejected") {
+      let err = result.error;
+      if (!(err instanceof GeolocationPositionError)) {
+        throw err;
+      }
+
+      if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
+        l.dispatch(
+          flash({
+            kind: "error",
+            title: "Location permission denied",
+          })
+        );
+      } else if (
+        err.code === GeolocationPositionError.POSITION_UNAVAILABLE ||
+        err.code === GeolocationPositionError.TIMEOUT
+      ) {
+        l.dispatch(
+          flash({
+            kind: "error",
+            title: "Location unavailable",
+          })
+        );
+      } else {
+        throw new Error(
+          `Unexpected GeolocationPositionError code: ${err.code} msg: ${err.message}`
+        );
+      }
+    }
+  },
+});
+
+startListening({
+  actionCreator: saveOverrideViewLayers,
   effect: async (_action, l) => {
-    l.dispatch(flash({ kind: "error", title: "Failed to save view" }));
+    // TODO
+    console.warn("TODO save overrideViewLayers");
   },
 });
 
 // Selectors
 
-const select = (state: RootState) => state.map;
+const select = (s: RootState) => s.map;
 
-export const selectViewEditorIsActive = (state: RootState) =>
-  select(state).viewEditor.state !== "closed";
+export const selectGeolocation = (s) => select(s).geolocation;
 
-export const selectViewEditorState = (state: RootState) =>
-  select(state).viewEditor.state;
+const selectMapId = (s) => select(s).map.id;
 
-const selectMapId = (state: RootState) => select(state).map.id;
+export const selectTokens = (s) => select(s).tokens;
 
-export const selectTokens = (state: RootState) => select(state).tokens;
+export const selectViewAt = (s) => select(s).viewAt;
 
-export const selectViewAt = (state: RootState) => select(state).map.viewAt;
+export const selectViewLayerSourceDisplayList = (state) => {
+  const layers =
+    select(state).overrideViewLayers || select(state).map.viewLayers;
 
-export const selectShouldCreditOS = (state: RootState) =>
-  Object.values(select(state).map.viewDataSources).some((s) => s.creditOS);
-
-export const selectView = (state: RootState) => select(state).map.view;
-
-export const selectViewLayer = (id: string) => (state: RootState) =>
-  select(state).map.view.layers.find((l) => l.id === id);
-
-const selectGlyphs = (state: RootState) => {
-  let sources = Object.values(select(state).map.viewLayerSources);
-  let glyphs: string | undefined;
-  for (const source of sources) {
-    if (source.glyphs) {
-      if (glyphs) {
-        throw new Error("Only one source can have glyphs.");
-      } else {
-        glyphs = source.glyphs;
-      }
-    }
+  const used = {};
+  for (const layer of layers) {
+    used[layer.sourceId] = true;
   }
-  return glyphs;
+
+  const list = Object.values(select(state).viewLayerSources).filter(
+    (v) => !used[v.id]
+  );
+
+  return sortBy(list, (v) => v.name);
 };
 
-const selectSprite = (state: RootState) => {
-  let sources = Object.values(select(state).map.viewLayerSources);
-  let sprite: string | undefined;
-  for (const source of sources) {
-    if (source.sprite) {
-      if (sprite) {
-        throw new Error("Only one source can have sprite.");
-      } else {
-        sprite = source.sprite;
-      }
-    }
-  }
-  return sprite;
+export const selectViewLayers = (s) =>
+  select(s).overrideViewLayers || select(s).map.viewLayers;
+
+export const selectViewLayerSource = (id: number) => (s) =>
+  select(s).viewLayerSources[id];
+
+export const selectShouldCreditOS = (state) =>
+  select(state)
+    .map.viewLayers.map((view) => select(state).viewLayerSources[view.sourceId])
+    .flatMap((layerSource) => layerSource.dependencies)
+    .map((dataSourceId) => select(state).viewDataSources[dataSourceId])
+    .some((dataSource) => dataSource.attribution === "os");
+
+const ATTRIBUTION = {
+  os: `Contains OS data &copy; Crown copyright and database rights ${new Date().getFullYear()}`,
+  mapbox: `© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>`,
 };
-
-const selectViewDataSources = (state: RootState) =>
-  select(state).map.viewDataSources;
-export const selectViewLayerSources = (state: RootState) =>
-  select(state).map.viewLayerSources;
-
-export const selectViewLayerSource =
-  (id: number) =>
-  (state: RootState): ViewLayerSource =>
-    select(state).map.viewLayerSources[id];
-
-const selectViewLayers = (state: RootState) => select(state).map.view.layers;
-
-const osAttribution = `Contains OS data &copy; Crown copyright and database rights ${new Date().getFullYear()}`;
 
 export const glLayerId = (sourceLayerId: number, specId: string) =>
   `${sourceLayerId}-${specId}`;
 
+const OPACITY_PROPS = {
+  background: ["background-opacity"],
+  fill: ["fill-opacity"],
+  line: ["line-opacity"],
+  symbol: [], // Skipping "icon-opacity", "text-opacity"
+  raster: ["raster-opacity"],
+  circle: ["circle-opacity", "circle-stroke-opacity"],
+  "fill-extrusion": ["fill-extrusion-opacity"],
+  heatmap: ["heatmap-opacity"],
+  hillshade: ["hillshade-exaggeration"],
+};
+
 export const selectGLStyle = createSelector(
   [
-    selectGlyphs,
-    selectSprite,
-    selectViewDataSources,
-    selectViewLayerSources,
-    selectViewLayers,
+    (s) => select(s).viewDataSources,
+    (s) => select(s).viewLayerSources,
+    (s) => select(s).overrideViewLayers || select(s).map.viewLayers,
   ],
-  (
-    glyphs,
-    sprite,
-    dataSources,
-    layerSources,
-    viewLayers
-  ): GLStyleSpecification => {
-    const sourceList = Object.values(dataSources).map((s) => {
-      let spec = s.creditOS
-        ? { ...s.spec, attribution: osAttribution }
-        : s.spec;
+  (dataSources, layerSources, layers): ml.StyleSpecification => {
+    const style: Partial<ml.StyleSpecification> = {
+      version: 8,
+    };
+
+    const activeSources = layers.map((l) => layerSources[l.sourceId]);
+    const glyphs = activeSources.find((s) => s.glyphs)?.glyphs;
+    const sprite = activeSources.find((s) => s.sprite)?.sprite;
+    if (glyphs) style.glyphs = glyphs;
+    if (sprite) style.sprite = sprite;
+
+    const mlSourceList = Object.values(dataSources).map((s) => {
+      let spec = { ...s.spec } as any;
+      if (s.attribution) spec.attribution = ATTRIBUTION[s.attribution];
       return [s.id, spec];
     });
-    const sources = Object.fromEntries(sourceList);
+    style.sources = Object.fromEntries(mlSourceList);
 
-    const layers = viewLayers.flatMap((layer) => {
+    style.layers = layers.flatMap((layer, layerIdx) => {
       const source = layerSources[layer.sourceId];
 
-      const specs: GLLayerSpecification[] = [];
+      const specs: ml.LayerSpecification[] = [];
       for (const sourceSpec of source.layerSpecs) {
-        const paintOverrides = {};
+        const spec: ml.LayerSpecification = {
+          ...sourceSpec,
+          id: glLayerId(source.id, sourceSpec.id),
+        };
 
-        if (layer.opacity < 1) {
-          if (sourceSpec.type === "fill") {
-            paintOverrides["fill-opacity"] = layer.opacity;
-          } else if (sourceSpec.type === "background") {
-            paintOverrides["background-opacity"] = layer.opacity;
-          } else if (sourceSpec.type === "raster") {
-            paintOverrides["raster-opacity"] = layer.opacity;
+        if (layer.opacity < 1 && layerIdx !== 0) {
+          spec.paint = { ...spec.paint };
+          for (const prop of OPACITY_PROPS[sourceSpec.type]) {
+            spec.paint[prop] = (spec.paint[prop] || 1.0) * layer.opacity;
           }
         }
 
-        specs.push({
-          ...sourceSpec,
-          paint: { ...sourceSpec.paint, ...paintOverrides },
-          id: glLayerId(source.id, sourceSpec.id),
-        } as GLLayerSpecification);
+        specs.push(spec);
       }
 
       return specs;
     });
 
-    return {
-      version: 8,
-      glyphs,
-      sprite,
-      sources,
-      layers,
-    };
+    return style as ml.StyleSpecification;
   }
 );
+
+function sortBy<T>(list: T[], key: (item: T) => any) {
+  return list.slice().sort((a, b) => {
+    const keyA = key(a);
+    const keyB = key(b);
+    if (keyA < keyB) return -1;
+    if (keyA > keyB) return 1;
+    return 0;
+  });
+}
 
 export default mapSlice.reducer;
