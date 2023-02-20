@@ -1,6 +1,5 @@
 import {
   createAction,
-  createSelector,
   createSlice,
   isAnyOf,
   PayloadAction,
@@ -379,6 +378,8 @@ export const selectViewLayerSourceDisplayList = (state) => {
 
 export const selectViewLayers = (s) =>
   select(s).overrideViewLayers || select(s).map.viewLayers;
+export const selectViewLayerSources = (s) => select(s).viewLayerSources;
+export const selectViewDataSources = (s) => select(s).viewDataSources;
 
 export const selectViewLayerSource = (id: number) => (s) =>
   select(s).viewLayerSources[id];
@@ -389,77 +390,6 @@ export const selectShouldCreditOS = (state) =>
     .flatMap((layerSource) => layerSource.dependencies)
     .map((dataSourceId) => select(state).viewDataSources[dataSourceId])
     .some((dataSource) => dataSource.attribution === "os");
-
-const ATTRIBUTION = {
-  os: `Contains OS data &copy; Crown copyright and database rights ${new Date().getFullYear()}`,
-  mapbox: `© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>`,
-};
-
-export const glLayerId = (sourceLayerId: number, specId: string) =>
-  `${sourceLayerId}-${specId}`;
-
-const OPACITY_PROPS = {
-  background: ["background-opacity"],
-  fill: ["fill-opacity"],
-  line: ["line-opacity"],
-  symbol: [], // Skipping "icon-opacity", "text-opacity"
-  raster: ["raster-opacity"],
-  circle: ["circle-opacity", "circle-stroke-opacity"],
-  "fill-extrusion": ["fill-extrusion-opacity"],
-  heatmap: ["heatmap-opacity"],
-  hillshade: ["hillshade-exaggeration"],
-};
-
-export const selectGLStyle = createSelector(
-  [
-    (s) => select(s).viewDataSources,
-    (s) => select(s).viewLayerSources,
-    (s) => select(s).overrideViewLayers || select(s).map.viewLayers,
-  ],
-  (dataSources, layerSources, layers): ml.StyleSpecification => {
-    const style: Partial<ml.StyleSpecification> = {
-      version: 8,
-    };
-
-    const activeSources = layers.map((l) => layerSources[l.sourceId]);
-    const glyphs = activeSources.find((s) => s.glyphs)?.glyphs;
-    const sprite = activeSources.find((s) => s.sprite)?.sprite;
-    if (glyphs) style.glyphs = glyphs;
-    if (sprite) style.sprite = sprite;
-
-    const mlSourceList = Object.values(dataSources).map((s) => {
-      let spec = { ...s.spec } as any;
-      if (s.attribution) spec.attribution = ATTRIBUTION[s.attribution];
-      return [s.id, spec];
-    });
-    style.sources = Object.fromEntries(mlSourceList);
-
-    style.layers = layers.flatMap((layer, layerIdx) => {
-      const source = layerSources[layer.sourceId];
-
-      const specs: ml.LayerSpecification[] = [];
-      for (const sourceSpec of source.layerSpecs) {
-        const spec: ml.LayerSpecification = {
-          ...sourceSpec,
-          id: glLayerId(source.id, sourceSpec.id),
-        };
-
-        if (layer.opacity < 1 && layerIdx !== 0) {
-          spec.paint = { ...spec.paint };
-          for (const prop of OPACITY_PROPS[sourceSpec.type]) {
-            spec.paint[prop] = (spec.paint[prop] || 1.0) * layer.opacity;
-          }
-        }
-
-        specs.push(spec);
-      }
-
-      return specs;
-    });
-
-    return style as ml.StyleSpecification;
-  }
-);
 
 function sortBy<T>(list: T[], key: (item: T) => any) {
   return list.slice().sort((a, b) => {

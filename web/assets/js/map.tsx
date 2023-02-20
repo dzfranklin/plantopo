@@ -15,10 +15,19 @@ declare global {
     _dbg: {
       store: AppStore;
       mapGL: ml.Map;
+      computeStyleStats: {
+        paintOnlyUpdates: number;
+        fullUpdates: number;
+      };
     };
   }
 }
-window._dbg = {} as any;
+window._dbg = {
+  computeStyleStats: {
+    paintOnlyUpdates: 0,
+    fullUpdates: 0,
+  },
+} as any;
 
 const rootNode = document.getElementById("map-app-root")!;
 window.appNode = rootNode;
