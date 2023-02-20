@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
     "jsx": "react-jsx",
+    "target": "ES2019",
+    "moduleResolution": "node",
     // Required by @headlessui/react
     "allowSyntheticDefaultImports": true
   }
