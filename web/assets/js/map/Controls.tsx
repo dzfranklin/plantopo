@@ -134,7 +134,7 @@ function LayerSelect({ close }) {
           onReorder={(v) => dispatch(overrideViewLayers(v))}
         >
           {viewLayers.map((v, i) => (
-            <LayerItem key={v.id} layer={v} isBase={i === 0} />
+            <LayerItem key={v.sourceId} layer={v} idx={i} />
           ))}
         </Reorder.Group>
 
@@ -157,7 +157,7 @@ function LayerSelect({ close }) {
   );
 }
 
-function LayerItem({ layer, isBase }) {
+function LayerItem({ layer, idx }) {
   const dispatch = useAppDispatch();
   const source = useAppSelector(selectViewLayerSource(layer.sourceId));
   const reorderControls = useDragControls();
@@ -171,7 +171,7 @@ function LayerItem({ layer, isBase }) {
       className="flex flex-row select-none mb-[16px]"
     >
       <button
-        onClick={() => dispatch(removeOverrideViewLayer(layer.id))}
+        onClick={() => dispatch(removeOverrideViewLayer(idx))}
         className="-ml-1 mr-[8px]"
       >
         <CloseIcon className="fill-gray-500 w-[20px]" />
@@ -187,7 +187,7 @@ function LayerItem({ layer, isBase }) {
       <div className="flex flex-col justify-center grow">
         <div>{source.name}</div>
 
-        {!isBase && (
+        {idx !== 0 && (
           <Slider.Root
             min={0}
             max={1}
@@ -196,10 +196,8 @@ function LayerItem({ layer, isBase }) {
             onValueChange={([opacity]) => {
               dispatch(
                 updateOverrideViewLayer({
-                  layer: layer.id,
-                  value: {
-                    opacity,
-                  },
+                  idx,
+                  value: { opacity },
                 })
               );
             }}

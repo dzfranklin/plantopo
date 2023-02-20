@@ -4,12 +4,12 @@ import {
   isAnyOf,
   PayloadAction,
 } from "@reduxjs/toolkit";
-import { v4 as uuid } from "uuid";
 import * as ml from "maplibre-gl";
 import type { RootState } from "./store";
 import * as api from "./api";
 import { startListening } from "./listener";
 import { flash } from "./flashSlice";
+import { JsonTemplateObject } from "@sanalabs/json";
 
 const REPORT_VIEW_AT_DEBOUNCE_MS = 300;
 
@@ -21,15 +21,44 @@ interface MapState {
   viewLayerSources: {
     [id: number]: ViewLayerSource;
   };
-  map: {
-    id: number;
-    viewLayers: ViewLayer[];
-    features: any; // TODO
+  id: number;
+  myAwareness: any;
+  awareness: any[];
+  view: {
+    layers: ViewLayer[];
   };
-  viewAt: ViewAt;
   overrideViewLayers: ViewLayer[] | undefined;
+  features: any; // TODO
+  viewAt: ViewAt;
   geolocation: Geolocation;
 }
+
+const initialState: MapState = {
+  // TODO
+  tokens: JSON.parse(
+    document.getElementById("map-app-root")!.dataset.preloadedState
+  ).map.tokens,
+  viewDataSources: JSON.parse(
+    document.getElementById("map-app-root")!.dataset.preloadedState
+  ).map.viewDataSources,
+  viewLayerSources: JSON.parse(
+    document.getElementById("map-app-root")!.dataset.preloadedState
+  ).map.viewLayerSources,
+  id: 1,
+  myAwareness: {},
+  awareness: [],
+  view: {
+    layers: [],
+  },
+  overrideViewLayers: undefined,
+  features: {},
+  viewAt: JSON.parse(
+    document.getElementById("map-app-root")!.dataset.preloadedState
+  ).map.viewAt,
+  geolocation: {
+    updating: false,
+  },
+};
 
 interface Tokens {
   mapbox: string;
@@ -64,7 +93,6 @@ export interface ViewLayerSource {
 }
 
 export interface ViewLayer {
-  id: string;
   sourceId: number;
   opacity: number;
 }
@@ -88,11 +116,21 @@ interface Geolocation {
 
 export const mapSlice = createSlice({
   name: "map",
-  initialState: {} as MapState,
+  initialState,
   reducers: {
     // The map instance is the source of truth
     reportViewAt(state, { payload }: PayloadAction<ViewAt>) {
       state.viewAt = payload;
+    },
+
+    remoteSetView(state, { payload }: PayloadAction<JsonTemplateObject>) {
+      state.view = payload as unknown as MapState["view"];
+    },
+    remoteSetFeatures(state, { payload }: PayloadAction<JsonTemplateObject>) {
+      state.features = payload as unknown as MapState["features"];
+    },
+    remoteSetAwareness(state, { payload }: PayloadAction<any>) {
+      state.awareness = payload;
     },
 
     overrideViewLayers(
@@ -102,25 +140,20 @@ export const mapSlice = createSlice({
       if (payload) {
         state.overrideViewLayers = payload;
       } else {
-        state.overrideViewLayers = state.map.viewLayers;
+        state.overrideViewLayers = state.view.layers;
       }
     },
     updateOverrideViewLayer(
       state,
-      { payload }: PayloadAction<{ layer: string; value: Partial<ViewLayer> }>
+      { payload }: PayloadAction<{ idx: number; value: Partial<ViewLayer> }>
     ) {
-      const layer = state.overrideViewLayers.find(
-        (l) => l.id === payload.layer
-      );
-
+      const layer = state.overrideViewLayers[payload.idx];
       for (const prop in payload.value) {
         layer[prop] = payload.value[prop];
       }
     },
-    removeOverrideViewLayer(state, { payload }: PayloadAction<string>) {
-      state.overrideViewLayers = state.overrideViewLayers.filter(
-        (l) => l.id !== payload
-      );
+    removeOverrideViewLayer(state, { payload }: PayloadAction<number>) {
+      state.overrideViewLayers.splice(payload, 1);
     },
     addOverrideViewLayer(
       state,
@@ -128,7 +161,6 @@ export const mapSlice = createSlice({
     ) {
       const source = state.viewLayerSources[sourceId];
       state.overrideViewLayers.push({
-        id: uuid(),
         sourceId: sourceId,
         opacity: source.defaultOpacity || 1.0,
       });
@@ -137,7 +169,7 @@ export const mapSlice = createSlice({
       state.overrideViewLayers = undefined;
     },
     saveOverrideViewLayers(state, _action: PayloadAction<undefined>) {
-      state.map.viewLayers = state.overrideViewLayers;
+      state.view.layers = state.overrideViewLayers;
       state.overrideViewLayers = undefined;
     },
 
@@ -154,6 +186,9 @@ export const mapSlice = createSlice({
 
 export const {
   reportViewAt,
+  remoteSetView,
+  remoteSetFeatures,
+  remoteSetAwareness,
   overrideViewLayers,
   clearOverrideViewLayers,
   clearGeolocation,
@@ -352,17 +387,22 @@ startListening({
 
 const select = (s: RootState) => s.map;
 
+export const selectMyAwareness = (s) => select(s).myAwareness;
+export const selectViewJSON = (s) =>
+  select(s).view as unknown as JsonTemplateObject;
+export const selectFeaturesJSON = (s) =>
+  select(s).features as unknown as JsonTemplateObject;
+
 export const selectGeolocation = (s) => select(s).geolocation;
 
-const selectMapId = (s) => select(s).map.id;
+const selectMapId = (s) => select(s).id;
 
 export const selectTokens = (s) => select(s).tokens;
 
 export const selectViewAt = (s) => select(s).viewAt;
 
 export const selectViewLayerSourceDisplayList = (state) => {
-  const layers =
-    select(state).overrideViewLayers || select(state).map.viewLayers;
+  const layers = select(state).overrideViewLayers || select(state).view.layers;
 
   const used = {};
   for (const layer of layers) {
@@ -377,7 +417,8 @@ export const selectViewLayerSourceDisplayList = (state) => {
 };
 
 export const selectViewLayers = (s) =>
-  select(s).overrideViewLayers || select(s).map.viewLayers;
+  select(s).overrideViewLayers || select(s).view.layers;
+
 export const selectViewLayerSources = (s) => select(s).viewLayerSources;
 export const selectViewDataSources = (s) => select(s).viewDataSources;
 
@@ -385,8 +426,8 @@ export const selectViewLayerSource = (id: number) => (s) =>
   select(s).viewLayerSources[id];
 
 export const selectShouldCreditOS = (state) =>
-  select(state)
-    .map.viewLayers.map((view) => select(state).viewLayerSources[view.sourceId])
+  (select(state).overrideViewLayers || select(state).view.layers)
+    .map((view) => select(state).viewLayerSources[view.sourceId])
     .flatMap((layerSource) => layerSource.dependencies)
     .map((dataSourceId) => select(state).viewDataSources[dataSourceId])
     .some((dataSource) => dataSource.attribution === "os");

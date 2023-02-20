@@ -8,6 +8,7 @@ import * as ml from "maplibre-gl";
 import { AppStore, initStore } from "./map/store";
 import { Provider } from "react-redux";
 import { MotionConfig, useReducedMotion } from "framer-motion";
+import type { Doc as YDoc } from "yjs";
 
 declare global {
   interface Window {
@@ -15,6 +16,7 @@ declare global {
     _dbg: {
       store: AppStore;
       mapGL: ml.Map;
+      mapDoc: YDoc;
       computeStyleStats: {
         paintOnlyUpdates: number;
         fullUpdates: number;
@@ -32,7 +34,7 @@ window._dbg = {
 const rootNode = document.getElementById("map-app-root")!;
 window.appNode = rootNode;
 
-const store = initStore(JSON.parse(rootNode.dataset.preloadedState!));
+const store = initStore();
 window._dbg.store = store;
 
 const { disableAnimation } = window.userSettings;

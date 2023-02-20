@@ -1,38 +1,7 @@
-import {
-  View,
-  ViewAt,
-  ViewDataSource,
-  ViewLayer,
-  ViewLayerSource,
-} from "./mapSlice";
+import { ViewAt } from "./mapSlice";
 
 export function reportViewAt(mapId: number, value: ViewAt) {
   send(`map/${mapId}/view_at`, "POST", { data: value });
-}
-
-export async function saveView(view: View): Promise<View> {
-  let resp = await send("map/view/save", "POST", {
-    data: view,
-  });
-  return resp.data as View;
-}
-
-export async function listViewSources(
-  knownLayerSources: number[],
-  knownDataSources: string[]
-): Promise<{
-  layerSources: { [id: number]: ViewLayerSource };
-  dataSources: { [id: string]: ViewDataSource };
-}> {
-  const params = new URLSearchParams();
-  params.set("knownLayerSources", JSON.stringify(knownLayerSources));
-  params.set("knownDataSources", JSON.stringify(knownDataSources));
-  let resp = await send("map/view_sources?" + params.toString(), "GET");
-
-  return {
-    layerSources: resp.data.layerSources,
-    dataSources: resp.data.dataSources,
-  };
 }
 
 async function send(
