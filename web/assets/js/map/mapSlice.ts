@@ -425,12 +425,15 @@ export const selectViewDataSources = (s) => select(s).viewDataSources;
 export const selectViewLayerSource = (id: number) => (s) =>
   select(s).viewLayerSources[id];
 
-export const selectShouldCreditOS = (state) =>
-  (select(state).overrideViewLayers || select(state).view.layers)
-    .map((view) => select(state).viewLayerSources[view.sourceId])
-    .flatMap((layerSource) => layerSource.dependencies)
-    .map((dataSourceId) => select(state).viewDataSources[dataSourceId])
-    .some((dataSource) => dataSource.attribution === "os");
+export const selectShouldCreditOS = createSelector(
+  [selectViewLayers, selectViewLayerSources, selectViewDataSources],
+  (layers, layerSources, dataSources) =>
+    layers
+      .map((view) => layerSources[view.sourceId])
+      .flatMap((layerSource) => layerSource.dependencies)
+      .map((dataSourceId) => dataSources[dataSourceId])
+      .some((dataSource) => dataSource.attribution === "os")
+);
 
 function sortBy<T>(list: T[], key: (item: T) => any) {
   return list.slice().sort((a, b) => {
