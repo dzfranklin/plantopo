@@ -69,18 +69,28 @@ export function computeFullStyle(
     version: 8,
   };
 
-  const activeSources = layers.map((layer) => layerSources[layer.sourceId]);
-  const glyphs = activeSources.find((s) => s.glyphs)?.glyphs;
-  const sprite = activeSources.find((s) => s.sprite)?.sprite;
+  const activeLayerSources = layers.map(
+    (layer) => layerSources[layer.sourceId]
+  );
+  const glyphs = activeLayerSources.find((s) => s.glyphs)?.glyphs;
+  const sprite = activeLayerSources.find((s) => s.sprite)?.sprite;
   if (glyphs) style.glyphs = glyphs;
   if (sprite) style.sprite = sprite;
 
-  const mlSourceList = Object.values(dataSources).map((s) => {
+  const activeDataSourceIds = new Set<string>();
+  for (const layerSource of activeLayerSources) {
+    for (const id of layerSource.dependencies) {
+      activeDataSourceIds.add(id);
+    }
+  }
+
+  const activeDataSources = Array.from(activeDataSourceIds.keys()).map((id) => {
+    let s = dataSources[id];
     let spec = { ...s.spec } as any;
     if (s.attribution) spec.attribution = ATTRIBUTION[s.attribution];
     return [s.id, spec];
   });
-  style.sources = Object.fromEntries(mlSourceList);
+  style.sources = Object.fromEntries(activeDataSources);
 
   style.layers = layers.flatMap((layer) =>
     layerSources[layer.sourceId].layerSpecs.map((spec) => {
