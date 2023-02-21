@@ -15,13 +15,8 @@ use uuid::Uuid;
 use weak_table::WeakValueHashMap;
 use y_sync::awareness::Awareness;
 use yrs::{
-    types::ToJson,
-    updates::{
-        decoder::Decode,
-        encoder::{Encoder, EncoderV2},
-    },
-    Array, ArrayPrelim, Doc, Map, MapPrelim, ReadTxn, StateVector, Transact, TransactionMut,
-    Update, UpdateEvent,
+    types::ToJson, updates::decoder::Decode, Array, ArrayPrelim, Doc, Map, MapPrelim, ReadTxn,
+    StateVector, Transact, TransactionMut, Update, UpdateEvent,
 };
 use yrs_warp::{broadcast::BroadcastGroup, AwarenessRef};
 
@@ -105,11 +100,9 @@ pub fn create(db: DbRef, id: Uuid, req: CreateReq) -> Result<(), CreateError> {
         info!("creating: {}: {}", id, doc.to_json(&tx));
     }
 
-    let mut encoder = EncoderV2::new();
-    doc.transact()
-        .encode_diff(&StateVector::default(), &mut encoder);
-    let update = encoder.to_vec();
-    trace!("update={:?}", Update::decode_v2(&update));
+    let update = doc
+        .transact()
+        .encode_state_as_update_v1(&StateVector::default());
 
     {
         let tx = db.transaction();
@@ -149,7 +142,7 @@ pub async fn get_active(
 #[instrument(skip(db))]
 fn load_doc(db: DbRef, id: Uuid) -> eyre::Result<Option<Doc>> {
     if let Some(value) = db.get(id)? {
-        let value = Update::decode_v2(&value).context("failed to decode stored state")?;
+        let value = Update::decode_v1(&value).context("failed to decode stored state")?;
         let doc = configure_doc();
         doc.transact_mut().apply_update(value);
         debug!("loaded doc {}", doc.to_json(&doc.transact()));
@@ -180,7 +173,7 @@ async fn load_active(db: DbRef, id: Uuid) -> eyre::Result<Option<Active>> {
     debug!("Loaded {}", doc.to_json(&doc.transact()));
 
     let sub = doc
-        .observe_update_v2(move |tx, update| on_update(db.clone(), id, tx, update))
+        .observe_update_v1(move |tx, update| on_update(db.clone(), id, tx, update))
         .expect("Failed to subscribe to doc");
 
     let awareness = Arc::new(tokio::sync::RwLock::new(Awareness::new(doc)));
@@ -195,7 +188,7 @@ async fn load_active(db: DbRef, id: Uuid) -> eyre::Result<Option<Active>> {
 }
 
 fn on_update(db: DbRef, id: Uuid, tx: &TransactionMut, _update: &UpdateEvent) {
-    let value = tx.encode_state_as_update_v2(&StateVector::default());
+    let value = tx.encode_state_as_update_v1(&StateVector::default());
 
     debug!(
         "on_update layers={} features={}",
