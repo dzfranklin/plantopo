@@ -15,7 +15,7 @@
 .controls {
   grid-column: 1 / -1;
   grid-row: 1 / span 1;
-  z-index: 1;
+  z-index: 2;
   align-self: end;
   justify-self: end;
   margin-right: 16px;
