@@ -97,10 +97,10 @@ export function computeFullStyle(
       const out = {
         ...spec,
         id: glLayerId(layer.sourceId, spec.id),
+        paint: spec.paint ? { ...spec.paint } : {},
       };
 
       if (layer.opacity < OPACITY_CUTOFF) {
-        if (!out.paint) out.paint = {};
         for (const prop of OPACITY_PROPS[spec.type]) {
           out.paint[prop] = (out.paint[prop] || 1) * layer.opacity;
         }
@@ -108,7 +108,7 @@ export function computeFullStyle(
 
       return out;
     })
-  );
+  ) as any;
 
   return style as ml.StyleSpecification;
 }
