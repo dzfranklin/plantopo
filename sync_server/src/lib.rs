@@ -3,7 +3,7 @@ use eyre::{eyre, Context};
 #[allow(unused)]
 use tracing::{debug, error, info, instrument, trace, warn};
 
-use rocksdb::{MergeOperands, OptimisticTransactionDB};
+use rocksdb::OptimisticTransactionDB;
 use serde::Deserialize;
 use std::{
     collections::HashMap,
@@ -49,7 +49,6 @@ impl fmt::Debug for ActiveMap {
 pub fn open_db(path: impl AsRef<Path>) -> eyre::Result<DbRef> {
     let mut db_opts = rocksdb::Options::default();
     db_opts.create_if_missing(true);
-    db_opts.set_merge_operator_associative("ymerge", ymerge);
     let db = OptimisticTransactionDB::open(&db_opts, path)?;
     info!("Opened {:?}", &db);
     Ok(Arc::new(db))
@@ -126,38 +125,6 @@ pub fn create(db: DbRef, id: Uuid, req: CreateReq) -> Result<(), CreateError> {
     Ok(())
 }
 
-#[instrument(skip_all)]
-fn ymerge(
-    _new_key: &[u8],
-    existing_val: Option<&[u8]>,
-    operands: &MergeOperands,
-) -> Option<Vec<u8>> {
-    // NOTE: Update::merge_updates doesn't work, but based on code comments that might a
-    // bug/missing feature. There might be a more efficent way to do this
-
-    let existing_val =
-        existing_val.map(|v| Update::decode_v2(v).expect("ymerge failed to decode existing_val"));
-
-    let doc = existing_val
-        .map(apply_full_update)
-        .unwrap_or_else(configure_doc);
-
-    let mut tx = doc.transact_mut();
-
-    trace!("ymerge before: {}", doc.to_json(&tx));
-    for update in operands.iter() {
-        let update = Update::decode_v2(update).expect("operand contains invalid update");
-        tx.apply_update(update);
-    }
-    trace!("ymerge after {} ops: {}", operands.len(), doc.to_json(&tx));
-
-    let mut encoder = EncoderV2::new();
-    tx.encode_diff(&StateVector::default(), &mut encoder);
-    let value = encoder.to_vec();
-
-    Some(value)
-}
-
 #[instrument(skip(db, maps))]
 pub async fn get_active(
     db: DbRef,
@@ -232,10 +199,22 @@ async fn load_map(db: DbRef, id: Uuid) -> eyre::Result<Option<ActiveMap>> {
     }))
 }
 
-fn on_update(db: DbRef, id: Uuid, _tx: &TransactionMut, update: &UpdateEvent) {
-    debug!("update {}: {:?}", id, Update::decode_v2(&update.update));
+fn on_update(db: DbRef, id: Uuid, tx: &TransactionMut, update: &UpdateEvent) {
+    let mut encoder = EncoderV2::new();
+    tx.encode_diff(&StateVector::default(), &mut encoder);
+    let value = encoder.to_vec();
 
-    db.merge(id, &update.update)
+    debug!(
+        "on_update layers={} features={}",
+        tx.get_array("layers")
+            .map(|v| v.to_json(tx))
+            .unwrap_or(lib0::any::Any::Undefined),
+        tx.get_map("features")
+            .map(|v| v.to_json(tx))
+            .unwrap_or(lib0::any::Any::Undefined)
+    );
+
+    db.put(id, value)
         .expect("failed to write to db in on_update");
 }
 
