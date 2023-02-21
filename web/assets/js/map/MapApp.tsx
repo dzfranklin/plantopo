@@ -26,7 +26,7 @@ export default function MapApp() {
 
   const [yData, setYData] = useState(null);
   useEffect(() => {
-    const doc = new YDoc();
+    const doc = new YDoc({ gc: false });
     window._dbg.mapDoc = doc;
     const provider = new WebsocketProvider(
       "ws://localhost:4005",

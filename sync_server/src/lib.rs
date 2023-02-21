@@ -91,7 +91,7 @@ pub fn create(db: DbRef, id: Uuid, req: CreateReq) -> Result<(), CreateError> {
     let layers_value = Any::from_json(&req.layers).map_err(CreateError::internal)?;
     let features_value = Any::from_json(&req.features).map_err(CreateError::internal)?;
 
-    let doc = Doc::new();
+    let doc = configure_doc();
     let layers = doc.get_or_insert_array("layers");
     let features = doc.get_or_insert_map("features");
 
@@ -161,11 +161,7 @@ pub async fn get_active(
 #[instrument(skip(db))]
 fn load_doc(db: DbRef, id: Uuid) -> eyre::Result<Option<Doc>> {
     if let Some(update) = db.get(id)? {
-        let doc = Doc::new();
-        {
-            doc.get_or_insert_array("layers");
-            doc.get_or_insert_map("features");
-        }
+        let doc = configure_doc();
         {
             let mut tx = doc.transact_mut();
             let update = Update::decode_v2(&update).context("failed to decode stored state")?;
@@ -175,6 +171,17 @@ fn load_doc(db: DbRef, id: Uuid) -> eyre::Result<Option<Doc>> {
     } else {
         Ok(None)
     }
+}
+
+fn configure_doc() -> yrs::Doc {
+    let opts = yrs::Options {
+        skip_gc: true,
+        ..Default::default()
+    };
+    let doc = Doc::with_options(opts);
+    doc.get_or_insert_array("layers");
+    doc.get_or_insert_map("features");
+    doc
 }
 
 #[instrument(skip(db))]
