@@ -18,8 +18,6 @@ import { WebsocketProvider } from "y-websocket";
 import { SyncYAwareness, SyncYJson } from "@sanalabs/y-redux";
 import { Doc as YDoc } from "yjs";
 
-type YMap = ReturnType<YDoc["getMap"]>;
-
 export default function MapApp() {
   const [baseIsLoading, setBaseIsLoading] = useState(true);
   const creditOS = useAppSelector(selectShouldCreditOS);
