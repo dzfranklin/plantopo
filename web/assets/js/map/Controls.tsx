@@ -2,7 +2,7 @@ import {
   ArrowsPointingOutIcon,
   ArrowsPointingInIcon,
 } from "@heroicons/react/24/outline";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -147,6 +147,14 @@ function LayerItem({ layer, idx }) {
   const source = useAppSelector(selectLayerSource(layer.sourceId));
   const reorderControls = useDragControls();
 
+  // Workaround for <https://github.com/framer/motion/issues/1597>
+  const setupReorderTarget = useCallback((node: HTMLElement) => {
+    if (!node) return;
+    node.addEventListener("touchstart", (e) => e.preventDefault(), {
+      passive: false,
+    });
+  }, []);
+
   return (
     <Reorder.Item
       value={layer}
@@ -196,13 +204,16 @@ function LayerItem({ layer, idx }) {
         )}
       </div>
 
-      <GripIcon
+      <div
+        className="h-[24px] ml-[16px] mr-1 cursor-grab fill-gray-400 self-center"
+        ref={setupReorderTarget}
         onPointerDown={(evt) => {
           evt.preventDefault();
           reorderControls.start(evt);
         }}
-      />
-        className="h-[24px] ml-[16px] mr-1 cursor-grab fill-gray-400 self-center" />
+      >
+        <GripIcon className="h-full" />
+      </div>
     </Reorder.Item>
   );
 }
