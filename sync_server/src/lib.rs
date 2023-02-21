@@ -16,8 +16,12 @@ use weak_table::WeakValueHashMap;
 use y_sync::awareness::Awareness;
 use yrs::{
     types::ToJson,
-    updates::{decoder::Decode, encoder::Encode},
-    Array, ArrayPrelim, Doc, Map, MapPrelim, Transact, TransactionMut, Update, UpdateEvent,
+    updates::{
+        decoder::Decode,
+        encoder::{Encode, Encoder, EncoderV2},
+    },
+    Array, ArrayPrelim, Doc, Map, MapPrelim, ReadTxn, StateVector, Transact, TransactionMut,
+    Update, UpdateEvent,
 };
 use yrs_warp::{broadcast::BroadcastGroup, AwarenessRef};
 
@@ -92,18 +96,21 @@ pub fn create(db: DbRef, id: Uuid, req: CreateReq) -> Result<(), CreateError> {
     let features_value = Any::from_json(&req.features).map_err(CreateError::internal)?;
 
     let doc = configure_doc();
+
     let layers = doc.get_or_insert_array("layers");
     let features = doc.get_or_insert_map("features");
-
-    let update = {
+    {
         let mut tx = doc.transact_mut();
         initialize_deep(&mut tx, Parent::Array(layers), layers_value);
         initialize_deep(&mut tx, Parent::Map(features), features_value);
-
         info!("creating: {}: {}", id, doc.to_json(&tx));
+    }
 
-        tx.encode_update_v2()
-    };
+    let mut encoder = EncoderV2::new();
+    doc.transact()
+        .encode_diff(&StateVector::default(), &mut encoder);
+    let update = encoder.to_vec();
+    trace!("update={:?}", Update::decode_v2(&update));
 
     {
         let tx = db.transaction();
@@ -119,22 +126,36 @@ pub fn create(db: DbRef, id: Uuid, req: CreateReq) -> Result<(), CreateError> {
     Ok(())
 }
 
+#[instrument(skip_all)]
 fn ymerge(
     _new_key: &[u8],
     existing_val: Option<&[u8]>,
     operands: &MergeOperands,
 ) -> Option<Vec<u8>> {
-    let existing_val = existing_val
-        .map(|v| Update::decode_v2(v).expect("ymerge failed to decode existing_val"))
-        .unwrap_or_default();
+    // NOTE: Update::merge_updates doesn't work, but based on code comments that might a
+    // bug/missing feature. There might be a more efficent way to do this
 
-    let operands = operands
-        .into_iter()
-        .map(|op| Update::decode_v2(op).expect("ymerge failed to decode operand"));
+    let existing_val =
+        existing_val.map(|v| Update::decode_v2(v).expect("ymerge failed to decode existing_val"));
 
-    let new_val = Update::merge_updates(iter::once(existing_val).chain(operands));
+    let doc = existing_val
+        .map(apply_full_update)
+        .unwrap_or_else(configure_doc);
 
-    Some(new_val.encode_v2())
+    let mut tx = doc.transact_mut();
+
+    trace!("ymerge before: {}", doc.to_json(&tx));
+    for update in operands.iter() {
+        let update = Update::decode_v2(update).expect("operand contains invalid update");
+        tx.apply_update(update);
+    }
+    trace!("ymerge after {} ops: {}", operands.len(), doc.to_json(&tx));
+
+    let mut encoder = EncoderV2::new();
+    tx.encode_diff(&StateVector::default(), &mut encoder);
+    let value = encoder.to_vec();
+
+    Some(value)
 }
 
 #[instrument(skip(db, maps))]
@@ -161,16 +182,19 @@ pub async fn get_active(
 #[instrument(skip(db))]
 fn load_doc(db: DbRef, id: Uuid) -> eyre::Result<Option<Doc>> {
     if let Some(update) = db.get(id)? {
-        let doc = configure_doc();
-        {
-            let mut tx = doc.transact_mut();
-            let update = Update::decode_v2(&update).context("failed to decode stored state")?;
-            tx.apply_update(update);
-        }
+        let update = Update::decode_v2(&update).context("failed to decode stored state")?;
+        let doc = apply_full_update(update);
+        debug!("loaded doc {}", doc.to_json(&doc.transact()));
         Ok(Some(doc))
     } else {
         Ok(None)
     }
+}
+
+fn apply_full_update(value: Update) -> Doc {
+    let doc = configure_doc();
+    doc.transact_mut().apply_update(value);
+    doc
 }
 
 fn configure_doc() -> yrs::Doc {
@@ -191,10 +215,7 @@ async fn load_map(db: DbRef, id: Uuid) -> eyre::Result<Option<ActiveMap>> {
         None => return Ok(None),
     };
 
-    if tracing::event_enabled!(tracing::Level::DEBUG) {
-        let dump = doc.to_json(&doc.transact());
-        debug!("Loaded: {}", dump);
-    }
+    debug!("Loaded {}", doc.to_json(&doc.transact()));
 
     let sub = doc
         .observe_update_v2(move |tx, update| on_update(db.clone(), id, tx, update))
@@ -294,17 +315,25 @@ mod test {
 
     struct TestState {
         _db_dir: TempDir,
+        _trace: tracing::subscriber::DefaultGuard,
         db: DbRef,
     }
 
     impl TestState {
         fn new() -> Self {
             color_eyre::install().unwrap();
+            let subscriber = tracing_subscriber::fmt()
+                .pretty()
+                .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+                .with_test_writer()
+                .finish();
+            let trace = tracing::subscriber::set_default(subscriber);
 
             let db_dir = tempdir().unwrap();
             let db = open_db(db_dir.path()).unwrap();
             Self {
                 _db_dir: db_dir,
+                _trace: trace,
                 db,
             }
         }
