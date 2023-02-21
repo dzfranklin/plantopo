@@ -7,7 +7,7 @@ use rocksdb::{MergeOperands, OptimisticTransactionDB};
 use serde::Deserialize;
 use std::{
     collections::HashMap,
-    fmt, iter,
+    fmt,
     path::Path,
     sync::{Arc, Weak},
 };
@@ -18,7 +18,7 @@ use yrs::{
     types::ToJson,
     updates::{
         decoder::Decode,
-        encoder::{Encode, Encoder, EncoderV2},
+        encoder::{Encoder, EncoderV2},
     },
     Array, ArrayPrelim, Doc, Map, MapPrelim, ReadTxn, StateVector, Transact, TransactionMut,
     Update, UpdateEvent,
