@@ -29,8 +29,8 @@ export default function MapApp() {
     const doc = new YDoc();
     window._dbg.mapDoc = doc;
     const provider = new WebsocketProvider(
-      "ws://localhost:4005/socket",
-      "1aac3792-3ecc-4399-8a52-36c3d61271f1",
+      "ws://localhost:4005",
+      "map/c2f85ed1-38e3-444c-b6bc-ae33a831ca5a/socket",
       doc
     );
     const layers = doc.getArray("layers");
@@ -48,11 +48,11 @@ export default function MapApp() {
     <div className="map-app">
       {yData && (
         <>
-          {/* <SyncYJson
+          <SyncYJson
             yJson={yData.layers}
             selectData={selectViewLayersJSON}
             setData={remoteSetViewLayers}
-          /> */}
+          />
           <SyncYJson
             yJson={yData.features}
             selectData={selectFeaturesJSON}
