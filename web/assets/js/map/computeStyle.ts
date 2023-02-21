@@ -113,12 +113,12 @@ export function computeFullStyle(
   return style as ml.StyleSpecification;
 }
 
-export function computeLayerStyleUpdate(
+function computeLayerStyleUpdate(
   layerSources: LayerSources,
   layer: Layer,
   updatePaint: UpdatePaint
 ) {
-  if (layer.opacity > 0.95) {
+  if (layer.opacity > OPACITY_CUTOFF) {
     return;
   }
 
