@@ -121,7 +121,7 @@ function LayerSelect({ close }) {
       initial={{ height: 0 }}
       animate={{ height: "60%", minHeight: 400 }}
       exit={{ height: 0 }}
-      className="absolute flex flex-col bottom-0 right-0 w-full max-w-[400px] bg-white p-[16px]"
+      className="absolute flex flex-col bottom-0 right-0 w-full sm:max-w-[400px] bg-white p-[16px]"
     >
       {/* Negative margin & padding hack moves the scrollback over */}
       <motion.div
