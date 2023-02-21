@@ -8,5 +8,8 @@
         "/web/_build/**": true,
         "/web/.elixir_ls/**": true,
     },
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
+    "eslint.workingDirectories": [
+        "web/assets"
+    ]
 }
