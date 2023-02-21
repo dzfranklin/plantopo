@@ -200,8 +200,9 @@ fn on_update(db: DbRef, id: Uuid, tx: &TransactionMut, _update: &UpdateEvent) {
             .unwrap_or(lib0::any::Any::Undefined)
     );
 
-    db.put(id, value)
-        .expect("failed to write to db in on_update");
+    if let Err(e) = db.put(id, value) {
+        error!("Failed to write to db in on_update: {}", e);
+    }
 }
 
 type AnyMap = Box<HashMap<String, lib0::any::Any>>;
