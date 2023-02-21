@@ -29,10 +29,10 @@ import {
   zoomOut,
   selectGeolocation,
   clearGeolocation,
-  selectViewLayerSourceDisplayList,
-  selectViewLayerSource,
+  selectLayerSourceDisplayList,
+  selectLayerSource,
   updateLayer,
-  selectViewLayers,
+  selectLayers,
   removeLayer,
   addLayer,
   setLayers,
@@ -99,8 +99,8 @@ export default function Controls() {
 
 function LayerSelect({ close }) {
   const dispatch = useAppDispatch();
-  const viewLayers = useAppSelector(selectViewLayers);
-  const sourceList = useAppSelector(selectViewLayerSourceDisplayList);
+  const viewLayers = useAppSelector(selectLayers);
+  const sourceList = useAppSelector(selectLayerSourceDisplayList);
 
   return (
     <motion.div
@@ -144,7 +144,7 @@ function LayerSelect({ close }) {
 
 function LayerItem({ layer, idx }) {
   const dispatch = useAppDispatch();
-  const source = useAppSelector(selectViewLayerSource(layer.sourceId));
+  const source = useAppSelector(selectLayerSource(layer.sourceId));
   const reorderControls = useDragControls();
 
   return (

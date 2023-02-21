@@ -16,16 +16,16 @@ const REPORT_VIEW_AT_DEBOUNCE_MS = 300;
 
 interface MapState {
   tokens: Tokens;
-  viewDataSources: {
-    [id: string]: ViewDataSource;
+  layerDatas: {
+    [id: string]: LayerData;
   };
-  viewLayerSources: {
-    [id: number]: ViewLayerSource;
+  layerSources: {
+    [id: number]: LayerSource;
   };
   id: number;
   myAwareness: any;
   awareness: any[];
-  viewLayers: ViewLayer[];
+  layers: Layer[];
   features?: any; // TODO
   viewAt: ViewAt;
   geolocation: Geolocation;
@@ -36,16 +36,16 @@ const initialState: MapState = {
   tokens: JSON.parse(
     document.getElementById("map-app-root")!.dataset.preloadedState
   ).map.tokens,
-  viewDataSources: JSON.parse(
+  layerDatas: JSON.parse(
     document.getElementById("map-app-root")!.dataset.preloadedState
   ).map.viewDataSources,
-  viewLayerSources: JSON.parse(
+  layerSources: JSON.parse(
     document.getElementById("map-app-root")!.dataset.preloadedState
   ).map.viewLayerSources,
   id: 1,
   myAwareness: {},
   awareness: [],
-  viewLayers: [],
+  layers: [],
   features: undefined,
   viewAt: JSON.parse(
     document.getElementById("map-app-root")!.dataset.preloadedState
@@ -70,13 +70,13 @@ export interface ViewAt {
   bearing: number;
 }
 
-export interface ViewDataSource {
+export interface LayerData {
   id: number;
   attribution?: string;
   spec: ml.SourceSpecification;
 }
 
-export interface ViewLayerSource {
+export interface LayerSource {
   id: number;
   name: string;
   defaultOpacity: number | null;
@@ -87,7 +87,7 @@ export interface ViewLayerSource {
   layerSpecs: ml.LayerSpecification[];
 }
 
-export interface ViewLayer {
+export interface Layer {
   sourceId: number;
   opacity: number;
 }
@@ -118,8 +118,8 @@ export const mapSlice = createSlice({
       state.viewAt = payload;
     },
 
-    remoteSetViewLayers(state, { payload }: PayloadAction<JsonTemplateObject>) {
-      state.viewLayers = payload as unknown as MapState["viewLayers"];
+    remoteSetLayers(state, { payload }: PayloadAction<JsonTemplateObject>) {
+      state.layers = payload as unknown as MapState["layers"];
     },
     remoteSetFeatures(state, { payload }: PayloadAction<JsonTemplateObject>) {
       state.features = payload as unknown as MapState["features"];
@@ -130,28 +130,28 @@ export const mapSlice = createSlice({
 
     updateLayer(
       state,
-      { payload }: PayloadAction<{ idx: number; value: Partial<ViewLayer> }>
+      { payload }: PayloadAction<{ idx: number; value: Partial<Layer> }>
     ) {
-      const layer = state.viewLayers[payload.idx];
+      const layer = state.layers[payload.idx];
       for (const prop in payload.value) {
         layer[prop] = payload.value[prop];
       }
     },
     removeLayer(state, { payload }: PayloadAction<number>) {
-      state.viewLayers.splice(payload, 1);
+      state.layers.splice(payload, 1);
     },
     addLayer(
       state,
       { payload: { sourceId } }: PayloadAction<{ sourceId: number }>
     ) {
-      const source = state.viewLayerSources[sourceId];
-      state.viewLayers.push({
+      const source = state.layerSources[sourceId];
+      state.layers.push({
         sourceId: sourceId,
         opacity: source.defaultOpacity || 1.0,
       });
     },
-    setLayers(state, { payload }: PayloadAction<ViewLayer[]>) {
-      state.viewLayers = payload;
+    setLayers(state, { payload }: PayloadAction<Layer[]>) {
+      state.layers = payload;
     },
 
     setGeolocation(state, { payload }: PayloadAction<Geolocation>) {
@@ -167,7 +167,7 @@ export const mapSlice = createSlice({
 
 export const {
   reportViewAt,
-  remoteSetViewLayers,
+  remoteSetLayers,
   remoteSetFeatures,
   remoteSetAwareness,
   clearGeolocation,
@@ -363,8 +363,8 @@ startListening({
 const select = (s: RootState) => s.map;
 
 export const selectMyAwareness = (s) => select(s).myAwareness;
-export const selectViewLayersJSON = (s) =>
-  select(s).viewLayers as unknown as JsonTemplateObject;
+export const selectLayersJSON = (s) =>
+  select(s).layers as unknown as JsonTemplateObject;
 export const selectFeaturesJSON = (s) =>
   select(s).features as unknown as JsonTemplateObject;
 
@@ -376,31 +376,31 @@ export const selectTokens = (s) => select(s).tokens;
 
 export const selectViewAt = (s) => select(s).viewAt;
 
-export const selectViewLayerSourceDisplayList = (state) => {
-  const layers = selectViewLayers(state);
+export const selectLayerSourceDisplayList = (state) => {
+  const layers = selectLayers(state);
 
   const used = {};
   for (const layer of layers) {
     used[layer.sourceId] = true;
   }
 
-  const list = Object.values(select(state).viewLayerSources).filter(
+  const list = Object.values(select(state).layerSources).filter(
     (v) => !used[v.id]
   );
 
   return sortBy(list, (v) => v.name);
 };
 
-export const selectViewLayers = (s) => select(s).viewLayers;
+export const selectLayers = (s) => select(s).layers;
 
-export const selectViewLayerSources = (s) => select(s).viewLayerSources;
-export const selectViewDataSources = (s) => select(s).viewDataSources;
+export const selectLayerSources = (s) => select(s).layerSources;
+export const selectLayerDatas = (s) => select(s).layerDatas;
 
-export const selectViewLayerSource = (id: number) => (s) =>
-  select(s).viewLayerSources[id];
+export const selectLayerSource = (id: number) => (s) =>
+  select(s).layerSources[id];
 
 export const selectShouldCreditOS = createSelector(
-  [selectViewLayers, selectViewLayerSources, selectViewDataSources],
+  [selectLayers, selectLayerSources, selectLayerDatas],
   (layers, layerSources, dataSources) =>
     layers
       .map((view) => layerSources[view.sourceId])

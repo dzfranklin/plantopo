@@ -1,4 +1,4 @@
-import { ViewDataSource, ViewLayer, ViewLayerSource } from "./mapSlice";
+import { LayerData, Layer, LayerSource } from "./mapSlice";
 import * as ml from "maplibre-gl";
 
 const ATTRIBUTION = {
@@ -24,14 +24,14 @@ const OPACITY_PROPS = {
 const OPACITY_CUTOFF = 0.95;
 
 type UpdatePaint = (id: string, prop: string, value: number) => void;
-type DataSources = { [id: string]: ViewDataSource };
-type LayerSources = { [id: number]: ViewLayerSource };
+type DataSources = { [id: string]: LayerData };
+type LayerSources = { [id: number]: LayerSource };
 
 export default function computeStyle(
   dataSources: DataSources,
   layerSources: LayerSources,
-  layers: ViewLayer[],
-  prevLayers: ViewLayer[] | undefined,
+  layers: Layer[],
+  prevLayers: Layer[] | undefined,
   updateFull: (style: ml.StyleSpecification) => void,
   updatePaint: UpdatePaint
 ) {
@@ -63,7 +63,7 @@ export default function computeStyle(
 export function computeFullStyle(
   dataSources: DataSources,
   layerSources: LayerSources,
-  layers: ViewLayer[]
+  layers: Layer[]
 ): ml.StyleSpecification {
   const style: Partial<ml.StyleSpecification> = {
     version: 8,
@@ -115,7 +115,7 @@ export function computeFullStyle(
 
 export function computeLayerStyleUpdate(
   layerSources: LayerSources,
-  layer: ViewLayer,
+  layer: Layer,
   updatePaint: UpdatePaint
 ) {
   if (layer.opacity > 0.95) {

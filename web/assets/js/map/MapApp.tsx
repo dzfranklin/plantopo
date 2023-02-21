@@ -4,11 +4,11 @@ import { useAppSelector } from "./hooks";
 import {
   remoteSetAwareness,
   remoteSetFeatures,
-  remoteSetViewLayers,
+  remoteSetLayers,
   selectFeaturesJSON,
   selectMyAwareness,
   selectShouldCreditOS,
-  selectViewLayersJSON,
+  selectLayersJSON,
 } from "./mapSlice";
 import LoadingIndicator from "./LoadingIndicator";
 import classNames from "../classNames";
@@ -51,8 +51,8 @@ export default function MapApp() {
         <>
           <SyncYJson
             yJson={yData.layers}
-            selectData={selectViewLayersJSON}
-            setData={remoteSetViewLayers}
+            selectData={selectLayersJSON}
+            setData={remoteSetLayers}
           />
           <SyncYJson
             yJson={yData.features}

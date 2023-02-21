@@ -9,9 +9,9 @@ import {
   selectGeolocation,
   selectTokens,
   selectViewAt,
-  selectViewDataSources,
-  selectViewLayers,
-  selectViewLayerSources,
+  selectLayerDatas,
+  selectLayers,
+  selectLayerSources,
   ViewAt,
 } from "./mapSlice";
 import "../userSettings";
@@ -152,13 +152,13 @@ export default function MapBase(props: Props) {
     const storeUnsubscribe = store.subscribe(() => {
       const state = store.getState();
 
-      let layers = selectViewLayers(state);
-      let prevLayers = prevState && selectViewLayers(prevState);
+      let layers = selectLayers(state);
+      let prevLayers = prevState && selectLayers(prevState);
       if (layers !== prevLayers) {
         requestAnimationFrame(() =>
           computeStyle(
-            selectViewDataSources(state),
-            selectViewLayerSources(state),
+            selectLayerDatas(state),
+            selectLayerSources(state),
             layers,
             prevLayers,
             (style) => map.setStyle(style),
