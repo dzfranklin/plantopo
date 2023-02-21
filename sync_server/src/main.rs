@@ -1,38 +1,44 @@
-use core::fmt;
 #[allow(unused)]
 use eyre::{eyre, Context};
-use std::collections::HashMap;
-use std::sync::{Arc, Weak};
+use rocksdb::{MergeOperands, DB};
+use serde::Deserialize;
+use std::{
+    convert::Infallible,
+    env, fmt, iter,
+    sync::{Arc, Weak},
+};
 use tokio::select;
 #[allow(unused)]
-use tracing::{debug, error, info, instrument, warn};
-use warp::ws::{WebSocket, Ws};
-use warp::{reject, Filter, Reply};
+use tracing::{debug, error, info, instrument, trace, warn};
+use uuid::Uuid;
+use warp::{
+    body::BodyDeserializeError,
+    hyper::StatusCode,
+    reject, reply,
+    ws::{WebSocket, Ws},
+    Filter, Reply,
+};
 use weak_table::WeakValueHashMap;
 use y_sync::awareness::Awareness;
-use yrs::types::ToJson;
 use yrs::{
-    Array, ArrayPrelim, ArrayRef, Doc, Map, MapPrelim, MapRef, ReadTxn, Transact, TransactionMut,
+    types::ToJson,
+    updates::{decoder::Decode, encoder::Encode},
+    Doc, Map, Transact, TransactionMut, Update, UpdateEvent,
 };
-use yrs_warp::broadcast::BroadcastGroup;
-use yrs_warp::ws::WarpConn;
-use yrs_warp::AwarenessRef;
+use yrs_warp::{broadcast::BroadcastGroup, ws::WarpConn, AwarenessRef};
 
 const BCAST_SIZE: usize = 32;
 
-type MapsStateRef = Arc<parking_lot::RwLock<WeakValueHashMap<u32, Weak<MapState>>>>;
+type ActivesRef = Arc<tokio::sync::Mutex<WeakValueHashMap<Uuid, Weak<ActiveMap>>>>;
 
-// TODO: Do we have a consistency issue if we evict and then load right after?
-// Could the db update come after the db load?
-
-struct MapState {
-    id: u32,
+struct ActiveMap {
+    id: Uuid,
     awareness: AwarenessRef,
     bcast: BroadcastGroup,
     _sub: yrs::UpdateSubscription,
 }
 
-impl fmt::Debug for MapState {
+impl fmt::Debug for ActiveMap {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MapState")
             .field("id", &self.id)
@@ -40,8 +46,12 @@ impl fmt::Debug for MapState {
     }
 }
 
+#[derive(Debug)]
+struct InternalError(eyre::Error);
+impl warp::reject::Reject for InternalError {}
+
 #[tokio::main]
-async fn main() {
+async fn main() -> eyre::Result<()> {
     color_eyre::install().unwrap();
     let subscriber = tracing_subscriber::fmt()
         .pretty()
@@ -49,17 +59,29 @@ async fn main() {
         .finish();
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    let maps: MapsStateRef = Arc::new(parking_lot::RwLock::new(WeakValueHashMap::new()));
+    let mut db_opts = rocksdb::Options::default();
+    db_opts.create_if_missing(true);
+    db_opts.set_merge_operator_associative("ymerge", ymerge);
+    let db_path = env::var("PLANTOPO_SYNC_DB").context("PLANTOPO_SYNC_DB")?;
+    let db = DB::open(&db_opts, db_path)?;
+    info!("Opened {:?}", &db);
+    let db = Arc::new(db);
 
-    let map_path = warp::path("map")
-        .and(warp::any().map(move || maps.clone()))
-        .and(warp::path::param::<u32>())
+    let actives: ActivesRef = Arc::new(Default::default());
+
+    let and_db = warp::any().map(move || db.clone());
+    let and_actives = warp::any().map(move || actives.clone());
+
+    let ws_path = warp::path("socket")
+        .and(warp::path::param::<Uuid>())
+        .and(warp::path::end())
         .and(warp::ws())
-        .and_then(|maps, map_id, ws: Ws| async move {
-            // May as well crash the connection if this fails
-            let map = get_map(maps, map_id).await.expect("get_map failed");
+        .and(and_db.clone())
+        .and(and_actives)
+        .and_then(|id, ws: Ws, db, actives| async move {
+            // TODO: Auth
 
-            if let Some(map) = map {
+            if let Some(map) = get_active(db, actives, id).await.map_err(InternalError)? {
                 Ok(ws
                     .on_upgrade(move |socket| map_peer(socket, map))
                     .into_response())
@@ -68,11 +90,91 @@ async fn main() {
             }
         });
 
-    warp::serve(map_path).run(([0, 0, 0, 0], 4005)).await;
+    let create_path = warp::path("create")
+        .and(warp::path::end())
+        .and(warp::post())
+        .and(warp::body::json())
+        .and(and_db.clone())
+        .and_then(|body: CreateReq, db| async move {
+            create(db, body).map_err(InternalError)?;
+            Ok::<_, warp::Rejection>(warp::reply())
+        });
+
+    let paths = ws_path
+        .or(create_path)
+        .or(warp::any().and_then(|| async { Err::<Infallible, _>(reject::not_found()) }))
+        .recover(handle_rejection);
+
+    warp::serve(paths).run(([0, 0, 0, 0], 4005)).await;
+
+    Ok(())
+}
+
+async fn handle_rejection(err: warp::Rejection) -> Result<impl Reply, Infallible> {
+    trace!("handle_rejection: {:?}", err);
+
+    if err.is_not_found() {
+        Ok(reply::with_status("Not Found", StatusCode::NOT_FOUND))
+    } else if let Some(err) = err.find::<InternalError>() {
+        info!("InternalError: {}", err.0);
+        Ok(reply::with_status(
+            "Internal Server Error\n",
+            StatusCode::INTERNAL_SERVER_ERROR,
+        ))
+    } else if err.find::<reject::MethodNotAllowed>().is_some() {
+        Ok(reply::with_status(
+            "Method Not Allowed\n",
+            StatusCode::METHOD_NOT_ALLOWED,
+        ))
+    } else if err.find::<reject::UnsupportedMediaType>().is_some() {
+        Ok(reply::with_status(
+            "Unsupported Media Type\n",
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+        ))
+    } else if let Some(err) = err.find::<BodyDeserializeError>() {
+        debug!("{}", err);
+        Ok(reply::with_status("Bad Request\n", StatusCode::BAD_REQUEST))
+    } else {
+        info!("Unhandled rejection: {:?}", err);
+        Ok(reply::with_status(
+            "Internal Server Error\n",
+            StatusCode::INTERNAL_SERVER_ERROR,
+        ))
+    }
+}
+
+#[derive(Deserialize, Debug)]
+struct CreateReq {
+    id: Uuid,
+    value: String,
+}
+
+fn create(db: Arc<DB>, req: CreateReq) -> eyre::Result<()> {
+    // TODO: Auth
+    db.put(req.id, Update::default().encode_v2())?;
+    Ok(())
+}
+
+fn ymerge(
+    _new_key: &[u8],
+    existing_val: Option<&[u8]>,
+    operands: &MergeOperands,
+) -> Option<Vec<u8>> {
+    let existing_val = existing_val
+        .map(|v| Update::decode_v2(v).expect("ymerge failed to decode existing_val"))
+        .unwrap_or_default();
+
+    let operands = operands
+        .into_iter()
+        .map(|op| Update::decode_v2(op).expect("ymerge failed to decode operand"));
+
+    let new_val = Update::merge_updates(iter::once(existing_val).chain(operands));
+
+    Some(new_val.encode_v2())
 }
 
 #[instrument]
-async fn map_peer(socket: WebSocket, map: Arc<MapState>) {
+async fn map_peer(socket: WebSocket, map: Arc<ActiveMap>) {
     let conn = WarpConn::new(map.awareness.clone(), socket);
     let sub = map.bcast.join(conn.inbox().clone());
 
@@ -86,88 +188,52 @@ async fn map_peer(socket: WebSocket, map: Arc<MapState>) {
     }
 }
 
-#[instrument(skip(maps))]
-async fn get_map(maps: MapsStateRef, map_id: u32) -> eyre::Result<Option<Arc<MapState>>> {
-    if let Some(map) = maps.read().get(&map_id) {
-        info!("Got map from memory");
-        return Ok(Some(map));
-    }
-
-    let new_map = match load_map(map_id).await? {
-        Some(new_map) => Arc::new(new_map),
-        None => {
-            info!("Load map failed, nonexistent");
-            return Ok(None);
-        }
-    };
-
-    let mut lock = maps.write();
-    if let Some(existing) = lock.get(&map_id) {
-        info!("While map loaded someone else populated memory, so got map from memory");
-        Ok(Some(existing))
+#[instrument(skip(db, maps))]
+async fn get_active(
+    db: Arc<DB>,
+    maps: ActivesRef,
+    id: Uuid,
+) -> eyre::Result<Option<Arc<ActiveMap>>> {
+    let mut lock = maps.lock().await;
+    if let Some(map) = lock.get(&id) {
+        info!("Got map from active");
+        Ok(Some(map))
+    } else if let Some(map) = load_map(db, id).await? {
+        info!("Loaded map from db to active");
+        let map = Arc::new(map);
+        lock.insert(id, map.clone());
+        Ok(Some(map))
     } else {
-        info!("Got map from load");
-        lock.insert(map_id, new_map.clone());
-        Ok(Some(new_map))
+        info!("Map not found");
+        Ok(None)
     }
 }
 
-#[instrument]
-async fn load_map(id: u32) -> eyre::Result<Option<MapState>> {
-    // TODO: Request from phoenix
+#[instrument(skip(db))]
+async fn load_map(db: Arc<DB>, id: Uuid) -> eyre::Result<Option<ActiveMap>> {
     let doc = Doc::new();
 
-    let initial = r#"{
-        "view": {
-            "layers": [{"opacity":1,"sourceId":1},{"sourceId":2,"opacity":0.2}]
-        },
-        "features": {
-            "708ec5d9-b403-4a8d-b204-84a0c01cf90b": {
-                "id": "708ec5d9-b403-4a8d-b204-84a0c01cf90b",
-                "parent": "root"
-            }
-        }
-    }"#;
-
-    // TODO: Store state vectors in a kv store (sled? whats backup like)
-
-    let mut initial = lib0::any::Any::from_json(initial)
-        .context("parse initial json")
-        .and_then(any_as_hashmap)?;
-
-    let initial_view = initial
-        .remove("view")
-        .ok_or_else(|| eyre!("initial view missing"))?;
-
-    let initial_features = initial
-        .remove("features")
-        .ok_or_else(|| eyre!("initial features missing"))?;
-
-    {
-        let view = doc.get_or_insert_map("view");
-        let features = doc.get_or_insert_map("features");
-
+    if let Some(update) = db.get(id)? {
         let mut tx = doc.transact_mut();
-        initialize_deep(&mut tx, Parent::Map(view), initial_view);
-        initialize_deep(&mut tx, Parent::Map(features), initial_features);
+        let update = Update::decode_v2(&update).context("failed to decode stored state")?;
+        tx.apply_update(update);
+    } else {
+        return Ok(None);
+    }
+
+    if tracing::event_enabled!(tracing::Level::DEBUG) {
+        let dump = doc.to_json(&doc.transact());
+        debug!("Loaded: {}", dump);
     }
 
     let sub = doc
-        .observe_update_v1(move |tx, _update| {
-            let view = get_ymap_json(tx, "view").expect("update has view");
-            let features = get_ymap_json(tx, "features").expect("update has features");
-
-            debug!(
-                "map update: id={}\nview={}\nfeatures={}",
-                id, view, features
-            );
-        })
+        .observe_update_v2(move |tx, update| on_update(db.clone(), id, tx, update))
         .expect("Failed to subscribe to doc");
 
     let awareness = Arc::new(tokio::sync::RwLock::new(Awareness::new(doc)));
     let bcast = BroadcastGroup::open(awareness.clone(), BCAST_SIZE).await;
 
-    Ok(Some(MapState {
+    Ok(Some(ActiveMap {
         id,
         awareness,
         bcast,
@@ -177,6 +243,8 @@ async fn load_map(id: u32) -> eyre::Result<Option<MapState>> {
 
 type AnyMap = Box<HashMap<String, lib0::any::Any>>;
 type AnyArray = Box<[lib0::any::Any]>;
+fn on_update(db: Arc<DB>, id: Uuid, _tx: &TransactionMut, update: &UpdateEvent) {
+    debug!("update {}: {:?}", id, Update::decode_v2(&update.update));
 
 enum Parent {
     Map(MapRef),
@@ -247,4 +315,6 @@ fn get_ymap_json(tx: &impl ReadTxn, name: &str) -> Option<String> {
     let mut out = String::new();
     map_ref.to_json(tx).to_json(&mut out);
     Some(out)
+    db.merge(id, &update.update)
+        .expect("failed to write to db in on_update");
 }

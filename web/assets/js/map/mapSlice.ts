@@ -1,5 +1,6 @@
 import {
   createAction,
+  createSelector,
   createSlice,
   isAnyOf,
   PayloadAction,
@@ -24,11 +25,9 @@ interface MapState {
   id: number;
   myAwareness: any;
   awareness: any[];
-  view: {
-    layers: ViewLayer[];
-  };
+  viewLayers: ViewLayer[];
   overrideViewLayers: ViewLayer[] | undefined;
-  features: any; // TODO
+  features?: any; // TODO
   viewAt: ViewAt;
   geolocation: Geolocation;
 }
@@ -47,11 +46,9 @@ const initialState: MapState = {
   id: 1,
   myAwareness: {},
   awareness: [],
-  view: {
-    layers: [],
-  },
+  viewLayers: [],
   overrideViewLayers: undefined,
-  features: {},
+  features: undefined,
   viewAt: JSON.parse(
     document.getElementById("map-app-root")!.dataset.preloadedState
   ).map.viewAt,
@@ -123,8 +120,8 @@ export const mapSlice = createSlice({
       state.viewAt = payload;
     },
 
-    remoteSetView(state, { payload }: PayloadAction<JsonTemplateObject>) {
-      state.view = payload as unknown as MapState["view"];
+    remoteSetViewLayers(state, { payload }: PayloadAction<JsonTemplateObject>) {
+      state.viewLayers = payload as unknown as MapState["viewLayers"];
     },
     remoteSetFeatures(state, { payload }: PayloadAction<JsonTemplateObject>) {
       state.features = payload as unknown as MapState["features"];
@@ -140,7 +137,7 @@ export const mapSlice = createSlice({
       if (payload) {
         state.overrideViewLayers = payload;
       } else {
-        state.overrideViewLayers = state.view.layers;
+        state.overrideViewLayers = state.viewLayers;
       }
     },
     updateOverrideViewLayer(
@@ -169,7 +166,7 @@ export const mapSlice = createSlice({
       state.overrideViewLayers = undefined;
     },
     saveOverrideViewLayers(state, _action: PayloadAction<undefined>) {
-      state.view.layers = state.overrideViewLayers;
+      state.viewLayers = state.overrideViewLayers;
       state.overrideViewLayers = undefined;
     },
 
@@ -186,7 +183,7 @@ export const mapSlice = createSlice({
 
 export const {
   reportViewAt,
-  remoteSetView,
+  remoteSetViewLayers,
   remoteSetFeatures,
   remoteSetAwareness,
   overrideViewLayers,
@@ -388,8 +385,8 @@ startListening({
 const select = (s: RootState) => s.map;
 
 export const selectMyAwareness = (s) => select(s).myAwareness;
-export const selectViewJSON = (s) =>
-  select(s).view as unknown as JsonTemplateObject;
+export const selectViewLayersJSON = (s) =>
+  select(s).viewLayers as unknown as JsonTemplateObject;
 export const selectFeaturesJSON = (s) =>
   select(s).features as unknown as JsonTemplateObject;
 
@@ -402,7 +399,7 @@ export const selectTokens = (s) => select(s).tokens;
 export const selectViewAt = (s) => select(s).viewAt;
 
 export const selectViewLayerSourceDisplayList = (state) => {
-  const layers = select(state).overrideViewLayers || select(state).view.layers;
+  const layers = select(state).overrideViewLayers || select(state).viewLayers;
 
   const used = {};
   for (const layer of layers) {
@@ -417,7 +414,7 @@ export const selectViewLayerSourceDisplayList = (state) => {
 };
 
 export const selectViewLayers = (s) =>
-  select(s).overrideViewLayers || select(s).view.layers;
+  select(s).overrideViewLayers || select(s).viewLayers;
 
 export const selectViewLayerSources = (s) => select(s).viewLayerSources;
 export const selectViewDataSources = (s) => select(s).viewDataSources;
