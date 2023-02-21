@@ -205,14 +205,14 @@ function LayerItem({ layer, idx }) {
       </div>
 
       <div
-        className="h-[24px] ml-[16px] mr-1 cursor-grab fill-gray-400 self-center"
+        className="flex flex-col justify-center ml-[16px] p-[8px] cursor-grab fill-gray-400"
         ref={setupReorderTarget}
         onPointerDown={(evt) => {
           evt.preventDefault();
           reorderControls.start(evt);
         }}
       >
-        <GripIcon className="h-full" />
+        <GripIcon className="h-[24px]" />
       </div>
     </Reorder.Item>
   );
