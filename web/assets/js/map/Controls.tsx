@@ -153,7 +153,7 @@ function LayerItem({ layer, idx }) {
       dragListener={false}
       dragControls={reorderControls}
       layoutId={source.id.toString()}
-      className="flex flex-row select-none mb-[16px]"
+      className="flex flex-row mb-[16px]"
     >
       <button
         onClick={() => dispatch(removeLayer(idx))}
@@ -198,7 +198,10 @@ function LayerItem({ layer, idx }) {
 
       <GripIcon
         className="h-[24px] ml-[16px] mr-1 row-span-full cursor-grab fill-gray-400 self-center"
-        onPointerDown={reorderControls.start.bind(reorderControls)}
+        onPointerDown={(evt) => {
+          evt.preventDefault();
+          reorderControls.start(evt);
+        }}
       />
     </Reorder.Item>
   );
