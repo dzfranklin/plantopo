@@ -346,6 +346,10 @@ startListening({
         throw err;
       }
 
+      l.dispatch(
+        mapSlice.actions.setGeolocation({ updating: false, value: undefined })
+      );
+
       if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
         l.dispatch(
           flash({
