@@ -1,5 +1,5 @@
-import { nanoid } from "nanoid";
-import { useState } from "react";
+import { nanoid } from 'nanoid';
+import { useState } from 'react';
 
 interface Props {
   value: boolean;

@@ -1,16 +1,16 @@
 import {
   ArrowsPointingOutIcon,
   ArrowsPointingInIcon,
-} from "@heroicons/react/24/outline";
-import { useCallback, useEffect, useState } from "react";
+} from '@heroicons/react/24/outline';
+import { useCallback, useEffect, useState } from 'react';
 import {
   AnimatePresence,
   motion,
   Reorder,
   useDragControls,
-} from "framer-motion";
-import * as Slider from "@radix-ui/react-slider";
-import classNames from "../classNames";
+} from 'framer-motion';
+import * as Slider from '@radix-ui/react-slider';
+import classNames from '../classNames';
 import {
   CloseIcon,
   GoToMyLocationIcon,
@@ -19,8 +19,8 @@ import {
   UploadIcon,
   ZoomInIcon,
   ZoomOutIcon,
-} from "./components/icons";
-import { useAppDispatch, useAppSelector } from "./hooks";
+} from './components/icons';
+import { useAppDispatch, useAppSelector } from './hooks';
 import {
   exitFullscreen,
   requestGeolocation,
@@ -36,8 +36,8 @@ import {
   removeLayer,
   addLayer,
   setLayers,
-} from "./mapSlice";
-import Button from "./components/Button";
+} from './mapSlice';
+import Button from './components/Button';
 
 export default function Controls() {
   const dispatch = useAppDispatch();
@@ -46,8 +46,8 @@ export default function Controls() {
   const geolocation = useAppSelector(selectGeolocation);
 
   useEffect(() => {
-    document.addEventListener("fullscreenchange", () =>
-      setIsFullscreen(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', () =>
+      setIsFullscreen(!!document.fullscreenElement),
     );
   }, [setIsFullscreen]);
 
@@ -62,8 +62,8 @@ export default function Controls() {
         <Control
           icon={GoToMyLocationIcon}
           iconClass={classNames(
-            "fill-purple-600",
-            geolocation.updating && "animate-spin"
+            'fill-purple-600',
+            geolocation.updating && 'animate-spin',
           )}
           onClick={() => dispatch(clearGeolocation())}
         />
@@ -105,7 +105,7 @@ function LayerSelect({ close }) {
   return (
     <motion.div
       initial={{ height: 0 }}
-      animate={{ height: "60%", minHeight: 400 }}
+      animate={{ height: '60%', minHeight: 400 }}
       exit={{ height: 0 }}
       className="absolute flex flex-col bottom-0 right-0 w-full sm:max-w-[400px] bg-white p-[16px]"
     >
@@ -148,9 +148,9 @@ function LayerItem({ layer, idx }) {
   const reorderControls = useDragControls();
 
   // Workaround for <https://github.com/framer/motion/issues/1597>
-  const setupReorderTarget = useCallback((node: HTMLElement) => {
+  const setupReorderTarget = useCallback((node: HTMLElement | null) => {
     if (!node) return;
-    node.addEventListener("touchstart", (e) => e.preventDefault(), {
+    node.addEventListener('touchstart', (e) => e.preventDefault(), {
       passive: false,
     });
   }, []);
@@ -191,7 +191,7 @@ function LayerItem({ layer, idx }) {
                 updateLayer({
                   idx,
                   value: { opacity },
-                })
+                }),
               );
             }}
             className="relative flex items-center select-none touch-none w-full h-5 py-[15px]"
@@ -253,7 +253,7 @@ function Control(props) {
         onClick={props.onClick}
         className="flex justify-center p-[5px] hover:bg-gray-200"
       >
-        <Icon className={classNames(props.iconClass, "w-[24px]")} />
+        <Icon className={classNames(props.iconClass, 'w-[24px]')} />
       </button>
     </div>
   );

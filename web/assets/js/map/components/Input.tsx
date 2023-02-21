@@ -1,5 +1,5 @@
-import { nanoid } from "nanoid";
-import { useState } from "react";
+import { nanoid } from 'nanoid';
+import { useState } from 'react';
 
 export interface Props {
   value: string;
@@ -27,7 +27,7 @@ export default function Input(props: Props) {
 
       <div>
         <input
-          type={props.type || "text"}
+          type={props.type || 'text'}
           id={id}
           className="block w-full px-2 py-1 text-sm border-gray-300 rounded focus:border-indigo-500 focus:ring-indigo-500"
           placeholder={props.placeholder}

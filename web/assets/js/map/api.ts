@@ -1,18 +1,18 @@
-import { ViewAt } from "./mapSlice";
+import { ViewAt } from './mapSlice';
 
 export function reportViewAt(mapId: number, value: ViewAt) {
-  send(`map/${mapId}/view_at`, "POST", { data: value });
+  send(`map/${mapId}/view_at`, 'POST', { data: value });
 }
 
-async function send(
+async function send<I, O>(
   path: string,
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
-  data?: any
-): Promise<{ [_: string | number]: any } | undefined> {
-  console.debug("Sending", { path, method, data });
-  const resp = await fetch("/api/" + path, {
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+  data?: I,
+): Promise<O | undefined> {
+  console.debug('Sending', { path, method, data });
+  const resp = await fetch('/api/' + path, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: { 'Content-Type': 'application/json' },
     body: data && JSON.stringify(data),
   });
 

@@ -1,7 +1,7 @@
-import { useRef, useEffect } from "react";
-import * as ml from "maplibre-gl";
-import deepEqual from "react-fast-compare";
-import { useAppDispatch, useAppSelector, useAppStore } from "./hooks";
+import { useRef, useEffect } from 'react';
+import * as ml from 'maplibre-gl';
+import deepEqual from 'react-fast-compare';
+import { useAppDispatch, useAppStore } from './hooks';
 import {
   flyTo,
   mapClick,
@@ -13,11 +13,11 @@ import {
   selectLayers,
   selectLayerSources,
   ViewAt,
-} from "./mapSlice";
-import "../userSettings";
-import { startListening, stopListening } from "./listener";
-import "../map";
-import computeStyle from "./computeStyle";
+} from './mapSlice';
+import '../userSettings';
+import { startListening, stopListening } from './listener';
+import '../map';
+import computeStyle from './computeStyle';
 
 export interface Props {
   isLoading: (_: boolean) => void;
@@ -52,11 +52,11 @@ export default function MapBase(props: Props) {
         const url = new URL(urlS);
         const params = url.searchParams;
 
-        if (url.host === "api.os.uk") {
-          params.set("srs", "3857");
-          params.set("key", tokens.os);
-        } else if (url.host === "api.mapbox.com") {
-          params.set("access_token", tokens.mapbox);
+        if (url.host === 'api.os.uk') {
+          params.set('srs', '3857');
+          params.set('key', tokens.os);
+        } else if (url.host === 'api.mapbox.com') {
+          params.set('access_token', tokens.mapbox);
         }
 
         return {
@@ -68,20 +68,20 @@ export default function MapBase(props: Props) {
 
     const flyToListener = {
       actionCreator: flyTo,
-      effect: async ({ payload }, l) => {
+      effect: async ({ payload }, _l) => {
         const current = selectViewAt(store.getState());
         const { options, to } = payload;
 
-        let center = to.center || current.center;
-        let zoom = to.zoom || current.zoom;
-        let pitch = to.pitch || current.pitch;
-        let bearing = to.bearing || current.bearing;
+        const center = to.center || current.center;
+        const zoom = to.zoom || current.zoom;
+        const pitch = to.pitch || current.pitch;
+        const bearing = to.bearing || current.bearing;
 
         if (options.ignoreIfCenterVisible && map.getBounds().contains(center)) {
           return;
         }
 
-        let opts: ml.FlyToOptions = {
+        const opts: ml.FlyToOptions = {
           center,
           zoom,
           pitch,
@@ -99,7 +99,7 @@ export default function MapBase(props: Props) {
     startListening(flyToListener);
 
     // Note that move is fired during any transition
-    map.on("move", () => {
+    map.on('move', () => {
       const state = store.getState();
 
       const center = map.getCenter();
@@ -115,7 +115,7 @@ export default function MapBase(props: Props) {
       }
     });
 
-    map.on("click", (evt) => {
+    map.on('click', (evt) => {
       const TARGET_WIDTH_PX = 20;
       const point = evt.point;
       const features = map
@@ -133,27 +133,27 @@ export default function MapBase(props: Props) {
           geo: [evt.lngLat.lng, evt.lngLat.lat],
           screen: [evt.point.x, evt.point.y],
           features,
-        })
+        }),
       );
     });
 
-    for (const evt of ["dataloading", "dataabort", "data"]) {
+    for (const evt of ['dataloading', 'dataabort', 'data']) {
       map.on(evt, () => {
         map && props.isLoading(!map.areTilesLoaded());
       });
     }
 
-    const geoLocElem = document.createElement("div");
+    const geoLocElem = document.createElement('div');
     geoLocElem.className =
-      "w-[18px] h-[18px] bg-sky-600 rounded-full border border-[2px] border-white";
+      'w-[18px] h-[18px] bg-sky-600 rounded-full border border-[2px] border-white';
     const geoLocMarker = new ml.Marker({ element: geoLocElem });
 
     let prevState;
     const storeUnsubscribe = store.subscribe(() => {
       const state = store.getState();
 
-      let layers = selectLayers(state);
-      let prevLayers = prevState && selectLayers(prevState);
+      const layers = selectLayers(state);
+      const prevLayers = prevState && selectLayers(prevState);
       if (layers !== prevLayers) {
         requestAnimationFrame(() =>
           computeStyle(
@@ -163,12 +163,12 @@ export default function MapBase(props: Props) {
             prevLayers,
             (style) => map.setStyle(style),
             (id, prop, value) =>
-              map.setPaintProperty(id, prop, value, { validate: false })
-          )
+              map.setPaintProperty(id, prop, value, { validate: false }),
+          ),
         );
       }
 
-      let geoLoc = selectGeolocation(state);
+      const geoLoc = selectGeolocation(state);
       if (!prevState || geoLoc !== selectGeolocation(prevState)) {
         if (geoLoc.value) {
           geoLocMarker.setLngLat(geoLoc.value.position);

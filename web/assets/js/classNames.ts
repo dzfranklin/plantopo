@@ -1,3 +1,3 @@
-export default function classNames(...names: any[]) {
-  return names.filter((n) => typeof n === "string").join(" ");
+export default function classNames(...names: unknown[]) {
+  return names.filter((n) => typeof n === 'string').join(' ');
 }

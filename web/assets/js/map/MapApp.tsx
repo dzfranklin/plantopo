@@ -1,21 +1,12 @@
-import MapBase from "./MapBase";
-import { useEffect, useState } from "react";
-import { useAppSelector } from "./hooks";
-import {
-  remoteSetPeerAwareness,
-  remoteSetFeatures,
-  remoteSetLayers,
-  selectAwareness,
-  selectShouldCreditOS,
-} from "./mapSlice";
-import LoadingIndicator from "./LoadingIndicator";
-import classNames from "../classNames";
-import Flash from "./Flash";
-import Controls from "./Controls";
-import { WebsocketProvider } from "y-websocket";
-import { SyncYAwareness, SyncYJson } from "@sanalabs/y-redux";
-import { Doc as YDoc } from "yjs";
-import MapSync from "./MapSync";
+import MapBase from './MapBase';
+import { useState } from 'react';
+import { useAppSelector } from './hooks';
+import { selectShouldCreditOS } from './mapSlice';
+import LoadingIndicator from './LoadingIndicator';
+import classNames from '../classNames';
+import Flash from './Flash';
+import Controls from './Controls';
+import MapSync from './MapSync';
 
 export default function MapApp() {
   const [baseIsLoading, setBaseIsLoading] = useState(true);
@@ -42,7 +33,7 @@ function CreditImages(props: { creditOS: boolean }) {
       <img src="/images/mapbox_logo.svg" className="h-full" />
       <img
         src="/images/os_logo.svg"
-        className={classNames("h-full", props.creditOS || "hidden")}
+        className={classNames('h-full', props.creditOS || 'hidden')}
       />
     </div>
   );

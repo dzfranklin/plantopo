@@ -1,24 +1,25 @@
-import { LayerData, Layer, LayerSource } from "./mapSlice";
-import * as ml from "maplibre-gl";
+import { LayerData, Layer, LayerSource } from './mapSlice';
+import * as ml from 'maplibre-gl';
 
 const ATTRIBUTION = {
   os: `Contains OS data &copy; Crown copyright and database rights ${new Date().getFullYear()}`,
-  mapbox: `© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>`,
+  mapbox:
+    '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>',
 };
 
 const glLayerId = (sourceLayerId: number, specId: string) =>
   `${sourceLayerId}-${specId}`;
 
 const OPACITY_PROPS = {
-  background: ["background-opacity"],
-  fill: ["fill-opacity"],
-  line: ["line-opacity"],
+  background: ['background-opacity'],
+  fill: ['fill-opacity'],
+  line: ['line-opacity'],
   symbol: [], // Skipping "icon-opacity", "text-opacity"
-  raster: ["raster-opacity"],
-  circle: ["circle-opacity", "circle-stroke-opacity"],
-  "fill-extrusion": ["fill-extrusion-opacity"],
-  heatmap: ["heatmap-opacity"],
-  hillshade: ["hillshade-exaggeration"],
+  raster: ['raster-opacity'],
+  circle: ['circle-opacity', 'circle-stroke-opacity'],
+  'fill-extrusion': ['fill-extrusion-opacity'],
+  heatmap: ['heatmap-opacity'],
+  hillshade: ['hillshade-exaggeration'],
 };
 
 const OPACITY_CUTOFF = 0.95;
@@ -33,7 +34,7 @@ export default function computeStyle(
   layers: Layer[],
   prevLayers: Layer[] | undefined,
   updateFull: (style: ml.StyleSpecification) => void,
-  updatePaint: UpdatePaint
+  updatePaint: UpdatePaint,
 ) {
   if (!prevLayers || layers.length !== prevLayers.length) {
     updateFull(computeFullStyle(dataSources, layerSources, layers));
@@ -63,14 +64,14 @@ export default function computeStyle(
 export function computeFullStyle(
   dataSources: DataSources,
   layerSources: LayerSources,
-  layers: Layer[]
+  layers: Layer[],
 ): ml.StyleSpecification {
   const style: Partial<ml.StyleSpecification> = {
     version: 8,
   };
 
   const activeLayerSources = layers.map(
-    (layer) => layerSources[layer.sourceId]
+    (layer) => layerSources[layer.sourceId],
   );
   const glyphs = activeLayerSources.find((s) => s.glyphs)?.glyphs;
   const sprite = activeLayerSources.find((s) => s.sprite)?.sprite;
@@ -85,9 +86,9 @@ export function computeFullStyle(
   }
 
   const activeDataSources = Array.from(activeDataSourceIds.keys()).map((id) => {
-    let s = dataSources[id];
-    let spec = { ...s.spec } as any;
-    if (s.attribution) spec.attribution = ATTRIBUTION[s.attribution];
+    const s = dataSources[id];
+    const spec = { ...s.spec };
+    if (s.attribution) spec['attribution'] = ATTRIBUTION[s.attribution];
     return [s.id, spec];
   });
   style.sources = Object.fromEntries(activeDataSources);
@@ -106,9 +107,9 @@ export function computeFullStyle(
         }
       }
 
-      return out;
-    })
-  ) as any;
+      return out as ml.LayerSpecification;
+    }),
+  );
 
   return style as ml.StyleSpecification;
 }
@@ -116,7 +117,7 @@ export function computeFullStyle(
 function computeLayerStyleUpdate(
   layerSources: LayerSources,
   layer: Layer,
-  updatePaint: UpdatePaint
+  updatePaint: UpdatePaint,
 ) {
   if (layer.opacity > OPACITY_CUTOFF) {
     return;
@@ -126,7 +127,7 @@ function computeLayerStyleUpdate(
   for (const spec of source.layerSpecs) {
     const glId = glLayerId(layer.sourceId, spec.id);
     for (const prop of OPACITY_PROPS[spec.type]) {
-      const value = (spec.paint[prop] || 1) * layer.opacity;
+      const value = (spec.paint?.[prop] || 1) * layer.opacity;
       updatePaint(glId, prop, value);
     }
   }

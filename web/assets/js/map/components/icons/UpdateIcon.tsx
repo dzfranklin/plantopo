@@ -1,4 +1,4 @@
-import * as React from "react";
+import * as React from 'react';
 const SvgUpdateIcon = (props) => (
   <svg
     width={29.333}

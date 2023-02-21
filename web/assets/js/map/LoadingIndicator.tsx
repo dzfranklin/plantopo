@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef } from 'react';
 
 export interface Props {
   isLoading: boolean;
@@ -17,7 +17,7 @@ export default function LoadingIndicator({ isLoading }: Props) {
     const perRot = 1000; // Millis per full rotation
 
     const canvas = nodeRef.current!;
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext('2d')!;
 
     canvas.style.width = `${totalSize}px`;
     canvas.style.height = `${totalSize}px`;
@@ -37,8 +37,8 @@ export default function LoadingIndicator({ isLoading }: Props) {
       const end = start + 1 + Math.PI / 4 + Math.sin((t - 0.25) * 2 * Math.PI);
 
       ctx.beginPath();
-      ctx.strokeStyle = "#29d";
-      ctx.lineCap = "round";
+      ctx.strokeStyle = '#29d';
+      ctx.lineCap = 'round';
       ctx.lineWidth = thickness;
       ctx.arc(totalSize / 2, totalSize / 2, r, start, end);
       ctx.stroke();

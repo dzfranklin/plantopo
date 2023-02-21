@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { nanoid } from "nanoid";
+import { useState } from 'react';
+import { nanoid } from 'nanoid';
 
 export interface Props<T> {
   options: T[];

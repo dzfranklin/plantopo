@@ -1,4 +1,4 @@
-import * as React from "react";
+import * as React from 'react';
 const SvgRouteIcon = (props) => (
   <svg
     width={29.333}
@@ -9,13 +9,13 @@ const SvgRouteIcon = (props) => (
   >
     <path
       style={{
-        fill: "none",
-        stroke: "#000",
+        fill: 'none',
+        stroke: '#000',
         strokeWidth: 1.5,
-        strokeLinecap: "round",
-        strokeLinejoin: "round",
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
         strokeMiterlimit: 4,
-        strokeDasharray: "1.5,4.5",
+        strokeDasharray: '1.5,4.5',
         strokeOpacity: 1,
         strokeDashoffset: 0,
       }}

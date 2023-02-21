@@ -1,6 +1,6 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { startListening } from "./listener";
-import type { RootState } from "./store";
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { startListening } from './listener';
+import type { RootState } from './store';
 
 const INFO_CLEAR_AFTER = 3_000;
 
@@ -9,7 +9,7 @@ interface FlashState {
 }
 
 export interface Flash {
-  kind: "info" | "error";
+  kind: 'info' | 'error';
   title: string;
   body?: string;
 }
@@ -19,7 +19,7 @@ const initialState: FlashState = {
 };
 
 export const flashSlice = createSlice({
-  name: "flash",
+  name: 'flash',
   initialState,
   reducers: {
     flash(state, action: PayloadAction<Flash>) {
@@ -27,7 +27,7 @@ export const flashSlice = createSlice({
     },
 
     clearFlash: {
-      reducer(state, action: PayloadAction<null>) {
+      reducer(state, _action: PayloadAction<null>) {
         state.active = undefined;
       },
       prepare() {
@@ -46,12 +46,12 @@ export const { flash, clearFlash } = flashSlice.actions;
 startListening({
   actionCreator: flash,
   effect: async (action, l) => {
-    if (action.payload.kind === "info") {
+    if (action.payload.kind === 'info') {
       l.cancelActiveListeners();
       try {
         await l.delay(INFO_CLEAR_AFTER);
       } catch (e) {
-        if (e.code !== "listener-cancelled") {
+        if (e.code !== 'listener-cancelled') {
           throw e;
         }
       }

@@ -1,4 +1,4 @@
-import * as React from "react";
+import * as React from 'react';
 const SvgLayerSelectionIcon = (props) => (
   <svg
     width={29.334}

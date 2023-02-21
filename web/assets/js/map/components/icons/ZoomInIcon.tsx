@@ -1,4 +1,4 @@
-import * as React from "react";
+import * as React from 'react';
 const SvgZoomInIcon = (props) => (
   <svg
     width={14}

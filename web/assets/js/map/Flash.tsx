@@ -1,11 +1,11 @@
 import {
   InformationCircleIcon,
   ExclamationCircleIcon,
-} from "@heroicons/react/20/solid";
-import { XMarkIcon } from "@heroicons/react/24/solid";
-import classNames from "../classNames";
-import { clearFlash, selectActiveFlash } from "./flashSlice";
-import { useAppDispatch, useAppSelector } from "./hooks";
+} from '@heroicons/react/20/solid';
+import { XMarkIcon } from '@heroicons/react/24/solid';
+import classNames from '../classNames';
+import { clearFlash, selectActiveFlash } from './flashSlice';
+import { useAppDispatch, useAppSelector } from './hooks';
 
 export default function Flash() {
   const dispatch = useAppDispatch();
@@ -17,14 +17,14 @@ export default function Flash() {
         <div
           role="alert"
           onClick={() => dispatch(clearFlash())}
-          className={classNames("flash", `flash--${active.kind}`)}
+          className={classNames('flash', `flash--${active.kind}`)}
         >
           <p className="flash-title">
-            {active.kind === "info" && (
+            {active.kind === 'info' && (
               <InformationCircleIcon className="flash-title-icon" />
             )}
 
-            {active.kind === "error" && (
+            {active.kind === 'error' && (
               <ExclamationCircleIcon className="flash-title-icon" />
             )}
 

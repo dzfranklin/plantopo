@@ -4,15 +4,16 @@ import {
   createSlice,
   isAnyOf,
   PayloadAction,
-} from "@reduxjs/toolkit";
-import * as ml from "maplibre-gl";
-import type { RootState } from "./store";
-import * as api from "./api";
-import { startListening } from "./listener";
-import { flash } from "./flashSlice";
-import { JsonTemplateObject } from "@sanalabs/json";
-
-const REPORT_VIEW_AT_DEBOUNCE_MS = 300;
+} from '@reduxjs/toolkit';
+import * as ml from 'maplibre-gl';
+import type { RootState } from './store';
+import { startListening } from './listener';
+import { flash } from './flashSlice';
+import {
+  JsonObject,
+  JsonTemplateArray,
+  JsonTemplateObject,
+} from '@sanalabs/json';
 
 interface MapState {
   tokens: Tokens;
@@ -26,30 +27,24 @@ interface MapState {
   awareness?: Awareness;
   peerAwareness: Awareness[];
   layers: Layer[];
-  features?: any; // TODO
+  features?: unknown; // TODO
   viewAt: ViewAt;
   geolocation: Geolocation;
 }
 
+const todoPreload =
+  document.getElementById('map-app-root')!.dataset.preloadedState!;
 const initialState: MapState = {
   // TODO
-  tokens: JSON.parse(
-    document.getElementById("map-app-root")!.dataset.preloadedState
-  ).map.tokens,
-  layerDatas: JSON.parse(
-    document.getElementById("map-app-root")!.dataset.preloadedState
-  ).map.viewDataSources,
-  layerSources: JSON.parse(
-    document.getElementById("map-app-root")!.dataset.preloadedState
-  ).map.viewLayerSources,
-  id: "c2f85ed1-38e3-444c-b6bc-ae33a831ca5a",
+  tokens: JSON.parse(todoPreload).map.tokens,
+  layerDatas: JSON.parse(todoPreload).map.viewDataSources,
+  layerSources: JSON.parse(todoPreload).map.viewLayerSources,
+  id: 'c2f85ed1-38e3-444c-b6bc-ae33a831ca5a',
   awareness: undefined,
   peerAwareness: [],
   layers: [],
   features: undefined,
-  viewAt: JSON.parse(
-    document.getElementById("map-app-root")!.dataset.preloadedState
-  ).map.viewAt,
+  viewAt: JSON.parse(todoPreload).map.viewAt,
   geolocation: {
     updating: false,
   },
@@ -102,7 +97,7 @@ interface MapClick {
   screen: XY;
   features: {
     layer: string;
-    properties: { [_: string]: any };
+    properties: { [_: string]: unknown };
   }[];
 }
 
@@ -115,7 +110,7 @@ interface Geolocation {
 }
 
 export const mapSlice = createSlice({
-  name: "map",
+  name: 'map',
   initialState,
   reducers: {
     // The map instance is the source of truth
@@ -123,19 +118,19 @@ export const mapSlice = createSlice({
       state.viewAt = payload;
     },
 
-    remoteSetLayers(state, { payload }: PayloadAction<any>) {
-      state.layers = payload as unknown as MapState["layers"];
+    remoteSetLayers(state, { payload }: PayloadAction<JsonTemplateArray>) {
+      state.layers = payload as unknown as MapState['layers'];
     },
-    remoteSetFeatures(state, { payload }: PayloadAction<any>) {
-      state.features = payload as unknown as MapState["features"];
+    remoteSetFeatures(state, { payload }: PayloadAction<JsonTemplateObject>) {
+      state.features = payload as unknown as MapState['features'];
     },
-    remoteSetPeerAwareness(state, { payload }: PayloadAction<any>) {
-      state.peerAwareness = payload;
+    remoteSetPeerAwareness(state, { payload }: PayloadAction<JsonObject[]>) {
+      state.peerAwareness = payload as unknown as MapState['peerAwareness'];
     },
 
     updateLayer(
       state,
-      { payload }: PayloadAction<{ idx: number; value: Partial<Layer> }>
+      { payload }: PayloadAction<{ idx: number; value: Partial<Layer> }>,
     ) {
       const layer = state.layers[payload.idx];
       for (const prop in payload.value) {
@@ -147,7 +142,7 @@ export const mapSlice = createSlice({
     },
     addLayer(
       state,
-      { payload: { sourceId } }: PayloadAction<{ sourceId: number }>
+      { payload: { sourceId } }: PayloadAction<{ sourceId: number }>,
     ) {
       const source = state.layerSources[sourceId];
       state.layers.push({
@@ -187,20 +182,20 @@ interface FlyToOptions {
   ignoreIfCenterVisible?: boolean;
 }
 export const flyTo = createAction(
-  "map/flyTo",
+  'map/flyTo',
   (to: Partial<ViewAt>, options: FlyToOptions = {}) => ({
     payload: { to, options },
-  })
+  }),
 );
 
 // Emitted by map
-export const mapClick = createAction<MapClick>("map/mapClick");
+export const mapClick = createAction<MapClick>('map/mapClick');
 
-export const requestGeolocation = createAction("map/requestGeolocation");
-export const zoomIn = createAction("map/zoomIn");
-export const zoomOut = createAction("map/zoomOut");
-export const requestFullscreen = createAction("map/requestFullscreen"); // Requires transient user activation
-export const exitFullscreen = createAction("map/exitFullscreen");
+export const requestGeolocation = createAction('map/requestGeolocation');
+export const zoomIn = createAction('map/zoomIn');
+export const zoomOut = createAction('map/zoomOut');
+export const requestFullscreen = createAction('map/requestFullscreen'); // Requires transient user activation
+export const exitFullscreen = createAction('map/exitFullscreen');
 
 // Listeners
 
@@ -243,30 +238,30 @@ startListening({
   actionCreator: requestFullscreen,
   effect: async (_action, l) => {
     if (document.fullscreenElement) {
-      console.info("Suppressing requestFullscreen as already fullscreen");
+      console.info('Suppressing requestFullscreen as already fullscreen');
       return;
     }
 
     if (!document.fullscreenEnabled) {
       l.dispatch(
         flash({
-          kind: "error",
-          title: "Fullscreen disabled",
-          body: "Your browser indicated fullscreen is disabled",
-        })
+          kind: 'error',
+          title: 'Fullscreen disabled',
+          body: 'Your browser indicated fullscreen is disabled',
+        }),
       );
     }
 
     try {
-      await window.appNode.requestFullscreen({ navigationUI: "hide" });
+      await window.appNode.requestFullscreen({ navigationUI: 'hide' });
     } catch (e) {
       if (e instanceof TypeError) {
         l.dispatch(
           flash({
-            kind: "error",
-            title: "Error",
-            body: "Your browser refused to enter fullscreen mode",
-          })
+            kind: 'error',
+            title: 'Error',
+            body: 'Your browser refused to enter fullscreen mode',
+          }),
         );
       } else {
         throw e;
@@ -277,9 +272,9 @@ startListening({
 
 startListening({
   actionCreator: exitFullscreen,
-  effect: async (_action, l) => {
+  effect: async (_action, _l) => {
     if (!document.fullscreenElement) {
-      console.info("Suppressing exitFullscreen as not fullscreen");
+      console.info('Suppressing exitFullscreen as not fullscreen');
       return;
     }
     await document.exitFullscreen();
@@ -299,12 +294,12 @@ startListening({
       mapSlice.actions.setGeolocation({
         updating: true,
         value: prev.value,
-      })
+      }),
     );
 
     // Remember cancelling this listener cancels the fork, but the underlying
     // request still runs to completion.
-    let result = await l.fork<GeolocationPosition>(
+    const result = await l.fork<GeolocationPosition>(
       (_f) =>
         new Promise((res, rej) => {
           navigator.geolocation.getCurrentPosition(res, rej, {
@@ -312,10 +307,10 @@ startListening({
             timeout: 1000 * 10,
             enableHighAccuracy: true,
           });
-        })
+        }),
     ).result;
 
-    if (result.status === "ok") {
+    if (result.status === 'ok') {
       const { accuracy, latitude, longitude } = result.value.coords;
       const position: LngLat = [longitude, latitude];
 
@@ -323,27 +318,28 @@ startListening({
         mapSlice.actions.setGeolocation({
           updating: false,
           value: { accuracy, position },
-        })
+        }),
       );
 
       l.dispatch(flyTo({ center: position }, { ignoreIfCenterVisible: true }));
-    } else if (result.status === "cancelled") {
-    } else if (result.status === "rejected") {
-      let err = result.error;
+    } else if (result.status === 'cancelled') {
+      // We received clearGeolocation
+    } else if (result.status === 'rejected') {
+      const err = result.error;
       if (!(err instanceof GeolocationPositionError)) {
         throw err;
       }
 
       l.dispatch(
-        mapSlice.actions.setGeolocation({ updating: false, value: undefined })
+        mapSlice.actions.setGeolocation({ updating: false, value: undefined }),
       );
 
       if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
         l.dispatch(
           flash({
-            kind: "error",
-            title: "Location permission denied",
-          })
+            kind: 'error',
+            title: 'Location permission denied',
+          }),
         );
       } else if (
         err.code === GeolocationPositionError.POSITION_UNAVAILABLE ||
@@ -351,13 +347,13 @@ startListening({
       ) {
         l.dispatch(
           flash({
-            kind: "error",
-            title: "Location unavailable",
-          })
+            kind: 'error',
+            title: 'Location unavailable',
+          }),
         );
       } else {
         throw new Error(
-          `Unexpected GeolocationPositionError code: ${err.code} msg: ${err.message}`
+          `Unexpected GeolocationPositionError code: ${err.code} msg: ${err.message}`,
         );
       }
     }
@@ -385,7 +381,7 @@ export const selectLayerSourceDisplayList = (state) => {
   }
 
   const list = Object.values(select(state).layerSources).filter(
-    (v) => !used[v.id]
+    (v) => !used[v.id],
   );
 
   return sortBy(list, (v) => v.name);
@@ -404,10 +400,10 @@ export const selectShouldCreditOS = createSelector(
       .map((view) => layerSources[view.sourceId])
       .flatMap((layerSource) => layerSource.dependencies)
       .map((dataSourceId) => dataSources[dataSourceId])
-      .some((dataSource) => dataSource.attribution === "os")
+      .some((dataSource) => dataSource.attribution === 'os'),
 );
 
-function sortBy<T>(list: T[], key: (item: T) => any) {
+function sortBy<T, B>(list: T[], key: (item: T) => B) {
   return list.slice().sort((a, b) => {
     const keyA = key(a);
     const keyB = key(b);
