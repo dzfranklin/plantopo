@@ -27,9 +27,6 @@ export default function LoadingIndicator({ isLoading }: Props) {
     canvas.height = Math.floor(totalSize * scale);
     ctx.scale(scale, scale);
 
-    (window as any).ctx = ctx;
-    (window as any).totalSize = totalSize;
-
     const startTime = Date.now();
 
     const update = () => {
