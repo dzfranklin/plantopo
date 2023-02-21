@@ -26,13 +26,16 @@ export default function MapApp() {
   useEffect(() => {
     const doc = new YDoc({ gc: false });
     window._dbg.mapDoc = doc;
-    const provider = new WebsocketProvider(
-      "ws://localhost:4005",
-      "map/c2f85ed1-38e3-444c-b6bc-ae33a831ca5a/socket",
-      doc
-    );
+
     const layers = doc.getArray("layers");
     const features = doc.getMap("features");
+
+    let server = new URL(location.href);
+    server.protocol = location.protocol === "https:" ? "wss" : "ws";
+    server.port = "4005";
+    server.pathname = "map/c2f85ed1-38e3-444c-b6bc-ae33a831ca5a";
+    const provider = new WebsocketProvider(server.toString(), "socket", doc);
+
     const awareness = provider.awareness;
     setYData({ layers, features, awareness });
 
