@@ -197,12 +197,12 @@ function LayerItem({ layer, idx }) {
       </div>
 
       <GripIcon
-        className="h-[24px] ml-[16px] mr-1 row-span-full cursor-grab fill-gray-400 self-center"
         onPointerDown={(evt) => {
           evt.preventDefault();
           reorderControls.start(evt);
         }}
       />
+        className="h-[24px] ml-[16px] mr-1 cursor-grab fill-gray-400 self-center" />
     </Reorder.Item>
   );
 }
