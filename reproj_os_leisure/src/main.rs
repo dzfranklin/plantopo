@@ -1,14 +1,6 @@
-use std::{
-    collections::HashMap,
-    fs::{self, File},
-    ptr,
-};
-
 use eyre::{Context, ContextCompat};
-use gdal::{
-    programs::raster::build_vrt, spatial_ref::SpatialRef, Dataset, DatasetOptions, DriverManager,
-};
-use image::{imageops, GenericImage, Rgb, RgbImage};
+use gdal::{spatial_ref::SpatialRef, Dataset};
+use image::{imageops, Rgb, RgbImage};
 use proj::Proj;
 use tile_grid::{Extent, ExtentInt, Grid};
 
@@ -40,9 +32,9 @@ fn get(input_z: u8, input_x: u32, input_y: u32, draw_dbg: bool) -> eyre::Result<
         tile_grid::Origin::TopLeft, // This is a guess
     );
     let input_to_source = Proj::new_known_crs("EPSG:3857", "EPSG:27700", None)?;
-    let source_to_input = Proj::new_known_crs("EPSG:27700", "EPSG:3857", None)?;
+    let _source_to_input = Proj::new_known_crs("EPSG:27700", "EPSG:3857", None)?;
     let source_spatial_ref = SpatialRef::from_epsg(27700)?;
-    let input_spatial_ref = SpatialRef::from_epsg(3857)?;
+    let _input_spatial_ref = SpatialRef::from_epsg(3857)?;
 
     let input_bbox = input_grid.tile_extent_xyz(input_x, input_y, input_z);
     let input_res = input_grid.pixel_width(input_z);
@@ -55,7 +47,7 @@ fn get(input_z: u8, input_x: u32, input_y: u32, draw_dbg: bool) -> eyre::Result<
         .find(|(_, &source_res)| source_res <= input_res)
         .unwrap_or((max_source_z, &SOURCE_RESOLUTIONS[max_source_z]));
     let source_z: u8 = source_z.try_into()?;
-    let scale_factor = input_res / source_res;
+    let _scale_factor = input_res / source_res;
 
     let source_tile_extents =
         tile_limits_xyz(&source_grid, &source_target_bbox, source_z, source_res);
@@ -73,7 +65,7 @@ fn get(input_z: u8, input_x: u32, input_y: u32, draw_dbg: bool) -> eyre::Result<
     let mut img = RgbImage::new(img_width, img_height);
 
     for &(tile_x, tile_y) in &coords {
-        let src_path = format!("test_assets/{}_{}_{}.png", source_z, tile_x, tile_y);
+        let src_path = format!("test_assets/{source_z}_{tile_x}_{tile_y}.png");
         let tile = image::open(&src_path).with_context(|| format!("No tile {}", &src_path))?;
         let tile = tile.as_rgb8().context("tile not rgb8")?;
 
