@@ -27,17 +27,17 @@ use yrs_warp::{broadcast::BroadcastGroup, AwarenessRef};
 
 const BCAST_SIZE: usize = 32;
 
-pub type ActivesRef = Arc<tokio::sync::Mutex<WeakValueHashMap<Uuid, Weak<ActiveMap>>>>;
+pub type ActivesRef = Arc<tokio::sync::Mutex<WeakValueHashMap<Uuid, Weak<Active>>>>;
 pub type DbRef = Arc<OptimisticTransactionDB>;
 
-pub struct ActiveMap {
+pub struct Active {
     pub id: Uuid,
     pub awareness: AwarenessRef,
     pub bcast: BroadcastGroup,
     _sub: yrs::UpdateSubscription,
 }
 
-impl fmt::Debug for ActiveMap {
+impl fmt::Debug for Active {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("MapState")
             .field("id", &self.id)
@@ -130,12 +130,12 @@ pub async fn get_active(
     db: DbRef,
     maps: ActivesRef,
     id: Uuid,
-) -> eyre::Result<Option<Arc<ActiveMap>>> {
+) -> eyre::Result<Option<Arc<Active>>> {
     let mut lock = maps.lock().await;
     if let Some(map) = lock.get(&id) {
         info!("Got map from active");
         Ok(Some(map))
-    } else if let Some(map) = load_map(db, id).await? {
+    } else if let Some(map) = load_active(db, id).await? {
         info!("Loaded map from db to active");
         let map = Arc::new(map);
         lock.insert(id, map.clone());
@@ -148,20 +148,15 @@ pub async fn get_active(
 
 #[instrument(skip(db))]
 fn load_doc(db: DbRef, id: Uuid) -> eyre::Result<Option<Doc>> {
-    if let Some(update) = db.get(id)? {
-        let update = Update::decode_v2(&update).context("failed to decode stored state")?;
-        let doc = apply_full_update(update);
+    if let Some(value) = db.get(id)? {
+        let value = Update::decode_v2(&value).context("failed to decode stored state")?;
+        let doc = configure_doc();
+        doc.transact_mut().apply_update(value);
         debug!("loaded doc {}", doc.to_json(&doc.transact()));
         Ok(Some(doc))
     } else {
         Ok(None)
     }
-}
-
-fn apply_full_update(value: Update) -> Doc {
-    let doc = configure_doc();
-    doc.transact_mut().apply_update(value);
-    doc
 }
 
 fn configure_doc() -> yrs::Doc {
@@ -176,7 +171,7 @@ fn configure_doc() -> yrs::Doc {
 }
 
 #[instrument(skip(db))]
-async fn load_map(db: DbRef, id: Uuid) -> eyre::Result<Option<ActiveMap>> {
+async fn load_active(db: DbRef, id: Uuid) -> eyre::Result<Option<Active>> {
     let doc = match load_doc(db.clone(), id)? {
         Some(doc) => doc,
         None => return Ok(None),
@@ -191,7 +186,7 @@ async fn load_map(db: DbRef, id: Uuid) -> eyre::Result<Option<ActiveMap>> {
     let awareness = Arc::new(tokio::sync::RwLock::new(Awareness::new(doc)));
     let bcast = BroadcastGroup::open(awareness.clone(), BCAST_SIZE).await;
 
-    Ok(Some(ActiveMap {
+    Ok(Some(Active {
         id,
         awareness,
         bcast,
@@ -199,10 +194,8 @@ async fn load_map(db: DbRef, id: Uuid) -> eyre::Result<Option<ActiveMap>> {
     }))
 }
 
-fn on_update(db: DbRef, id: Uuid, tx: &TransactionMut, update: &UpdateEvent) {
-    let mut encoder = EncoderV2::new();
-    tx.encode_diff(&StateVector::default(), &mut encoder);
-    let value = encoder.to_vec();
+fn on_update(db: DbRef, id: Uuid, tx: &TransactionMut, _update: &UpdateEvent) {
+    let value = tx.encode_state_as_update_v2(&StateVector::default());
 
     debug!(
         "on_update layers={} features={}",
