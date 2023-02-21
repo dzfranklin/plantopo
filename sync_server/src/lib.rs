@@ -166,7 +166,7 @@ fn apply_full_update(value: Update) -> Doc {
 
 fn configure_doc() -> yrs::Doc {
     let opts = yrs::Options {
-        skip_gc: true,
+        skip_gc: false,
         ..Default::default()
     };
     let doc = Doc::with_options(opts);

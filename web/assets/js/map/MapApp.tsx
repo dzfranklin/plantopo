@@ -24,7 +24,7 @@ export default function MapApp() {
 
   const [yData, setYData] = useState(null);
   useEffect(() => {
-    const doc = new YDoc({ gc: false });
+    const doc = new YDoc({ gc: true });
     window._dbg.mapDoc = doc;
 
     const layers = doc.getArray("layers");
