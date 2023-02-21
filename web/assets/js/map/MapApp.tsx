@@ -2,13 +2,11 @@ import MapBase from "./MapBase";
 import { useEffect, useState } from "react";
 import { useAppSelector } from "./hooks";
 import {
-  remoteSetAwareness,
+  remoteSetPeerAwareness,
   remoteSetFeatures,
   remoteSetLayers,
-  selectFeaturesJSON,
-  selectMyAwareness,
+  selectAwareness,
   selectShouldCreditOS,
-  selectLayersJSON,
 } from "./mapSlice";
 import LoadingIndicator from "./LoadingIndicator";
 import classNames from "../classNames";
@@ -17,55 +15,15 @@ import Controls from "./Controls";
 import { WebsocketProvider } from "y-websocket";
 import { SyncYAwareness, SyncYJson } from "@sanalabs/y-redux";
 import { Doc as YDoc } from "yjs";
+import MapSync from "./MapSync";
 
 export default function MapApp() {
   const [baseIsLoading, setBaseIsLoading] = useState(true);
   const creditOS = useAppSelector(selectShouldCreditOS);
 
-  const [yData, setYData] = useState(null);
-  useEffect(() => {
-    const doc = new YDoc({ gc: true });
-    window._dbg.mapDoc = doc;
-
-    const layers = doc.getArray("layers");
-    const features = doc.getMap("features");
-
-    let server = new URL(location.href);
-    server.protocol = location.protocol === "https:" ? "wss" : "ws";
-    server.port = "4005";
-    server.pathname = "map/c2f85ed1-38e3-444c-b6bc-ae33a831ca5a";
-    const provider = new WebsocketProvider(server.toString(), "socket", doc);
-
-    const awareness = provider.awareness;
-    setYData({ layers, features, awareness });
-
-    return () => {
-      provider.destroy();
-      doc.destroy();
-    };
-  }, []);
-
   return (
     <div className="map-app">
-      {yData && (
-        <>
-          <SyncYJson
-            yJson={yData.layers}
-            selectData={selectLayersJSON}
-            setData={remoteSetLayers}
-          />
-          <SyncYJson
-            yJson={yData.features}
-            selectData={selectFeaturesJSON}
-            setData={remoteSetFeatures}
-          />
-          <SyncYAwareness
-            awareness={yData.awareness}
-            selectLocalAwarenessState={selectMyAwareness}
-            setAwarenessStates={remoteSetAwareness}
-          />
-        </>
-      )}
+      <MapSync />
 
       <MapBase isLoading={setBaseIsLoading} />
       <CreditImages creditOS={creditOS} />

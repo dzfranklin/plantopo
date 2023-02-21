@@ -16,7 +16,6 @@ declare global {
     _dbg: {
       store: AppStore;
       mapGL: ml.Map;
-      mapDoc: YDoc;
       computeStyleStats: {
         paintOnlyUpdates: number;
         fullUpdates: number;

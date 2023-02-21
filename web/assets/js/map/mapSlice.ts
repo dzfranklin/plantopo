@@ -22,9 +22,9 @@ interface MapState {
   layerSources: {
     [id: number]: LayerSource;
   };
-  id: number;
-  myAwareness: any;
-  awareness: any[];
+  id: string;
+  awareness?: Awareness;
+  peerAwareness: Awareness[];
   layers: Layer[];
   features?: any; // TODO
   viewAt: ViewAt;
@@ -42,9 +42,9 @@ const initialState: MapState = {
   layerSources: JSON.parse(
     document.getElementById("map-app-root")!.dataset.preloadedState
   ).map.viewLayerSources,
-  id: 1,
-  myAwareness: {},
-  awareness: [],
+  id: "c2f85ed1-38e3-444c-b6bc-ae33a831ca5a",
+  awareness: undefined,
+  peerAwareness: [],
   layers: [],
   features: undefined,
   viewAt: JSON.parse(
@@ -54,6 +54,11 @@ const initialState: MapState = {
     updating: false,
   },
 };
+
+export interface Awareness {
+  clientId: number;
+  isCurrentClient: boolean;
+}
 
 interface Tokens {
   mapbox: string;
@@ -118,14 +123,14 @@ export const mapSlice = createSlice({
       state.viewAt = payload;
     },
 
-    remoteSetLayers(state, { payload }: PayloadAction<JsonTemplateObject>) {
+    remoteSetLayers(state, { payload }: PayloadAction<any>) {
       state.layers = payload as unknown as MapState["layers"];
     },
-    remoteSetFeatures(state, { payload }: PayloadAction<JsonTemplateObject>) {
+    remoteSetFeatures(state, { payload }: PayloadAction<any>) {
       state.features = payload as unknown as MapState["features"];
     },
-    remoteSetAwareness(state, { payload }: PayloadAction<any>) {
-      state.awareness = payload;
+    remoteSetPeerAwareness(state, { payload }: PayloadAction<any>) {
+      state.peerAwareness = payload;
     },
 
     updateLayer(
@@ -169,7 +174,7 @@ export const {
   reportViewAt,
   remoteSetLayers,
   remoteSetFeatures,
-  remoteSetAwareness,
+  remoteSetPeerAwareness,
   clearGeolocation,
   updateLayer,
   removeLayer,
@@ -199,23 +204,24 @@ export const exitFullscreen = createAction("map/exitFullscreen");
 
 // Listeners
 
-startListening({
-  actionCreator: reportViewAt,
-  effect: async ({ payload }, l) => {
-    const mapId = selectMapId(l.getState());
-    l.cancelActiveListeners();
-    try {
-      await l.delay(REPORT_VIEW_AT_DEBOUNCE_MS);
-      api.reportViewAt(mapId, payload);
-    } catch (e) {
-      if (e.code === "listener-cancelled") {
-        // Handover responsibility to to the subsequent effect that cancelled us
-      } else {
-        throw e;
-      }
-    }
-  },
-});
+// TODO
+// startListening({
+//   actionCreator: reportViewAt,
+//   effect: async ({ payload }, l) => {
+//     const mapId = selectMapId(l.getState());
+//     l.cancelActiveListeners();
+//     try {
+//       await l.delay(REPORT_VIEW_AT_DEBOUNCE_MS);
+//       api.reportViewAt(mapId, payload);
+//     } catch (e) {
+//       if (e.code === "listener-cancelled") {
+//         // Handover responsibility to to the subsequent effect that cancelled us
+//       } else {
+//         throw e;
+//       }
+//     }
+//   },
+// });
 
 startListening({
   actionCreator: zoomIn,
@@ -362,18 +368,12 @@ startListening({
 
 const select = (s: RootState) => s.map;
 
-export const selectMyAwareness = (s) => select(s).myAwareness;
-export const selectLayersJSON = (s) =>
-  select(s).layers as unknown as JsonTemplateObject;
-export const selectFeaturesJSON = (s) =>
-  select(s).features as unknown as JsonTemplateObject;
-
+export const selectId = (s) => select(s).id;
+export const selectAwareness = (s) => select(s).awareness;
+export const selectLayers = (s) => select(s).layers;
+export const selectFeatures = (s) => select(s).features;
 export const selectGeolocation = (s) => select(s).geolocation;
-
-const selectMapId = (s) => select(s).id;
-
 export const selectTokens = (s) => select(s).tokens;
-
 export const selectViewAt = (s) => select(s).viewAt;
 
 export const selectLayerSourceDisplayList = (state) => {
@@ -390,8 +390,6 @@ export const selectLayerSourceDisplayList = (state) => {
 
   return sortBy(list, (v) => v.name);
 };
-
-export const selectLayers = (s) => select(s).layers;
 
 export const selectLayerSources = (s) => select(s).layerSources;
 export const selectLayerDatas = (s) => select(s).layerDatas;
