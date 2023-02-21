@@ -26,7 +26,6 @@ interface MapState {
   myAwareness: any;
   awareness: any[];
   viewLayers: ViewLayer[];
-  overrideViewLayers: ViewLayer[] | undefined;
   features?: any; // TODO
   viewAt: ViewAt;
   geolocation: Geolocation;
@@ -47,7 +46,6 @@ const initialState: MapState = {
   myAwareness: {},
   awareness: [],
   viewLayers: [],
-  overrideViewLayers: undefined,
   features: undefined,
   viewAt: JSON.parse(
     document.getElementById("map-app-root")!.dataset.preloadedState
@@ -130,44 +128,30 @@ export const mapSlice = createSlice({
       state.awareness = payload;
     },
 
-    overrideViewLayers(
-      state,
-      { payload }: PayloadAction<ViewLayer[] | undefined>
-    ) {
-      if (payload) {
-        state.overrideViewLayers = payload;
-      } else {
-        state.overrideViewLayers = state.viewLayers;
-      }
-    },
-    updateOverrideViewLayer(
+    updateLayer(
       state,
       { payload }: PayloadAction<{ idx: number; value: Partial<ViewLayer> }>
     ) {
-      const layer = state.overrideViewLayers[payload.idx];
+      const layer = state.viewLayers[payload.idx];
       for (const prop in payload.value) {
         layer[prop] = payload.value[prop];
       }
     },
-    removeOverrideViewLayer(state, { payload }: PayloadAction<number>) {
-      state.overrideViewLayers.splice(payload, 1);
+    removeLayer(state, { payload }: PayloadAction<number>) {
+      state.viewLayers.splice(payload, 1);
     },
-    addOverrideViewLayer(
+    addLayer(
       state,
       { payload: { sourceId } }: PayloadAction<{ sourceId: number }>
     ) {
       const source = state.viewLayerSources[sourceId];
-      state.overrideViewLayers.push({
+      state.viewLayers.push({
         sourceId: sourceId,
         opacity: source.defaultOpacity || 1.0,
       });
     },
-    clearOverrideViewLayers(state, _action: PayloadAction<undefined>) {
-      state.overrideViewLayers = undefined;
-    },
-    saveOverrideViewLayers(state, _action: PayloadAction<undefined>) {
-      state.viewLayers = state.overrideViewLayers;
-      state.overrideViewLayers = undefined;
+    setLayers(state, { payload }: PayloadAction<ViewLayer[]>) {
+      state.viewLayers = payload;
     },
 
     setGeolocation(state, { payload }: PayloadAction<Geolocation>) {
@@ -186,13 +170,11 @@ export const {
   remoteSetViewLayers,
   remoteSetFeatures,
   remoteSetAwareness,
-  overrideViewLayers,
-  clearOverrideViewLayers,
   clearGeolocation,
-  updateOverrideViewLayer,
-  saveOverrideViewLayers,
-  removeOverrideViewLayer,
-  addOverrideViewLayer,
+  updateLayer,
+  removeLayer,
+  addLayer,
+  setLayers,
 } = mapSlice.actions;
 
 // Intercepted by map
@@ -376,14 +358,6 @@ startListening({
   },
 });
 
-startListening({
-  actionCreator: saveOverrideViewLayers,
-  effect: async (_action, l) => {
-    // TODO
-    console.warn("TODO save overrideViewLayers");
-  },
-});
-
 // Selectors
 
 const select = (s: RootState) => s.map;
@@ -403,7 +377,7 @@ export const selectTokens = (s) => select(s).tokens;
 export const selectViewAt = (s) => select(s).viewAt;
 
 export const selectViewLayerSourceDisplayList = (state) => {
-  const layers = select(state).overrideViewLayers || select(state).viewLayers;
+  const layers = selectViewLayers(state);
 
   const used = {};
   for (const layer of layers) {
@@ -417,8 +391,7 @@ export const selectViewLayerSourceDisplayList = (state) => {
   return sortBy(list, (v) => v.name);
 };
 
-export const selectViewLayers = (s) =>
-  select(s).overrideViewLayers || select(s).viewLayers;
+export const selectViewLayers = (s) => select(s).viewLayers;
 
 export const selectViewLayerSources = (s) => select(s).viewLayerSources;
 export const selectViewDataSources = (s) => select(s).viewDataSources;

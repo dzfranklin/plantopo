@@ -30,14 +30,12 @@ import {
   selectGeolocation,
   clearGeolocation,
   selectViewLayerSourceDisplayList,
-  overrideViewLayers,
   selectViewLayerSource,
-  updateOverrideViewLayer,
-  saveOverrideViewLayers,
-  clearOverrideViewLayers,
+  updateLayer,
   selectViewLayers,
-  removeOverrideViewLayer,
-  addOverrideViewLayer,
+  removeLayer,
+  addLayer,
+  setLayers,
 } from "./mapSlice";
 import Button from "./components/Button";
 
@@ -87,10 +85,7 @@ export default function Controls() {
 
       <Control
         icon={LayerSelectionIcon}
-        onClick={() => {
-          setLayerSelectIsOpen(true);
-          dispatch(overrideViewLayers());
-        }}
+        onClick={() => setLayerSelectIsOpen(true)}
       />
 
       <AnimatePresence>
@@ -107,15 +102,6 @@ function LayerSelect({ close }) {
   const viewLayers = useAppSelector(selectViewLayers);
   const sourceList = useAppSelector(selectViewLayerSourceDisplayList);
 
-  const complete = (save) => {
-    if (save) {
-      dispatch(saveOverrideViewLayers());
-    } else {
-      dispatch(clearOverrideViewLayers());
-    }
-    close();
-  };
-
   return (
     <motion.div
       initial={{ height: 0 }}
@@ -131,7 +117,7 @@ function LayerSelect({ close }) {
         <Reorder.Group
           axis="y"
           values={viewLayers}
-          onReorder={(v) => dispatch(overrideViewLayers(v))}
+          onReorder={(v) => dispatch(setLayers(v))}
         >
           {viewLayers.map((v, i) => (
             <LayerItem key={v.sourceId} layer={v} idx={i} />
@@ -148,8 +134,7 @@ function LayerSelect({ close }) {
       </motion.div>
 
       <div className="flex flex-row justify-end gap-2 mt-2 shrink">
-        <Button onClick={() => complete(false)}>Cancel</Button>
-        <Button onClick={() => complete(true)} style="primary">
+        <Button onClick={close} style="primary">
           Done
         </Button>
       </div>
@@ -171,7 +156,7 @@ function LayerItem({ layer, idx }) {
       className="flex flex-row select-none mb-[16px]"
     >
       <button
-        onClick={() => dispatch(removeOverrideViewLayer(idx))}
+        onClick={() => dispatch(removeLayer(idx))}
         className="-ml-1 mr-[8px]"
       >
         <CloseIcon className="fill-gray-500 w-[20px]" />
@@ -195,7 +180,7 @@ function LayerItem({ layer, idx }) {
             value={[layer.opacity]}
             onValueChange={([opacity]) => {
               dispatch(
-                updateOverrideViewLayer({
+                updateLayer({
                   idx,
                   value: { opacity },
                 })
@@ -228,7 +213,7 @@ function SourceItem({ source }) {
       className="flex flex-row items-center mb-[10px]"
     >
       <button
-        onClick={() => dispatch(addOverrideViewLayer({ sourceId: source.id }))}
+        onClick={() => dispatch(addLayer({ sourceId: source.id }))}
         className="-ml-1 mr-[8px]"
       >
         <UploadIcon className="stroke-gray-500 w-[20px]" />
