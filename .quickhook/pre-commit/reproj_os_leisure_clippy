@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-cd reproj_os_leisure && cargo clippy --no-deps
+cd reproj_os_leisure && cargo clippy --no-deps -- -Dwarnings

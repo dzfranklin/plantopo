@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-cd sync_server && cargo clippy --no-deps
+cd sync_server && cargo clippy --no-deps -- -Dwarnings
