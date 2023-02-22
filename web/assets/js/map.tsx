@@ -19,6 +19,10 @@ declare global {
         paintOnlyUpdates: number;
         fullUpdates: number;
       };
+      sync: {
+        yDoc?: unknown;
+        ws?: unknown;
+      };
     };
   }
 }
@@ -27,6 +31,7 @@ window._dbg = {
     paintOnlyUpdates: 0,
     fullUpdates: 0,
   },
+  sync: {},
 };
 
 const rootNode = document.getElementById('map-app-root')!;
@@ -38,17 +43,17 @@ window._dbg.store = store;
 const { disableAnimation } = window.userSettings;
 
 createRoot(rootNode).render(
-  <React.StrictMode>
-    <Provider store={store}>
-      <MotionConfig
-        reducedMotion={disableAnimation ? 'always' : 'user'}
-        transition={{
-          type: 'easeInOut',
-          duration: disableAnimation ? 0 : 0.25,
-        }}
-      >
-        <MapApp />
-      </MotionConfig>
-    </Provider>
-  </React.StrictMode>,
+  // <React.StrictMode>
+  <Provider store={store}>
+    <MotionConfig
+      reducedMotion={disableAnimation ? 'always' : 'user'}
+      transition={{
+        type: 'easeInOut',
+        duration: disableAnimation ? 0 : 0.25,
+      }}
+    >
+      <MapApp />
+    </MotionConfig>
+  </Provider>,
+  /*</React.StrictMode>,*/
 );

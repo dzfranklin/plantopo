@@ -16,6 +16,7 @@ import {
 } from '@sanalabs/json';
 
 interface MapState {
+  onlineStatus: 'connecting' | 'connected' | 'reconnecting';
   tokens: Tokens;
   layerDatas: {
     [id: string]: LayerData;
@@ -35,6 +36,7 @@ interface MapState {
 const todoPreload =
   document.getElementById('map-app-root')!.dataset.preloadedState!;
 const initialState: MapState = {
+  onlineStatus: 'connecting',
   // TODO
   tokens: JSON.parse(todoPreload).map.tokens,
   layerDatas: JSON.parse(todoPreload).map.viewDataSources,
@@ -109,10 +111,27 @@ interface Geolocation {
   };
 }
 
+export type WsStatus = 'disconnected' | 'connecting' | 'connected';
+
 export const mapSlice = createSlice({
   name: 'map',
   initialState,
   reducers: {
+    wsReportStatus(state, { payload }: PayloadAction<WsStatus>) {
+      if (
+        state.onlineStatus === 'connecting' ||
+        state.onlineStatus === 'reconnecting'
+      ) {
+        if (payload === 'connected') {
+          state.onlineStatus = 'connected';
+        }
+      } else if (state.onlineStatus === 'connected') {
+        if (payload === 'disconnected' || payload === 'connecting') {
+          state.onlineStatus = 'reconnecting';
+        }
+      }
+    },
+
     // The map instance is the source of truth
     reportViewAt(state, { payload }: PayloadAction<ViewAt>) {
       state.viewAt = payload;
@@ -166,6 +185,7 @@ export const mapSlice = createSlice({
 // Actions
 
 export const {
+  wsReportStatus,
   reportViewAt,
   remoteSetLayers,
   remoteSetFeatures,
