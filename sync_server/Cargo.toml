@@ -27,3 +27,6 @@ yrs-warp = "0.4.0"
 assert-json-diff = "2.0.2"
 serde_json = "1.0.93"
 tempfile = "3.3.0"
+
+[profile.dev.package.backtrace]
+opt-level = 3
