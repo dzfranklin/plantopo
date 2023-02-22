@@ -21,6 +21,7 @@ declare global {
       };
       sync: {
         yDoc?: unknown;
+        idb?: unknown;
         ws?: unknown;
       };
     };

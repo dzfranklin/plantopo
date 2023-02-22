@@ -1,5 +1,6 @@
 #[allow(unused)]
 use eyre::{eyre, Context};
+use tokio::select;
 #[allow(unused)]
 use tracing::{debug, error, info, instrument, trace, warn};
 
@@ -8,17 +9,19 @@ use serde::Deserialize;
 use std::{
     collections::HashMap,
     fmt,
+    net::SocketAddr,
     path::Path,
     sync::{Arc, Weak},
 };
 use uuid::Uuid;
+use warp::ws::WebSocket;
 use weak_table::WeakValueHashMap;
 use y_sync::awareness::Awareness;
 use yrs::{
     types::ToJson, updates::decoder::Decode, Array, ArrayPrelim, Doc, Map, MapPrelim, ReadTxn,
     StateVector, Transact, TransactionMut, Update, UpdateEvent,
 };
-use yrs_warp::{broadcast::BroadcastGroup, AwarenessRef};
+use yrs_warp::{broadcast::BroadcastGroup, ws::WarpConn, AwarenessRef};
 
 const BCAST_SIZE: usize = 32;
 
@@ -27,16 +30,37 @@ pub type DbRef = Arc<OptimisticTransactionDB>;
 
 pub struct Active {
     pub id: Uuid,
-    pub awareness: AwarenessRef,
+    pub aware: AwarenessRef,
     pub bcast: BroadcastGroup,
-    _sub: yrs::UpdateSubscription,
+    _doc_sub: yrs::UpdateSubscription,
 }
+
+// TODO: spawn per active, so we can manage without sync overhead or send issues for awareness updates
+// We can do broadcastgroup better with too I think
+// This will also enable only writing every 30sec or so
 
 impl fmt::Debug for Active {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("MapState")
+        f.debug_struct("Active")
             .field("id", &self.id)
             .finish_non_exhaustive()
+    }
+}
+
+#[instrument(skip(socket))]
+pub async fn handle_socket(
+    db: DbRef,
+    map: Arc<Active>,
+    id: Uuid,
+    socket: WebSocket,
+    addr: SocketAddr,
+) {
+    info!("handle_socket {:?} to {}", addr, id);
+    let conn = WarpConn::new(map.aware.clone(), socket);
+    let sub = map.bcast.join(conn.inbox().clone());
+    select! {
+        _res = sub => {}
+        _res = conn => {}
     }
 }
 
@@ -56,14 +80,13 @@ pub fn get_snapshot(db: DbRef, id: Uuid) -> eyre::Result<Option<String>> {
         None => return Ok(None),
     };
     let mut out = String::new();
-    doc.to_json(&doc.transact()).to_json(&mut out);
+    read_data_json(&doc.transact()).to_json(&mut out);
     Ok(Some(out))
 }
 
 #[derive(Deserialize, Debug)]
 pub struct CreateReq {
-    layers: String,
-    features: String,
+    data: String,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -86,18 +109,14 @@ pub fn create(db: DbRef, id: Uuid, req: CreateReq) -> Result<(), CreateError> {
 
     // TODO: Auth
 
-    let layers_value = Any::from_json(&req.layers).map_err(CreateError::internal)?;
-    let features_value = Any::from_json(&req.features).map_err(CreateError::internal)?;
+    let data_value = Any::from_json(&req.data).map_err(CreateError::internal)?;
 
     let doc = configure_doc();
+    let data = doc.get_or_insert_map("data");
 
-    let layers = doc.get_or_insert_array("layers");
-    let features = doc.get_or_insert_map("features");
     {
         let mut tx = doc.transact_mut();
-        initialize_deep(&mut tx, Parent::Array(layers), layers_value);
-        initialize_deep(&mut tx, Parent::Map(features), features_value);
-        info!("creating: {}: {}", id, doc.to_json(&tx));
+        initialize_deep(&mut tx, Parent::Map(data), data_value);
     }
 
     let update = doc
@@ -142,10 +161,10 @@ pub async fn get_active(
 #[instrument(skip(db))]
 fn load_doc(db: DbRef, id: Uuid) -> eyre::Result<Option<Doc>> {
     if let Some(value) = db.get(id)? {
-        let value = Update::decode_v1(&value).context("failed to decode stored state")?;
+        let value = Update::decode_v1(&value).context("failed to decode stored data")?;
         let doc = configure_doc();
         doc.transact_mut().apply_update(value);
-        debug!("loaded doc {}", doc.to_json(&doc.transact()));
+        debug!("loaded doc data={}", read_data_json(&doc.transact()));
         Ok(Some(doc))
     } else {
         Ok(None)
@@ -158,8 +177,7 @@ fn configure_doc() -> yrs::Doc {
         ..Default::default()
     };
     let doc = Doc::with_options(opts);
-    doc.get_or_insert_array("layers");
-    doc.get_or_insert_map("features");
+    doc.get_or_insert_map("data");
     doc
 }
 
@@ -170,39 +188,42 @@ async fn load_active(db: DbRef, id: Uuid) -> eyre::Result<Option<Active>> {
         None => return Ok(None),
     };
 
-    debug!("Loaded {}", doc.to_json(&doc.transact()));
+    debug!("data={}", read_data_json(&doc.transact()));
 
-    let sub = doc
-        .observe_update_v1(move |tx, update| on_update(db.clone(), id, tx, update))
+    let doc_sub = doc
+        .observe_update_v1(move |tx, update| on_doc_update(db.clone(), id, tx, update))
         .expect("Failed to subscribe to doc");
 
-    let awareness = Arc::new(tokio::sync::RwLock::new(Awareness::new(doc)));
-    let bcast = BroadcastGroup::open(awareness.clone(), BCAST_SIZE).await;
+    let aware = Awareness::new(doc);
+    let aware = Arc::new(tokio::sync::RwLock::new(aware));
+    let bcast = BroadcastGroup::open(aware.clone(), BCAST_SIZE).await;
 
     Ok(Some(Active {
         id,
-        awareness,
+        aware,
         bcast,
-        _sub: sub,
+        _doc_sub: doc_sub,
     }))
 }
 
-fn on_update(db: DbRef, id: Uuid, tx: &TransactionMut, _update: &UpdateEvent) {
+fn on_doc_update(db: DbRef, id: Uuid, tx: &TransactionMut, event: &UpdateEvent) {
     let value = tx.encode_state_as_update_v1(&StateVector::default());
 
     debug!(
-        "on_update layers={} features={}",
-        tx.get_array("layers")
-            .map(|v| v.to_json(tx))
-            .unwrap_or(lib0::any::Any::Undefined),
-        tx.get_map("features")
-            .map(|v| v.to_json(tx))
-            .unwrap_or(lib0::any::Any::Undefined)
+        "on_doc_update: update={:?}\ndata={}",
+        Update::decode_v1(&event.update),
+        read_data_json(tx)
     );
 
     if let Err(e) = db.put(id, value) {
         error!("Failed to write to db in on_update: {}", e);
     }
+}
+
+fn read_data_json(tx: &impl ReadTxn) -> lib0::any::Any {
+    tx.get_map("data")
+        .map(|s| s.to_json(tx))
+        .unwrap_or(lib0::any::Any::Undefined)
 }
 
 type AnyMap = Box<HashMap<String, lib0::any::Any>>;
@@ -316,23 +337,24 @@ mod test {
             db.clone(),
             id,
             CreateReq {
-                layers: json!([
-                    {
-                        "sourceId": 42,
-                        "opacity": 1
-                    },
-                    {
-                        "sourceId": 1,
-                        "opacity": 0.34
+                data: json!({
+                    "layers": [
+                        {
+                            "sourceId": 42,
+                            "opacity": 1
+                        },
+                        {
+                            "sourceId": 1,
+                            "opacity": 0.34
+                        }
+                    ],
+                    "features": {
+                      "1aac3792-3ecc-4399-8a52-36c3d61271f1": {
+                        "properties": {
+                          "nested": "works"
+                        }
+                      }
                     }
-                ])
-                .to_string(),
-                features: json!({
-                  "1aac3792-3ecc-4399-8a52-36c3d61271f1": {
-                    "properties": {
-                      "nested": "works"
-                    }
-                  }
                 })
                 .to_string(),
             },
@@ -343,23 +365,23 @@ mod test {
 
         assert_json_eq!(
             json!({
-                  "layers": [
-                      {
-                          "sourceId": 42,
-                          "opacity": 1
-                      },
-                      {
-                          "sourceId": 1,
-                          "opacity": 0.34
-                      }
-                  ],
-                  "features": {
-                    "1aac3792-3ecc-4399-8a52-36c3d61271f1": {
-                      "properties": {
-                        "nested": "works"
-                      }
+                "layers": [
+                    {
+                        "sourceId": 42,
+                        "opacity": 1
+                    },
+                    {
+                        "sourceId": 1,
+                        "opacity": 0.34
                     }
-                  }
+                ],
+                "features": {
+                "1aac3792-3ecc-4399-8a52-36c3d61271f1": {
+                    "properties": {
+                    "nested": "works"
+                    }
+                }
+                }
             }),
             actual
         );

@@ -9,11 +9,7 @@ import * as ml from 'maplibre-gl';
 import type { RootState } from './store';
 import { startListening } from './listener';
 import { flash } from './flashSlice';
-import {
-  JsonObject,
-  JsonTemplateArray,
-  JsonTemplateObject,
-} from '@sanalabs/json';
+import { JsonObject, JsonTemplateObject } from '@sanalabs/json';
 
 interface MapState {
   onlineStatus: 'connecting' | 'connected' | 'reconnecting';
@@ -27,8 +23,10 @@ interface MapState {
   id: string;
   awareness?: Awareness;
   peerAwareness: Awareness[];
-  layers: Layer[];
-  features?: unknown; // TODO
+  data?: {
+    layers: Layer[];
+    features: unknown;
+  };
   viewAt: ViewAt;
   geolocation: Geolocation;
 }
@@ -44,8 +42,7 @@ const initialState: MapState = {
   id: 'c2f85ed1-38e3-444c-b6bc-ae33a831ca5a',
   awareness: undefined,
   peerAwareness: [],
-  layers: [],
-  features: undefined,
+  data: undefined,
   viewAt: JSON.parse(todoPreload).map.viewAt,
   geolocation: {
     updating: false,
@@ -137,13 +134,10 @@ export const mapSlice = createSlice({
       state.viewAt = payload;
     },
 
-    remoteSetLayers(state, { payload }: PayloadAction<JsonTemplateArray>) {
-      state.layers = payload as unknown as MapState['layers'];
+    remoteUpdate(state, { payload }: PayloadAction<JsonTemplateObject>) {
+      state.data = payload as unknown as MapState['data'];
     },
-    remoteSetFeatures(state, { payload }: PayloadAction<JsonTemplateObject>) {
-      state.features = payload as unknown as MapState['features'];
-    },
-    remoteSetPeerAwareness(state, { payload }: PayloadAction<JsonObject[]>) {
+    remoteAwareUpdate(state, { payload }: PayloadAction<JsonObject[]>) {
       state.peerAwareness = payload as unknown as MapState['peerAwareness'];
     },
 
@@ -151,26 +145,30 @@ export const mapSlice = createSlice({
       state,
       { payload }: PayloadAction<{ idx: number; value: Partial<Layer> }>,
     ) {
-      const layer = state.layers[payload.idx];
+      if (!state.data) return;
+      const layer = state.data.layers[payload.idx];
       for (const prop in payload.value) {
         layer[prop] = payload.value[prop];
       }
     },
     removeLayer(state, { payload }: PayloadAction<number>) {
-      state.layers.splice(payload, 1);
+      if (!state.data) return;
+      state.data.layers.splice(payload, 1);
     },
     addLayer(
       state,
       { payload: { sourceId } }: PayloadAction<{ sourceId: number }>,
     ) {
+      if (!state.data) return;
       const source = state.layerSources[sourceId];
-      state.layers.push({
+      state.data.layers.push({
         sourceId: sourceId,
         opacity: source.defaultOpacity || 1.0,
       });
     },
     setLayers(state, { payload }: PayloadAction<Layer[]>) {
-      state.layers = payload;
+      if (!state.data) return;
+      state.data.layers = payload;
     },
 
     setGeolocation(state, { payload }: PayloadAction<Geolocation>) {
@@ -187,9 +185,8 @@ export const mapSlice = createSlice({
 export const {
   wsReportStatus,
   reportViewAt,
-  remoteSetLayers,
-  remoteSetFeatures,
-  remoteSetPeerAwareness,
+  remoteUpdate,
+  remoteAwareUpdate,
   clearGeolocation,
   updateLayer,
   removeLayer,
@@ -384,16 +381,17 @@ startListening({
 
 const select = (s: RootState) => s.map;
 
+export const selectData = (s) => select(s).data;
 export const selectId = (s) => select(s).id;
 export const selectAwareness = (s) => select(s).awareness;
-export const selectLayers = (s) => select(s).layers;
-export const selectFeatures = (s) => select(s).features;
+export const selectLayers = (s) => select(s).data?.layers;
 export const selectGeolocation = (s) => select(s).geolocation;
 export const selectTokens = (s) => select(s).tokens;
 export const selectViewAt = (s) => select(s).viewAt;
 
 export const selectLayerSourceDisplayList = (state) => {
   const layers = selectLayers(state);
+  if (!layers) return;
 
   const used = {};
   for (const layer of layers) {
@@ -415,12 +413,14 @@ export const selectLayerSource = (id: number) => (s) =>
 
 export const selectShouldCreditOS = createSelector(
   [selectLayers, selectLayerSources, selectLayerDatas],
-  (layers, layerSources, dataSources) =>
-    layers
+  (layers, layerSources, dataSources) => {
+    if (!layers) return;
+    return layers
       .map((view) => layerSources[view.sourceId])
       .flatMap((layerSource) => layerSource.dependencies)
       .map((dataSourceId) => dataSources[dataSourceId])
-      .some((dataSource) => dataSource.attribution === 'os'),
+      .some((dataSource) => dataSource.attribution === 'os');
+  },
 );
 
 function sortBy<T, B>(list: T[], key: (item: T) => B) {

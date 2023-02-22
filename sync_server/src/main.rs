@@ -1,18 +1,15 @@
 #[allow(unused)]
 use eyre::{eyre, Context};
+use plantopo_sync_server::{
+    create, get_active, get_snapshot, handle_socket, open_db, ActivesRef, CreateError, CreateReq,
+    DbRef,
+};
+use std::{convert::Infallible, env, net::SocketAddr, sync::Arc};
 #[allow(unused)]
 use tracing::{debug, error, info, instrument, trace, warn};
-
-use std::{convert::Infallible, env, sync::Arc};
-use tokio::select;
 use uuid::Uuid;
 use warp::{
     addr, body::BodyDeserializeError, hyper::StatusCode, path, reject, reply, ws::Ws, Filter, Reply,
-};
-use yrs_warp::ws::WarpConn;
-
-use plantopo_sync_server::{
-    create, get_active, get_snapshot, open_db, ActivesRef, CreateError, CreateReq,
 };
 
 #[derive(Debug)]
@@ -43,28 +40,26 @@ async fn main() -> eyre::Result<()> {
         .and(warp::ws())
         .and(and_db.clone())
         .and(and_actives.clone())
-        .and_then(|id, addr, ws: Ws, db, actives| async move {
-            trace!("Pre-upgrade ws for map {} from {:?}", id, addr);
+        .and_then(
+            |id, addr: Option<SocketAddr>, ws: Ws, db: DbRef, actives| async move {
+                let addr = addr.expect("transport uses addresses");
+                trace!("Pre-upgrade ws for map {} from {:?}", id, addr);
 
-            // TODO: Auth
+                // TODO: Auth
 
-            if let Some(map) = get_active(db, actives, id).await.map_err(InternalError)? {
-                Ok(ws
-                    .on_upgrade(move |socket| async move {
-                        info!("Connected {:?} to {}", addr, id);
-                        let conn = WarpConn::new(map.awareness.clone(), socket);
-                        let sub = map.bcast.join(conn.inbox().clone());
-                        select! {
-                            _res = sub => {}
-                            _res = conn => {}
-                        }
-                    })
-                    .into_response())
-            } else {
-                debug!("socket: map not found: {}", id);
-                Err(reject::not_found())
-            }
-        });
+                if let Some(map) = get_active(db.clone(), actives, id)
+                    .await
+                    .map_err(InternalError)?
+                {
+                    let reply =
+                        ws.on_upgrade(move |socket| handle_socket(db, map, id, socket, addr));
+                    Ok(reply.into_response())
+                } else {
+                    debug!("socket: map not found: {}", id);
+                    Err(reject::not_found())
+                }
+            },
+        );
 
     let create_path = path("map")
         .and(path::param::<Uuid>())

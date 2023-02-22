@@ -5,21 +5,16 @@ import * as Y from 'yjs';
 import { useAppDispatch, useAppSelector } from './hooks';
 import { Awareness as YAwareness } from 'y-protocols/awareness';
 import {
-  remoteSetFeatures,
-  remoteSetLayers,
-  remoteSetPeerAwareness,
+  remoteUpdate,
   selectAwareness,
-  selectFeatures,
   selectId,
-  selectLayers,
   WsStatus,
   wsReportStatus,
+  selectData,
+  remoteAwareUpdate,
 } from './mapSlice';
-import {
-  JsonObject,
-  JsonTemplateArray,
-  JsonTemplateObject,
-} from '@sanalabs/json';
+import { JsonObject, JsonTemplateObject } from '@sanalabs/json';
+import { IndexeddbPersistence } from 'y-indexeddb';
 
 const RESYNC_INTERVAL_MS = 1000 * 60 * 5;
 const MAX_BACKOFF_MS = 1000 * 60 * 2;
@@ -30,15 +25,13 @@ export default function MapSync() {
 
   const [state, setState] = useState<{
     yAwareness: YAwareness;
-    yLayers: Y.Array<unknown>;
-    yFeatures: Y.Map<unknown>;
+    yData: Y.Map<unknown>;
   } | null>(null);
 
   useEffect(() => {
     const yDoc = new Y.Doc({ gc: true });
     window._dbg.sync.yDoc = yDoc;
-    const yLayers = yDoc.getArray('layers') as Y.Array<unknown>;
-    const yFeatures = yDoc.getMap('features') as Y.Map<unknown>;
+    const yData = yDoc.getMap('data') as Y.Map<unknown>;
 
     const ws = new WebsocketProvider(wsUrl(id), 'socket', yDoc, {
       resyncInterval: RESYNC_INTERVAL_MS,
@@ -60,7 +53,13 @@ export default function MapSync() {
       console.debug('ws connection-error', event);
     });
 
-    setState({ yAwareness, yLayers, yFeatures });
+    const idb = new IndexeddbPersistence(`map/${id}`, yDoc);
+    window._dbg.sync.idb = idb;
+    idb.on('synced', () => {
+      console.debug('idb synced');
+    });
+
+    setState({ yAwareness, yData });
     return () => {
       ws.destroy();
       yDoc.destroy();
@@ -68,25 +67,19 @@ export default function MapSync() {
   }, [id]);
 
   if (!state) return <></>;
-  const { yAwareness, yLayers, yFeatures } = state;
   return (
     <>
       <SyncYJson
-        yJson={yLayers}
-        selectData={(s) => selectLayers(s) as unknown as JsonTemplateArray}
-        setData={(d) => remoteSetLayers(d)}
-      />
-      <SyncYJson
-        yJson={yFeatures}
-        selectData={(s) => selectFeatures(s) as unknown as JsonTemplateObject}
-        setData={remoteSetFeatures}
+        yJson={state.yData}
+        selectData={(s) => selectData(s) as unknown as JsonTemplateObject}
+        setData={remoteUpdate}
       />
       <SyncYAwareness
-        awareness={yAwareness}
+        awareness={state.yAwareness}
         selectLocalAwarenessState={(s) =>
           selectAwareness(s) as JsonObject | undefined
         }
-        setAwarenessStates={remoteSetPeerAwareness}
+        setAwarenessStates={remoteAwareUpdate}
       />
     </>
   );
