@@ -12,6 +12,7 @@ import { flash } from './flashSlice';
 import { JsonObject, JsonTemplateObject } from '@sanalabs/json';
 
 interface MapState {
+  user: UserMeta;
   onlineStatus: 'connecting' | 'connected' | 'reconnecting';
   tokens: Tokens;
   layerDatas: {
@@ -21,8 +22,8 @@ interface MapState {
     [id: number]: LayerSource;
   };
   id: string;
-  awareness?: Awareness;
-  peerAwareness: Awareness[];
+  myAware?: Aware;
+  peerAwares?: Aware[];
   data?: {
     layers: Layer[];
     features: unknown;
@@ -34,14 +35,19 @@ interface MapState {
 const todoPreload =
   document.getElementById('map-app-root')!.dataset.preloadedState!;
 const initialState: MapState = {
+  user: {
+    type: 'signedIn',
+    username: 'daniel',
+    id: 'c2f85ed1-38e3-444c-b6bc-ae33a831ca5b',
+  },
   onlineStatus: 'connecting',
   // TODO
   tokens: JSON.parse(todoPreload).map.tokens,
   layerDatas: JSON.parse(todoPreload).map.viewDataSources,
   layerSources: JSON.parse(todoPreload).map.viewLayerSources,
   id: 'c2f85ed1-38e3-444c-b6bc-ae33a831ca5a',
-  awareness: undefined,
-  peerAwareness: [],
+  myAware: undefined,
+  peerAwares: undefined,
   data: undefined,
   viewAt: JSON.parse(todoPreload).map.viewAt,
   geolocation: {
@@ -49,10 +55,15 @@ const initialState: MapState = {
   },
 };
 
-export interface Awareness {
+export interface Aware {
   clientId: number;
   isCurrentClient: boolean;
+  user?: UserMeta;
 }
+
+type UserMeta =
+  | { type: 'anon' }
+  | { type: 'signedIn'; username: string; id: string };
 
 interface Tokens {
   mapbox: string;
@@ -138,7 +149,11 @@ export const mapSlice = createSlice({
       state.data = payload as unknown as MapState['data'];
     },
     remoteAwareUpdate(state, { payload }: PayloadAction<JsonObject[]>) {
-      state.peerAwareness = payload as unknown as MapState['peerAwareness'];
+      const list = payload as unknown as Aware[];
+      const peers = list.filter((a) => !a.isCurrentClient);
+      const my = list.find((a) => a.isCurrentClient)!;
+      state.myAware = { ...my, user: state.user };
+      state.peerAwares = peers;
     },
 
     updateLayer(
@@ -383,7 +398,7 @@ const select = (s: RootState) => s.map;
 
 export const selectData = (s) => select(s).data;
 export const selectId = (s) => select(s).id;
-export const selectAwareness = (s) => select(s).awareness;
+export const selectAwareness = (s) => select(s).myAware;
 export const selectLayers = (s) => select(s).data?.layers;
 export const selectGeolocation = (s) => select(s).geolocation;
 export const selectTokens = (s) => select(s).tokens;

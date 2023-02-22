@@ -1,9 +1,5 @@
 #[allow(unused)]
 use eyre::{eyre, Context};
-use tokio::select;
-#[allow(unused)]
-use tracing::{debug, error, info, instrument, trace, warn};
-
 use rocksdb::OptimisticTransactionDB;
 use serde::Deserialize;
 use std::{
@@ -13,13 +9,26 @@ use std::{
     path::Path,
     sync::{Arc, Weak},
 };
+use tokio::select;
+#[allow(unused)]
+use tracing::{debug, error, info, instrument, trace, warn};
 use uuid::Uuid;
-use warp::ws::WebSocket;
+use warp::{
+    reject, reply,
+    ws::{WebSocket, Ws},
+    Reply,
+};
 use weak_table::WeakValueHashMap;
-use y_sync::awareness::Awareness;
+use y_sync::{
+    awareness::Awareness,
+};
 use yrs::{
-    types::ToJson, updates::decoder::Decode, Array, ArrayPrelim, Doc, Map, MapPrelim, ReadTxn,
-    StateVector, Transact, TransactionMut, Update, UpdateEvent,
+    types::ToJson,
+    updates::{
+        decoder::Decode,
+    },
+    Array, ArrayPrelim, Doc, Map, MapPrelim, ReadTxn, StateVector, Transact, TransactionMut,
+    Update, UpdateEvent,
 };
 use yrs_warp::{broadcast::BroadcastGroup, ws::WarpConn, AwarenessRef};
 
@@ -29,15 +38,11 @@ pub type ActivesRef = Arc<tokio::sync::Mutex<WeakValueHashMap<Uuid, Weak<Active>
 pub type DbRef = Arc<OptimisticTransactionDB>;
 
 pub struct Active {
-    pub id: Uuid,
-    pub aware: AwarenessRef,
-    pub bcast: BroadcastGroup,
+    id: Uuid,
+    aware: AwarenessRef,
+    bcast: BroadcastGroup,
     _doc_sub: yrs::UpdateSubscription,
 }
-
-// TODO: spawn per active, so we can manage without sync overhead or send issues for awareness updates
-// We can do broadcastgroup better with too I think
-// This will also enable only writing every 30sec or so
 
 impl fmt::Debug for Active {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -47,21 +52,58 @@ impl fmt::Debug for Active {
     }
 }
 
-#[instrument(skip(socket))]
+#[derive(Debug)]
+pub struct InternalError(pub eyre::Error);
+impl warp::reject::Reject for InternalError {}
+
+#[instrument(skip(db, actives, socket))]
 pub async fn handle_socket(
     db: DbRef,
-    map: Arc<Active>,
+    actives: ActivesRef,
     id: Uuid,
+    socket: Ws,
+    addr: SocketAddr,
+) -> Result<reply::Response, warp::Rejection> {
+    trace!("handle_socket {:?} to {}", addr, id);
+
+    // TODO: Auth
+    let active = get_active(db.clone(), actives.clone(), id)
+        .await
+        .map_err(InternalError)?;
+
+    if let Some(active) = active {
+        let reply = socket.on_upgrade(move |socket| async move {
+            let result =
+                handle_upgraded_socket(db.clone(), actives.clone(), id, active, socket, addr).await;
+            if let Err(err) = result {
+                warn!("Error in handle_upgraded_socket: {}", err);
+            }
+        });
+        Ok(reply.into_response())
+    } else {
+        info!("handle_socket: map not found: {}", id);
+        Err(reject::not_found())
+    }
+}
+
+#[instrument(skip_all)]
+pub async fn handle_upgraded_socket(
+    _db: DbRef,
+    _actives: ActivesRef,
+    id: Uuid,
+    active: Arc<Active>,
     socket: WebSocket,
     addr: SocketAddr,
-) {
-    info!("handle_socket {:?} to {}", addr, id);
-    let conn = WarpConn::new(map.aware.clone(), socket);
-    let sub = map.bcast.join(conn.inbox().clone());
+) -> eyre::Result<()> {
+    trace!("handle_upgraded_socket {:?} to {}", addr, id);
+    let conn = WarpConn::new(active.aware.clone(), socket);
+    let sub = active.bcast.join(conn.inbox().clone());
+    info!("connected {} to {}", addr, id);
     select! {
         _res = sub => {}
         _res = conn => {}
     }
+    Ok(())
 }
 
 #[instrument(skip(path))]

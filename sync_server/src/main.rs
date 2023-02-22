@@ -1,20 +1,15 @@
 #[allow(unused)]
 use eyre::{eyre, Context};
 use plantopo_sync_server::{
-    create, get_active, get_snapshot, handle_socket, open_db, ActivesRef, CreateError, CreateReq,
-    DbRef,
+    create, get_snapshot, handle_socket, open_db, ActivesRef, CreateError, CreateReq, InternalError,
 };
 use std::{convert::Infallible, env, net::SocketAddr, sync::Arc};
 #[allow(unused)]
 use tracing::{debug, error, info, instrument, trace, warn};
 use uuid::Uuid;
 use warp::{
-    addr, body::BodyDeserializeError, hyper::StatusCode, path, reject, reply, ws::Ws, Filter, Reply,
+    addr, body::BodyDeserializeError, hyper::StatusCode, path, reject, reply, Filter, Reply,
 };
-
-#[derive(Debug)]
-struct InternalError(eyre::Error);
-impl warp::reject::Reject for InternalError {}
 
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
@@ -41,23 +36,9 @@ async fn main() -> eyre::Result<()> {
         .and(and_db.clone())
         .and(and_actives.clone())
         .and_then(
-            |id, addr: Option<SocketAddr>, ws: Ws, db: DbRef, actives| async move {
+            |id, addr: Option<SocketAddr>, socket, db, actives| async move {
                 let addr = addr.expect("transport uses addresses");
-                trace!("Pre-upgrade ws for map {} from {:?}", id, addr);
-
-                // TODO: Auth
-
-                if let Some(map) = get_active(db.clone(), actives, id)
-                    .await
-                    .map_err(InternalError)?
-                {
-                    let reply =
-                        ws.on_upgrade(move |socket| handle_socket(db, map, id, socket, addr));
-                    Ok(reply.into_response())
-                } else {
-                    debug!("socket: map not found: {}", id);
-                    Err(reject::not_found())
-                }
+                handle_socket(db, actives, id, socket, addr).await
             },
         );
 
