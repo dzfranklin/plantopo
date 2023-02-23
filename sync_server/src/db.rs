@@ -137,6 +137,28 @@ fn merge_data(current: Option<&[u8]>, ops: &MergeOperands) -> eyre::Result<Vec<u
     Ok(combined.encode_v1())
 }
 
+// fn merge_data(current: Option<&[u8]>, ops: &MergeOperands) -> eyre::Result<Vec<u8>> {
+//     let doc = configure_doc();
+//     let mut tx = doc.transact_mut();
+
+//     if let Some(current) = current {
+//         let current = Update::decode_v1(current)?;
+//         tx.apply_update(current);
+//         trace!(current_data=%read_data_json(&tx));
+//     } else {
+//         trace!("current is None");
+//     }
+
+//     for op in ops {
+//         let op = Update::decode_v1(op)?;
+//         tx.apply_update(op);
+//     }
+//     trace!(ops_len=?ops.len(), merged_data=%read_data_json(&tx));
+
+//     let merged = tx.encode_state_as_update_v1(&StateVector::default());
+//     Ok(merged)
+// }
+
 const UUID_LEN: usize = 16;
 const KEY_LEN: usize = UUID_LEN + 1;
 const TYPE_DATA: u8 = 1;

@@ -13,6 +13,7 @@ import {
   selectLayers,
   selectLayerSources,
   ViewAt,
+  selectIs3d,
 } from './mapSlice';
 import '../userSettings';
 import { startListening, stopListening } from './listener';
@@ -152,21 +153,29 @@ export default function MapBase(props: Props) {
     const storeUnsubscribe = store.subscribe(() => {
       const state = store.getState();
 
+      const is3d = selectIs3d(state);
       const layers = selectLayers(state);
       const prevLayers = prevState && selectLayers(prevState);
-      if (layers !== prevLayers) {
-        requestAnimationFrame(() =>
-          computeStyle(
-            selectLayerDatas(state),
-            selectLayerSources(state),
-            layers,
-            prevLayers,
-            (style) => map.setStyle(style),
-            (id, prop, value) =>
-              map.setPaintProperty(id, prop, value, { validate: false }),
-          ),
-        );
-      }
+      const prevIs3d = prevState && selectIs3d(prevState);
+      computeStyle(
+        selectLayerDatas(state),
+        selectLayerSources(state),
+        is3d,
+        layers,
+        prevIs3d,
+        prevLayers,
+        (style) => requestAnimationFrame(() => map.setStyle(style)),
+        (terrain) =>
+          requestAnimationFrame(() => {
+            // Work around a type def bug
+            const setter = map.setTerrain.bind(map) as unknown as (
+              s: ml.TerrainSpecification | undefined,
+            ) => void;
+            setter(terrain);
+          }),
+        (id, prop, value) =>
+          map.setPaintProperty(id, prop, value, { validate: false }),
+      );
 
       const geoLoc = selectGeolocation(state);
       if (!prevState || geoLoc !== selectGeolocation(prevState)) {

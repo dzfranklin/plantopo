@@ -23,6 +23,7 @@ const OPACITY_PROPS = {
 };
 
 const OPACITY_CUTOFF = 0.95;
+const DATA_FOR_3D = 'aws-open-terrain';
 
 type UpdatePaint = (id: string, prop: string, value: number) => void;
 type DataSources = { [id: string]: LayerData };
@@ -31,21 +32,34 @@ type LayerSources = { [id: number]: LayerSource };
 export default function computeStyle(
   dataSources: DataSources,
   layerSources: LayerSources,
+  is3d: boolean,
   layers: Layer[],
+  prevIs3d: boolean,
   prevLayers: Layer[] | undefined,
   updateFull: (style: ml.StyleSpecification) => void,
+  updateTerrain: (terrain?: ml.TerrainSpecification) => void,
   updatePaint: UpdatePaint,
 ) {
-  if (!prevLayers || layers.length !== prevLayers.length) {
-    updateFull(computeFullStyle(dataSources, layerSources, layers));
+  const full = () => {
+    const [style, terrain] = computeFullStyle(
+      dataSources,
+      layerSources,
+      is3d,
+      layers,
+    );
+    updateFull(style);
+    updateTerrain(terrain);
     window._dbg.computeStyleStats.fullUpdates += 1;
+  };
+
+  if (is3d !== prevIs3d || !prevLayers || layers.length !== prevLayers.length) {
+    full();
     return;
   }
 
   for (let i = 0; i < layers.length; i++) {
     if (prevLayers[i].sourceId !== layers[i].sourceId) {
-      updateFull(computeFullStyle(dataSources, layerSources, layers));
-      window._dbg.computeStyleStats.fullUpdates += 1;
+      full();
       return;
     }
   }
@@ -64,8 +78,9 @@ export default function computeStyle(
 export function computeFullStyle(
   dataSources: DataSources,
   layerSources: LayerSources,
+  is3d: boolean,
   layers: Layer[],
-): ml.StyleSpecification {
+): [ml.StyleSpecification, ml.TerrainSpecification?] {
   const style: Partial<ml.StyleSpecification> = {
     version: 8,
   };
@@ -85,6 +100,15 @@ export function computeFullStyle(
     }
   }
 
+  let terrain;
+  if (is3d) {
+    terrain = {
+      source: DATA_FOR_3D,
+      exaggeration: 1,
+    };
+    activeDataSourceIds.add(DATA_FOR_3D);
+  }
+
   const activeDataSources = Array.from(activeDataSourceIds.keys()).map((id) => {
     const s = dataSources[id];
     const spec = { ...s.spec };
@@ -93,25 +117,27 @@ export function computeFullStyle(
   });
   style.sources = Object.fromEntries(activeDataSources);
 
-  style.layers = layers.flatMap((layer) =>
-    layerSources[layer.sourceId].layerSpecs.map((spec) => {
+  style.layers = layers.flatMap((layer) => {
+    const source = layerSources[layer.sourceId];
+    return source.layerSpecs.map((spec) => {
       const out = {
         ...spec,
         id: glLayerId(layer.sourceId, spec.id),
         paint: spec.paint ? { ...spec.paint } : {},
       };
 
-      if (layer.opacity && layer.opacity < OPACITY_CUTOFF) {
+      const opacity = layer.opacity || source.defaultOpacity || 1;
+      if (opacity < OPACITY_CUTOFF) {
         for (const prop of OPACITY_PROPS[spec.type]) {
-          out.paint[prop] = (out.paint[prop] || 1) * layer.opacity;
+          out.paint[prop] = (out.paint[prop] || 1) * opacity;
         }
       }
 
       return out as ml.LayerSpecification;
-    }),
-  );
+    });
+  });
 
-  return style as ml.StyleSpecification;
+  return [style as ml.StyleSpecification, terrain];
 }
 
 function computeLayerStyleUpdate(
@@ -119,12 +145,13 @@ function computeLayerStyleUpdate(
   layer: Layer,
   updatePaint: UpdatePaint,
 ) {
-  if (layer.opacity && layer.opacity < OPACITY_CUTOFF) {
-    const source = layerSources[layer.sourceId];
+  const source = layerSources[layer.sourceId];
+  const opacity = layer.opacity || source.defaultOpacity || 1;
+  if (opacity < OPACITY_CUTOFF) {
     for (const spec of source.layerSpecs) {
       const glId = glLayerId(layer.sourceId, spec.id);
       for (const prop of OPACITY_PROPS[spec.type]) {
-        const value = (spec.paint?.[prop] || 1) * layer.opacity;
+        const value = (spec.paint?.[prop] || 1) * opacity;
         updatePaint(glId, prop, value);
       }
     }

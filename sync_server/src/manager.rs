@@ -82,7 +82,6 @@ impl Manager {
         let update = aware
             .update_with_clients(changed)
             .expect("changed clients known");
-        trace!("{:?}", &update);
 
         let msg = Message::Awareness(update).encode_v1();
         if tx.send(msg).is_err() {
@@ -92,7 +91,7 @@ impl Manager {
 
     #[instrument(skip(db, tx, event))]
     fn on_doc_update(map: Uuid, db: &Db, tx: &Sender, event: &UpdateEvent) {
-        trace!("{:?}", Update::decode_v2(&event.update));
+        trace!("{:?}", Update::decode_v1(&event.update));
 
         // Equivalant to Message::Sync(SyncMessage::Update(...)).encode_v1()
         // except we avoid an unnecessary Vec clone

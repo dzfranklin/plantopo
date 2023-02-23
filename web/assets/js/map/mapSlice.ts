@@ -10,6 +10,7 @@ import type { RootState } from './store';
 import { startListening } from './listener';
 import { flash } from './flashSlice';
 import { JsonObject, JsonTemplateObject } from '@sanalabs/json';
+import { Features } from './features';
 
 interface MapState {
   enableLocalSave: boolean;
@@ -24,9 +25,11 @@ interface MapState {
   id: string;
   localAware: Aware;
   peerAwares?: PeerAware[];
-  data: {
+  data?: {
     layers: Layer[];
-    features: unknown;
+    is3d: boolean;
+    features: Features;
+    featureTrash: Features;
   };
   viewAt: ViewAt;
   geolocation: Geolocation;
@@ -39,21 +42,46 @@ const initialState: MapState = {
   onlineStatus: 'connecting',
   // TODO
   tokens: JSON.parse(todoPreload).map.tokens,
-  layerDatas: JSON.parse(todoPreload).map.viewDataSources,
+  layerDatas: {
+    ...JSON.parse(todoPreload).map.viewDataSources,
+    'aws-open-terrain': {
+      id: 'aws-open-terrain',
+      spec: {
+        type: 'raster-dem',
+        encoding: 'terrarium',
+        maxzoom: 15,
+        tiles: [
+          'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
+        ],
+        attribution:
+          'Terrain Tiles was accessed from <a href="https://registry.opendata.aws/terrain-tiles">https://registry.opendata.aws/terrain-tiles</a>. ' +
+          'ArcticDEM terrain data DEM(s) were created from DigitalGlobe, Inc., imagery and funded under National Science Foundation awards 1043681, 1559691, and 1542736; ' +
+          'Australia terrain data © Commonwealth of Australia (Geoscience Australia) 2017; ' +
+          'Austria terrain data © offene Daten Österreichs &ndash; Digitales Geländemodell (DGM) Österreich; ' +
+          'Canada terrain data contains information licensed under the Open Government Licence &ndash; Canada; ' +
+          'Europe terrain data produced using Copernicus data and information funded by the European Union - EU-DEM layers; ' +
+          'Global ETOPO1 terrain data U.S. National Oceanic and Atmospheric Administration * Mexico terrain data source: INEGI, Continental relief, 2016; ' +
+          'New Zealand terrain data Copyright 2011 Crown copyright (c) Land Information New Zealand and the New Zealand Government (All rights reserved); ' +
+          'Norway terrain data © Kartverket; ' +
+          'United Kingdom terrain data © Environment Agency copyright and/or database right 2015. All rights reserved; ' +
+          'United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey. ',
+      },
+    },
+  },
   layerSources: JSON.parse(todoPreload).map.viewLayerSources,
   id: 'c2f85ed1-38e3-444c-b6bc-ae33a831ca5a',
   localAware: {
     user: { username: 'daniel', id: 'c2f85ed1-38e3-444c-b6bc-ae33a831ca5b' },
   },
   peerAwares: undefined,
-  data: {
-    layers: [],
-    features: {},
-  },
   viewAt: JSON.parse(todoPreload).map.viewAt,
   geolocation: {
     updating: false,
   },
+};
+
+const DEFAULT_LAYER: Layer = {
+  sourceId: 1, // TODO: Replace with uuids
 };
 
 type PeerAware = Aware & { clientId: number; isCurrentClient: boolean };
@@ -181,6 +209,10 @@ export const mapSlice = createSlice({
       state.data.layers = payload;
     },
 
+    setIs3d(state, { payload }: PayloadAction<boolean>) {
+      state.data.is3d = payload;
+    },
+
     setGeolocation(state, { payload }: PayloadAction<Geolocation>) {
       state.geolocation = payload;
     },
@@ -202,6 +234,7 @@ export const {
   removeLayer,
   addLayer,
   setLayers,
+  setIs3d,
 } = mapSlice.actions;
 
 // Intercepted by map
@@ -375,7 +408,8 @@ const select = (s: RootState) => s.map;
 export const selectData = (s) => select(s).data;
 export const selectId = (s) => select(s).id;
 export const selectLocalAware = (s) => select(s).localAware;
-export const selectLayers = (s) => select(s).data?.layers;
+export const selectLayers = (s) => select(s).data?.layers || [DEFAULT_LAYER];
+export const selectIs3d = (s) => select(s).data?.is3d ?? false;
 export const selectGeolocation = (s) => select(s).geolocation;
 export const selectTokens = (s) => select(s).tokens;
 export const selectViewAt = (s) => select(s).viewAt;

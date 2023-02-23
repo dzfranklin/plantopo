@@ -77,11 +77,12 @@ pub async fn handle_upgraded_socket(
     trace!("handle_upgraded_socket {:?} to {}", addr, id);
     let conn = WarpConn::new(active.aware.clone(), socket);
     let sub = active.manager.join(conn.inbox().clone());
-    info!("connected {} to {}", addr, id);
+    info!("connected {addr} to {id}");
     select! {
         _res = sub => {}
         _res = conn => {}
     }
+    info!("{addr} disconnected from {id}");
     Ok(())
 }
 
@@ -148,20 +149,6 @@ async fn make_active(db: Db, id: Uuid) -> eyre::Result<Option<Active>> {
     Ok(Some(Active { id, aware, manager }))
 }
 
-// fn on_doc_update(db: Db, id: Uuid, tx: &TransactionMut, event: &UpdateEvent) {
-//     let value = tx.encode_state_as_update_v1(&StateVector::default());
-
-//     debug!(
-//         "on_doc_update: update={:?}\ndata={}",
-//         Update::decode_v1(&event.update),
-//         read_data_json(tx)
-//     );
-
-//     if let Err(e) = db.put(id, value) {
-//         error!("Failed to write to db in on_update: {}", e);
-//     }
-// }
-
 fn read_data_json(tx: &impl ReadTxn) -> lib0::any::Any {
     tx.get_map("data")
         .map(|s| s.to_json(tx))
@@ -170,40 +157,47 @@ fn read_data_json(tx: &impl ReadTxn) -> lib0::any::Any {
 
 #[cfg(test)]
 mod test {
+    use std::sync::Once;
+
     use super::*;
     use assert_json_diff::assert_json_eq;
     use serde_json::json;
     use tempfile::{tempdir, TempDir};
+    use yrs::{ArrayPrelim, Map, MapPrelim};
 
     struct TestState {
         _db_dir: TempDir,
-        _trace: tracing::subscriber::DefaultGuard,
         db: Db,
     }
 
     impl TestState {
         fn new() -> Self {
+            let db_dir = tempdir().unwrap();
+            let db = Db::open(db_dir.path()).unwrap();
+            Self {
+                _db_dir: db_dir,
+                db,
+            }
+        }
+    }
+
+    fn setup() -> TestState {
+        static ONCE: Once = Once::new();
+        ONCE.call_once(|| {
             color_eyre::install().unwrap();
             let subscriber = tracing_subscriber::fmt()
                 .pretty()
                 .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
                 .with_test_writer()
                 .finish();
-            let trace = tracing::subscriber::set_default(subscriber);
-
-            let db_dir = tempdir().unwrap();
-            let db = Db::open(db_dir.path()).unwrap();
-            Self {
-                _db_dir: db_dir,
-                _trace: trace,
-                db,
-            }
-        }
+            tracing::subscriber::set_global_default(subscriber).unwrap();
+        });
+        TestState::new()
     }
 
     #[test]
     fn create_then_snapshot() -> eyre::Result<()> {
-        let state = TestState::new();
+        let state = setup();
         let db = state.db;
 
         let id = Uuid::new_v4();
@@ -223,4 +217,52 @@ mod test {
 
         Ok(())
     }
+
+    #[test]
+    fn merge_one_update() -> eyre::Result<()> {
+        let state = setup();
+        let db = state.db;
+        let id = Uuid::new_v4();
+
+        {
+            let doc = configure_doc();
+            let data = doc.get_or_insert_map("data");
+
+            let current = {
+                let mut tx = doc.transact_mut();
+                data.insert(
+                    &mut tx,
+                    "layers",
+                    ArrayPrelim::from([MapPrelim::from([("sourceId", 42)])]),
+                );
+                tx.encode_update_v1()
+            };
+
+            let update = {
+                let mut tx = doc.transact_mut();
+                data.insert(&mut tx, "foobar", 101);
+                tx.encode_update_v1()
+            };
+
+            db.update_data(id, current)?;
+            db.update_data(id, update)?;
+        };
+
+        let doc = db.get_data(id)?.unwrap();
+        let mut actual = String::new();
+        read_data_json(&doc.transact()).to_json(&mut actual);
+        let actual: serde_json::Value = serde_json::from_str(&actual)?;
+
+        assert_json_eq!(
+            json!({
+                "foobar": 101,
+                "layers": [{"sourceId": 42}]
+            }),
+            actual
+        );
+
+        Ok(())
+    }
+
+    // TODO: Figure out a failing test for the previous buggy merge operator
 }

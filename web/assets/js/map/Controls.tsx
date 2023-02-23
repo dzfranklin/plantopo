@@ -36,13 +36,18 @@ import {
   removeLayer,
   addLayer,
   setLayers,
+  selectIs3d,
+  setIs3d,
 } from './mapSlice';
 import Button from './components/Button';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMountain } from '@fortawesome/free-solid-svg-icons';
 
 export default function Controls() {
   const dispatch = useAppDispatch();
   const [layerSelectIsOpen, setLayerSelectIsOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const is3d = useAppSelector(selectIs3d);
   const geolocation = useAppSelector(selectGeolocation);
 
   useEffect(() => {
@@ -73,6 +78,11 @@ export default function Controls() {
         onClick={() =>
           dispatch(isFullscreen ? exitFullscreen() : requestFullscreen())
         }
+      />
+      <Control
+        icon={IconFor3d}
+        iconClass={classNames(is3d ? 'text-purple-600' : 'text-gray-700')}
+        onClick={() => dispatch(setIs3d(!is3d))}
       />
       <ZoomControl />
       <Control
@@ -239,7 +249,7 @@ function SourceItem({ source }) {
 function Control(props) {
   const Icon = props.icon;
   return (
-    <div className="bg-white border border-gray-200 rounded-[2px] w-min">
+    <div className="bg-white border border-gray-200 rounded-[2px]">
       <button
         onClick={props.onClick}
         className="flex justify-center p-[5px] hover:bg-gray-200"
@@ -267,5 +277,14 @@ function ZoomControl() {
         <ZoomOutIcon className="w-[14px]" />
       </button>
     </div>
+  );
+}
+
+function IconFor3d({ className }) {
+  return (
+    <FontAwesomeIcon
+      icon={faMountain}
+      className={classNames(className, 'h-[20px] w-[20px] p-[2px]')}
+    />
   );
 }
