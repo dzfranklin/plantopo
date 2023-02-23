@@ -68,26 +68,17 @@ export default function Controls() {
           onClick={() => dispatch(clearGeolocation())}
         />
       )}
-
-      {!isFullscreen ? (
-        <Control
-          icon={ArrowsPointingOutIcon}
-          onClick={() => dispatch(requestFullscreen())}
-        />
-      ) : (
-        <Control
-          icon={ArrowsPointingInIcon}
-          onClick={() => dispatch(exitFullscreen())}
-        />
-      )}
-
+      <Control
+        icon={isFullscreen ? ArrowsPointingInIcon : ArrowsPointingOutIcon}
+        onClick={() =>
+          dispatch(isFullscreen ? exitFullscreen() : requestFullscreen())
+        }
+      />
       <ZoomControl />
-
       <Control
         icon={LayerSelectionIcon}
         onClick={() => setLayerSelectIsOpen(true)}
       />
-
       <AnimatePresence>
         {layerSelectIsOpen && (
           <LayerSelect close={() => setLayerSelectIsOpen(false)} />
