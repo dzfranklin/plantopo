@@ -2,25 +2,27 @@ import { SyncYAwareness, SyncYJson } from '@sanalabs/y-redux';
 import { useEffect, useState } from 'react';
 import { WebsocketProvider } from 'y-websocket';
 import * as Y from 'yjs';
-import { useAppDispatch, useAppSelector } from './hooks';
+import { useAppDispatch, useAppSelector, useAppStore } from './hooks';
 import { Awareness as YAwareness } from 'y-protocols/awareness';
 import {
   remoteUpdate,
-  selectAwareness,
+  selectLocalAware,
   selectId,
   WsStatus,
   wsReportStatus,
   selectData,
   remoteAwareUpdate,
+  selectEnableLocalSave,
 } from './mapSlice';
 import { JsonObject, JsonTemplateObject } from '@sanalabs/json';
 import { IndexeddbPersistence } from 'y-indexeddb';
 
 const RESYNC_INTERVAL_MS = 1000 * 60 * 5;
-const MAX_BACKOFF_MS = 1000 * 60 * 2;
+const MAX_BACKOFF_MS = 1000 * 30;
 
 export default function MapSync() {
   const dispatch = useAppDispatch();
+  const store = useAppStore();
   const id = useAppSelector(selectId);
 
   const [state, setState] = useState<{
@@ -53,11 +55,13 @@ export default function MapSync() {
       console.debug('ws connection-error', event);
     });
 
-    const idb = new IndexeddbPersistence(`map/${id}`, yDoc);
-    window._dbg.sync.idb = idb;
-    idb.on('synced', () => {
-      console.debug('idb synced');
-    });
+    if (selectEnableLocalSave(store.getState())) {
+      const idb = new IndexeddbPersistence(`map/${id}`, yDoc);
+      window._dbg.sync.idb = idb;
+      idb.on('synced', () => {
+        console.debug('idb synced');
+      });
+    }
 
     setState({ yAwareness, yData });
     return () => {
@@ -77,7 +81,7 @@ export default function MapSync() {
       <SyncYAwareness
         awareness={state.yAwareness}
         selectLocalAwarenessState={(s) =>
-          selectAwareness(s) as JsonObject | undefined
+          selectLocalAware(s) as JsonObject | undefined
         }
         setAwarenessStates={remoteAwareUpdate}
       />
@@ -90,5 +94,6 @@ const wsUrl = (id: string) => {
   server.protocol = location.protocol === 'https:' ? 'wss' : 'ws';
   server.port = '4005';
   server.pathname = 'map/' + id;
+  server.search = '';
   return server.toString();
 };

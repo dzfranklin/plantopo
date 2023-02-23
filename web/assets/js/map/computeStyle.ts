@@ -101,7 +101,7 @@ export function computeFullStyle(
         paint: spec.paint ? { ...spec.paint } : {},
       };
 
-      if (layer.opacity < OPACITY_CUTOFF) {
+      if (layer.opacity && layer.opacity < OPACITY_CUTOFF) {
         for (const prop of OPACITY_PROPS[spec.type]) {
           out.paint[prop] = (out.paint[prop] || 1) * layer.opacity;
         }
@@ -119,16 +119,14 @@ function computeLayerStyleUpdate(
   layer: Layer,
   updatePaint: UpdatePaint,
 ) {
-  if (layer.opacity > OPACITY_CUTOFF) {
-    return;
-  }
-
-  const source = layerSources[layer.sourceId];
-  for (const spec of source.layerSpecs) {
-    const glId = glLayerId(layer.sourceId, spec.id);
-    for (const prop of OPACITY_PROPS[spec.type]) {
-      const value = (spec.paint?.[prop] || 1) * layer.opacity;
-      updatePaint(glId, prop, value);
+  if (layer.opacity && layer.opacity < OPACITY_CUTOFF) {
+    const source = layerSources[layer.sourceId];
+    for (const spec of source.layerSpecs) {
+      const glId = glLayerId(layer.sourceId, spec.id);
+      for (const prop of OPACITY_PROPS[spec.type]) {
+        const value = (spec.paint?.[prop] || 1) * layer.opacity;
+        updatePaint(glId, prop, value);
+      }
     }
   }
 }

@@ -1,47 +1,26 @@
-#[allow(unused)]
-use eyre::{eyre, Context};
-use rocksdb::OptimisticTransactionDB;
-use serde::Deserialize;
-use std::{
-    collections::HashMap,
-    fmt,
-    net::SocketAddr,
-    path::Path,
-    sync::{Arc, Weak},
-};
-use tokio::select;
-#[allow(unused)]
-use tracing::{debug, error, info, instrument, trace, warn};
-use uuid::Uuid;
+pub mod db;
+pub mod manager;
+pub mod prelude;
+
+use crate::prelude::*;
+use db::{CreateError, Db};
+use manager::Manager;
 use warp::{
     reject, reply,
     ws::{WebSocket, Ws},
     Reply,
 };
 use weak_table::WeakValueHashMap;
-use y_sync::{
-    awareness::Awareness,
-};
-use yrs::{
-    types::ToJson,
-    updates::{
-        decoder::Decode,
-    },
-    Array, ArrayPrelim, Doc, Map, MapPrelim, ReadTxn, StateVector, Transact, TransactionMut,
-    Update, UpdateEvent,
-};
-use yrs_warp::{broadcast::BroadcastGroup, ws::WarpConn, AwarenessRef};
-
-const BCAST_SIZE: usize = 32;
+use y_sync::awareness::Awareness;
+use yrs::{types::ToJson, Doc, ReadTxn, Transact};
+use yrs_warp::{ws::WarpConn, AwarenessRef};
 
 pub type ActivesRef = Arc<tokio::sync::Mutex<WeakValueHashMap<Uuid, Weak<Active>>>>;
-pub type DbRef = Arc<OptimisticTransactionDB>;
 
 pub struct Active {
     id: Uuid,
     aware: AwarenessRef,
-    bcast: BroadcastGroup,
-    _doc_sub: yrs::UpdateSubscription,
+    manager: Manager,
 }
 
 impl fmt::Debug for Active {
@@ -58,7 +37,7 @@ impl warp::reject::Reject for InternalError {}
 
 #[instrument(skip(db, actives, socket))]
 pub async fn handle_socket(
-    db: DbRef,
+    db: Db,
     actives: ActivesRef,
     id: Uuid,
     socket: Ws,
@@ -88,7 +67,7 @@ pub async fn handle_socket(
 
 #[instrument(skip_all)]
 pub async fn handle_upgraded_socket(
-    _db: DbRef,
+    _db: Db,
     _actives: ActivesRef,
     id: Uuid,
     active: Arc<Active>,
@@ -97,7 +76,7 @@ pub async fn handle_upgraded_socket(
 ) -> eyre::Result<()> {
     trace!("handle_upgraded_socket {:?} to {}", addr, id);
     let conn = WarpConn::new(active.aware.clone(), socket);
-    let sub = active.bcast.join(conn.inbox().clone());
+    let sub = active.manager.join(conn.inbox().clone());
     info!("connected {} to {}", addr, id);
     select! {
         _res = sub => {}
@@ -106,18 +85,9 @@ pub async fn handle_upgraded_socket(
     Ok(())
 }
 
-#[instrument(skip(path))]
-pub fn open_db(path: impl AsRef<Path>) -> eyre::Result<DbRef> {
-    let mut db_opts = rocksdb::Options::default();
-    db_opts.create_if_missing(true);
-    let db = OptimisticTransactionDB::open(&db_opts, path)?;
-    info!("Opened {:?}", &db);
-    Ok(Arc::new(db))
-}
-
 #[instrument(skip(db))]
-pub fn get_snapshot(db: DbRef, id: Uuid) -> eyre::Result<Option<String>> {
-    let doc = match load_doc(db, id)? {
+pub fn get_snapshot(db: Db, id: Uuid) -> eyre::Result<Option<String>> {
+    let doc = match db.get_data(id)? {
         Some(doc) => doc,
         None => return Ok(None),
     };
@@ -128,87 +98,28 @@ pub fn get_snapshot(db: DbRef, id: Uuid) -> eyre::Result<Option<String>> {
 
 #[derive(Deserialize, Debug)]
 pub struct CreateReq {
-    data: String,
-}
-
-#[derive(thiserror::Error, Debug)]
-pub enum CreateError {
-    #[error("already exists")]
-    AlreadyExists,
-    #[error(transparent)]
-    Internal(eyre::Error),
-}
-
-impl CreateError {
-    fn internal(err: impl Into<eyre::Error>) -> Self {
-        Self::Internal(err.into())
-    }
+    layer_source: u32,
 }
 
 #[instrument(skip(db))]
-pub fn create(db: DbRef, id: Uuid, req: CreateReq) -> Result<(), CreateError> {
-    use lib0::any::Any;
-
+pub fn create(db: Db, id: Uuid, req: CreateReq) -> Result<(), CreateError> {
     // TODO: Auth
-
-    let data_value = Any::from_json(&req.data).map_err(CreateError::internal)?;
-
-    let doc = configure_doc();
-    let data = doc.get_or_insert_map("data");
-
-    {
-        let mut tx = doc.transact_mut();
-        initialize_deep(&mut tx, Parent::Map(data), data_value);
-    }
-
-    let update = doc
-        .transact()
-        .encode_state_as_update_v1(&StateVector::default());
-
-    {
-        let tx = db.transaction();
-        let existing = tx.get_for_update(id, true).map_err(CreateError::internal)?;
-        if existing.is_some() {
-            return Err(CreateError::AlreadyExists);
-        } else {
-            tx.put(id, update).map_err(CreateError::internal)?;
-        }
-        tx.commit().map_err(CreateError::internal)?;
-    }
-
-    Ok(())
+    db.create(id, req.layer_source)
 }
 
 #[instrument(skip(db, maps))]
-pub async fn get_active(
-    db: DbRef,
-    maps: ActivesRef,
-    id: Uuid,
-) -> eyre::Result<Option<Arc<Active>>> {
+pub async fn get_active(db: Db, maps: ActivesRef, id: Uuid) -> eyre::Result<Option<Arc<Active>>> {
     let mut lock = maps.lock().await;
     if let Some(map) = lock.get(&id) {
         info!("Got map from active");
         Ok(Some(map))
-    } else if let Some(map) = load_active(db, id).await? {
+    } else if let Some(map) = make_active(db, id).await? {
         info!("Loaded map from db to active");
         let map = Arc::new(map);
         lock.insert(id, map.clone());
         Ok(Some(map))
     } else {
         info!("Map not found");
-        Ok(None)
-    }
-}
-
-#[instrument(skip(db))]
-fn load_doc(db: DbRef, id: Uuid) -> eyre::Result<Option<Doc>> {
-    if let Some(value) = db.get(id)? {
-        let value = Update::decode_v1(&value).context("failed to decode stored data")?;
-        let doc = configure_doc();
-        doc.transact_mut().apply_update(value);
-        debug!("loaded doc data={}", read_data_json(&doc.transact()));
-        Ok(Some(doc))
-    } else {
         Ok(None)
     }
 }
@@ -224,115 +135,37 @@ fn configure_doc() -> yrs::Doc {
 }
 
 #[instrument(skip(db))]
-async fn load_active(db: DbRef, id: Uuid) -> eyre::Result<Option<Active>> {
-    let doc = match load_doc(db.clone(), id)? {
+async fn make_active(db: Db, id: Uuid) -> eyre::Result<Option<Active>> {
+    let doc = match db.get_data(id)? {
         Some(doc) => doc,
         None => return Ok(None),
     };
 
-    debug!("data={}", read_data_json(&doc.transact()));
-
-    let doc_sub = doc
-        .observe_update_v1(move |tx, update| on_doc_update(db.clone(), id, tx, update))
-        .expect("Failed to subscribe to doc");
-
-    let aware = Awareness::new(doc);
+    let mut aware = Awareness::new(doc);
+    let manager = Manager::new(db, id, &mut aware)?;
     let aware = Arc::new(tokio::sync::RwLock::new(aware));
-    let bcast = BroadcastGroup::open(aware.clone(), BCAST_SIZE).await;
 
-    Ok(Some(Active {
-        id,
-        aware,
-        bcast,
-        _doc_sub: doc_sub,
-    }))
+    Ok(Some(Active { id, aware, manager }))
 }
 
-fn on_doc_update(db: DbRef, id: Uuid, tx: &TransactionMut, event: &UpdateEvent) {
-    let value = tx.encode_state_as_update_v1(&StateVector::default());
+// fn on_doc_update(db: Db, id: Uuid, tx: &TransactionMut, event: &UpdateEvent) {
+//     let value = tx.encode_state_as_update_v1(&StateVector::default());
 
-    debug!(
-        "on_doc_update: update={:?}\ndata={}",
-        Update::decode_v1(&event.update),
-        read_data_json(tx)
-    );
+//     debug!(
+//         "on_doc_update: update={:?}\ndata={}",
+//         Update::decode_v1(&event.update),
+//         read_data_json(tx)
+//     );
 
-    if let Err(e) = db.put(id, value) {
-        error!("Failed to write to db in on_update: {}", e);
-    }
-}
+//     if let Err(e) = db.put(id, value) {
+//         error!("Failed to write to db in on_update: {}", e);
+//     }
+// }
 
 fn read_data_json(tx: &impl ReadTxn) -> lib0::any::Any {
     tx.get_map("data")
         .map(|s| s.to_json(tx))
         .unwrap_or(lib0::any::Any::Undefined)
-}
-
-type AnyMap = Box<HashMap<String, lib0::any::Any>>;
-type AnyArray = Box<[lib0::any::Any]>;
-
-enum Parent {
-    Map(yrs::MapRef),
-    Array(yrs::ArrayRef),
-}
-
-#[allow(clippy::boxed_local)]
-fn initialize_deep(tx: &mut TransactionMut, parent: Parent, value: lib0::any::Any) {
-    use lib0::any::Any;
-
-    match parent {
-        Parent::Map(parent) => {
-            let value = any_as_hashmap(value).unwrap();
-            for (child_key, child_value) in value.into_iter() {
-                if matches!(child_value, Any::Map(_) | Any::Array(_)) {
-                    let child_parent = match child_value {
-                        Any::Map(_) => {
-                            Parent::Map(parent.insert(tx, child_key, MapPrelim::<Doc>::new()))
-                        }
-                        Any::Array(_) => {
-                            Parent::Array(parent.insert(tx, child_key, ArrayPrelim::default()))
-                        }
-                        _ => unreachable!(),
-                    };
-                    initialize_deep(tx, child_parent, child_value);
-                } else {
-                    parent.insert(tx, child_key, child_value);
-                }
-            }
-        }
-        Parent::Array(parent) => {
-            let value = any_as_array(value).unwrap();
-            for child_value in value.iter() {
-                let child_value = child_value.clone();
-                if matches!(child_value, Any::Map(_) | Any::Array(_)) {
-                    let child_parent = match child_value {
-                        Any::Map(_) => Parent::Map(parent.push_back(tx, MapPrelim::<Doc>::new())),
-                        Any::Array(_) => {
-                            Parent::Array(parent.push_back(tx, ArrayPrelim::default()))
-                        }
-                        _ => unreachable!(),
-                    };
-                    initialize_deep(tx, child_parent, child_value);
-                } else {
-                    parent.push_back(tx, child_value);
-                }
-            }
-        }
-    }
-}
-
-fn any_as_hashmap(value: lib0::any::Any) -> eyre::Result<AnyMap> {
-    match value {
-        lib0::any::Any::Map(value) => Ok(value),
-        _ => Err(eyre!("not a map")),
-    }
-}
-
-fn any_as_array(value: lib0::any::Any) -> eyre::Result<AnyArray> {
-    match value {
-        lib0::any::Any::Array(value) => Ok(value),
-        _ => Err(eyre!("not a map")),
-    }
 }
 
 #[cfg(test)]
@@ -345,7 +178,7 @@ mod test {
     struct TestState {
         _db_dir: TempDir,
         _trace: tracing::subscriber::DefaultGuard,
-        db: DbRef,
+        db: Db,
     }
 
     impl TestState {
@@ -359,7 +192,7 @@ mod test {
             let trace = tracing::subscriber::set_default(subscriber);
 
             let db_dir = tempdir().unwrap();
-            let db = open_db(db_dir.path()).unwrap();
+            let db = Db::open(db_dir.path()).unwrap();
             Self {
                 _db_dir: db_dir,
                 _trace: trace,
@@ -375,55 +208,15 @@ mod test {
 
         let id = Uuid::new_v4();
 
-        create(
-            db.clone(),
-            id,
-            CreateReq {
-                data: json!({
-                    "layers": [
-                        {
-                            "sourceId": 42,
-                            "opacity": 1
-                        },
-                        {
-                            "sourceId": 1,
-                            "opacity": 0.34
-                        }
-                    ],
-                    "features": {
-                      "1aac3792-3ecc-4399-8a52-36c3d61271f1": {
-                        "properties": {
-                          "nested": "works"
-                        }
-                      }
-                    }
-                })
-                .to_string(),
-            },
-        )?;
+        create(db.clone(), id, CreateReq { layer_source: 42 })?;
 
         let actual = get_snapshot(db, id)?.expect("exists");
         let actual: serde_json::Value = serde_json::from_str(&actual)?;
 
         assert_json_eq!(
             json!({
-                "layers": [
-                    {
-                        "sourceId": 42,
-                        "opacity": 1
-                    },
-                    {
-                        "sourceId": 1,
-                        "opacity": 0.34
-                    }
-                ],
-                "features": {
-                "1aac3792-3ecc-4399-8a52-36c3d61271f1": {
-                    "properties": {
-                    "nested": "works"
-                    }
-                }
-                }
+                "features": {},
+                "layers": [{"sourceId": 42}]
             }),
             actual
         );

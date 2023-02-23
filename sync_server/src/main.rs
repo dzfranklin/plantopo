@@ -1,14 +1,15 @@
-#[allow(unused)]
-use eyre::{eyre, Context};
 use plantopo_sync_server::{
-    create, get_snapshot, handle_socket, open_db, ActivesRef, CreateError, CreateReq, InternalError,
+    create,
+    db::{CreateError, Db},
+    get_snapshot, handle_socket,
+    prelude::*,
+    ActivesRef, CreateReq, InternalError,
 };
 use std::{convert::Infallible, env, net::SocketAddr, sync::Arc};
-#[allow(unused)]
-use tracing::{debug, error, info, instrument, trace, warn};
 use uuid::Uuid;
 use warp::{
-    addr, body::BodyDeserializeError, hyper::StatusCode, path, reject, reply, Filter, Reply,
+    addr, body::BodyDeserializeError, hyper::StatusCode, path, path::FullPath, reject, reply,
+    Filter, Reply,
 };
 
 #[tokio::main]
@@ -20,17 +21,14 @@ async fn main() -> eyre::Result<()> {
         .finish();
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    let db_path = env::var("PLANTOPO_SYNC_DB").context("PLANTOPO_SYNC_DB")?;
-    let db = open_db(&db_path)?;
+    let db_path = env::var("PLANTOPO_SYNC_DB").wrap_err("PLANTOPO_SYNC_DB")?;
+    let db = Db::open(&db_path)?;
     let actives: ActivesRef = Arc::new(Default::default());
 
     let and_db = warp::any().map(move || db.clone());
     let and_actives = warp::any().map(move || actives.clone());
 
-    let ws_path = path("map")
-        .and(path::param::<Uuid>())
-        .and(path("socket"))
-        .and(path::end())
+    let ws_route = path!("map" / Uuid / "socket")
         .and(addr::remote())
         .and(warp::ws())
         .and(and_db.clone())
@@ -42,10 +40,7 @@ async fn main() -> eyre::Result<()> {
             },
         );
 
-    let create_path = path("map")
-        .and(path::param::<Uuid>())
-        .and(path("create"))
-        .and(path::end())
+    let create_route = path!("map" / Uuid / "create")
         .and(warp::post())
         .and(warp::body::json())
         .and(and_db.clone())
@@ -60,10 +55,7 @@ async fn main() -> eyre::Result<()> {
             }
         });
 
-    let snapshot_path = path("map")
-        .and(path::param::<Uuid>())
-        .and(warp::path("snapshot"))
-        .and(warp::path::end())
+    let snapshot_route = path!("map" / Uuid / "snapshot")
         .and(and_db.clone())
         .and_then(|id: Uuid, db| async move {
             match get_snapshot(db, id).map_err(InternalError)? {
@@ -72,10 +64,13 @@ async fn main() -> eyre::Result<()> {
             }
         });
 
-    let paths = ws_path
-        .or(create_path)
-        .or(snapshot_path)
-        .or(warp::any().and_then(|| async { Err::<Infallible, _>(reject::not_found()) }))
+    let paths = ws_route
+        .or(create_route)
+        .or(snapshot_route)
+        .or(path::full().and_then(|path: FullPath| async move {
+            info!("Not found: {}", path.as_str());
+            Err::<Infallible, _>(reject::not_found())
+        }))
         .recover(handle_rejection);
 
     warp::serve(paths).run(([0, 0, 0, 0], 4005)).await;
