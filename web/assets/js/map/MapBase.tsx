@@ -15,10 +15,11 @@ import {
   ViewAt,
   selectIs3d,
 } from './mapSlice';
-import '../userSettings';
+import '../globals';
 import { startListening, stopListening } from './listener';
 import '../map';
 import computeStyle from './computeStyle';
+import reportLayerDataRequest from './reportLayerDataRequest';
 
 export interface Props {
   isLoading: (_: boolean) => void;
@@ -60,8 +61,10 @@ export default function MapBase(props: Props) {
           params.set('access_token', tokens.mapbox);
         }
 
+        const out = url.toString();
+        reportLayerDataRequest(out);
         return {
-          url: url.toString(),
+          url: out,
         };
       },
     });
@@ -90,7 +93,7 @@ export default function MapBase(props: Props) {
           speed: FLY_TO_SPEED,
         };
 
-        if (window.userSettings.disableAnimation) {
+        if (window.appSettings.disableAnimation) {
           opts.duration = 0;
         }
 
@@ -164,14 +167,15 @@ export default function MapBase(props: Props) {
         layers,
         prevIs3d,
         prevLayers,
-        (style) => requestAnimationFrame(() => map.setStyle(style)),
-        (terrain) =>
+        (style, change3d) =>
           requestAnimationFrame(() => {
-            // Work around a type def bug
-            const setter = map.setTerrain.bind(map) as unknown as (
-              s: ml.TerrainSpecification | undefined,
-            ) => void;
-            setter(terrain);
+            map.setStyle(style);
+            if (change3d === false) {
+              // Work around a type def bug
+              map.setTerrain(undefined as unknown as ml.TerrainSpecification);
+            } else if (typeof change3d === 'string') {
+              map.setTerrain({ source: change3d });
+            }
           }),
         (id, prop, value) =>
           map.setPaintProperty(id, prop, value, { validate: false }),

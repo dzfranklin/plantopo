@@ -1,7 +1,7 @@
 import MapBase from './MapBase';
 import { useState } from 'react';
 import { useAppSelector } from './hooks';
-import { selectShouldCreditOS } from './mapSlice';
+import { selectDataLoaded, selectShouldCreditOS } from './mapSlice';
 import LoadingIndicator from './LoadingIndicator';
 import classNames from '../classNames';
 import Flash from './Flash';
@@ -9,6 +9,7 @@ import Controls from './Controls';
 import MapSync from './MapSync';
 
 export default function MapApp() {
+  const dataLoaded = useAppSelector(selectDataLoaded);
   const [baseIsLoading, setBaseIsLoading] = useState(true);
   const creditOS = useAppSelector(selectShouldCreditOS);
 
@@ -16,11 +17,17 @@ export default function MapApp() {
     <div className="map-app">
       <MapSync />
 
-      <MapBase isLoading={setBaseIsLoading} />
-      <CreditImages creditOS={creditOS} />
-      <LoadingIndicator isLoading={baseIsLoading} />
+      {dataLoaded ? (
+        <>
+          <MapBase isLoading={setBaseIsLoading} />
+          <CreditImages creditOS={creditOS} />
+          <LoadingIndicator isLoading={baseIsLoading} />
 
-      <Controls />
+          <Controls />
+        </>
+      ) : (
+        'TODO LOADING INDICATOR'
+      )}
 
       <Flash />
     </div>

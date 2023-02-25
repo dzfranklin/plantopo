@@ -1,1 +1,9 @@
-<div id="map-app-root" data-preloaded-state={Jason.encode!(@preloaded_state)}></div>
+<div
+  id="map-app-root"
+  data-tokens={Jason.encode!(@tokens)}
+  data-layer-datas={Jason.encode!(@layer_datas)}
+  data-layer-sources={Jason.encode!(@layer_sources)}
+  data-map-id={@map_id}
+  data-view-at={Jason.encode!(@view_at)}
+>
+</div>

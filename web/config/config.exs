@@ -7,12 +7,34 @@
 # General application configuration
 import Config
 
+# The session will be stored in the cookie and signed,
+# this means its contents can be read but not tampered with.
+# Set :encryption_salt if you would also like to encrypt it.
+config :plantopo, :session_options,
+  store: :cookie,
+  key: "_plantopo_key",
+  signing_salt: "2X9+N2Jc",
+  same_site: "Lax"
+
 config :plantopo,
   namespace: PlanTopo,
   ecto_repos: [PlanTopo.Repo]
 
+config :plantopo, PlanTopo.Repo,
+  migration_primary_key: [type: :binary_id],
+  migration_timestamps: [type: :utc_datetime]
+
 # Configures the endpoint
 config :plantopo, PlanTopoWeb.Endpoint,
+  http: [
+    dispatch: [
+      {:_,
+       [
+         {"/sync_socket", PlanTopoWeb.Sync.Socket, []},
+         {:_, Plug.Cowboy.Handler, {PlanTopoWeb.Endpoint, []}}
+       ]}
+    ]
+  ],
   url: [host: "localhost"],
   render_errors: [
     formats: [html: PlanTopoWeb.ErrorHTML, json: PlanTopoWeb.ErrorJSON],

@@ -61,7 +61,8 @@ defmodule PlanTopo.MixProject do
       {:minio_server, "~> 0.3"},
       {:locus, "~> 2.3"},
       {:geo, "~> 3.4"},
-      {:rexbug, "~> 1.0"}
+      {:rexbug, "~> 1.0"},
+      {:bimap, "~> 1.3"}
     ]
   end
 

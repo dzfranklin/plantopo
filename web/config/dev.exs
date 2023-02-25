@@ -1,5 +1,12 @@
 import Config
 
+config :plantopo, PlanTopo.Sync.Engine,
+  cmd: "../sync_server_engine/debug_run.sh",
+  save_every_millis: 1000 * 30,
+  exit_timeout_millis: 1000
+
+# exit_timeout_millis: 1000 * 60 * 5
+
 s3_config = [
   access_key_id: "admin",
   secret_access_key: "adminkey",
@@ -25,7 +32,8 @@ config :plantopo, PlanTopo.Repo,
   database: "plantopo_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+  pool_size: 10,
+  log: false
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
@@ -39,16 +47,12 @@ config :plantopo, PlanTopoWeb.Endpoint,
   http: [ip: {0, 0, 0, 0}, port: 4000],
   check_origin: false,
   code_reloader: true,
-  debug_errors: false,
+  debug_errors: true,
   secret_key_base: "jdF2PrDJSIR0K1P2BPftQiWCBjwv1QiaLdxjOaRE7YQKv+rOHklskiPtS4feBJdn",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},
     tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
   ]
-
-config :plantopo, PlanTopoWeb.OSProxy,
-  ip: {0, 0, 0, 0},
-  port: 4003
 
 # ## SSL Support
 #

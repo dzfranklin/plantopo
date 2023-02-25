@@ -24,7 +24,13 @@ defmodule PlanTopoWeb.UserLoginLive do
         phx-update="ignore"
       >
         <.input field={{f, :email}} type="email" label="Email" required />
-        <.input field={{f, :password}} type="password" label="Password" required />
+        <.input
+          field={{f, :password}}
+          type="password"
+          label="Password"
+          autocomplete="current-password"
+          required
+        />
 
         <:actions :let={f}>
           <.input field={{f, :remember_me}} type="checkbox" label="Keep me logged in" />

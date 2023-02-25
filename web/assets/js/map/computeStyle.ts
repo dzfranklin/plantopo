@@ -23,11 +23,12 @@ const OPACITY_PROPS = {
 };
 
 const OPACITY_CUTOFF = 0.95;
-const DATA_FOR_3D = 'aws-open-terrain';
+const TERRAIN_SOURCE_ID = 'terrain';
 
 type UpdatePaint = (id: string, prop: string, value: number) => void;
 type DataSources = { [id: string]: LayerData };
 type LayerSources = { [id: number]: LayerSource };
+type Change3d = string | false | undefined;
 
 export default function computeStyle(
   dataSources: DataSources,
@@ -36,23 +37,22 @@ export default function computeStyle(
   layers: Layer[],
   prevIs3d: boolean,
   prevLayers: Layer[] | undefined,
-  updateFull: (style: ml.StyleSpecification) => void,
-  updateTerrain: (terrain?: ml.TerrainSpecification) => void,
+  updateFull: (style: ml.StyleSpecification, change3d: Change3d) => void,
   updatePaint: UpdatePaint,
 ) {
   const full = () => {
-    const [style, terrain] = computeFullStyle(
-      dataSources,
-      layerSources,
-      is3d,
-      layers,
-    );
-    updateFull(style);
-    updateTerrain(terrain);
+    const style = computeFullStyle(dataSources, layerSources, is3d, layers);
+
+    let change3d: Change3d;
+    if (is3d != prevIs3d) {
+      change3d = is3d ? TERRAIN_SOURCE_ID : false;
+    }
+
+    updateFull(style, change3d);
     window._dbg.computeStyleStats.fullUpdates += 1;
   };
 
-  if (is3d !== prevIs3d || !prevLayers || layers.length !== prevLayers.length) {
+  if (is3d != prevIs3d || !prevLayers || layers.length !== prevLayers.length) {
     full();
     return;
   }
@@ -80,7 +80,7 @@ export function computeFullStyle(
   layerSources: LayerSources,
   is3d: boolean,
   layers: Layer[],
-): [ml.StyleSpecification, ml.TerrainSpecification?] {
+): ml.StyleSpecification {
   const style: Partial<ml.StyleSpecification> = {
     version: 8,
   };
@@ -100,13 +100,8 @@ export function computeFullStyle(
     }
   }
 
-  let terrain;
   if (is3d) {
-    terrain = {
-      source: DATA_FOR_3D,
-      exaggeration: 1,
-    };
-    activeDataSourceIds.add(DATA_FOR_3D);
+    activeDataSourceIds.add(TERRAIN_SOURCE_ID);
   }
 
   const activeDataSources = Array.from(activeDataSourceIds.keys()).map((id) => {
@@ -137,7 +132,7 @@ export function computeFullStyle(
     });
   });
 
-  return [style as ml.StyleSpecification, terrain];
+  return style as ml.StyleSpecification;
 }
 
 function computeLayerStyleUpdate(

@@ -1,5 +1,5 @@
 defmodule PlanTopo.Accounts.UserToken do
-  use Ecto.Schema
+  use PlanTopo.Schema
   import Ecto.Query
   alias PlanTopo.Accounts.UserToken
 

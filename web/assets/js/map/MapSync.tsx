@@ -35,7 +35,7 @@ export default function MapSync() {
     window._dbg.sync.yDoc = yDoc;
     const yData = yDoc.getMap('data') as Y.Map<unknown>;
 
-    const ws = new WebsocketProvider(wsUrl(id), 'socket', yDoc, {
+    const ws = new WebsocketProvider(wsUrl(), 'sync_socket?' + id, yDoc, {
       resyncInterval: RESYNC_INTERVAL_MS,
       maxBackoffTime: MAX_BACKOFF_MS,
     });
@@ -89,11 +89,10 @@ export default function MapSync() {
   );
 }
 
-const wsUrl = (id: string) => {
+const wsUrl = () => {
   const server = new URL(location.href);
   server.protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  server.port = '4005';
-  server.pathname = 'map/' + id;
+  server.pathname = '';
   server.search = '';
   return server.toString();
 };

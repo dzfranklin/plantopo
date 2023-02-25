@@ -1,9 +1,8 @@
-defmodule PlanTopo.Maps.ViewDataSource do
-  use Ecto.Schema
-  import Ecto.Changeset
+defmodule PlanTopo.Maps.LayerData do
+  use PlanTopo.Schema
 
   @primary_key {:id, :string, autogenerate: false}
-  schema "map_view_data_sources" do
+  schema "map_layer_datas" do
     field :spec, :map
     field :attribution, :string
 

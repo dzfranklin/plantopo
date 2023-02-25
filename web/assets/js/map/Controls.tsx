@@ -58,37 +58,52 @@ export default function Controls() {
 
   return (
     <div className="flex flex-col items-end gap-[8px] controls w-min">
-      {!geolocation.value && !geolocation.updating ? (
-        <Control
-          icon={GoToMyLocationIcon}
-          onClick={() => dispatch(requestGeolocation())}
-        />
-      ) : (
-        <Control
-          icon={GoToMyLocationIcon}
-          iconClass={classNames(
-            'fill-purple-600',
+      <Control
+        onClick={() =>
+          dispatch(
+            geolocation.value || geolocation.updating
+              ? clearGeolocation()
+              : requestGeolocation(),
+          )
+        }
+      >
+        <GoToMyLocationIcon
+          className={classNames(
+            'w-[24px]',
+            (geolocation.value || geolocation.updating) && 'fill-purple-600',
             geolocation.updating && 'animate-spin',
           )}
-          onClick={() => dispatch(clearGeolocation())}
         />
-      )}
+      </Control>
+
       <Control
-        icon={isFullscreen ? ArrowsPointingInIcon : ArrowsPointingOutIcon}
         onClick={() =>
           dispatch(isFullscreen ? exitFullscreen() : requestFullscreen())
         }
-      />
-      <Control
-        icon={IconFor3d}
-        iconClass={classNames(is3d ? 'text-purple-600' : 'text-gray-700')}
-        onClick={() => dispatch(setIs3d(!is3d))}
-      />
+      >
+        {isFullscreen ? (
+          <ArrowsPointingInIcon className="w-[24px]" />
+        ) : (
+          <ArrowsPointingOutIcon className="w-[24px]" />
+        )}
+      </Control>
+
+      <Control onClick={() => dispatch(setIs3d(!is3d))}>
+        <FontAwesomeIcon
+          icon={faMountain}
+          className={classNames(
+            'h-[20px] w-[20px] p-[2px]',
+            is3d ? 'text-purple-600' : 'text-gray-700',
+          )}
+        />
+      </Control>
+
       <ZoomControl />
-      <Control
-        icon={LayerSelectionIcon}
-        onClick={() => setLayerSelectIsOpen(true)}
-      />
+
+      <Control onClick={() => setLayerSelectIsOpen(true)}>
+        <LayerSelectionIcon className="w-[24px]" />
+      </Control>
+
       <AnimatePresence>
         {layerSelectIsOpen && (
           <LayerSelect close={() => setLayerSelectIsOpen(false)} />
@@ -247,14 +262,13 @@ function SourceItem({ source }) {
 }
 
 function Control(props) {
-  const Icon = props.icon;
   return (
     <div className="bg-white border border-gray-200 rounded-[2px]">
       <button
         onClick={props.onClick}
         className="flex justify-center p-[5px] hover:bg-gray-200"
       >
-        <Icon className={classNames(props.iconClass, 'w-[24px]')} />
+        {props.children}
       </button>
     </div>
   );
@@ -277,14 +291,5 @@ function ZoomControl() {
         <ZoomOutIcon className="w-[14px]" />
       </button>
     </div>
-  );
-}
-
-function IconFor3d({ className }) {
-  return (
-    <FontAwesomeIcon
-      icon={faMountain}
-      className={classNames(className, 'h-[20px] w-[20px] p-[2px]')}
-    />
   );
 }

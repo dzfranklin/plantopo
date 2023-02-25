@@ -10,20 +10,20 @@
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
 alias PlanTopo.{Repo, Accounts, Maps}
-alias Maps.{ViewDataSource, ViewLayerSource}
+alias Maps.{LayerData, LayerSource}
 
 {:ok, user} =
   Accounts.register_user(%{
     email: "test@example.com",
+    username: "test",
     password: "testpassword"
   })
 
-# Switch the uuids everywhere, rename in line with mapSlice
-# Add mapbox vector streets
+# TODO: Add some kind of vector streets
 
-aws_open_terrain =
-  Repo.insert!(%ViewDataSource{
-    id: "aws-open-terrain",
+terrain =
+  Repo.insert!(%LayerData{
+    id: "terrain",
     spec: %{
       type: "raster-dem",
       encoding: "terrarium",
@@ -53,7 +53,7 @@ aws_open_terrain =
   })
 
 satellite_data =
-  Repo.insert!(%ViewDataSource{
+  Repo.insert!(%LayerData{
     id: "mapbox.satellite",
     attribution: "mapbox",
     spec: %{
@@ -65,72 +65,47 @@ satellite_data =
     }
   })
 
-satellite_layer_source =
-  Repo.insert!(%ViewLayerSource{
-    name: "Satellite",
-    dependencies: [satellite_data],
-    layer_specs: [
-      %{
-        id: "layer",
-        source: satellite_data.id,
-        type: "raster"
-      }
-    ]
-  })
+Repo.insert!(%LayerSource{
+  name: "Satellite",
+  dependencies: [satellite_data],
+  layer_specs: [
+    %{
+      id: "layer",
+      source: satellite_data.id,
+      type: "raster"
+    }
+  ]
+})
 
-mapbox_dem_data =
-  Repo.insert!(%ViewDataSource{
-    id: "mapbox.dem",
-    attribution: "mapbox",
-    spec: File.read!("priv/mapbox_dem_source.json") |> Jason.decode!()
-  })
-
-hillshade_layer_source =
-  Repo.insert(%ViewLayerSource{
-    name: "Hillshading",
-    default_opacity: 0.25,
-    dependencies: [mapbox_dem_data],
-    layer_specs: [
-      %{
-        id: "layer",
-        source: mapbox_dem_data.id,
-        type: "hillshade",
-        paint: %{
-          "hillshade-shadow-color": "rgba(0, 0, 0, 0.2)",
-          "hillshade-accent-color": "rgba(0, 0, 0, 0)",
-          "hillshade-highlight-color": "rgba(0, 0, 0, 0)"
-        }
+Repo.insert(%LayerSource{
+  name: "Hillshading",
+  default_opacity: 0.25,
+  dependencies: [terrain],
+  layer_specs: [
+    %{
+      id: "layer",
+      source: terrain.id,
+      type: "hillshade",
+      paint: %{
+        "hillshade-shadow-color": "rgba(0, 0, 0, 0.2)",
+        "hillshade-accent-color": "rgba(0, 0, 0, 0)",
+        "hillshade-highlight-color": "rgba(0, 0, 0, 0)"
       }
-    ]
-  })
+    }
+  ]
+})
 
 # TODO: Layer sources should have fine-grained clip paths so that we can clip around the uk.
 # Or at least bboxes
 
-os_vector_layer_source =
-  Maps.import_mapbox_style!(
-    File.read!("priv/os_style.json"),
-    %{"name" => "Ordinance Survey Vector"},
-    fn %{"id" => "esri", "spec" => spec} ->
-      %{
-        "id" => "os.vector",
-        "attribution" => "os",
-        "spec" => spec
-      }
-    end
-  )
-
-map =
-  Repo.insert!(%Maps.Map{
-    owner_id: user.id,
-    view_layers: [
-      %{
-        source_id: satellite_layer_source.id
-      },
-      %{
-        source_id: os_vector_layer_source.id,
-        opacity: 0.35
-      }
-    ],
-    features: %{}
-  })
+Maps.import_mapbox_style!(
+  File.read!("priv/os_style.json"),
+  %{"name" => "Ordinance Survey Vector"},
+  fn %{"id" => "esri", "spec" => spec} ->
+    %{
+      "id" => "os.vector",
+      "attribution" => "os",
+      "spec" => spec
+    }
+  end
+)

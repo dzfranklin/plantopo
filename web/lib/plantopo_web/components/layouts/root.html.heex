@@ -2,7 +2,7 @@
 <html lang="en" class="w-full h-full">
   <head>
     <script type="text/javascript">
-      <%= raw PlanTopoWeb.InjectUserSettings.inject(assigns[:current_user]) %>
+      <%= raw PlanTopoWeb.InjectGlobals.inject(assigns[:current_user]) %>
     </script>
 
     <meta charset="utf-8" />

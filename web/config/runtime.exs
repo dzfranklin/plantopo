@@ -6,8 +6,6 @@ config :plantopo, :frontend_tokens,
 
 config :locus, :license_key, System.fetch_env!("PLANTOPO_MAXMIND_LICENSE_KEY")
 
-config :plantopo, PlanTopo.OSProxy, api_key: System.fetch_env!("PLANTOPO_OS_API_KEY")
-
 # config/runtime.exs is executed for all environments, including
 # during releases. It is executed after compilation and before the
 # system starts, so it is typically used to load production configuration

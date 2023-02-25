@@ -1,6 +1,5 @@
 defmodule PlanTopo.Accounts.UserSettings do
-  use Ecto.Schema
-  import Ecto.Changeset
+  use PlanTopo.Schema
 
   schema "user_settings" do
     has_one :user, PlanTopo.Accounts.User, foreign_key: :settings_id

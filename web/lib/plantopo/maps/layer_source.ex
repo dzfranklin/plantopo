@@ -1,17 +1,16 @@
-defmodule PlanTopo.Maps.ViewLayerSource do
-  use Ecto.Schema
-  import Ecto.Changeset
-  alias PlanTopo.Maps.ViewDataSource
+defmodule PlanTopo.Maps.LayerSource do
+  use PlanTopo.Schema
+  alias PlanTopo.Maps.LayerData
 
-  schema "map_view_layer_sources" do
+  schema "map_layer_sources" do
     field :name, :string
     field :default_opacity, :float
     field :layer_specs, {:array, :map}
     field :glyphs, :string
     field :sprite, :string
 
-    many_to_many :dependencies, ViewDataSource,
-      join_through: "map_view_layer_source_dependencies",
+    many_to_many :dependencies, LayerData,
+      join_through: "map_layer_source_dependencies",
       join_keys: [source_id: :id, data_id: :id]
 
     timestamps()

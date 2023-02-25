@@ -11,17 +11,14 @@ import { startListening } from './listener';
 import { flash } from './flashSlice';
 import { JsonObject, JsonTemplateObject } from '@sanalabs/json';
 import { Features } from './features';
+import { WritableDraft } from 'immer/dist/internal';
 
 interface MapState {
   enableLocalSave: boolean;
   onlineStatus: 'connecting' | 'connected' | 'reconnecting';
   tokens: Tokens;
-  layerDatas: {
-    [id: string]: LayerData;
-  };
-  layerSources: {
-    [id: number]: LayerSource;
-  };
+  layerDatas: LayerDatas;
+  layerSources: LayerSources;
   id: string;
   localAware: Aware;
   peerAwares?: PeerAware[];
@@ -31,66 +28,25 @@ interface MapState {
     features: Features;
     featureTrash: Features;
   };
-  viewAt: ViewAt;
   geolocation: Geolocation;
 }
 
-const todoPreload =
-  document.getElementById('map-app-root')!.dataset.preloadedState!;
-const initialState: MapState = {
-  enableLocalSave: !location.search.includes('noLocalSave'),
-  onlineStatus: 'connecting',
-  // TODO
-  tokens: JSON.parse(todoPreload).map.tokens,
-  layerDatas: {
-    ...JSON.parse(todoPreload).map.viewDataSources,
-    'aws-open-terrain': {
-      id: 'aws-open-terrain',
-      spec: {
-        type: 'raster-dem',
-        encoding: 'terrarium',
-        maxzoom: 15,
-        tiles: [
-          'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png',
-        ],
-        attribution:
-          'Terrain Tiles was accessed from <a href="https://registry.opendata.aws/terrain-tiles">https://registry.opendata.aws/terrain-tiles</a>. ' +
-          'ArcticDEM terrain data DEM(s) were created from DigitalGlobe, Inc., imagery and funded under National Science Foundation awards 1043681, 1559691, and 1542736; ' +
-          'Australia terrain data © Commonwealth of Australia (Geoscience Australia) 2017; ' +
-          'Austria terrain data © offene Daten Österreichs &ndash; Digitales Geländemodell (DGM) Österreich; ' +
-          'Canada terrain data contains information licensed under the Open Government Licence &ndash; Canada; ' +
-          'Europe terrain data produced using Copernicus data and information funded by the European Union - EU-DEM layers; ' +
-          'Global ETOPO1 terrain data U.S. National Oceanic and Atmospheric Administration * Mexico terrain data source: INEGI, Continental relief, 2016; ' +
-          'New Zealand terrain data Copyright 2011 Crown copyright (c) Land Information New Zealand and the New Zealand Government (All rights reserved); ' +
-          'Norway terrain data © Kartverket; ' +
-          'United Kingdom terrain data © Environment Agency copyright and/or database right 2015. All rights reserved; ' +
-          'United States 3DEP (formerly NED) and global GMTED2010 and SRTM terrain data courtesy of the U.S. Geological Survey. ',
-      },
-    },
-  },
-  layerSources: JSON.parse(todoPreload).map.viewLayerSources,
-  id: 'c2f85ed1-38e3-444c-b6bc-ae33a831ca5a',
-  localAware: {
-    user: { username: 'daniel', id: 'c2f85ed1-38e3-444c-b6bc-ae33a831ca5b' },
-  },
-  peerAwares: undefined,
-  viewAt: JSON.parse(todoPreload).map.viewAt,
-  geolocation: {
-    updating: false,
-  },
+export type LayerDatas = {
+  [id: string]: LayerData;
 };
 
-const DEFAULT_LAYER: Layer = {
-  sourceId: 1, // TODO: Replace with uuids
+export type LayerSources = {
+  [id: number]: LayerSource;
 };
 
 type PeerAware = Aware & { clientId: number; isCurrentClient: boolean };
 
 export interface Aware {
   user?: { username: string; id: string };
+  viewAt?: ViewAt;
 }
 
-interface Tokens {
+export interface Tokens {
   mapbox: string;
   os: string;
 }
@@ -146,9 +102,9 @@ interface Geolocation {
 
 export type WsStatus = 'disconnected' | 'connecting' | 'connected';
 
-export const mapSlice = createSlice({
+const mapSlice = createSlice({
   name: 'map',
-  initialState,
+  initialState: null as unknown as MapState,
   reducers: {
     wsReportStatus(state, { payload }: PayloadAction<WsStatus>) {
       if (
@@ -167,11 +123,18 @@ export const mapSlice = createSlice({
 
     // The map instance is the source of truth
     reportViewAt(state, { payload }: PayloadAction<ViewAt>) {
-      state.viewAt = payload;
+      state.localAware.viewAt = payload;
     },
 
     remoteUpdate(state, { payload }: PayloadAction<JsonTemplateObject>) {
-      state.data = payload as unknown as MapState['data'];
+      const value = (payload as unknown as Partial<MapState['data']>)!;
+      state.data = {
+        ...value, // Preserve unknown props
+        layers: value.layers || [],
+        is3d: value.is3d || false,
+        features: value.features || {},
+        featureTrash: value.featureTrash || {},
+      };
     },
     remoteAwareUpdate(state, { payload }: PayloadAction<JsonObject[]>) {
       const list = payload as unknown as PeerAware[];
@@ -183,8 +146,7 @@ export const mapSlice = createSlice({
       state,
       { payload }: PayloadAction<{ idx: number; value: Partial<Layer> }>,
     ) {
-      if (!state.data) return;
-      const layer = state.data.layers[payload.idx];
+      const layer = ensureData(state).layers[payload.idx];
       for (const prop in payload.value) {
         layer[prop] = payload.value[prop];
       }
@@ -197,20 +159,18 @@ export const mapSlice = createSlice({
       state,
       { payload: { sourceId } }: PayloadAction<{ sourceId: number }>,
     ) {
-      if (!state.data) return;
       const source = state.layerSources[sourceId];
-      state.data.layers.push({
+      ensureData(state).layers.push({
         sourceId: sourceId,
         opacity: source.defaultOpacity || 1.0,
       });
     },
     setLayers(state, { payload }: PayloadAction<Layer[]>) {
-      if (!state.data) return;
-      state.data.layers = payload;
+      ensureData(state).layers = payload;
     },
 
     setIs3d(state, { payload }: PayloadAction<boolean>) {
-      state.data.is3d = payload;
+      ensureData(state).is3d = payload;
     },
 
     setGeolocation(state, { payload }: PayloadAction<Geolocation>) {
@@ -221,6 +181,16 @@ export const mapSlice = createSlice({
     },
   },
 });
+
+const ensureData = (state: WritableDraft<MapState>) => {
+  if (!state.data) {
+    throw new Error('Data not yet available');
+  } else {
+    return state.data;
+  }
+};
+
+export default mapSlice.reducer;
 
 // Actions
 
@@ -257,12 +227,72 @@ export const zoomOut = createAction('map/zoomOut');
 export const requestFullscreen = createAction('map/requestFullscreen'); // Requires transient user activation
 export const exitFullscreen = createAction('map/exitFullscreen');
 
+// Selectors
+
+const select = (s: RootState) => s.map;
+
+export const selectData = (s) => select(s).data;
+export const selectDataLoaded = (s) => !!select(s).data;
+export const selectId = (s) => select(s).id;
+export const selectLocalAware = (s) => select(s).localAware;
+export const selectLayers = (s) => select(s).data?.layers || [];
+export const selectIs3d = (s) => select(s).data?.is3d ?? false;
+export const selectGeolocation = (s) => select(s).geolocation;
+export const selectTokens = (s) => select(s).tokens;
+export const selectViewAt = (s) => select(s).localAware.viewAt;
+export const selectEnableLocalSave = (s) => select(s).enableLocalSave;
+
+export const selectLayerSourceDisplayList = (state) => {
+  const layers = selectLayers(state);
+  if (!layers) return;
+
+  const used = {};
+  for (const layer of layers) {
+    used[layer.sourceId] = true;
+  }
+
+  const list = Object.values(select(state).layerSources).filter(
+    (v) => !used[v.id],
+  );
+
+  return sortBy(list, (v) => v.name);
+};
+
+export const selectLayerSources = (s) => select(s).layerSources;
+export const selectLayerDatas = (s) => select(s).layerDatas;
+
+export const selectLayerSource = (id: number) => (s) =>
+  select(s).layerSources[id];
+
+export const selectShouldCreditOS = createSelector(
+  [selectLayers, selectLayerSources, selectLayerDatas],
+  (layers, layerSources, dataSources) => {
+    if (!layers) return false;
+    return layers
+      .map((view) => layerSources[view.sourceId])
+      .flatMap((layerSource) => layerSource.dependencies)
+      .map((dataSourceId) => dataSources[dataSourceId])
+      .some((dataSource) => dataSource.attribution === 'os');
+  },
+);
+
+function sortBy<T, B>(list: T[], key: (item: T) => B) {
+  return list.slice().sort((a, b) => {
+    const keyA = key(a);
+    const keyB = key(b);
+    if (keyA < keyB) return -1;
+    if (keyA > keyB) return 1;
+    return 0;
+  });
+}
+
 // Listeners
 
 startListening({
   actionCreator: zoomIn,
   effect: (_action, l) => {
     const current = selectViewAt(l.getState());
+    if (!current) return;
     l.dispatch(flyTo({ zoom: Math.round(current.zoom + 1) }));
   },
 });
@@ -271,6 +301,7 @@ startListening({
   actionCreator: zoomOut,
   effect: (_action, l) => {
     const current = selectViewAt(l.getState());
+    if (!current) return;
     l.dispatch(flyTo({ zoom: Math.round(current.zoom - 1) }));
   },
 });
@@ -400,63 +431,3 @@ startListening({
     }
   },
 });
-
-// Selectors
-
-const select = (s: RootState) => s.map;
-
-export const selectData = (s) => select(s).data;
-export const selectId = (s) => select(s).id;
-export const selectLocalAware = (s) => select(s).localAware;
-export const selectLayers = (s) => select(s).data?.layers || [DEFAULT_LAYER];
-export const selectIs3d = (s) => select(s).data?.is3d ?? false;
-export const selectGeolocation = (s) => select(s).geolocation;
-export const selectTokens = (s) => select(s).tokens;
-export const selectViewAt = (s) => select(s).viewAt;
-export const selectEnableLocalSave = (s) => select(s).enableLocalSave;
-
-export const selectLayerSourceDisplayList = (state) => {
-  const layers = selectLayers(state);
-  if (!layers) return;
-
-  const used = {};
-  for (const layer of layers) {
-    used[layer.sourceId] = true;
-  }
-
-  const list = Object.values(select(state).layerSources).filter(
-    (v) => !used[v.id],
-  );
-
-  return sortBy(list, (v) => v.name);
-};
-
-export const selectLayerSources = (s) => select(s).layerSources;
-export const selectLayerDatas = (s) => select(s).layerDatas;
-
-export const selectLayerSource = (id: number) => (s) =>
-  select(s).layerSources[id];
-
-export const selectShouldCreditOS = createSelector(
-  [selectLayers, selectLayerSources, selectLayerDatas],
-  (layers, layerSources, dataSources) => {
-    if (!layers) return;
-    return layers
-      .map((view) => layerSources[view.sourceId])
-      .flatMap((layerSource) => layerSource.dependencies)
-      .map((dataSourceId) => dataSources[dataSourceId])
-      .some((dataSource) => dataSource.attribution === 'os');
-  },
-);
-
-function sortBy<T, B>(list: T[], key: (item: T) => B) {
-  return list.slice().sort((a, b) => {
-    const keyA = key(a);
-    const keyB = key(b);
-    if (keyA < keyB) return -1;
-    if (keyA > keyB) return 1;
-    return 0;
-  });
-}
-
-export default mapSlice.reducer;

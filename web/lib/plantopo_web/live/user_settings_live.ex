@@ -1,6 +1,5 @@
 defmodule PlanTopoWeb.UserSettingsLive do
   use PlanTopoWeb, :live_view
-
   alias PlanTopo.Accounts
 
   def render(assigns) do
@@ -16,6 +15,7 @@ defmodule PlanTopoWeb.UserSettingsLive do
     >
       <.inputs_for :let={s} form={f} field={:settings}>
         <.input field={{s, :disable_animation}} type="checkbox" label="Disable animation" />
+        <.input field={{s, :advanced}} type="checkbox" label="Enable advanced mode" />
       </.inputs_for>
 
       <:actions>
@@ -23,7 +23,7 @@ defmodule PlanTopoWeb.UserSettingsLive do
       </:actions>
     </.simple_form>
 
-    <.header>Change Email</.header>
+    <.header>Change email</.header>
 
     <.simple_form
       :let={f}
@@ -33,7 +33,7 @@ defmodule PlanTopoWeb.UserSettingsLive do
       phx-change="validate_email"
     >
       <.error :if={@email_changeset.action == :insert}>
-        Oops, something went wrong! Please check the errors below.
+        Please check the errors below.
       </.error>
 
       <.input field={{f, :email}} type="email" label="Email" required />
@@ -45,6 +45,7 @@ defmodule PlanTopoWeb.UserSettingsLive do
         type="password"
         label="Current password"
         value={@email_form_current_password}
+        autocomplete="current-password"
         required
       />
       <:actions>
@@ -52,7 +53,7 @@ defmodule PlanTopoWeb.UserSettingsLive do
       </:actions>
     </.simple_form>
 
-    <.header>Change Password</.header>
+    <.header>Change password</.header>
 
     <.simple_form
       :let={f}
@@ -65,13 +66,24 @@ defmodule PlanTopoWeb.UserSettingsLive do
       phx-trigger-action={@trigger_submit}
     >
       <.error :if={@password_changeset.action == :insert}>
-        Oops, something went wrong! Please check the errors below.
+        Please check the errors below.
       </.error>
 
       <.input field={{f, :email}} type="hidden" value={@current_email} />
 
-      <.input field={{f, :password}} type="password" label="New password" required />
-      <.input field={{f, :password_confirmation}} type="password" label="Confirm new password" />
+      <.input
+        field={{f, :password}}
+        type="password"
+        label="New password"
+        autocomplete="new-password"
+        required
+      />
+      <.input
+        field={{f, :password_confirmation}}
+        type="password"
+        autocomplete="new-password"
+        label="Confirm new password"
+      />
       <.input
         field={{f, :current_password}}
         name="current_password"
@@ -79,10 +91,40 @@ defmodule PlanTopoWeb.UserSettingsLive do
         label="Current password"
         id="current_password_for_password"
         value={@current_password}
+        autocomplete="current-password"
         required
       />
       <:actions>
         <.button phx-disable-with="Changing...">Change Password</.button>
+      </:actions>
+    </.simple_form>
+
+    <.header>Change username</.header>
+
+    <.simple_form
+      :let={f}
+      id="username_form"
+      for={@username_changeset}
+      phx-submit="update_username"
+      phx-change="validate_username"
+    >
+      <.error :if={@username_changeset.action == :insert}>
+        Please check the errors below.
+      </.error>
+
+      <.input field={{f, :username}} type="text" label="Username" required />
+
+      <.input
+        field={{f, :current_password}}
+        name="current_password"
+        id="current_password_for_username"
+        type="password"
+        label="Current password"
+        value={@username_form_current_password}
+        required
+      />
+      <:actions>
+        <.button phx-disable-with="Changing...">Change username</.button>
       </:actions>
     </.simple_form>
     """
@@ -112,6 +154,8 @@ defmodule PlanTopoWeb.UserSettingsLive do
       |> assign(:current_email, user.email)
       |> assign(:email_changeset, Accounts.change_user_email(user))
       |> assign(:password_changeset, Accounts.change_user_password(user))
+      |> assign(:username_changeset, Accounts.change_username(user))
+      |> assign(:username_form_current_password, nil)
       |> assign(:trigger_submit, false)
 
     {:ok, socket}
@@ -167,6 +211,37 @@ defmodule PlanTopoWeb.UserSettingsLive do
 
       {:error, changeset} ->
         {:noreply, assign(socket, :email_changeset, Map.put(changeset, :action, :insert))}
+    end
+  end
+
+  def handle_event("validate_username", params, socket) do
+    %{"current_password" => password, "user" => user_params} = params
+    username_changeset = Accounts.change_username(socket.assigns.current_user, user_params)
+
+    socket =
+      assign(socket,
+        username_changeset: Map.put(username_changeset, :action, :validate),
+        username_form_current_password: password
+      )
+
+    {:noreply, socket}
+  end
+
+  def handle_event("update_username", params, socket) do
+    %{"current_password" => password, "user" => user_params} = params
+    user = socket.assigns.current_user
+
+    case Accounts.update_username(user, password, user_params) do
+      {:ok, user} ->
+        socket =
+          socket
+          |> assign(:current_user, user)
+          |> put_flash(:info, "Settings saved")
+
+        {:noreply, socket}
+
+      {:error, change} ->
+        {:noreply, assign(socket, :username_changeset, change)}
     end
   end
 

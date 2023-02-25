@@ -1,33 +1,108 @@
 defmodule PlanTopo.Maps do
   @moduledoc """
-  The Maps.Maps context.
+  The Maps context.
   """
 
   import Ecto.Query, warn: false
   alias PlanTopo.AuthError, warn: false
-  alias PlanTopo.{Maps, Repo, Accounts.User}
-  alias __MODULE__.{ViewAt, ViewDataSource, ViewLayerSource}
+  alias PlanTopo.{Repo, Accounts.User}
+  alias __MODULE__.{Meta, Snapshot, ViewAt, LayerData, LayerSource, Role}
+  alias Ecto.Multi
   require Logger
 
-  def get_map!(%User{id: user_id}, id) do
-    Maps.Map
-    |> where([m], m.owner_id == ^user_id and m.id == ^id)
-    |> Repo.one!()
+  def create!(%User{id: user_id}, attrs) do
+    Repo.transaction!(fn ->
+      map =
+        Meta.changeset(attrs)
+        |> Repo.insert!()
+
+      %{user_id: user_id, map_id: map.id, value: :owner}
+      |> Role.changeset()
+      |> Repo.insert!()
+
+      map
+    end)
   end
 
-  def list_view_layer_sources(%User{}, except \\ []) do
-    # TODO: Restrict based on user
-    ViewLayerSource
-    |> where([s], s.id not in ^except)
-    |> preload(:dependencies)
+  def update_meta!(%User{} = user, %Meta{} = meta, attrs) do
+    if role(user, meta.id) not in [:editor, :owner], do: raise(AuthError)
+
+    Meta.changeset(meta, attrs)
+    |> Repo.update!()
+  end
+
+  def delete!(%User{} = user, %Meta{} = meta) do
+    if role(user, meta.id) != :owner, do: raise(AuthError)
+    Repo.delete!(meta)
+  end
+
+  def list_owned_by(%User{id: user_id}) do
+    where(Role, user_id: ^user_id)
+    |> where([p], p.value == :owner)
+    |> join(:inner, [p], m in assoc(p, :map))
+    |> order_by(desc: :updated_at)
+    |> select([p, m], m)
     |> Repo.all()
   end
 
-  def list_view_data_sources(%User{}, except \\ []) do
-    # TODO: Restrict based on user
-    ViewDataSource
-    |> where([s], s.id not in ^except)
+  def list_shared_with(%User{id: user_id}) do
+    where(Role, user_id: ^user_id)
+    |> where([p], p.value != :owner)
+    |> join(:inner, [p], m in assoc(p, :map))
+    |> order_by(desc: :updated_at)
+    |> select([p, m], {m, p})
     |> Repo.all()
+  end
+
+  def role(nil, map_id) do
+    where(Role, map_id: ^map_id)
+    |> where([p], is_nil(p.user_id))
+    |> Repo.one()
+    |> role_to_value()
+  end
+
+  def role(%User{id: user_id}, map_id) when not is_nil(user_id) do
+    where(Role, user_id: ^user_id, map_id: ^map_id)
+    |> Repo.one()
+    |> role_to_value()
+  end
+
+  defp role_to_value(perm) do
+    case perm do
+      nil -> :none
+      %Role{value: value} -> value
+    end
+  end
+
+  def set_role(%User{id: user_id}, map_id, value) when not is_nil(user_id) do
+    %{user_id: user_id, map_id: map_id, value: value}
+    |> Role.changeset()
+    |> Repo.insert()
+  end
+
+  def set_role(nil, map_id, value) do
+    if value in [:viewer, :editor] do
+      %{map_id: map_id, value: value}
+      |> Role.changeset()
+      |> Repo.insert()
+    else
+      raise "Cannot give everyone owner role"
+    end
+  end
+
+  def fetch_snapshot(map_id) do
+    where(Snapshot, map_id: ^map_id)
+    |> order_by(desc: :snapshot_at)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  def record_snapshot!(map_id, value) do
+    Repo.transaction!(fn ->
+      Map.put(value, :map_id, map_id)
+      |> Snapshot.changeset()
+      |> Repo.insert!()
+    end)
   end
 
   def get_view_at(%User{id: user_id} = user, map_id, ip) do
@@ -37,13 +112,30 @@ defmodule PlanTopo.Maps do
       |> Repo.one()
 
     if is_nil(record) do
-      get_fallback_view_at(user, map_id, ip)
+      get_fallback_view_at(user.id, map_id, ip)
     else
       record
     end
   end
 
-  def get_fallback_view_at(%User{id: user_id}, map_id, ip) do
+  def get_view_at(nil, map_id, ip) do
+    get_fallback_view_at(nil, map_id, ip)
+  end
+
+  def update_views_at!(views_at) do
+    Enum.reduce(views_at, Multi.new(), fn value, multi ->
+      Multi.insert(
+        multi,
+        value.user_id,
+        ViewAt.changeset(value),
+        on_conflict: :replace_all,
+        conflict_target: [:user_id, :map_id]
+      )
+    end)
+    |> Repo.transaction!()
+  end
+
+  defp get_fallback_view_at(user_id, map_id, ip) do
     %ViewAt{
       user_id: user_id,
       map_id: map_id,
@@ -71,13 +163,31 @@ defmodule PlanTopo.Maps do
     end
   end
 
-  def set_view_at!(%User{id: user_id}, map_id, attrs) do
-    %ViewAt{user_id: user_id, map_id: map_id}
-    |> ViewAt.changeset(attrs)
-    |> Repo.insert!(
-      on_conflict: :replace_all,
-      conflict_target: [:user_id, :map_id]
-    )
+  def list_layer_sources(user, except \\ [])
+
+  def list_layer_sources(%User{}, except) do
+    # TODO: Restrict based on user
+    list_layer_sources(nil, except)
+  end
+
+  def list_layer_sources(nil, except) do
+    LayerSource
+    |> where([s], s.id not in ^except)
+    |> preload(:dependencies)
+    |> Repo.all()
+  end
+
+  def list_layer_datas(user, except \\ [])
+
+  def list_layer_datas(%User{}, except) do
+    # TODO: Restrict based on user
+    list_layer_datas(nil, except)
+  end
+
+  def list_layer_datas(nil, except) do
+    LayerData
+    |> where([s], s.id not in ^except)
+    |> Repo.all()
   end
 
   def import_mapbox_style!(sty, fallbacks \\ %{}, transform_dep \\ & &1) do
@@ -116,7 +226,7 @@ defmodule PlanTopo.Maps do
         end
       end)
 
-    ViewLayerSource.changeset(%{
+    LayerSource.changeset(%{
       name: name,
       layer_specs: layers,
       glyphs: glyphs,
@@ -125,149 +235,4 @@ defmodule PlanTopo.Maps do
     })
     |> Repo.insert!()
   end
-
-  # @doc """
-  # Returns the tuple `{view_sources, source_datas}`.
-  # """
-  # def list_sources do
-  #   sources =
-  #     Views.Source
-  #     |> order_by([:name, :id])
-  #     |> Repo.all()
-
-  #   datas =
-  #     SourceData
-  #     |> order_by([:id])
-  #     |> Repo.all()
-
-  #   {sources, datas}
-  # end
-
-  # @doc """
-  # Returns the list of views a user can use.
-  # """
-  # def list_views(user, cursor \\ nil) do
-  #   View
-  #   |> where([v], is_nil(v.owner_id) or v.owner_id == ^user.id)
-  #   |> order_by(desc: :updated_at, asc: :id)
-  #   |> Repo.paginate(after: cursor, cursor_fields: [{:updated_at, :desc}, :id])
-  # end
-
-  # @doc """
-  # Gets a single views.
-
-  # Raises `Ecto.NoResultsError` if the View does not exist.
-  # """
-  # def get_view!(user, id) do
-  #   View
-  #   |> where(owner_id: ^user.id, id: ^id)
-  #   |> Repo.one!()
-  # end
-
-  # @doc """
-  # Returns a presigned URL for viewing the preview image. Expires in a week.
-
-  # - user: the user, or nil for default
-  # - ty: Either `:preview` or `:icon`
-  # """
-  # def view_preview_url(user, view_id, ty) do
-  #   {:ok, url} =
-  #     ExAws.Config.new(:s3)
-  #     |> S3.presigned_url(:get, "map-view-icon", view_preview_object(user, view_id, ty),
-  #       expires_in: 60 * 60 * 24 * 7
-  #     )
-
-  #   url
-  # end
-
-  # @doc """
-  # Generate presigned URLs for POSTing new preview images. Content-Type must be
-  # `"image/png"`. Expires in 2 hours.
-
-  # - user: the user, or nil for default
-
-  # Returns the tuple `{preview_upload_url, icon_upload_url}`
-  # """
-  # def view_preview_upload(user, view_id) do
-  #   for ty <- [:preview, :icon] do
-  #     {:ok, url} =
-  #       ExAws.Config.new(:s3)
-  #       |> S3.presigned_url(:put, "map-view-icon", view_preview_object(user, view_id, ty),
-  #         headers: [{"Content-Type", "image/png"}],
-  #         expires_in: 60 * 60 * 2
-  #       )
-
-  #     url
-  #   end
-  #   |> List.to_tuple()
-  # end
-
-  # defp view_preview_object(user, view_id, ty) when is_integer(view_id) do
-  #   ty =
-  #     case ty do
-  #       :preview -> "preview"
-  #       :icon -> "icon"
-  #     end
-
-  #   user =
-  #     case user do
-  #       nil -> "default"
-  #       %User{id: user_id} when is_integer(user_id) -> "user-#{user_id}"
-  #     end
-
-  #   "#{user}/#{view_id}/#{ty}.png"
-  # end
-
-  # @doc """
-  # Creates a view.
-  # """
-  # def create_view(%User{} = user, attrs) do
-  #   View.changeset(attrs)
-  #   |> View.change_owner(user)
-  #   |> Repo.insert()
-  # end
-
-  # @doc """
-  # Creates a default view.
-  # """
-  # def create_default_view(attrs) do
-  #   View.changeset(attrs)
-  #   |> Repo.insert()
-  # end
-
-  # @doc """
-  # Updates a view.
-  # """
-  # def update_view(%User{} = user, %View{} = view, attrs) do
-  #   if user.id != view.owner_id, do: raise(AuthError)
-
-  #   view
-  #   |> View.changeset(attrs)
-  #   |> Repo.update()
-  # end
-
-  # @doc """
-  # Deletes a view.
-  # """
-  # def delete_view(%User{} = user, %View{} = view) do
-  #   if user.id != view.owner_id, do: raise(AuthError)
-
-  #   Repo.delete(view)
-  # end
-
-  # @doc """
-  # Creates a view source.
-  # """
-  # def create_view_source(attrs) do
-  #   Views.Source.changeset(attrs)
-  #   |> Repo.insert()
-  # end
-
-  # @doc """
-  # Creates a source data.
-  # """
-  # def create_source_data(attrs) do
-  #   SourceData.changeset(attrs)
-  #   |> Repo.insert()
-  # end
 end

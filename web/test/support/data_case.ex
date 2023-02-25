@@ -21,7 +21,6 @@ defmodule PlanTopo.DataCase do
       alias PlanTopo.Repo
 
       import Ecto
-      import Ecto.Changeset
       import Ecto.Query
       import PlanTopo.DataCase
     end

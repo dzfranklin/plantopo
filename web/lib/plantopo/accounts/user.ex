@@ -1,15 +1,15 @@
 defmodule PlanTopo.Accounts.User do
   alias PlanTopo.Accounts.UserSettings
-  use Ecto.Schema
-  import Ecto.Changeset
+  use PlanTopo.Schema
 
   schema "users" do
+    field :username, :string
     field :email, :string
     field :password, :string, virtual: true, redact: true
     field :hashed_password, :string, redact: true
     field :confirmed_at, :naive_datetime
 
-    belongs_to :settings, UserSettings
+    belongs_to :settings, UserSettings, on_replace: :update
 
     timestamps()
   end
@@ -42,12 +42,31 @@ defmodule PlanTopo.Accounts.User do
       using this changeset for validations on a LiveView form before
       submitting the form), this option can be set to `false`.
       Defaults to `true`.
+
+    * `:validate_username` - See `:validate_email`
   """
   def registration_changeset(user, attrs, opts \\ []) do
     user
-    |> cast(attrs, [:email, :password])
+    |> cast(attrs, [:username, :email, :password])
+    |> validate_username(opts)
     |> validate_email(opts)
     |> validate_password(opts)
+  end
+
+  def username_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:username])
+    |> validate_username(opts)
+  end
+
+  defp validate_username(changeset, opts) do
+    changeset
+    |> validate_required([:username])
+    |> validate_format(:username, ~r/^[a-z0-9]+$/,
+      message: "must contain only lowercase letters and numbers"
+    )
+    |> validate_length(:username, min: 3, max: 30)
+    |> maybe_validate_unique_username(opts)
   end
 
   defp validate_email(changeset, opts) do
@@ -62,9 +81,6 @@ defmodule PlanTopo.Accounts.User do
     changeset
     |> validate_required([:password])
     |> validate_length(:password, min: 12, max: 72)
-    # |> validate_format(:password, ~r/[a-z]/, message: "at least one lower case character")
-    # |> validate_format(:password, ~r/[A-Z]/, message: "at least one upper case character")
-    # |> validate_format(:password, ~r/[!?@#$%^&*_0-9]/, message: "at least one digit or punctuation character")
     |> maybe_hash_password(opts)
   end
 
@@ -88,6 +104,16 @@ defmodule PlanTopo.Accounts.User do
       changeset
       |> unsafe_validate_unique(:email, PlanTopo.Repo)
       |> unique_constraint(:email)
+    else
+      changeset
+    end
+  end
+
+  defp maybe_validate_unique_username(changeset, opts) do
+    if Keyword.get(opts, :validate_username, true) do
+      changeset
+      |> unsafe_validate_unique(:username, PlanTopo.Repo)
+      |> unique_constraint(:username)
     else
       changeset
     end

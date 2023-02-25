@@ -66,6 +66,16 @@ defmodule PlanTopo.Accounts do
     |> Repo.update()
   end
 
+  def change_username(%User{} = user, attrs \\ %{}) do
+    User.username_changeset(user, attrs, validate_username: false)
+  end
+
+  def update_username(%User{} = user, password, attrs \\ %{}) do
+    User.username_changeset(user, attrs)
+    |> User.validate_current_password(password)
+    |> Repo.update()
+  end
+
   @doc """
     Returns an `%Ecto.Changeset{}` for changing the user email.
   """

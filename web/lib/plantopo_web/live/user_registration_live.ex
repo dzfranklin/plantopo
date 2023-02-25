@@ -6,7 +6,7 @@ defmodule PlanTopoWeb.UserRegistrationLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
+    <div class="max-w-sm mx-auto">
       <.header class="text-center">
         Register for an account
         <:subtitle>
@@ -33,8 +33,15 @@ defmodule PlanTopoWeb.UserRegistrationLive do
           Oops, something went wrong! Please check the errors below.
         </.error>
 
+        <.input field={{f, :username}} type="text" label="Username" autocomplete="username" required />
         <.input field={{f, :email}} type="email" label="Email" required />
-        <.input field={{f, :password}} type="password" label="Password" required />
+        <.input
+          field={{f, :password}}
+          type="password"
+          label="Password"
+          autocomplete="new-password"
+          required
+        />
 
         <:actions>
           <.button phx-disable-with="Creating account..." class="w-full">Create an account</.button>
