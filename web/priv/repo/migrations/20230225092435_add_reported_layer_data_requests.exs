@@ -5,11 +5,10 @@ defmodule PlanTopo.Repo.Migrations.AddReportedLayerDataRequests do
     create table(:reported_layer_data_requests, primary_key: [type: :bigserial]) do
       add :alleged_user_id, :binary
       add :at, :utc_datetime
-      add :url, :string
-      add :host, :string
-      add :path, :string
-      add :path_seg_1, :string
-      add :path_seg_2, :string
+      add :source, :string
+      add :x, :integer
+      add :y, :integer
+      add :z, :integer
     end
   end
 end

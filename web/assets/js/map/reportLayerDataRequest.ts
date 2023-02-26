@@ -12,10 +12,18 @@ db.version(1).stores({
 });
 const table = db.table('requests');
 
-export default function reportLayerDataRequest(url: string) {
+export default function reportLayerDataRequest(
+  source: string,
+  x: number,
+  y: number,
+  z: number,
+) {
   table.add({
-    url,
     at: Date.now(),
+    source,
+    x,
+    y,
+    z,
   });
 
   requestIdleCallback(() => maybeUpload(MIN_SUBSEQUENT_UPLOAD_SIZE));
@@ -37,7 +45,7 @@ async function maybeUpload(minChunkSize: number) {
       },
       body: JSON.stringify({
         user: window.currentUser?.id,
-        requests: chunk.map(({ url, at }) => ({ url, at })),
+        requests: chunk,
       }),
     });
 
