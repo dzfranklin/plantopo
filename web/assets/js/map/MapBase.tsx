@@ -147,10 +147,7 @@ export default function MapBase(props: Props) {
       });
     }
 
-    const geoLocElem = document.createElement('div');
-    geoLocElem.className =
-      'w-[18px] h-[18px] bg-sky-600 rounded-full border border-[2px] border-white';
-    const geoLocMarker = new ml.Marker({ element: geoLocElem });
+    const geoLocMarker = new ml.Marker({ element: createGeolocMarkerElem() });
 
     let prevState;
     const storeUnsubscribe = store.subscribe(() => {
@@ -203,3 +200,19 @@ export default function MapBase(props: Props) {
 
   return <div ref={nodeRef} className="map-base" />;
 }
+
+const createGeolocMarkerElem = () => {
+  const elem = document.createElement('div');
+  const parent = document.createElement('div');
+  const center = document.createElement('div');
+  const outer = document.createElement('div');
+  elem.append(parent);
+  parent.append(outer);
+  parent.append(center);
+  parent.className = 'flex items-center justify-center';
+  center.className =
+    'm-auto absolute w-[18px] h-[18px] bg-sky-600 rounded-full border border-[2px] border-white';
+  outer.className =
+    'm-auto absolute w-[54px] h-[54px] bg-sky-400 opacity-40 rounded-full';
+  return elem;
+};
