@@ -1,4 +1,4 @@
-import { AFTER_LAST_IDX, BEFORE_FIRST_IDX, idxCmp, idxMid } from './fracIdx';
+import { idxBetween } from './fracIdx';
 
 export type Feature =
   | GroupFeature
@@ -134,19 +134,17 @@ export const computeFeaturesByParent = (parentId: string, features: Features) =>
   Object.values(features).filter((f) => parentIdOf(f) === parentId);
 
 export const computeFeaturesDisplayList = (features: Feature[]) =>
-  Object.values(features).sort((a: Feature, b: Feature) =>
-    a.at === b.at ? tiebreakIdCmp(a.id, b.id) : idxCmp(idxOf(a), idxOf(b)),
-  );
+  Object.values(features).sort(featureCmp);
 
 export function computeAtAfter(features: Features, afterId?: string): string {
   const afterFeature = afterId && features[afterId];
 
   let parentId: string;
-  let insertAfterIdx: string;
-  let insertBeforeIdx: string;
+  let beforeNew: string;
+  let afterNew: string;
 
   if (afterFeature) {
-    insertAfterIdx = idxOf(afterFeature);
+    beforeNew = idxOf(afterFeature);
     parentId = parentIdOf(afterFeature);
 
     const group = computeFeaturesByParent(parentId, features);
@@ -156,18 +154,18 @@ export function computeAtAfter(features: Features, afterId?: string): string {
     if (activeLinearIdx < 0) throw new Error('afterId does not exist');
 
     const beforeFeature = list[activeLinearIdx + 1];
-    insertBeforeIdx = beforeFeature ? idxOf(beforeFeature) : AFTER_LAST_IDX;
+    afterNew = beforeFeature ? idxOf(beforeFeature) : '';
   } else {
     parentId = ROOT_FEATURE;
 
     const group = computeFeaturesByParent(ROOT_FEATURE, features);
     const list = computeFeaturesDisplayList(group);
     const last = list[list.length - 1];
-    insertAfterIdx = last ? idxOf(last) : BEFORE_FIRST_IDX;
-    insertBeforeIdx = AFTER_LAST_IDX;
+    beforeNew = last ? idxOf(last) : '';
+    afterNew = '';
   }
 
-  const idx = idxMid(insertAfterIdx, insertBeforeIdx);
+  const idx = idxBetween(beforeNew, afterNew);
   return serializeAt(parentId, idx);
 }
 
@@ -177,8 +175,12 @@ export const parentIdOf = (f: Feature) => f.at.substring(0, UUID_STR_LEN);
 export const idxOf = (f: Feature) => f.at.substring(UUID_STR_LEN);
 export const serializeAt = (parentId: string, idx: string) => parentId + idx;
 
-const tiebreakIdCmp = (a: string, b: string) => {
-  if (a < b) return -1;
-  if (a > b) return 1;
+const featureCmp = (a: Feature, b: Feature) => {
+  const aIdx = idxOf(a);
+  const bIdx = idxOf(b);
+  if (aIdx < bIdx) return -1;
+  if (aIdx > bIdx) return 1;
+  if (a.id < b.id) return -1;
+  if (a.id > b.id) return 1;
   return 0;
 };
