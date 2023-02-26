@@ -45,10 +45,10 @@ export default function MapBase(props: Props) {
         sources: {},
         layers: [],
       },
-      center: viewAt.center,
-      pitch: viewAt.pitch,
-      bearing: viewAt.bearing,
-      zoom: viewAt.zoom,
+      center: viewAt?.center,
+      pitch: viewAt?.pitch,
+      bearing: viewAt?.bearing,
+      zoom: viewAt?.zoom,
       keyboard: false,
       transformRequest: (urlS) => {
         const url = new URL(urlS);
@@ -61,19 +61,26 @@ export default function MapBase(props: Props) {
           params.set('access_token', tokens.mapbox);
         }
 
-        const out = url.toString();
-        reportLayerDataRequest(out);
         return {
-          url: out,
+          url: url.toString(),
         };
       },
     });
     window._dbg.mapGL = map;
 
+    map.on('data', (e) => {
+      const sourceId = e['sourceId'];
+      const tileId = e['tile']?.tileID?.canonical;
+      if (e.dataType === 'source' && sourceId && tileId) {
+        reportLayerDataRequest(sourceId, tileId.x, tileId.y, tileId.z);
+      }
+    });
+
     const flyToListener = {
       actionCreator: flyTo,
       effect: async ({ payload }, _l) => {
         const current = selectViewAt(store.getState());
+        if (!current) return;
         const { options, to } = payload;
 
         const center = to.center || current.center;
@@ -167,12 +174,14 @@ export default function MapBase(props: Props) {
         (style, change3d) =>
           requestAnimationFrame(() => {
             map.setStyle(style);
-            if (change3d === false) {
-              // Work around a type def bug
-              map.setTerrain(undefined as unknown as ml.TerrainSpecification);
-            } else if (typeof change3d === 'string') {
-              map.setTerrain({ source: change3d });
-            }
+            map.once('styledata', () => {
+              if (change3d === false) {
+                // Work around a type def bug
+                map.setTerrain(undefined as unknown as ml.TerrainSpecification);
+              } else if (typeof change3d === 'string') {
+                map.setTerrain({ source: change3d });
+              }
+            });
           }),
         (id, prop, value) =>
           map.setPaintProperty(id, prop, value, { validate: false }),
@@ -193,7 +202,7 @@ export default function MapBase(props: Props) {
 
     return () => {
       stopListening(flyToListener);
-      storeUnsubscribe();
+      storeUnsubscribe?.();
       map.remove();
     };
   }, []);

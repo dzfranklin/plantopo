@@ -24,6 +24,7 @@ module.exports = {
     'comma-dangle': ['warn', 'always-multiline'],
     '@typescript-eslint/no-non-null-assertion': 'off',
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-empty-function': 'off',
     'prefer-const': 'warn',
     'no-empty': 'warn',
   }

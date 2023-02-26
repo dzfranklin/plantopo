@@ -32,7 +32,7 @@ defmodule PlanTopo.Application do
     opts = [strategy: :one_for_one, name: PlanTopo.Supervisor]
     {:ok, sup_pid} = Supervisor.start_link(children, opts)
 
-    :locus.start_loader(:city, {:maxmind, "GeoLite2-City"})
+    :ok = :locus.start_loader(:city, {:maxmind, "GeoLite2-City"})
 
     {:ok, sup_pid}
   end

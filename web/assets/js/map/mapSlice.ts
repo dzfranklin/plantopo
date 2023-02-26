@@ -10,7 +10,11 @@ import type { RootState } from './store';
 import { startListening } from './listener';
 import { flash } from './flashSlice';
 import { JsonObject, JsonTemplateObject } from '@sanalabs/json';
-import { Features } from './features';
+import {
+  computeFeaturesByParent,
+  computeFeaturesDisplayList,
+  Features,
+} from './features';
 import { WritableDraft } from 'immer/dist/internal';
 
 interface MapState {
@@ -21,7 +25,7 @@ interface MapState {
   layerSources: LayerSources;
   id: string;
   localAware: Aware;
-  peerAwares?: PeerAware[];
+  peerAwares?: { [clientId: number]: PeerAware };
   data?: {
     layers: Layer[];
     is3d: boolean;
@@ -29,6 +33,9 @@ interface MapState {
     featureTrash: Features;
   };
   geolocation: Geolocation;
+  create?: {
+    type: string;
+  };
 }
 
 export type LayerDatas = {
@@ -44,6 +51,7 @@ type PeerAware = Aware & { clientId: number; isCurrentClient: boolean };
 export interface Aware {
   user?: { username: string; id: string };
   viewAt?: ViewAt;
+  activeFeature?: string;
 }
 
 export interface Tokens {
@@ -138,8 +146,12 @@ const mapSlice = createSlice({
     },
     remoteAwareUpdate(state, { payload }: PayloadAction<JsonObject[]>) {
       const list = payload as unknown as PeerAware[];
-      const peers = list.filter((a) => !a.isCurrentClient);
-      state.peerAwares = peers;
+      state.peerAwares = {};
+      for (const peer of list) {
+        if (!peer.isCurrentClient) {
+          state.peerAwares[peer.clientId] = peer;
+        }
+      }
     },
 
     updateLayer(
@@ -179,6 +191,10 @@ const mapSlice = createSlice({
     clearGeolocation(state, _action: PayloadAction<undefined>) {
       state.geolocation = { updating: false };
     },
+
+    startCreate(state, { payload }: PayloadAction<{ type: string }>) {
+      state.create = payload;
+    },
   },
 });
 
@@ -205,6 +221,7 @@ export const {
   addLayer,
   setLayers,
   setIs3d,
+  startCreate,
 } = mapSlice.actions;
 
 // Intercepted by map
@@ -241,6 +258,31 @@ export const selectGeolocation = (s) => select(s).geolocation;
 export const selectTokens = (s) => select(s).tokens;
 export const selectViewAt = (s) => select(s).localAware.viewAt;
 export const selectEnableLocalSave = (s) => select(s).enableLocalSave;
+const selectPeers = (s) => select(s).peerAwares || {};
+
+export const selectIsActiveFeature = (id: string) => (s) =>
+  select(s).localAware.activeFeature === id;
+
+export const selectPeersActiveOnFeature = (id: string) => (s) => {
+  const peers = selectPeers(s);
+  const actives: number[] = [];
+  for (const peer of Object.values(peers)) {
+    if (peer.activeFeature === id) {
+      actives.push(peer.clientId);
+    }
+  }
+  return actives;
+};
+
+const selectFeaturesByParent = (parentId: string) =>
+  createSelector([(s) => select(s).data?.features], (features) =>
+    features ? computeFeaturesByParent(parentId, features) : [],
+  );
+
+export const selectFeaturesDisplayList = (parentId: string) =>
+  createSelector([selectFeaturesByParent(parentId)], (features) =>
+    computeFeaturesDisplayList(features),
+  );
 
 export const selectLayerSourceDisplayList = (state) => {
   const layers = selectLayers(state);

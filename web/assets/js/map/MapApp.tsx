@@ -7,6 +7,7 @@ import classNames from '../classNames';
 import Flash from './Flash';
 import Controls from './Controls';
 import MapSync from './MapSync';
+import Sidebar from './Sidebar';
 
 export default function MapApp() {
   const dataLoaded = useAppSelector(selectDataLoaded);
@@ -22,6 +23,8 @@ export default function MapApp() {
           <MapBase isLoading={setBaseIsLoading} />
           <CreditImages creditOS={creditOS} />
           <LoadingIndicator isLoading={baseIsLoading} />
+
+          <Sidebar />
 
           <Controls />
         </>

@@ -1,17 +1,32 @@
-export type Feature = FeatureGroup | Point | Route | RoutePoint;
+import { AFTER_LAST_IDX, BEFORE_FIRST_IDX, idxCmp, idxMid } from './fracIdx';
+
+export type Feature =
+  | GroupFeature
+  | PointFeature
+  | RouteFeature
+  | RoutePointFeature
+  | UnknownFeature;
+
 export type Features = { [id: string]: Feature };
 
-interface Base {
+export const ROOT_FEATURE = 'db0d225b-6fb4-444e-a18e-13f637036bff';
+
+export interface Base {
   id: Id;
-  // RoutePoint parent must be Route. All others must have a FeatureGroup or
+  // Describes where this feature is visually in the tree
+  //
+  // RoutePoint parent must be Route.All others must have a FeatureGroup or
   // null as the parent
-  parent: Id | null;
-  idx: Index;
+  at: Index;
   // Use filter set on the style
   visible: boolean;
 }
 
-export interface FeatureGroup extends Base {
+interface UnknownFeature extends Base {
+  type: string;
+}
+
+export interface GroupFeature extends Base {
   type: 'group';
   name?: string;
   details?: string;
@@ -21,7 +36,7 @@ export interface FeatureGroup extends Base {
   childRouteLineStyle?: RouteLineStyle;
 }
 
-export interface Point extends Base {
+export interface PointFeature extends Base {
   type: 'point';
   coords: LngLat;
   name?: string;
@@ -29,7 +44,7 @@ export interface Point extends Base {
   style?: PointStyle;
 }
 
-export interface Route extends Base {
+export interface RouteFeature extends Base {
   type: 'route';
   name?: string;
   details?: string;
@@ -39,14 +54,14 @@ export interface Route extends Base {
   lineStyle?: RouteLineStyle;
 }
 
-export interface RoutePoint extends Base {
+export interface RoutePointFeature extends Base {
   type: 'route/point';
   parent: Id;
   coords: LngLat;
 }
 
 type Id = string; // Hyphenated UUID
-type Index = string;
+type Index = string; // parent uuid concatenated with fracIdx
 type LngLat = string; // lng, lat as JSON [number, number]
 
 // We're styling with a subset of ml styles. For now a little input box with
@@ -114,3 +129,56 @@ interface RouteLineStyle {
 
 type Color = string; // hex rgba
 type Font = string; // JSON [primary, fallback]
+
+export const computeFeaturesByParent = (parentId: string, features: Features) =>
+  Object.values(features).filter((f) => parentIdOf(f) === parentId);
+
+export const computeFeaturesDisplayList = (features: Feature[]) =>
+  Object.values(features).sort((a: Feature, b: Feature) =>
+    a.at === b.at ? tiebreakIdCmp(a.id, b.id) : idxCmp(idxOf(a), idxOf(b)),
+  );
+
+export function computeAtAfter(features: Features, afterId?: string): string {
+  const afterFeature = afterId && features[afterId];
+
+  let parentId: string;
+  let insertAfterIdx: string;
+  let insertBeforeIdx: string;
+
+  if (afterFeature) {
+    insertAfterIdx = idxOf(afterFeature);
+    parentId = parentIdOf(afterFeature);
+
+    const group = computeFeaturesByParent(parentId, features);
+    const list = computeFeaturesDisplayList(group);
+
+    const activeLinearIdx = list.findIndex((f) => f.id === afterFeature.id);
+    if (activeLinearIdx < 0) throw new Error('afterId does not exist');
+
+    const beforeFeature = list[activeLinearIdx + 1];
+    insertBeforeIdx = beforeFeature ? idxOf(beforeFeature) : AFTER_LAST_IDX;
+  } else {
+    parentId = ROOT_FEATURE;
+
+    const group = computeFeaturesByParent(ROOT_FEATURE, features);
+    const list = computeFeaturesDisplayList(group);
+    const last = list[list.length - 1];
+    insertAfterIdx = last ? idxOf(last) : BEFORE_FIRST_IDX;
+    insertBeforeIdx = AFTER_LAST_IDX;
+  }
+
+  const idx = idxMid(insertAfterIdx, insertBeforeIdx);
+  return serializeAt(parentId, idx);
+}
+
+const UUID_STR_LEN = 36;
+
+export const parentIdOf = (f: Feature) => f.at.substring(0, UUID_STR_LEN);
+export const idxOf = (f: Feature) => f.at.substring(UUID_STR_LEN);
+export const serializeAt = (parentId: string, idx: string) => parentId + idx;
+
+const tiebreakIdCmp = (a: string, b: string) => {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+};
