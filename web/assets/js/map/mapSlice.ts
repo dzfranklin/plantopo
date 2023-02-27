@@ -51,7 +51,7 @@ export type LayerDatas = {
 };
 
 export type LayerSources = {
-  [id: number]: LayerSource;
+  [id: string]: LayerSource;
 };
 
 export type PeerAware = Aware & { clientId: number; isCurrentClient: boolean };
@@ -90,18 +90,18 @@ export interface LayerData {
 }
 
 export interface LayerSource {
-  id: number;
+  id: string;
   name: string;
   defaultOpacity: number | null;
   dependencies: string[];
-  icon: string;
+  icon: string | null;
   glyphs: string | null;
   sprite: string | null;
   layerSpecs: ml.LayerSpecification[];
 }
 
 export interface Layer {
-  sourceId: number;
+  sourceId: string;
   opacity?: number;
 }
 
@@ -183,7 +183,7 @@ const mapSlice = createSlice({
     },
     addLayer(
       state,
-      { payload: { sourceId } }: PayloadAction<{ sourceId: number }>,
+      { payload: { sourceId } }: PayloadAction<{ sourceId: string }>,
     ) {
       const source = state.layerSources[sourceId];
       ensureData(state).layers.push({

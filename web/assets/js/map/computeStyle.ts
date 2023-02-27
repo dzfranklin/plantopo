@@ -7,7 +7,7 @@ const ATTRIBUTION = {
     '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>',
 };
 
-const glLayerId = (sourceLayerId: number, specId: string) =>
+const glLayerId = (sourceLayerId: string, specId: string) =>
   `${sourceLayerId}-${specId}`;
 
 const OPACITY_PROPS = {

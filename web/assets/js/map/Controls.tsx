@@ -195,7 +195,7 @@ function LayerItem({ layer, idx }) {
       </Tooltip>
 
       <img
-        src={source.icon}
+        src={source.icon ?? undefined}
         loading="lazy"
         className="aspect-square h-[45px] mr-[14px]"
         alt=""
