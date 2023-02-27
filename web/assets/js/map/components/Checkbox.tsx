@@ -17,7 +17,7 @@ export default function Checkbox({ value, onChange, label, className }: Props) {
         type="checkbox"
         id={inputId}
         checked={value}
-        onChange={(e) => onChange(e.target.checked)}
+        onChange={(e) => onChange?.(e.target.checked)}
       />
       {label && (
         <label

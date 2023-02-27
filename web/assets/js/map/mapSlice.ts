@@ -11,11 +11,18 @@ import { startListening } from './listener';
 import { flash } from './flashSlice';
 import { JsonObject, JsonTemplateObject } from '@sanalabs/json';
 import {
-  computeFeaturesByParent,
+  computeAtAfter,
   computeFeaturesDisplayList,
+  Feature,
   Features,
-} from './features';
+  GroupFeature,
+  parentIdOf,
+  PointFeature,
+  RouteFeature,
+  serializeLngLat,
+} from './feature/features';
 import { WritableDraft } from 'immer/dist/internal';
+import { v4 as uuid } from 'uuid';
 
 interface MapState {
   enableLocalSave: boolean;
@@ -33,8 +40,9 @@ interface MapState {
     featureTrash: Features;
   };
   geolocation: Geolocation;
-  create?: {
+  creating?: {
     type: string;
+    at: string;
   };
 }
 
@@ -46,7 +54,13 @@ export type LayerSources = {
   [id: number]: LayerSource;
 };
 
-type PeerAware = Aware & { clientId: number; isCurrentClient: boolean };
+export type PeerAware = Aware & { clientId: number; isCurrentClient: boolean };
+
+export type ActiveFeature =
+  | GroupFeature
+  | PointFeature
+  | RouteFeature
+  | undefined;
 
 export interface Aware {
   user?: { username: string; id: string };
@@ -91,8 +105,8 @@ export interface Layer {
   opacity?: number;
 }
 
-interface MapClick {
-  geo: LngLat;
+interface MapPointerEvent {
+  lngLat: LngLat;
   screen: XY;
   features: {
     layer: string;
@@ -192,13 +206,57 @@ const mapSlice = createSlice({
       state.geolocation = { updating: false };
     },
 
-    startCreate(state, { payload }: PayloadAction<{ type: string }>) {
-      state.create = payload;
+    setActive(state, { payload }: PayloadAction<Feature | undefined>) {
+      state.localAware.activeFeature = payload ? payload.id : undefined;
+    },
+
+    startCreating(state, { payload }: PayloadAction<{ type: string }>) {
+      const features = ensureData(state).features;
+      const beforeId = state.localAware.activeFeature;
+      const at = computeAtAfter(features, beforeId);
+      state.creating = {
+        type: payload.type,
+        at,
+      };
+    },
+    finishCreating(state, { payload }: PayloadAction<Feature>) {
+      const features = ensureData(state).features;
+      features[payload.id] = payload;
+      state.localAware.activeFeature = payload.id;
+      state.creating = undefined;
+    },
+
+    updateFeature(
+      state,
+      { payload }: PayloadAction<{ id: string; update: Partial<Feature> }>,
+    ) {
+      const feature = ensureData(state).features[payload.id];
+      if (!feature) throw new Error('updateFeature: not found');
+      for (const prop in payload.update) {
+        feature[prop] = payload.update[prop];
+      }
+    },
+    deleteFeature(state, { payload }: PayloadAction<Feature>) {
+      const data = ensureData(state);
+
+      const { id } = payload;
+      const parentId = parentIdOf(payload);
+      const list = computeFeaturesDisplayList(parentId, data.features);
+
+      data.featureTrash[id] = payload;
+      delete data.features[id];
+
+      const deletedDisplayIdx = list.findIndex((f) => f.id === id);
+      if (deletedDisplayIdx > -1) {
+        const nextActive =
+          list.at(deletedDisplayIdx + 1) || list.at(deletedDisplayIdx - 1);
+        state.localAware.activeFeature = nextActive?.id;
+      }
     },
   },
 });
 
-const ensureData = (state: WritableDraft<MapState>) => {
+const ensureData = (state: WritableDraft<MapState> | MapState) => {
   if (!state.data) {
     throw new Error('Data not yet available');
   } else {
@@ -210,6 +268,7 @@ export default mapSlice.reducer;
 
 // Actions
 
+const actions = mapSlice.actions;
 export const {
   wsReportStatus,
   reportViewAt,
@@ -221,8 +280,11 @@ export const {
   addLayer,
   setLayers,
   setIs3d,
-  startCreate,
-} = mapSlice.actions;
+  setActive,
+  startCreating,
+  updateFeature,
+  deleteFeature,
+} = actions;
 
 // Intercepted by map
 interface FlyToOptions {
@@ -235,9 +297,9 @@ export const flyTo = createAction(
   }),
 );
 
-// Emitted by map
-export const mapClick = createAction<MapClick>('map/mapClick');
+export const mapClick = createAction<MapPointerEvent>('map/mapClick');
 
+// Controls
 export const requestGeolocation = createAction('map/requestGeolocation');
 export const zoomIn = createAction('map/zoomIn');
 export const zoomOut = createAction('map/zoomOut');
@@ -260,33 +322,45 @@ export const selectViewAt = (s) => select(s).localAware.viewAt;
 export const selectEnableLocalSave = (s) => select(s).enableLocalSave;
 const selectPeers = (s) => select(s).peerAwares || {};
 
-export const selectIsActiveFeature = (id: string) => (s) =>
-  select(s).localAware.activeFeature === id;
+// Features
 
-export const selectPeersActiveOnFeature = (id: string) => (s) => {
-  const peers = selectPeers(s);
-  const actives: number[] = [];
-  for (const peer of Object.values(peers)) {
-    if (peer.activeFeature === id) {
-      actives.push(peer.clientId);
-    }
+export const selectInCreate = (s) => !!select(s).creating;
+
+export const selectFeatures = (s) => select(s).data?.features || {};
+
+export const selectActiveFeature = (s): ActiveFeature => {
+  const map = selectFeatures(s);
+  const id = select(s).localAware.activeFeature;
+  if (!id) return;
+  const feature = map[id];
+  if (!feature) return;
+
+  if (!['group', 'route', 'point'].includes(feature.type)) {
+    console.warn('Unexpected active feature', feature);
+    return;
   }
-  return actives;
+
+  return feature as any;
 };
 
-const selectFeaturesByParent = (parentId: string) =>
-  createSelector([(s) => select(s).data?.features], (features) =>
-    features ? computeFeaturesByParent(parentId, features) : [],
+export const selectIsActiveFeature = (id: string) => (s) =>
+  selectActiveFeature(s)?.id === id;
+
+export const selectPeersActiveOnFeature = (id: string) =>
+  createSelector([selectPeers], (peers) =>
+    Object.values(peers).filter((peer) => peer.activeFeature === id),
   );
 
 export const selectFeaturesDisplayList = (parentId: string) =>
-  createSelector([selectFeaturesByParent(parentId)], (features) =>
-    computeFeaturesDisplayList(features),
+  createSelector([selectFeatures], (features) =>
+    computeFeaturesDisplayList(parentId, features),
   );
+
+// Layers
 
 export const selectLayerSourceDisplayList = (state) => {
   const layers = selectLayers(state);
-  if (!layers) return;
+  if (!layers) return [];
 
   const used = {};
   for (const layer of layers) {
@@ -329,6 +403,28 @@ function sortBy<T, B>(list: T[], key: (item: T) => B) {
 }
 
 // Listeners
+
+startListening({
+  actionCreator: mapClick,
+  effect: ({ payload }, l) => {
+    const state = select(l.getState());
+    const creating = state.creating;
+    if (creating) {
+      const { type, at } = creating;
+
+      if (type === 'point') {
+        l.dispatch(
+          actions.finishCreating({
+            id: uuid(),
+            at,
+            type: 'point',
+            lngLat: serializeLngLat(payload.lngLat),
+          }),
+        );
+      }
+    }
+  },
+});
 
 startListening({
   actionCreator: zoomIn,
@@ -405,7 +501,7 @@ startListening({
 
     const prev = selectGeolocation(l.getState());
     l.dispatch(
-      mapSlice.actions.setGeolocation({
+      actions.setGeolocation({
         updating: true,
         value: prev.value,
       }),
@@ -429,7 +525,7 @@ startListening({
       const position: LngLat = [longitude, latitude];
 
       l.dispatch(
-        mapSlice.actions.setGeolocation({
+        actions.setGeolocation({
           updating: false,
           value: { accuracy, position },
         }),
@@ -444,9 +540,7 @@ startListening({
         throw err;
       }
 
-      l.dispatch(
-        mapSlice.actions.setGeolocation({ updating: false, value: undefined }),
-      );
+      l.dispatch(actions.setGeolocation({ updating: false, value: undefined }));
 
       if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
         l.dispatch(

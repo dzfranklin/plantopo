@@ -13,9 +13,17 @@ import {
   DropdownMenuTrigger,
 } from '@radix-ui/react-dropdown-menu';
 import { DotFilledIcon } from '@radix-ui/react-icons';
+import { useAppDispatch } from '../hooks';
+import { startCreating } from '../mapSlice';
 import './dropdown.css';
 
-export default function AddDropdown({ onNew }) {
+export default function AddDropdown() {
+  const dispatch = useAppDispatch();
+
+  const onNewClick = (type) => (_e) => {
+    dispatch(startCreating({ type }));
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="inline-flex items-center px-2 py-1 m-1 text-xs font-medium text-white bg-indigo-600 border border-transparent rounded shadow-sm h-min focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-indigo-400 hover:bg-indigo-700">
@@ -24,10 +32,14 @@ export default function AddDropdown({ onNew }) {
       </DropdownMenuTrigger>
 
       <DropdownMenuPortal>
-        <DropdownMenuContent className="DropdownMenuContent" sideOffset={5}>
-          <Item label="New point" cmd="⌘+P" onClick={() => onNew('point')} />
-          <Item label="New route" cmd="⌘+R" onClick={() => onNew('route')} />
-          <Item label="New folder" cmd="⌘+F" onClick={() => onNew('group')} />
+        <DropdownMenuContent
+          onCloseAutoFocus={(e) => e.preventDefault()}
+          className="DropdownMenuContent"
+          sideOffset={5}
+        >
+          <Item label="New point" cmd="⌘+P" onClick={onNewClick('point')} />
+          <Item label="New route" cmd="⌘+R" onClick={onNewClick('route')} />
+          <Item label="New folder" cmd="⌘+F" onClick={onNewClick('group')} />
 
           <DropdownMenuSeparator className="DropdownMenuSeparator" />
 

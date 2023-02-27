@@ -1,7 +1,12 @@
 import MapBase from './MapBase';
-import { useState } from 'react';
-import { useAppSelector } from './hooks';
-import { selectDataLoaded, selectShouldCreditOS } from './mapSlice';
+import { useEffect, useState } from 'react';
+import { useAppDispatch, useAppSelector, useAppStore } from './hooks';
+import {
+  deleteFeature,
+  selectActiveFeature,
+  selectDataLoaded,
+  selectShouldCreditOS,
+} from './mapSlice';
 import LoadingIndicator from './LoadingIndicator';
 import classNames from '../classNames';
 import Flash from './Flash';
@@ -10,9 +15,26 @@ import MapSync from './MapSync';
 import Sidebar from './Sidebar';
 
 export default function MapApp() {
+  const store = useAppStore();
+  const dispatch = useAppDispatch();
   const dataLoaded = useAppSelector(selectDataLoaded);
   const [baseIsLoading, setBaseIsLoading] = useState(true);
   const creditOS = useAppSelector(selectShouldCreditOS);
+
+  useEffect(() => {
+    if (!dataLoaded) return;
+    const handler = (event: KeyboardEvent) => {
+      const { key } = event;
+      const state = store.getState();
+      const active = selectActiveFeature(state);
+
+      if (key === 'Delete' && active) {
+        dispatch(deleteFeature(active));
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [dataLoaded]);
 
   return (
     <div className="map-app">

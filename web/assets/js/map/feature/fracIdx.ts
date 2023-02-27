@@ -1,6 +1,16 @@
 // From <https://madebyevan.com/algos/crdt-fractional-indexing/>
 
-export function idxBetween(before: string, after: string): string {
+export function idxBetween(
+  before: string | undefined,
+  after: string | undefined,
+): string {
+  if (before === undefined) {
+    before = '';
+  }
+  if (after === undefined) {
+    after = '';
+  }
+
   // The demo uses "0" as the first digit and "9" as the last digit for
   // ease of understanding. However, this algorithm is best done with as
   // large a base as possible to keep the generated positions shorter. A

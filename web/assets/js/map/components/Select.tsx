@@ -10,7 +10,9 @@ export interface Props<T> {
   className?: string;
 }
 
-export default function Select<T>(props: Props<T>) {
+export default function Select<T extends { toString: () => string }>(
+  props: Props<T>,
+) {
   const { className, onChange, label, options } = props;
 
   const value = props.value || options[0];
@@ -18,7 +20,13 @@ export default function Select<T>(props: Props<T>) {
   const valueMap =
     props.valueMap || ((v) => ({ id: v.toString(), label: v.toString() }));
 
-  const unmapValue = (id) => options.find((o) => valueMap(o).id === id);
+  const unmapValue = (id): T => {
+    const value = options.find((o) => valueMap(o).id === id);
+    if (!value) {
+      throw new Error('valueMap invariant broken');
+    }
+    return value;
+  };
 
   const [selectId] = useState(() => `input-${nanoid()}`);
 

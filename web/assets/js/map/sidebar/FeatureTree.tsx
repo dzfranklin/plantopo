@@ -1,114 +1,136 @@
 import { useState } from 'react';
 import classNames from '../../classNames';
-import {
-  Feature,
-  GroupFeature,
-  PointFeature,
-  ROOT_FEATURE,
-  RouteFeature,
-} from '../features';
+import { ROOT_FEATURE } from '../feature/features';
 import { useAppDispatch, useAppSelector } from '../hooks';
 import {
+  deleteFeature,
   selectFeaturesDisplayList,
   selectIsActiveFeature,
   selectPeersActiveOnFeature,
-  startCreate,
+  setActive,
+  updateFeature,
 } from '../mapSlice';
-import AddDropdown from './AddDropdown';
+import * as ContextMenu from '@radix-ui/react-context-menu';
+import '../components/contextMenu.css';
+
+const UNNAMED_PLACEHOLDER = 'Unnamed Feature';
 
 export default function FeatureTree() {
-  const dispatch = useAppDispatch();
-
-  // TODO: refactor so that parent is a part of idx, as they need to go together
-
   return (
-    <div className="flex flex-col overflow-y-scroll grow">
-      <div className="sticky flex flex-row justify-end mx-[14px] pb-8px">
-        <AddDropdown onNew={(type) => dispatch(startCreate({ type }))} />
-      </div>
-
-      <Group
-        feature={null}
-        id={ROOT_FEATURE}
-        isActive={false}
-        activePeers={[]}
-      />
-
-      <div className="h-[50%] max-h-[200px]">TODO feature editor</div>
+    <div className="flex flex-col pt-1 overflow-y-auto border-t border-gray-300 grow">
+      <GroupChildren parentId={ROOT_FEATURE} isExpanded={true} />
     </div>
   );
 }
 
-// TODO: Scroll to active
-
-function Feature({ feature }) {
-  const isActive = useAppSelector(selectIsActiveFeature(feature.id));
-  const activePeers = useAppSelector(selectPeersActiveOnFeature(feature.id));
-  const props = {
-    id: feature.id,
-    feature,
-    isActive,
-    activePeers,
-  };
-
-  if (feature.type === 'group') {
-    return <Group {...props} />;
-  } else if (feature.type === 'point') {
-    return <Point {...props} />;
-  } else if (feature.type === 'route') {
-    return <Route {...props} />;
-  } else {
-    console.warn(`Unknown feature [type=${feature.type}]`, feature);
+function FeatureItem({ feature }) {
+  const { type } = feature;
+  if (type !== 'group' && type !== 'point' && type !== 'route') {
+    console.info(`Unknown feature [type=${feature.type}]`, feature);
     return <></>;
   }
-}
 
-interface FeatureProps<T> {
-  feature: T;
-  id: string;
-  isActive: boolean;
-  activePeers: number[];
-}
-
-function Group({ feature, id }: FeatureProps<GroupFeature | null>) {
-  const list = useAppSelector(selectFeaturesDisplayList(id));
-  const [isExpanded, setIsExpanded] = useState(id === ROOT_FEATURE);
+  const dispatch = useAppDispatch();
+  const isActive = useAppSelector(selectIsActiveFeature(feature.id));
+  const activePeers = useAppSelector(selectPeersActiveOnFeature(feature.id));
+  const [isRename, setIsRename] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className={classNames(!feature && 'grow')}>
-      {feature && (
-        <div>
-          <button onClick={() => setIsExpanded(!isExpanded)}>
-            TODO EXPAND ICON
+    <ContextMenu.Root
+      onOpenChange={(isOpen) => isOpen && dispatch(setActive(feature))}
+    >
+      <li
+        className={classNames(
+          'flex px-2 py-1 border-[1px] border-transparent',
+          feature.type === 'group' && 'ml-[30px]',
+          isActive && 'bg-blue-100',
+          activePeers.length > 0 && 'border-dashed border-purple-500',
+        )}
+      >
+        <button onClick={() => setIsExpanded(!isExpanded)}>TODO Exp</button>
+
+        <ContextMenu.Trigger asChild>
+          <button
+            onClick={() => {
+              if (isActive) {
+                setIsRename(true);
+              } else {
+                dispatch(setActive(feature));
+              }
+            }}
+            className="flex overflow-x-hidden text-sm text-left truncate grow"
+          >
+            {isRename ? (
+              <input
+                placeholder={UNNAMED_PLACEHOLDER}
+                value={feature.name || ''}
+                onChange={(e) =>
+                  dispatch(
+                    updateFeature({
+                      id: feature.id,
+                      update: { name: e.target.value },
+                    }),
+                  )
+                }
+                autoFocus
+                onFocus={(e) => e.currentTarget.select()}
+                onBlur={() => setIsRename(false)}
+                onKeyDown={(e) =>
+                  (e.key === 'Escape' || e.key === 'Enter') &&
+                  setIsRename(false)
+                }
+                className="bg-blue-100 grow"
+              />
+            ) : (
+              <span className={classNames(!feature.name && 'opacity-60')}>
+                {feature.name || UNNAMED_PLACEHOLDER}
+              </span>
+            )}
+
+            {type === 'group' && (
+              <GroupChildren parentId={feature.id} isExpanded={isExpanded} />
+            )}
           </button>
+        </ContextMenu.Trigger>
 
-          <p>{feature.name}</p>
-        </div>
-      )}
-
-      {isExpanded && (
-        <ul>
-          {list.map((feature) => (
-            <Feature key={feature.id} feature={feature} />
-          ))}
-        </ul>
-      )}
-    </div>
+        <ContextMenu.Portal>
+          <ContextMenu.Content
+            className="ContextMenuContent"
+            loop={true}
+            collisionPadding={5}
+          >
+            <ContextMenu.Item
+              onClick={() => setTimeout(() => setIsRename(true))}
+              className="ContextMenuItem"
+            >
+              Rename <div className="RightSlot">Alt+R</div>
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              onClick={() => dispatch(deleteFeature(feature))}
+              className="ContextMenuItem"
+            >
+              Delete <div className="RightSlot">Del</div>
+            </ContextMenu.Item>
+          </ContextMenu.Content>
+        </ContextMenu.Portal>
+      </li>
+    </ContextMenu.Root>
   );
 }
 
-function Point({ feature }: FeatureProps<PointFeature>) {
-  return (
-    <li>
-      <span>{feature.name || 'Unnamed point'}</span>
-    </li>
-  );
-}
+const GroupChildren = ({ parentId, isExpanded }) => {
+  const list = useAppSelector(selectFeaturesDisplayList(parentId));
 
-function Route({ feature }: FeatureProps<RouteFeature>) {
-  return (
-    <li>
-      <span>{feature.name || 'Unnamed route'}</span>
-    </li>
-  );
-}
+  if (isExpanded) {
+    return (
+      <ul>
+        {list.map((feature) => (
+          <FeatureItem key={feature.id} feature={feature} />
+        ))}
+      </ul>
+    );
+  } else {
+    return <></>;
+  }
+};

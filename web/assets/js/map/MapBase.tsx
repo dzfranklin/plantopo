@@ -4,7 +4,6 @@ import deepEqual from 'react-fast-compare';
 import { useAppDispatch, useAppStore } from './hooks';
 import {
   flyTo,
-  mapClick,
   reportViewAt,
   selectGeolocation,
   selectTokens,
@@ -14,6 +13,8 @@ import {
   selectLayerSources,
   ViewAt,
   selectIs3d,
+  selectInCreate,
+  mapClick,
 } from './mapSlice';
 import '../globals';
 import { startListening, stopListening } from './listener';
@@ -25,6 +26,7 @@ export interface Props {
   isLoading: (_: boolean) => void;
 }
 
+const FEATURE_POINTER_TARGET_PX = 20;
 const FLY_TO_SPEED = 2.8;
 
 export default function MapBase(props: Props) {
@@ -127,12 +129,17 @@ export default function MapBase(props: Props) {
     });
 
     map.on('click', (evt) => {
-      const TARGET_WIDTH_PX = 20;
       const point = evt.point;
       const features = map
         .queryRenderedFeatures([
-          [point.x - TARGET_WIDTH_PX / 2, point.y - TARGET_WIDTH_PX / 2],
-          [point.x + TARGET_WIDTH_PX / 2, point.y + TARGET_WIDTH_PX / 2],
+          [
+            point.x - FEATURE_POINTER_TARGET_PX / 2,
+            point.y - FEATURE_POINTER_TARGET_PX / 2,
+          ],
+          [
+            point.x + FEATURE_POINTER_TARGET_PX / 2,
+            point.y + FEATURE_POINTER_TARGET_PX / 2,
+          ],
         ])
         .map((f) => ({
           layer: f.layer.id,
@@ -141,7 +148,7 @@ export default function MapBase(props: Props) {
 
       dispatch(
         mapClick({
-          geo: [evt.lngLat.lng, evt.lngLat.lat],
+          lngLat: [evt.lngLat.lng, evt.lngLat.lat],
           screen: [evt.point.x, evt.point.y],
           features,
         }),
@@ -195,6 +202,13 @@ export default function MapBase(props: Props) {
         } else {
           geoLocMarker.remove();
         }
+      }
+
+      const canvas = map.getCanvas();
+      if (selectInCreate(state)) {
+        canvas.classList.add('cursor-crosshair');
+      } else {
+        canvas.classList.remove('cursor-crosshair');
       }
 
       prevState = state;

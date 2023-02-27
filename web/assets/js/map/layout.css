@@ -41,6 +41,6 @@
   align-self: end;
 }
 
-.map-app:has(.sidebar) .credit-images {
+.sidebar-is-open .credit-images {
   grid-column: 2 / -1;
 }
