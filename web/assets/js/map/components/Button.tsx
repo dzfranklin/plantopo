@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion';
+import { forwardRef } from 'react';
 import classNames from '../../classNames';
+import ComponentChildren from './ComponentChildren';
 
-export interface Props {
+interface Props {
   style?: 'primary' | 'secondary';
-  children?: JSX.Element | JSX.Element[] | string;
+  children?: ComponentChildren;
   onClick?: () => void;
   disableWith?: string | JSX.Element;
   className?: string;
@@ -19,10 +21,11 @@ const styles = {
   secondary: 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
 };
 
-export default function Button(props: Props) {
+const Button = forwardRef((props: Props, ref) => {
   const isDisabled = typeof props.disableWith === 'string';
   return (
     <motion.button
+      ref={ref as any}
       type="button"
       className={classNames(
         baseStyle,
@@ -33,14 +36,10 @@ export default function Button(props: Props) {
       disabled={isDisabled}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.9 }}
-      transition={
-        {
-          // type: 'spring',
-          // duration: window.appSettings.disableAnimation ? 0 : 0.3,
-        }
-      }
     >
       {isDisabled ? props.disableWith : props.children}
     </motion.button>
   );
-}
+});
+
+export default Button;

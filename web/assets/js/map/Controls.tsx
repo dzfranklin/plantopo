@@ -2,7 +2,7 @@ import {
   ArrowsPointingOutIcon,
   ArrowsPointingInIcon,
 } from '@heroicons/react/24/outline';
-import { useCallback, useEffect, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useState } from 'react';
 import {
   AnimatePresence,
   motion,
@@ -42,6 +42,7 @@ import {
 import Button from './components/Button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMountain } from '@fortawesome/free-solid-svg-icons';
+import Tooltip from './components/Tooltip';
 
 export default function Controls() {
   const dispatch = useAppDispatch();
@@ -59,6 +60,7 @@ export default function Controls() {
   return (
     <div className="flex flex-col items-end gap-[8px] controls w-min">
       <Control
+        title="Go to my location"
         onClick={() =>
           dispatch(
             geolocation.value || geolocation.updating
@@ -77,6 +79,7 @@ export default function Controls() {
       </Control>
 
       <Control
+        title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
         onClick={() =>
           dispatch(isFullscreen ? exitFullscreen() : requestFullscreen())
         }
@@ -88,7 +91,10 @@ export default function Controls() {
         )}
       </Control>
 
-      <Control onClick={() => dispatch(setIs3d(!is3d))}>
+      <Control
+        title={is3d ? 'Exit 3D terrain' : '3D terrain'}
+        onClick={() => dispatch(setIs3d(!is3d))}
+      >
         <FontAwesomeIcon
           icon={faMountain}
           className={classNames(
@@ -100,7 +106,7 @@ export default function Controls() {
 
       <ZoomControl />
 
-      <Control onClick={() => setLayerSelectIsOpen(true)}>
+      <Control title="Layers" onClick={() => setLayerSelectIsOpen(true)}>
         <LayerSelectionIcon className="w-[24px]" />
       </Control>
 
@@ -179,12 +185,14 @@ function LayerItem({ layer, idx }) {
       layoutId={source.id.toString()}
       className="flex flex-row mb-[16px]"
     >
-      <button
-        onClick={() => dispatch(removeLayer(idx))}
-        className="-ml-1 mr-[8px]"
-      >
-        <CloseIcon className="fill-gray-500 w-[20px]" />
-      </button>
+      <Tooltip title="Remove">
+        <button
+          onClick={() => dispatch(removeLayer(idx))}
+          className="-ml-1 mr-[8px]"
+        >
+          <CloseIcon className="fill-gray-500 w-[20px]" />
+        </button>
+      </Tooltip>
 
       <img
         src={source.icon}
@@ -197,39 +205,43 @@ function LayerItem({ layer, idx }) {
         <div>{source.name}</div>
 
         {idx !== 0 && (
-          <Slider.Root
-            min={0}
-            max={1}
-            step={0.01}
-            value={[layer.opacity]}
-            onValueChange={([opacity]) => {
-              dispatch(
-                updateLayer({
-                  idx,
-                  value: { opacity },
-                }),
-              );
-            }}
-            className="relative flex items-center select-none touch-none w-full h-5 py-[15px]"
-          >
-            <Slider.Track className="bg-[hsla(0,_0%,_0%,_0.478)] relative grow rounded-full h-[3px]">
-              <Slider.Range className="absolute h-full bg-purple-600 rounded-full" />
-            </Slider.Track>
-            <Slider.Thumb className="block w-5 h-5 bg-purple-600 rounded-[10px] hover:bg-purple-500 focus:outline-none focus:shadow-[0_0_0_5px] focus:shadow-[hsla(0,_0%,_0%,_0.220)]" />
-          </Slider.Root>
+          <Tooltip title="Opacity">
+            <Slider.Root
+              min={0}
+              max={1}
+              step={0.01}
+              value={[layer.opacity]}
+              onValueChange={([opacity]) => {
+                dispatch(
+                  updateLayer({
+                    idx,
+                    value: { opacity },
+                  }),
+                );
+              }}
+              className="relative flex items-center select-none touch-none w-full h-5 py-[15px]"
+            >
+              <Slider.Track className="bg-[hsla(0,_0%,_0%,_0.478)] relative grow rounded-full h-[3px]">
+                <Slider.Range className="absolute h-full bg-purple-600 rounded-full" />
+              </Slider.Track>
+              <Slider.Thumb className="block w-5 h-5 bg-purple-600 rounded-[10px] hover:bg-purple-500 focus:outline-none focus:shadow-[0_0_0_5px] focus:shadow-[hsla(0,_0%,_0%,_0.220)]" />
+            </Slider.Root>
+          </Tooltip>
         )}
       </div>
 
-      <div
-        className="flex flex-col justify-center ml-[16px] p-[8px] cursor-grab fill-gray-400"
-        ref={setupReorderTarget}
-        onPointerDown={(evt) => {
-          evt.preventDefault();
-          reorderControls.start(evt);
-        }}
-      >
-        <GripIcon className="h-[24px]" />
-      </div>
+      <Tooltip title="Reorder">
+        <div
+          className="flex flex-col justify-center ml-[16px] p-[8px] cursor-grab fill-gray-400"
+          ref={setupReorderTarget}
+          onPointerDown={(evt) => {
+            evt.preventDefault();
+            reorderControls.start(evt);
+          }}
+        >
+          <GripIcon className="h-[24px]" />
+        </div>
+      </Tooltip>
     </Reorder.Item>
   );
 }
@@ -242,12 +254,14 @@ function SourceItem({ source }) {
       layoutId={source.id.toString()}
       className="flex flex-row items-center mb-[10px]"
     >
-      <button
-        onClick={() => dispatch(addLayer({ sourceId: source.id }))}
-        className="-ml-1 mr-[8px]"
-      >
-        <UploadIcon className="stroke-gray-500 w-[20px]" />
-      </button>
+      <Tooltip title="Add">
+        <button
+          onClick={() => dispatch(addLayer({ sourceId: source.id }))}
+          className="-ml-1 mr-[8px]"
+        >
+          <UploadIcon className="stroke-gray-500 w-[20px]" />
+        </button>
+      </Tooltip>
 
       <img
         src={source.icon}
@@ -264,12 +278,14 @@ function SourceItem({ source }) {
 function Control(props) {
   return (
     <div className="bg-white border border-gray-200 rounded-[2px]">
-      <button
-        onClick={props.onClick}
-        className="flex justify-center p-[5px] hover:bg-gray-200"
-      >
-        {props.children}
-      </button>
+      <Tooltip title={props.title}>
+        <button
+          onClick={props.onClick}
+          className="flex justify-center p-[5px] hover:bg-gray-200"
+        >
+          {props.children}
+        </button>
+      </Tooltip>
     </div>
   );
 }
@@ -278,18 +294,22 @@ function ZoomControl() {
   const dispatch = useAppDispatch();
   return (
     <div className="bg-white border border-gray-200 rounded-[2px] flex flex-col w-min">
-      <button
-        onClick={() => dispatch(zoomIn)}
-        className="flex justify-center p-[10px] pb-[5px] hover:bg-gray-200"
-      >
-        <ZoomInIcon className="w-[14px]" />
-      </button>
-      <button
-        onClick={() => dispatch(zoomOut)}
-        className="flex justify-center p-[10px] pt-[5px] hover:bg-gray-200"
-      >
-        <ZoomOutIcon className="w-[14px]" />
-      </button>
+      <Tooltip title="Zoom in">
+        <button
+          onClick={() => dispatch(zoomIn)}
+          className="flex justify-center p-[10px] pb-[5px] hover:bg-gray-200"
+        >
+          <ZoomInIcon className="w-[14px]" />
+        </button>
+      </Tooltip>
+      <Tooltip title="Zoom out">
+        <button
+          onClick={() => dispatch(zoomOut)}
+          className="flex justify-center p-[10px] pt-[5px] hover:bg-gray-200"
+        >
+          <ZoomOutIcon className="w-[14px]" />
+        </button>
+      </Tooltip>
     </div>
   );
 }
