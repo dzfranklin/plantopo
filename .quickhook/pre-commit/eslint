@@ -1,2 +1,0 @@
-#!/usr/bin/env bash
-cd web/assets && npx eslint --max-warnings 0 .
