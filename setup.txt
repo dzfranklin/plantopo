@@ -1,0 +1,3 @@
+Clone submodules
+See <https://github.com/maplibre/maplibre-gl-js/blob/main/CONTRIBUTING.md>
+cd maplibre-gl-js && npm run build-prod && npm run build-css && npm run generate-typings

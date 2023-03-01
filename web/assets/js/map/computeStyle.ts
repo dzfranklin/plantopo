@@ -1,5 +1,9 @@
 import { LayerData, Layer, LayerSource } from './mapSlice';
-import * as ml from 'maplibre-gl';
+import * as mlStyle from '@maplibre/maplibre-gl-style-spec';
+import {
+  USER_FEATURES_DATA_ID,
+  USER_FEATURE_LAYER_SPECS,
+} from './base/featuresLayer';
 
 const ATTRIBUTION = {
   os: `Contains OS data &copy; Crown copyright and database rights ${new Date().getFullYear()}`,
@@ -22,133 +26,65 @@ const OPACITY_PROPS = {
   hillshade: ['hillshade-exaggeration'],
 };
 
-const OPACITY_CUTOFF = 0.95;
 const TERRAIN_SOURCE_ID = 'terrain';
 
-type UpdatePaint = (id: string, prop: string, value: number) => void;
-type DataSources = { [id: string]: LayerData };
-type LayerSources = { [id: number]: LayerSource };
-type Change3d = string | false | undefined;
-
-export default function computeStyle(
-  dataSources: DataSources,
-  layerSources: LayerSources,
-  is3d: boolean,
+export const computeLayers = (
+  layerSources: { [id: number]: LayerSource },
   layers: Layer[],
-  prevIs3d: boolean,
-  prevLayers: Layer[] | undefined,
-  updateFull: (style: ml.StyleSpecification, change3d: Change3d) => void,
-  updatePaint: UpdatePaint,
-) {
-  const full = () => {
-    const style = computeFullStyle(dataSources, layerSources, is3d, layers);
-
-    let change3d: Change3d;
-    if (is3d != prevIs3d) {
-      change3d = is3d ? TERRAIN_SOURCE_ID : false;
-    }
-
-    updateFull(style, change3d);
-    window._dbg.computeStyleStats.fullUpdates += 1;
-  };
-
-  if (is3d != prevIs3d || !prevLayers || layers.length !== prevLayers.length) {
-    full();
-    return;
-  }
-
-  for (let i = 0; i < layers.length; i++) {
-    if (prevLayers[i].sourceId !== layers[i].sourceId) {
-      full();
-      return;
-    }
-  }
-
-  let didUpdatePaint = false;
-  for (let i = 1; i < layers.length; i++) {
-    if (prevLayers[i].opacity !== layers[i].opacity) {
-      computeLayerStyleUpdate(layerSources, layers[i], updatePaint);
-      didUpdatePaint = true;
-    }
-  }
-
-  if (didUpdatePaint) window._dbg.computeStyleStats.paintOnlyUpdates += 1;
-}
-
-export function computeFullStyle(
-  dataSources: DataSources,
-  layerSources: LayerSources,
-  is3d: boolean,
-  layers: Layer[],
-): ml.StyleSpecification {
-  const style: Partial<ml.StyleSpecification> = {
-    version: 8,
-  };
-
-  const activeLayerSources = layers.map(
-    (layer) => layerSources[layer.sourceId],
-  );
-  const glyphs = activeLayerSources.find((s) => s.glyphs)?.glyphs;
-  const sprite = activeLayerSources.find((s) => s.sprite)?.sprite;
-  if (glyphs) style.glyphs = glyphs;
-  if (sprite) style.sprite = sprite;
-
-  const activeDataSourceIds = new Set<string>();
-  for (const layerSource of activeLayerSources) {
-    for (const id of layerSource.dependencies) {
-      activeDataSourceIds.add(id);
-    }
-  }
-
-  if (is3d) {
-    activeDataSourceIds.add(TERRAIN_SOURCE_ID);
-  }
-
-  const activeDataSources = Array.from(activeDataSourceIds.keys()).map((id) => {
-    const s = dataSources[id];
-    const spec = { ...s.spec };
-    if (s.attribution) spec['attribution'] = ATTRIBUTION[s.attribution];
-    return [s.id, spec];
-  });
-  style.sources = Object.fromEntries(activeDataSources);
-
-  style.layers = layers.flatMap((layer) => {
+): mlStyle.LayerSpecification[] => {
+  const out = layers.flatMap((layer, idx) => {
     const source = layerSources[layer.sourceId];
     return source.layerSpecs.map((spec) => {
-      const out = {
+      const out: mlStyle.LayerSpecification = {
         ...spec,
         id: glLayerId(layer.sourceId, spec.id),
-        paint: spec.paint ? { ...spec.paint } : {},
       };
 
-      const opacity = layer.opacity || source.defaultOpacity || 1;
-      if (opacity < OPACITY_CUTOFF) {
-        for (const prop of OPACITY_PROPS[spec.type]) {
-          out.paint[prop] = (out.paint[prop] || 1) * opacity;
-        }
-      }
+      // This can't be opacity = layer.opacity || ... because 0 is falsy
+      let opacity = layer.opacity ?? source.defaultOpacity ?? 1;
+      if (idx === 0) opacity = 1;
 
-      return out as ml.LayerSpecification;
+      const paint = spec.paint ? { ...spec.paint } : {};
+      for (const prop of OPACITY_PROPS[spec.type]) {
+        paint[prop] = (paint[prop] || 1) * opacity;
+      }
+      out.paint = paint;
+
+      return out;
     });
   });
 
-  return style as ml.StyleSpecification;
-}
-
-function computeLayerStyleUpdate(
-  layerSources: LayerSources,
-  layer: Layer,
-  updatePaint: UpdatePaint,
-) {
-  const source = layerSources[layer.sourceId];
-  const opacity = layer.opacity || source.defaultOpacity || 1;
-  if (opacity < OPACITY_CUTOFF) {
-    for (const spec of source.layerSpecs) {
-      const glId = glLayerId(layer.sourceId, spec.id);
-      for (const prop of OPACITY_PROPS[spec.type]) {
-        const value = (spec.paint?.[prop] || 1) * opacity;
-        updatePaint(glId, prop, value);
-      }
-    }
+  for (const l of USER_FEATURE_LAYER_SPECS) {
+    out.push(l);
   }
-}
+
+  return out;
+};
+
+export const computeSources = (layerDatas: {
+  [id: string]: LayerData;
+}): mlStyle.StyleSpecification['sources'] => {
+  const out = Object.fromEntries(
+    Object.values(layerDatas).map((s) => {
+      const spec = { ...s.spec };
+      if (s.attribution) spec['attribution'] = ATTRIBUTION[s.attribution];
+      return [s.id, spec];
+    }),
+  );
+
+  out[USER_FEATURES_DATA_ID] = {
+    type: 'geojson',
+    data: {
+      type: 'FeatureCollection',
+      features: [],
+    },
+  };
+
+  return out;
+};
+
+export const computeTerrain = (): mlStyle.TerrainSpecification => ({
+  source: TERRAIN_SOURCE_ID,
+});
+
+// TODO: Figure out how to combine glyph and sprite. Maybe a special loader?

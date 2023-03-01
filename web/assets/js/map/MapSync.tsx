@@ -68,7 +68,7 @@ export default function MapSync() {
       ws.destroy();
       yDoc.destroy();
     };
-  }, [id]);
+  }, [dispatch, id, store]);
 
   if (!state) return <></>;
   return (

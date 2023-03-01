@@ -28,7 +28,8 @@ defmodule PlanTopoWeb.MapJSON do
 
     %{
       mapbox: Keyword.fetch!(tokens, :mapbox),
-      os: Keyword.fetch!(tokens, :os)
+      os: Keyword.fetch!(tokens, :os),
+      maptiler: Keyword.fetch!(tokens, :maptiler)
     }
   end
 

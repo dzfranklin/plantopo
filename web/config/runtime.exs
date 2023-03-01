@@ -2,7 +2,8 @@ import Config
 
 config :plantopo, :frontend_tokens,
   mapbox: System.fetch_env!("PLANTOPO_MAPBOX_ACCESS_TOKEN"),
-  os: System.fetch_env!("PLANTOPO_OS_API_KEY")
+  os: System.fetch_env!("PLANTOPO_OS_API_KEY"),
+  maptiler: System.fetch_env!("PLANTOPO_MAPTILER_KEY")
 
 config :locus, :license_key, System.fetch_env!("PLANTOPO_MAXMIND_LICENSE_KEY")
 

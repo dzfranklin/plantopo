@@ -1,13 +1,15 @@
-import MapBase from './MapBase';
+import MapBase from './base/MapBase';
 import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector, useAppStore } from './hooks';
 import {
+  cancelCreating,
   deleteFeature,
   selectActiveFeature,
   selectDataLoaded,
+  selectInCreate,
   selectShouldCreditOS,
 } from './mapSlice';
-import LoadingIndicator from './LoadingIndicator';
+import LoadingIndicator from './base/LoadingIndicator';
 import classNames from '../classNames';
 import Flash from './Flash';
 import Controls from './Controls';
@@ -27,14 +29,17 @@ export default function MapApp() {
       const { key } = event;
       const state = store.getState();
       const active = selectActiveFeature(state);
+      const inCreate = selectInCreate(state);
 
       if (key === 'Delete' && active) {
         dispatch(deleteFeature(active));
+      } else if (key === 'Escape' && inCreate) {
+        dispatch(cancelCreating());
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [dataLoaded]);
+  }, [dataLoaded, dispatch, store]);
 
   return (
     <div className="map-app">

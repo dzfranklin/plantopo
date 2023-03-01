@@ -5,7 +5,7 @@ import {
   isAnyOf,
   PayloadAction,
 } from '@reduxjs/toolkit';
-import * as ml from 'maplibre-gl';
+import * as mlStyle from '@maplibre/maplibre-gl-style-spec';
 import type { RootState } from './store';
 import { startListening } from './listener';
 import { flash } from './flashSlice';
@@ -18,6 +18,7 @@ import {
   GroupFeature,
   parentIdOf,
   PointFeature,
+  ROOT_FEATURE,
   RouteFeature,
   serializeLngLat,
 } from './feature/features';
@@ -71,6 +72,7 @@ export interface Aware {
 export interface Tokens {
   mapbox: string;
   os: string;
+  maptiler: string;
 }
 
 type LngLat = [number, number];
@@ -86,7 +88,7 @@ export interface ViewAt {
 export interface LayerData {
   id: number;
   attribution?: string;
-  spec: ml.SourceSpecification;
+  spec: mlStyle.SourceSpecification;
 }
 
 export interface LayerSource {
@@ -97,7 +99,7 @@ export interface LayerSource {
   icon: string | null;
   glyphs: string | null;
   sprite: string | null;
-  layerSpecs: ml.LayerSpecification[];
+  layerSpecs: mlStyle.LayerSpecification[];
 }
 
 export interface Layer {
@@ -225,6 +227,9 @@ const mapSlice = createSlice({
       state.localAware.activeFeature = payload.id;
       state.creating = undefined;
     },
+    cancelCreating(state, _action: PayloadAction<undefined>) {
+      state.creating = undefined;
+    },
 
     updateFeature(
       state,
@@ -252,6 +257,11 @@ const mapSlice = createSlice({
           list.at(deletedDisplayIdx + 1) || list.at(deletedDisplayIdx - 1);
         state.localAware.activeFeature = nextActive?.id;
       }
+    },
+    _debugClearFeatures(state, _action: PayloadAction<undefined>) {
+      const data = ensureData(state);
+      data.features = {};
+      data.featureTrash = {};
     },
   },
 });
@@ -282,6 +292,7 @@ export const {
   setIs3d,
   setActive,
   startCreating,
+  cancelCreating,
   updateFeature,
   deleteFeature,
 } = actions;
@@ -356,7 +367,30 @@ export const selectFeaturesDisplayList = (parentId: string) =>
     computeFeaturesDisplayList(parentId, features),
   );
 
+export const selectFirstTopLevelFeature = createSelector(
+  [selectFeaturesDisplayList(ROOT_FEATURE)],
+  (list) => list.at(0),
+);
+
+export const selectLastTopLevelFeature = createSelector(
+  [selectFeaturesDisplayList(ROOT_FEATURE)],
+  (list) => list.at(-1),
+);
+
 // Layers
+
+export const selectLayerSources = (s) => select(s).layerSources;
+export const selectLayerDatas = (s) => select(s).layerDatas;
+
+export const selectSprites = createSelector(
+  [selectLayers, selectLayerSources],
+  (layers, sources): string[] => {
+    return layers
+      .map((l) => sources[l.sourceId])
+      .filter((s) => !!s.sprite)
+      .map((s) => s.sprite as string);
+  },
+);
 
 export const selectLayerSourceDisplayList = (state) => {
   const layers = selectLayers(state);
@@ -373,9 +407,6 @@ export const selectLayerSourceDisplayList = (state) => {
 
   return sortBy(list, (v) => v.name);
 };
-
-export const selectLayerSources = (s) => select(s).layerSources;
-export const selectLayerDatas = (s) => select(s).layerDatas;
 
 export const selectLayerSource = (id: number) => (s) =>
   select(s).layerSources[id];
