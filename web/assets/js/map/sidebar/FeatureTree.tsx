@@ -1,129 +1,54 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import classNames from '../../classNames';
-import {
-  Feature,
-  parentIdOf,
-  ROOT_FEATURE,
-  serializeAt,
-} from '../feature/features';
-import { useAppDispatch, useAppSelector, useAppStore } from '../hooks';
+import { Feature, ROOT_FEATURE } from '../feature/features';
+import { useAppDispatch, useAppSelector } from '../hooks';
 import {
   deleteFeature,
   selectFeaturesDisplayList,
   selectIsActiveFeature,
-  selectLastTopLevelFeature,
   selectPeersActiveOnFeature,
   setActive,
   updateFeature,
 } from '../mapSlice';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import '../components/contextMenu.css';
-import { idxBetween } from '../feature/fracIdx';
+import useFeatureTreeDrag from './useFeatureTreeDrag';
+import './featureDrag.css';
 
-const UNNAMED_PLACEHOLDER = 'Unnamed Feature';
-const DRAG_NEST_AFTER_MS = 500;
-
-// Why the fuck did the end/drop events stop? maybe use react-dnd
+const UNNAMED_PLACEHOLDER = {
+  group: 'Unnamed folder',
+  point: 'Unnamed point',
+  route: 'Unnamed route',
+};
 
 export default function FeatureTree() {
-  const store = useAppStore();
   const ref = useRef<HTMLDivElement>(null);
-  const [dragState, setDragState] = useState<DragState | null>(null);
-
-  useEffect(() => {
-    const handler = (e: DragEvent) => {
-      const treeElem = ref.current?.firstElementChild;
-      if (!treeElem || !isFeatureDrag(e)) return;
-      const dragId = e.dataTransfer!.getData('plantopo/feature');
-      e.preventDefault();
-      console.info('windowover');
-
-      const box = treeElem.getBoundingClientRect();
-      const mid = box.top + box.height / 2;
-
-      if (e.clientY < mid) {
-        const after = selectLastTopLevelFeature(store.getState())?.id;
-        setDragState({
-          id: dragId,
-          before: undefined,
-          after,
-          parent: ROOT_FEATURE,
-        });
-      } else {
-        const before = selectLastTopLevelFeature(store.getState())?.id;
-        setDragState({
-          id: dragId,
-          before,
-          after: undefined,
-          parent: ROOT_FEATURE,
-        });
-      }
-    };
-    window.addEventListener('dragover', handler);
-    return () => window.removeEventListener('dragover', handler);
-  }, [store]);
+  useFeatureTreeDrag(ref);
 
   return (
     <div
       ref={ref}
-      className="flex flex-col pt-1 overflow-y-auto border-t border-gray-300 grow"
+      className="flex flex-col pt-1 mx-[4px] overflow-y-auto border-t border-gray-300 grow"
     >
-      <GroupChildren
-        parentId={ROOT_FEATURE}
-        isExpanded={true}
-        dragState={dragState}
-        setDragState={setDragState}
-      />
+      <GroupChildren parentId={ROOT_FEATURE} isExpanded={true} />
     </div>
   );
 }
 
-type SetDragState = React.Dispatch<React.SetStateAction<DragState>>;
-
-type DragState = null | {
-  id: string;
-  // The feature that would come directly before the dragged feature if it was
-  // dropped right now
-  before: string | undefined;
-  parent: string;
-  after: string | undefined;
-};
-
-const GroupChildren = (props: {
+const GroupChildren = ({
+  parentId,
+  isExpanded,
+}: {
   parentId: string;
   isExpanded: boolean;
-  dragState: DragState;
-  setDragState: SetDragState;
 }) => {
-  const { parentId, isExpanded, dragState, setDragState } = props;
   const list = useAppSelector(selectFeaturesDisplayList(parentId));
 
   if (isExpanded) {
     return (
-      <ul>
-        <li>
-          {dragState && dragState.before === undefined && (
-            <DragPreview nest={false} />
-          )}
-        </li>
-
-        {list.map((feature, idx, list) => (
-          <li key={feature.id}>
-            {(!dragState || dragState.id !== feature.id) && (
-              <GroupChild
-                key={feature.id}
-                feature={feature}
-                idx={idx}
-                list={list}
-                dragState={dragState}
-                setDragState={setDragState}
-              />
-            )}
-
-            {dragState && dragState.before === feature.id && (
-              <DragPreview nest={dragState.parent === feature.id} />
-            )}
-          </li>
+      <ul className={classNames(parentId !== ROOT_FEATURE && 'ml-[15px]')}>
+        {list.map((feature) => (
+          <FeatureItem key={feature.id} feature={feature} />
         ))}
       </ul>
     );
@@ -132,80 +57,7 @@ const GroupChildren = (props: {
   }
 };
 
-const GroupChild = ({
-  feature,
-  idx,
-  list,
-  dragState,
-  setDragState,
-}: {
-  feature: Feature;
-  idx: number;
-  list: Feature[];
-  dragState: DragState;
-  setDragState: SetDragState;
-}) => {
-  return (
-    <div
-      onDragOver={(e) => {
-        if (!isFeatureDrag(e) || !dragState) return;
-        e.preventDefault();
-        e.stopPropagation();
-
-        const dragId = e.dataTransfer.getData('plantopo/feature');
-        const over = feature;
-        const overElem = e.target as HTMLElement;
-
-        let beforeOver: Feature | undefined = list[idx - 1];
-        let afterOver: Feature | undefined = list[idx + 1];
-        if (beforeOver?.id === dragId) beforeOver = list[idx - 2];
-        if (afterOver?.id === dragId) afterOver = list[idx + 2];
-
-        const overbox = overElem.getBoundingClientRect();
-        const relY = e.pageY - overbox.top;
-
-        let before: Feature | undefined;
-        let after: Feature | undefined;
-        if (relY > overbox.height / 2) {
-          before = over;
-          after = afterOver;
-        } else {
-          before = beforeOver;
-          after = over;
-        }
-        console.info(dragId, before?.['name'], after?.['name']);
-
-        setDragState({
-          id: dragId,
-          before: before?.id,
-          after: after?.id,
-          parent: before ? parentIdOf(before) : ROOT_FEATURE,
-        });
-      }}
-    >
-      <FeatureItem
-        key={feature.id}
-        feature={feature}
-        dragState={dragState}
-        setDragState={setDragState}
-      />
-    </div>
-  );
-};
-
-const isFeatureDrag = (e: DragEvent | React.DragEvent<any>) =>
-  e.dataTransfer?.types?.includes('plantopo/feature') ?? false;
-
-const DragPreview = ({ nest }) => {
-  return <div className={classNames(nest && 'ml-[20px]')}>dp</div>;
-};
-
-function FeatureItem(props: {
-  feature: Feature;
-  dragState: DragState;
-  setDragState: SetDragState;
-}) {
-  const { feature, dragState, setDragState } = props;
+function FeatureItem({ feature }: { feature: Feature }) {
   const { type } = feature;
 
   const dispatch = useAppDispatch();
@@ -213,13 +65,6 @@ function FeatureItem(props: {
   const activePeers = useAppSelector(selectPeersActiveOnFeature(feature.id));
   const [isRename, setIsRename] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [dragHoverTimer, setDragHoverTimer] = useState<any>(null);
-
-  useEffect(() => {
-    return () => {
-      if (dragHoverTimer) clearTimeout(dragHoverTimer);
-    };
-  }, [dragHoverTimer]);
 
   if (type !== 'group' && type !== 'point' && type !== 'route') {
     console.info(`Unknown feature [type=${feature.type}]`, feature);
@@ -228,74 +73,35 @@ function FeatureItem(props: {
 
   return (
     <ContextMenu.Root
-      onOpenChange={(isOpen) => isOpen && dispatch(setActive(feature))}
+      onOpenChange={(isOpen) => isOpen && dispatch(setActive(feature.id))}
     >
-      <div
-        draggable="true"
-        onDragStart={(e) => {
-          if (isRename) return;
-          e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('plantopo/feature', feature.id);
-        }}
-        onDragEnter={(e) => {
-          if (!isFeatureDrag(e)) return;
-          e.preventDefault();
-
-          if (feature.type === 'group') {
-            const timer = setTimeout(() => {
-              setDragState((prev) => prev && { ...prev, parent: feature.id });
-            }, DRAG_NEST_AFTER_MS);
-            setDragHoverTimer(timer);
-          }
-        }}
-        onDragExit={(e) => {
-          if (!isFeatureDrag(e)) return;
-          e.preventDefault();
-          if (dragHoverTimer) {
-            clearTimeout(dragHoverTimer);
-            setDragHoverTimer(null);
-          }
-        }}
-        onDrop={(e) => {
-          console.info('drop');
-          if (!isFeatureDrag(e) || !dragState) return;
-          e.preventDefault();
-
-          const idx = idxBetween(dragState.before, dragState.after);
-          const at = serializeAt(dragState.parent, idx);
-
-          setDragState(null);
-          dispatch(
-            updateFeature({
-              id: feature.id,
-              update: { at },
-            }),
-          );
-        }}
-        onDragEnd={(e) => {
-          console.info('dragend');
-          if (!isFeatureDrag(e)) return;
-          e.preventDefault();
-          if (dragState) setDragState(null);
-        }}
+      <li
+        draggable={isRename ? 'false' : 'true'}
+        data-feature={feature.id}
+        data-feature-type={feature.type}
         className={classNames(
-          'flex px-2 py-1 border-[1px] border-transparent w-full',
-          feature.type === 'group' && 'ml-[30px]',
+          'tree-feature flex px-2 py-1 border-[1px] border-transparent w-full',
           isActive && 'bg-blue-100',
           activePeers.length > 0 && 'border-dashed border-purple-500',
         )}
       >
-        <button onClick={() => setIsExpanded(!isExpanded)}>TODO Exp</button>
+        {/* The problem is that in some contexts the children should be in here and in others no
+        Crazy idea: Snapshot feature state during a drag. have it set as local state in this file, and use that state to compute the new it
+        Crazy idea #2: As you drag compute new ats, and have a dragstub feature type merged in locally. Doesn't re-compute at unnecessarily every little move
+         */}
+        {feature.type === 'group' && (
+          <button onClick={() => setIsExpanded(!isExpanded)}>TODO Exp</button>
+        )}
 
         <ContextMenu.Trigger asChild>
           <button
-            onMouseDown={() => !isActive && dispatch(setActive(feature))}
+            onMouseDown={() => !isActive && dispatch(setActive(feature.id))}
             onClick={() => isActive && setIsRename(true)}
             className="flex overflow-x-hidden text-sm text-left truncate grow"
           >
             {isRename ? (
               <input
-                placeholder={UNNAMED_PLACEHOLDER}
+                placeholder={UNNAMED_PLACEHOLDER[feature.type]}
                 value={feature.name || ''}
                 onChange={(e) =>
                   dispatch(
@@ -318,17 +124,12 @@ function FeatureItem(props: {
               <span
                 className={classNames('grow', !feature.name && 'opacity-60')}
               >
-                {feature.name || UNNAMED_PLACEHOLDER}
+                {feature.name || UNNAMED_PLACEHOLDER[feature.type]}
               </span>
             )}
 
             {type === 'group' && (
-              <GroupChildren
-                parentId={feature.id}
-                isExpanded={isExpanded}
-                dragState={props.dragState}
-                setDragState={props.setDragState}
-              />
+              <GroupChildren parentId={feature.id} isExpanded={isExpanded} />
             )}
           </button>
         </ContextMenu.Trigger>
@@ -353,7 +154,7 @@ function FeatureItem(props: {
             </ContextMenu.Item>
           </ContextMenu.Content>
         </ContextMenu.Portal>
-      </div>
+      </li>
     </ContextMenu.Root>
   );
 }

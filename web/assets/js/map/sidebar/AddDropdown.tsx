@@ -14,15 +14,11 @@ import {
 } from '@radix-ui/react-dropdown-menu';
 import { DotFilledIcon } from '@radix-ui/react-icons';
 import { useAppDispatch } from '../hooks';
-import { startCreating } from '../mapSlice';
+import { createGroup, enterLatlngPicker } from '../mapSlice';
 import './dropdown.css';
 
 export default function AddDropdown() {
   const dispatch = useAppDispatch();
-
-  const onNewClick = (type) => (_e) => {
-    dispatch(startCreating({ type }));
-  };
 
   return (
     <DropdownMenu>
@@ -37,9 +33,21 @@ export default function AddDropdown() {
           className="DropdownMenuContent"
           sideOffset={5}
         >
-          <Item label="New point" cmd="⌘+P" onClick={onNewClick('point')} />
-          <Item label="New route" cmd="⌘+R" onClick={onNewClick('route')} />
-          <Item label="New folder" cmd="⌘+F" onClick={onNewClick('group')} />
+          <Item
+            label="New point"
+            cmd="Ctrl+Alt+P"
+            onClick={() => dispatch(enterLatlngPicker({ type: 'point' }))}
+          />
+          <Item
+            label="New route"
+            cmd="Ctrl+Alt+R"
+            onClick={() => dispatch(enterLatlngPicker({ type: 'point' }))}
+          />
+          <Item
+            label="New folder"
+            cmd="Ctrl+Alt+F"
+            onClick={() => dispatch(createGroup())}
+          />
 
           <DropdownMenuSeparator className="DropdownMenuSeparator" />
 

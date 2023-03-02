@@ -1,45 +1,21 @@
 import MapBase from './base/MapBase';
-import { useEffect, useState } from 'react';
-import { useAppDispatch, useAppSelector, useAppStore } from './hooks';
-import {
-  cancelCreating,
-  deleteFeature,
-  selectActiveFeature,
-  selectDataLoaded,
-  selectInCreate,
-  selectShouldCreditOS,
-} from './mapSlice';
+import { useState } from 'react';
+import { useAppSelector } from './hooks';
+import { selectDataLoaded, selectShouldCreditOS } from './mapSlice';
 import LoadingIndicator from './base/LoadingIndicator';
 import classNames from '../classNames';
 import Flash from './Flash';
 import Controls from './Controls';
 import MapSync from './MapSync';
 import Sidebar from './Sidebar';
+import { useGlobalKeyboardShortcuts } from './keyboardShortcuts';
 
 export default function MapApp() {
-  const store = useAppStore();
-  const dispatch = useAppDispatch();
   const dataLoaded = useAppSelector(selectDataLoaded);
   const [baseIsLoading, setBaseIsLoading] = useState(true);
   const creditOS = useAppSelector(selectShouldCreditOS);
 
-  useEffect(() => {
-    if (!dataLoaded) return;
-    const handler = (event: KeyboardEvent) => {
-      const { key } = event;
-      const state = store.getState();
-      const active = selectActiveFeature(state);
-      const inCreate = selectInCreate(state);
-
-      if (key === 'Delete' && active) {
-        dispatch(deleteFeature(active));
-      } else if (key === 'Escape' && inCreate) {
-        dispatch(cancelCreating());
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [dataLoaded, dispatch, store]);
+  useGlobalKeyboardShortcuts();
 
   return (
     <div className="map-app">

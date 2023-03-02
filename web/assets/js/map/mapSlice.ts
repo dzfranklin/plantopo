@@ -20,10 +20,15 @@ import {
   PointFeature,
   ROOT_FEATURE,
   RouteFeature,
+  serializeAt,
   serializeLngLat,
 } from './feature/features';
 import { WritableDraft } from 'immer/dist/internal';
 import { v4 as uuid } from 'uuid';
+import { idxBetween } from './feature/fracIdx';
+import { castDraft } from 'immer';
+
+// TODO: Break this up into multiple slices. Probably need multiple y-sync-jsons
 
 interface MapState {
   enableLocalSave: boolean;
@@ -208,11 +213,11 @@ const mapSlice = createSlice({
       state.geolocation = { updating: false };
     },
 
-    setActive(state, { payload }: PayloadAction<Feature | undefined>) {
-      state.localAware.activeFeature = payload ? payload.id : undefined;
+    setActive(state, { payload }: PayloadAction<string | undefined>) {
+      state.localAware.activeFeature = payload;
     },
 
-    startCreating(state, { payload }: PayloadAction<{ type: string }>) {
+    enterLatlngPicker(state, { payload }: PayloadAction<{ type: string }>) {
       const features = ensureData(state).features;
       const beforeId = state.localAware.activeFeature;
       const at = computeAtAfter(features, beforeId);
@@ -221,7 +226,19 @@ const mapSlice = createSlice({
         at,
       };
     },
-    finishCreating(state, { payload }: PayloadAction<Feature>) {
+    createGroup(state, { payload }: PayloadAction<{ id: string }>) {
+      const features = ensureData(state).features;
+      const beforeId = state.localAware.activeFeature;
+      const at = computeAtAfter(features, beforeId);
+      const { id } = payload;
+      features[id] = castDraft({
+        type: 'group',
+        id,
+        at,
+      });
+      state.localAware.activeFeature = id;
+    },
+    create(state, { payload }: PayloadAction<Feature>) {
       const features = ensureData(state).features;
       features[payload.id] = payload;
       state.localAware.activeFeature = payload.id;
@@ -258,6 +275,64 @@ const mapSlice = createSlice({
         state.localAware.activeFeature = nextActive?.id;
       }
     },
+    moveFeature(
+      state,
+      action: PayloadAction<{
+        id: string;
+        beforeId?: string;
+        afterId?: string;
+      }>,
+    ) {
+      const { id, beforeId, afterId } = action.payload;
+      const { features } = ensureData(state);
+
+      // TODO: Move is buggy
+
+      let before = beforeId ? features[beforeId] : undefined;
+      let after = afterId ? features[afterId] : undefined;
+      let parentId: string;
+
+      if (before && after) {
+        if (parentIdOf(before) != parentIdOf(after)) {
+          console.error(
+            'moveFeature: Ignored. beforeParentId !== afterParentId and both set',
+            action.payload,
+          );
+          return;
+        }
+        parentId = parentIdOf(before);
+      } else if (before) {
+        parentId = parentIdOf(before);
+        const list = computeFeaturesDisplayList(parentId, features);
+        const beforeIdx = list.findIndex((f) => f.id === before!.id);
+        if (beforeIdx === -1) throw new Error('Unreachable');
+        after = list.at(beforeIdx + 1);
+      } else if (after) {
+        parentId = parentIdOf(after);
+        const list = computeFeaturesDisplayList(parentId, features);
+        const afterIdx = list.findIndex((f) => f.id === after!.id);
+        if (afterIdx === -1) throw new Error('unreachable');
+        before = list.at(afterIdx - 1);
+      } else {
+        console.error(
+          'moveFeature: not moving features as neither before nor after',
+          action.payload,
+        );
+        return;
+      }
+
+      const at = serializeAt(parentId, idxBetween(before?.id, after?.id));
+      features[id].at = at;
+    },
+    nestFeatureUnder(
+      state,
+      action: PayloadAction<{ id: string; parentId: string }>,
+    ) {
+      const features = ensureData(state).features;
+      const { id, parentId } = action.payload;
+      const at = serializeAt(parentId, idxBetween(undefined, undefined));
+      features[id].at = at;
+    },
     _debugClearFeatures(state, _action: PayloadAction<undefined>) {
       const data = ensureData(state);
       data.features = {};
@@ -291,11 +366,17 @@ export const {
   setLayers,
   setIs3d,
   setActive,
-  startCreating,
+  enterLatlngPicker,
   cancelCreating,
   updateFeature,
   deleteFeature,
+  moveFeature,
+  nestFeatureUnder,
 } = actions;
+
+export const createGroup = createAction('map/createGroup', () => ({
+  payload: { id: uuid() },
+}));
 
 // Intercepted by map
 interface FlyToOptions {
@@ -445,7 +526,7 @@ startListening({
 
       if (type === 'point') {
         l.dispatch(
-          actions.finishCreating({
+          actions.create({
             id: uuid(),
             at,
             type: 'point',

@@ -20,6 +20,8 @@ export default function computeFeaturesGeoJson(
           style: feat.style,
         },
       });
+    } else if (feat.type === 'group') {
+      // Ignore
     } else {
       console.info(`featuresGeoJson: unsupported type: ${feat.type}`, feat);
     }
