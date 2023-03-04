@@ -15,6 +15,7 @@ import * as ContextMenu from '@radix-ui/react-context-menu';
 import '../components/contextMenu.css';
 import useFeatureTreeDrag, { DragState } from './useFeatureTreeDrag';
 import './featureDrag.css';
+import { AnimatePresence, motion } from 'framer-motion';
 
 const UNNAMED_PLACEHOLDER = {
   group: 'Unnamed folder',
@@ -89,21 +90,46 @@ const GroupChildren = ({
         parentId === ROOT_FEATURE ? 'feature-tree__root' : 'ml-[15px]',
       )}
     >
-      {!isExpanded && dragChild && <DragInsertPoint key="drag-insert-point" />}
-
-      {list.map((item) =>
-        item.type === 'dragState' ? (
+      <AnimatePresence initial={false}>
+        {!isExpanded && dragChild && (
           <DragInsertPoint key="drag-insert-point" />
-        ) : (
-          <FeatureItem key={item.id} feature={item} dragState={dragState} />
-        ),
-      )}
+        )}
+
+        {isExpanded && (
+          <motion.div
+            key="children"
+            initial={'collapsed'}
+            animate={'open'}
+            exit={'collapsed'}
+            variants={{
+              open: { opacity: 1, height: 'auto' },
+              collapsed: { opacity: 0, height: 0 },
+            }}
+          >
+            {list.map((item) =>
+              item.type === 'dragState' ? (
+                <DragInsertPoint key="drag-insert-point" />
+              ) : (
+                <FeatureItem
+                  key={item.id}
+                  feature={item}
+                  dragState={dragState}
+                />
+              ),
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </ul>
   );
 };
 
 const DragInsertPoint = () => (
-  <li className="feature-tree__insertpoint h-[1px] bg-blue-500" />
+  <motion.li
+    transition={{ duration: window.appSettings.disableAnimation ? 0 : 0.1 }}
+    layoutId="drag-insert-point"
+    className="feature-tree__insertpoint h-[1px] mx-auto bg-blue-500"
+  />
 );
 
 function FeatureItem({
@@ -127,12 +153,13 @@ function FeatureItem({
   }
 
   return (
-    <li
+    <motion.li
       draggable={isRename ? 'false' : 'true'}
       data-feature={feature.id}
       data-feature-type={feature.type}
       data-feature-at={feature.at}
       className="feature-tree__parent"
+      layoutId={feature.id}
     >
       <div
         className={classNames(
@@ -197,7 +224,7 @@ function FeatureItem({
           dragState={dragState}
         />
       )}
-    </li>
+    </motion.li>
   );
 }
 
