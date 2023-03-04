@@ -49,7 +49,7 @@ createRoot(rootNode).render(
         reducedMotion={disableAnimation ? 'always' : 'user'}
         transition={{
           type: 'easeInOut',
-          duration: disableAnimation ? 0 : 0.25,
+          duration: disableAnimation ? 0 : 0.2,
         }}
       >
         <MapApp />
