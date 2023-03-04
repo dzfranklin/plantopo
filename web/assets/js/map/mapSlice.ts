@@ -435,11 +435,11 @@ export const selectLayerDatas = (s) => select(s).layerDatas;
 
 export const selectSprites = createSelector(
   [selectLayers, selectLayerSources],
-  (layers, sources): string[] => {
+  (layers, sources) => {
     return layers
       .map((l) => sources[l.sourceId])
       .filter((s) => !!s.sprite)
-      .map((s) => s.sprite as string);
+      .map((s) => [s.id, s.sprite as string]);
   },
 );
 

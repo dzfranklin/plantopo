@@ -95,6 +95,7 @@ export default function MapBase(props: Props) {
     map.on('load', () => {
       let prevState: RootState | undefined;
       let prevLayers: mlStyle.LayerSpecification[] | undefined;
+      const addedSprites = new Set();
       const matchStates = () => {
         const state = store.getState();
 
@@ -119,17 +120,13 @@ export default function MapBase(props: Props) {
         }
 
         const sprites = selectSprites(state);
-        const prevSprites = prevState ? selectSprites(prevState) : [];
-        if (sprites !== prevSprites) {
-          for (const sprite of sprites) {
+        if (!prevState || sprites !== selectSprites(prevState)) {
+          for (const [id, sprite] of sprites) {
             // We don't remove no longer needed sprites because they're pretty
             // small and there's a decent change we'll need them again
-            if (!prevSprites.includes(sprite)) {
-              map.addSprite(
-                // TODO: prefix sprites with layer instead of assuming no conflicts
-                'default',
-                sprite,
-              );
+            if (!addedSprites.has(id)) {
+              map.addSprite(id, sprite);
+              addedSprites.add(id);
             }
           }
         }

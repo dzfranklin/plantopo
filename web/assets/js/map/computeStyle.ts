@@ -26,6 +26,14 @@ const OPACITY_PROPS = {
   hillshade: ['hillshade-exaggeration'],
 };
 
+const RESOLVED_IMAGE_PROPS = {
+  background: [['paint', 'background-pattern']],
+  fill: [['paint', 'fill-pattern']],
+  line: [['paint', 'line-pattern']],
+  symbol: [['layout', 'icon-image']],
+  'fill-extrusion': [['paint', 'fill-extrusion-pattern']],
+};
+
 const TERRAIN_SOURCE_ID = 'terrain';
 
 export const computeLayers = (
@@ -45,11 +53,21 @@ export const computeLayers = (
       if (idx === 0) opacity = 1;
 
       const paint = spec.paint ? { ...spec.paint } : {};
+      const layout = spec.layout ? { ...spec.layout } : {};
+
       for (const prop of OPACITY_PROPS[spec.type]) {
         paint[prop] = (paint[prop] || 1) * opacity;
       }
-      out.paint = paint;
 
+      for (const [ty, prop] of RESOLVED_IMAGE_PROPS[spec.type]) {
+        const map = ty === 'paint' ? paint : layout;
+        if (map[prop] !== undefined) {
+          map[prop] = ['concat', source.id + ':', map[prop]];
+        }
+      }
+
+      out.paint = paint;
+      out.layout = layout;
       return out;
     });
   });
