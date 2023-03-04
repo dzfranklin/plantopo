@@ -18,6 +18,8 @@ import {
   mapClick,
   selectFeatures,
   selectSprites,
+  setActive,
+  selectSidebarOpen,
 } from '../mapSlice';
 import '../../globals';
 import { startListening, stopListening } from '../listener';
@@ -33,6 +35,7 @@ import { DeltaType, diff, OperationType } from '@sanalabs/json';
 import { RootState } from '../store';
 import { USER_FEATURES_DATA_ID } from './featuresLayer';
 import '../../../node_modules/maplibre-gl/dist/maplibre-gl.css';
+import { computeFeatureBbox } from '../feature/features';
 
 export interface Props {
   isLoading: (_: boolean) => void;
@@ -40,6 +43,7 @@ export interface Props {
 
 const FEATURE_POINTER_TARGET_PX = 20;
 const FLY_TO_SPEED = 2.8;
+const FLY_TO_PADDING_PX = 100;
 
 export default function MapBase(props: Props) {
   const store = useAppStore();
@@ -240,7 +244,7 @@ export default function MapBase(props: Props) {
 
     const flyToListener = {
       actionCreator: flyTo,
-      effect: async ({ payload }, _l) => {
+      effect: async ({ payload }, l) => {
         const current = selectViewAt(store.getState());
         if (!current) return;
         const { options, to } = payload;
@@ -254,22 +258,42 @@ export default function MapBase(props: Props) {
           return;
         }
 
-        const opts: ml.FlyToOptions = {
+        map.flyTo({
+          ...flyToOpts(l.getState()),
           center,
           zoom,
           pitch,
           bearing,
-          speed: FLY_TO_SPEED,
-        };
-
-        if (window.appSettings.disableAnimation) {
-          opts.duration = 0;
-        }
-
-        map.flyTo(opts);
+        });
       },
     };
     startListening(flyToListener);
+
+    const fitActiveListener = {
+      actionCreator: setActive,
+      effect: async ({ payload }, l) => {
+        if (!payload) return;
+        const features = selectFeatures(l.getState());
+        const feature = features?.[payload];
+        if (!features || !feature) return;
+
+        requestAnimationFrame(() => {
+          const bbox = computeFeatureBbox(feature, features);
+          if (!bbox) return;
+
+          const bounds = new ml.LngLatBounds(bbox);
+          const mapBounds = map.getBounds();
+          const alreadyInView =
+            mapBounds.contains(bounds.getSouthWest()) &&
+            mapBounds.contains(bounds.getNorthEast());
+
+          if (!alreadyInView) {
+            map.fitBounds(bounds, flyToOpts(l.getState()));
+          }
+        });
+      },
+    };
+    startListening(fitActiveListener);
 
     // Note that move is fired during any transition
     map.on('move', () => {
@@ -323,6 +347,7 @@ export default function MapBase(props: Props) {
 
     return () => {
       stopListening(flyToListener);
+      stopListening(fitActiveListener);
       storeUnsubscribe?.();
       map.remove();
     };
@@ -363,4 +388,31 @@ const createGeolocMarkerElem = () => {
   outer.className =
     'm-auto absolute w-[54px] h-[54px] bg-sky-400 opacity-40 rounded-full';
   return elem;
+};
+
+const flyToOpts = (state: RootState): ml.FlyToOptions => {
+  const opts: ml.FlyToOptions = {
+    speed: FLY_TO_SPEED,
+    padding: FLY_TO_PADDING_PX,
+  };
+
+  if (window.appSettings.disableAnimation) {
+    opts.duration = 0;
+  }
+
+  if (selectSidebarOpen(state)) {
+    const sidebarElem = document.querySelector('.sidebar');
+    if (sidebarElem) {
+      opts.padding = {
+        top: FLY_TO_PADDING_PX,
+        right: FLY_TO_PADDING_PX,
+        bottom: FLY_TO_PADDING_PX * 4, // bugfix: for some reason it's under-computed
+        left: sidebarElem.getBoundingClientRect().width + FLY_TO_PADDING_PX,
+      };
+    } else {
+      console.error('selectSidebarOpen but no elem');
+    }
+  }
+
+  return opts;
 };

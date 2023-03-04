@@ -19,6 +19,7 @@ export const initStore = (initState) =>
         localAware: initState.localAware,
         enableLocalSave: true,
         onlineStatus: 'connecting',
+        sidebarOpen: true,
         geolocation: {
           updating: false,
         },

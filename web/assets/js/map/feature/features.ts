@@ -232,3 +232,30 @@ export const serializeLngLat = (value: [number, number]) =>
   JSON.stringify(value);
 export const deserializeLngLat = (value: string): [number, number] =>
   JSON.parse(value);
+
+// In the order west, south, east, north
+export const computeFeatureBbox = (
+  feature: Feature,
+  features: Features,
+): [number, number, number, number] | undefined => {
+  if (feature.type === 'point') {
+    const [lng, lat] = JSON.parse(feature.lngLat);
+    return [lng, lat, lng, lat];
+  } else if (feature.type === 'route') {
+    // TODO:
+  } else if (feature.type === 'group') {
+    let bbox;
+    for (const child of computeFeaturesList(feature.id, features)) {
+      const childBbox = computeFeatureBbox(child, features);
+      if (!bbox) {
+        bbox = childBbox;
+      } else if (childBbox) {
+        bbox[0] = Math.min(bbox[0], childBbox[0]);
+        bbox[1] = Math.min(bbox[1], childBbox[1]);
+        bbox[2] = Math.max(bbox[2], childBbox[2]);
+        bbox[3] = Math.max(bbox[3], childBbox[3]);
+      }
+    }
+    return bbox;
+  }
+};

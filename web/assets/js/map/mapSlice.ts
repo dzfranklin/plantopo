@@ -32,6 +32,7 @@ import { castDraft } from 'immer';
 
 interface MapState {
   enableLocalSave: boolean;
+  sidebarOpen: boolean;
   onlineStatus: 'connecting' | 'connected' | 'reconnecting';
   tokens: Tokens;
   layerDatas: LayerDatas;
@@ -378,6 +379,7 @@ export const selectTokens = (s) => select(s).tokens;
 export const selectViewAt = (s) => select(s).localAware.viewAt;
 export const selectEnableLocalSave = (s) => select(s).enableLocalSave;
 const selectPeers = (s) => select(s).peerAwares || {};
+export const selectSidebarOpen = (s) => select(s).sidebarOpen;
 
 // Features
 
@@ -646,25 +648,6 @@ startListening({
           `Unexpected GeolocationPositionError code: ${err.code} msg: ${err.message}`,
         );
       }
-    }
-  },
-});
-
-startListening({
-  actionCreator: setActive,
-  effect: ({ payload }, l) => {
-    if (!payload) return;
-    const feature = selectFeatures(l.getState())?.[payload];
-    if (!feature) return;
-
-    let center;
-    if (feature.type === 'point') {
-      center = JSON.parse(feature.lngLat);
-    } else if (feature.type === 'route') {
-    }
-
-    if (center) {
-      l.dispatch(flyTo({ center }, { ignoreIfCenterVisible: true }));
     }
   },
 });
