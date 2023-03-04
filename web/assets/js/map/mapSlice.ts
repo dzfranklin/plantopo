@@ -649,3 +649,22 @@ startListening({
     }
   },
 });
+
+startListening({
+  actionCreator: setActive,
+  effect: ({ payload }, l) => {
+    if (!payload) return;
+    const feature = selectFeatures(l.getState())?.[payload];
+    if (!feature) return;
+
+    let center;
+    if (feature.type === 'point') {
+      center = JSON.parse(feature.lngLat);
+    } else if (feature.type === 'route') {
+    }
+
+    if (center) {
+      l.dispatch(flyTo({ center }, { ignoreIfCenterVisible: true }));
+    }
+  },
+});
