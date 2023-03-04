@@ -102,8 +102,8 @@ const GroupChildren = ({
             animate={'open'}
             exit={'collapsed'}
             variants={{
-              open: { opacity: 1, height: 'auto' },
-              collapsed: { opacity: 0, height: 0 },
+              open: { height: 'auto' },
+              collapsed: { height: 0 },
             }}
           >
             {list.map((item) =>
