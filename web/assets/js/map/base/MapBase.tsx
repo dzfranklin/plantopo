@@ -54,6 +54,11 @@ export default function MapBase(props: Props) {
     const initialViewAt = selectViewAt(state);
     const layerDatas = selectLayerDatas(state);
 
+    const spriteUrl = new URL(location.href);
+    spriteUrl.search = '';
+    spriteUrl.hash = '';
+    spriteUrl.pathname = '/sprite/sprite';
+
     const map = new ml.Map({
       container: nodeRef.current!,
       style: {
@@ -61,8 +66,7 @@ export default function MapBase(props: Props) {
         sources: computeSources(layerDatas),
         layers: [],
         glyphs: 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf',
-        // 'https://api.os.uk/maps/vector/v1/vts/resources/fonts/{fontstack}/{range}.pbf?key=',
-        // sprite: 'https://api.os.uk/maps/vector/v1/vts/resources/sprites/sprite?key=',
+        sprite: [{ id: 'feature', url: spriteUrl.toString() }],
       },
       center: initialViewAt?.center,
       pitch: initialViewAt?.pitch,
