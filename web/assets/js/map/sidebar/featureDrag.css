@@ -1,27 +1,4 @@
-.tree-feature--dragged {
+.feature-tree__parent--dragged {
   opacity: 0.4;
   pointer-events: none;
-}
-
-.tree-feature--insertpoint-above {
-  border-top: 1px solid var(--color-blue-500);
-}
-
-.tree-feature--insertpoint-below {
-  border-bottom: 1px solid var(--color-blue-500);
-}
-
-.tree-feature--insertpoint-first-child {
-  position: relative;
-}
-
-.tree-feature--insertpoint-first-child::after {
-  content: '';
-  display: block;
-  position: absolute;
-  bottom: 1px;
-  left: 40px;
-  right: 40px;
-  height: 1px;
-  background-color: var(--color-blue-500);
 }

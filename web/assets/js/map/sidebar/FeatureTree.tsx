@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import classNames from '../../classNames';
-import { Feature, ROOT_FEATURE } from '../feature/features';
+import { Feature, ROOT_FEATURE, sortFeatures } from '../feature/features';
 import { useAppDispatch, useAppSelector } from '../hooks';
 import {
   deleteFeature,
-  selectFeaturesDisplayList,
+  moveActive,
+  selectFeaturesList,
   selectIsActiveFeature,
   selectPeersActiveOnFeature,
   setActive,
@@ -12,7 +13,7 @@ import {
 } from '../mapSlice';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import '../components/contextMenu.css';
-import useFeatureTreeDrag from './useFeatureTreeDrag';
+import useFeatureTreeDrag, { DragState } from './useFeatureTreeDrag';
 import './featureDrag.css';
 
 const UNNAMED_PLACEHOLDER = {
@@ -22,15 +23,37 @@ const UNNAMED_PLACEHOLDER = {
 };
 
 export default function FeatureTree() {
+  const dispatch = useAppDispatch();
   const ref = useRef<HTMLDivElement>(null);
-  useFeatureTreeDrag(ref);
+  const dragState = useFeatureTreeDrag();
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Down' || e.key === 'ArrowDown') {
+        dispatch(moveActive('down'));
+        e.preventDefault();
+      } else if (e.key === 'Up' || e.key === 'ArrowUp') {
+        dispatch(moveActive('up'));
+        e.preventDefault();
+      } else if (e.key === 'Right' || e.key === 'ArrowRight') {
+        dispatch(moveActive('in'));
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [dispatch]);
 
   return (
     <div
       ref={ref}
       className="flex flex-col pt-1 mx-[4px] overflow-y-auto border-t border-gray-300 grow"
     >
-      <GroupChildren parentId={ROOT_FEATURE} isExpanded={true} />
+      <GroupChildren
+        parentId={ROOT_FEATURE}
+        isExpanded={true}
+        dragState={dragState}
+      />
     </div>
   );
 }
@@ -38,26 +61,58 @@ export default function FeatureTree() {
 const GroupChildren = ({
   parentId,
   isExpanded,
+  dragState,
 }: {
   parentId: string;
   isExpanded: boolean;
+  dragState: DragState | undefined;
 }) => {
-  const list = useAppSelector(selectFeaturesDisplayList(parentId));
+  const featureList = useAppSelector(selectFeaturesList(parentId));
 
-  if (isExpanded) {
-    return (
-      <ul className={classNames(parentId !== ROOT_FEATURE && 'ml-[15px]')}>
-        {list.map((feature) => (
-          <FeatureItem key={feature.id} feature={feature} />
-        ))}
-      </ul>
-    );
-  } else {
-    return <></>;
+  let dragChild: DragState | undefined;
+  if (dragState && dragState.parentId === parentId) {
+    dragChild = dragState;
   }
+
+  let list: (Feature | DragState)[] = [];
+  if (isExpanded) {
+    if (dragChild) {
+      list = sortFeatures([dragChild, ...featureList]);
+    } else {
+      list = sortFeatures(featureList);
+    }
+  }
+
+  return (
+    <ul
+      className={classNames(
+        parentId === ROOT_FEATURE ? 'feature-tree__root' : 'ml-[15px]',
+      )}
+    >
+      {!isExpanded && dragChild && <DragInsertPoint key="drag-insert-point" />}
+
+      {list.map((item) =>
+        item.type === 'dragState' ? (
+          <DragInsertPoint key="drag-insert-point" />
+        ) : (
+          <FeatureItem key={item.id} feature={item} dragState={dragState} />
+        ),
+      )}
+    </ul>
+  );
 };
 
-function FeatureItem({ feature }: { feature: Feature }) {
+const DragInsertPoint = () => (
+  <li className="feature-tree__insertpoint h-[1px] bg-blue-500" />
+);
+
+function FeatureItem({
+  feature,
+  dragState,
+}: {
+  feature: Feature;
+  dragState: DragState | undefined;
+}) {
   const { type } = feature;
 
   const dispatch = useAppDispatch();
@@ -72,89 +127,103 @@ function FeatureItem({ feature }: { feature: Feature }) {
   }
 
   return (
-    <ContextMenu.Root
-      onOpenChange={(isOpen) => isOpen && dispatch(setActive(feature.id))}
+    <li
+      draggable={isRename ? 'false' : 'true'}
+      data-feature={feature.id}
+      data-feature-type={feature.type}
+      data-feature-at={feature.at}
+      className="feature-tree__parent"
     >
-      <li
-        draggable={isRename ? 'false' : 'true'}
-        data-feature={feature.id}
-        data-feature-type={feature.type}
+      <div
         className={classNames(
-          'tree-feature flex px-2 py-1 border-[1px] border-transparent w-full',
+          'flex flex-row feature-tree__item grow',
           isActive && 'bg-blue-100',
           activePeers.length > 0 && 'border-dashed border-purple-500',
         )}
       >
-        {/* The problem is that in some contexts the children should be in here and in others no
-        Crazy idea: Snapshot feature state during a drag. have it set as local state in this file, and use that state to compute the new it
-        Crazy idea #2: As you drag compute new ats, and have a dragstub feature type merged in locally. Doesn't re-compute at unnecessarily every little move
-         */}
         {feature.type === 'group' && (
-          <button onClick={() => setIsExpanded(!isExpanded)}>TODO Exp</button>
+          <button onClick={() => setIsExpanded(!isExpanded)}>Exp</button>
         )}
 
-        <ContextMenu.Trigger asChild>
-          <button
-            onMouseDown={() => !isActive && dispatch(setActive(feature.id))}
-            onClick={() => isActive && setIsRename(true)}
-            className="flex overflow-x-hidden text-sm text-left truncate grow"
-          >
-            {isRename ? (
-              <input
-                placeholder={UNNAMED_PLACEHOLDER[feature.type]}
-                value={feature.name || ''}
-                onChange={(e) =>
-                  dispatch(
-                    updateFeature({
-                      id: feature.id,
-                      update: { name: e.target.value },
-                    }),
-                  )
-                }
-                autoFocus
-                onFocus={(e) => e.currentTarget.select()}
-                onBlur={() => setIsRename(false)}
-                onKeyDown={(e) =>
-                  (e.key === 'Escape' || e.key === 'Enter') &&
-                  setIsRename(false)
-                }
-                className="bg-blue-100 grow"
-              />
-            ) : (
-              <span
-                className={classNames('grow', !feature.name && 'opacity-60')}
-              >
-                {feature.name || UNNAMED_PLACEHOLDER[feature.type]}
-              </span>
-            )}
-
-            {type === 'group' && (
-              <GroupChildren parentId={feature.id} isExpanded={isExpanded} />
-            )}
-          </button>
-        </ContextMenu.Trigger>
-
-        <ContextMenu.Portal>
-          <ContextMenu.Content
-            className="ContextMenuContent"
-            loop={true}
-            collisionPadding={5}
-          >
-            <ContextMenu.Item
-              onClick={() => setTimeout(() => setIsRename(true))}
-              className="ContextMenuItem"
+        <ContextMenu.Root
+          onOpenChange={(isOpen) => isOpen && dispatch(setActive(feature.id))}
+        >
+          <ContextMenu.Trigger asChild>
+            <button
+              onClick={() => {
+                if (isActive) setIsRename(true);
+                else dispatch(setActive(feature.id));
+              }}
+              className="flex flex-row overflow-x-hidden text-sm text-left truncate grow"
             >
-              Rename <div className="RightSlot">Alt+R</div>
-            </ContextMenu.Item>
-            <ContextMenu.Item
-              onClick={() => dispatch(deleteFeature(feature))}
-              className="ContextMenuItem"
-            >
-              Delete <div className="RightSlot">Del</div>
-            </ContextMenu.Item>
-          </ContextMenu.Content>
-        </ContextMenu.Portal>
-      </li>
-    </ContextMenu.Root>
+              {isRename ? (
+                <input
+                  placeholder={UNNAMED_PLACEHOLDER[feature.type]}
+                  value={feature.name || ''}
+                  onChange={(e) =>
+                    dispatch(
+                      updateFeature({
+                        id: feature.id,
+                        update: { name: e.target.value },
+                      }),
+                    )
+                  }
+                  autoFocus
+                  onFocus={(e) => e.currentTarget.select()}
+                  onBlur={() => setIsRename(false)}
+                  onKeyDown={(e) =>
+                    (e.key === 'Escape' || e.key === 'Enter') &&
+                    setIsRename(false)
+                  }
+                  className="bg-blue-100 grow"
+                />
+              ) : (
+                <span
+                  className={classNames('grow', !feature.name && 'opacity-60')}
+                >
+                  {feature.name || UNNAMED_PLACEHOLDER[feature.type]}
+                </span>
+              )}
+            </button>
+          </ContextMenu.Trigger>
+          <FeatureContextMenu feature={feature} setIsRename={setIsRename} />
+        </ContextMenu.Root>
+      </div>
+
+      {type === 'group' && (
+        <GroupChildren
+          parentId={feature.id}
+          isExpanded={isExpanded}
+          dragState={dragState}
+        />
+      )}
+    </li>
   );
 }
+
+const FeatureContextMenu = ({ feature, setIsRename }) => {
+  const dispatch = useAppDispatch();
+
+  return (
+    <ContextMenu.Portal>
+      <ContextMenu.Content
+        className="ContextMenuContent"
+        loop={true}
+        collisionPadding={5}
+      >
+        <ContextMenu.Item
+          onClick={() => setTimeout(() => setIsRename(true))}
+          className="ContextMenuItem"
+        >
+          Rename <div className="RightSlot">Alt+R</div>
+        </ContextMenu.Item>
+        <ContextMenu.Item
+          onClick={() => dispatch(deleteFeature(feature))}
+          className="ContextMenuItem"
+        >
+          Delete <div className="RightSlot">Del</div>
+        </ContextMenu.Item>
+      </ContextMenu.Content>
+    </ContextMenu.Portal>
+  );
+};

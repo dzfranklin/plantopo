@@ -13,6 +13,8 @@ import { JsonObject, JsonTemplateObject } from '@sanalabs/json';
 import {
   computeAtAfter,
   computeFeaturesDisplayList,
+  computeFeaturesList,
+  deleteFeatures,
   Feature,
   Features,
   GroupFeature,
@@ -20,12 +22,10 @@ import {
   PointFeature,
   ROOT_FEATURE,
   RouteFeature,
-  serializeAt,
   serializeLngLat,
 } from './feature/features';
 import { WritableDraft } from 'immer/dist/internal';
 import { v4 as uuid } from 'uuid';
-import { idxBetween } from './feature/fracIdx';
 import { castDraft } from 'immer';
 
 // TODO: Break this up into multiple slices. Probably need multiple y-sync-jsons
@@ -216,6 +216,29 @@ const mapSlice = createSlice({
     setActive(state, { payload }: PayloadAction<string | undefined>) {
       state.localAware.activeFeature = payload;
     },
+    moveActive(state, { payload }: PayloadAction<'down' | 'up' | 'in'>) {
+      const features = ensureData(state).features;
+      const prevId = state.localAware.activeFeature;
+      const prev = prevId ? features[prevId] : null;
+
+      if (!prev) {
+        const list = computeFeaturesDisplayList(ROOT_FEATURE, features);
+        const next = list.at(0);
+        if (next) state.localAware.activeFeature = next.id;
+      } else if (payload === 'in') {
+        if (prev.type !== 'group') return;
+        const list = computeFeaturesDisplayList(prev.id, features);
+        const next = list.at(0);
+        if (next) state.localAware.activeFeature = next.id;
+      } else {
+        const list = computeFeaturesDisplayList(parentIdOf(prev), features);
+        const prevIdx = list.findIndex((f) => f.id === prevId);
+        let nextIdx = payload === 'up' ? prevIdx - 1 : prevIdx + 1;
+        if (nextIdx > list.length - 1) nextIdx = 0;
+        const next = list.at(nextIdx);
+        if (next) state.localAware.activeFeature = next.id;
+      }
+    },
 
     enterLatlngPicker(state, { payload }: PayloadAction<{ type: string }>) {
       const features = ensureData(state).features;
@@ -263,80 +286,23 @@ const mapSlice = createSlice({
 
       const { id } = payload;
       const parentId = parentIdOf(payload);
-      const list = computeFeaturesDisplayList(parentId, data.features);
 
-      data.featureTrash[id] = payload;
-      delete data.features[id];
-
-      const deletedDisplayIdx = list.findIndex((f) => f.id === id);
+      const sibList = computeFeaturesDisplayList(parentId, data.features);
+      const deletedDisplayIdx = sibList.findIndex((f) => f.id === id);
       if (deletedDisplayIdx > -1) {
         const nextActive =
-          list.at(deletedDisplayIdx + 1) || list.at(deletedDisplayIdx - 1);
+          sibList.at(deletedDisplayIdx + 1) ||
+          sibList.at(deletedDisplayIdx - 1);
         state.localAware.activeFeature = nextActive?.id;
       }
-    },
-    moveFeature(
-      state,
-      action: PayloadAction<{
-        id: string;
-        beforeId?: string;
-        afterId?: string;
-      }>,
-    ) {
-      const { id, beforeId, afterId } = action.payload;
-      const { features } = ensureData(state);
 
-      // TODO: Move is buggy
-
-      let before = beforeId ? features[beforeId] : undefined;
-      let after = afterId ? features[afterId] : undefined;
-      let parentId: string;
-
-      if (before && after) {
-        if (parentIdOf(before) != parentIdOf(after)) {
-          console.error(
-            'moveFeature: Ignored. beforeParentId !== afterParentId and both set',
-            action.payload,
-          );
-          return;
-        }
-        parentId = parentIdOf(before);
-      } else if (before) {
-        parentId = parentIdOf(before);
-        const list = computeFeaturesDisplayList(parentId, features);
-        const beforeIdx = list.findIndex((f) => f.id === before!.id);
-        if (beforeIdx === -1) throw new Error('Unreachable');
-        after = list.at(beforeIdx + 1);
-      } else if (after) {
-        parentId = parentIdOf(after);
-        const list = computeFeaturesDisplayList(parentId, features);
-        const afterIdx = list.findIndex((f) => f.id === after!.id);
-        if (afterIdx === -1) throw new Error('unreachable');
-        before = list.at(afterIdx - 1);
-      } else {
-        console.error(
-          'moveFeature: not moving features as neither before nor after',
-          action.payload,
-        );
-        return;
-      }
-
-      const at = serializeAt(parentId, idxBetween(before?.id, after?.id));
-      features[id].at = at;
-    },
-    nestFeatureUnder(
-      state,
-      action: PayloadAction<{ id: string; parentId: string }>,
-    ) {
-      const features = ensureData(state).features;
-      const { id, parentId } = action.payload;
-      const at = serializeAt(parentId, idxBetween(undefined, undefined));
-      features[id].at = at;
-    },
-    _debugClearFeatures(state, _action: PayloadAction<undefined>) {
-      const data = ensureData(state);
-      data.features = {};
-      data.featureTrash = {};
+      const { features, trash } = deleteFeatures(
+        data.features,
+        data.featureTrash,
+        payload,
+      );
+      data.features = features;
+      data.featureTrash = trash;
     },
   },
 });
@@ -366,12 +332,11 @@ export const {
   setLayers,
   setIs3d,
   setActive,
+  moveActive,
   enterLatlngPicker,
   cancelCreating,
   updateFeature,
   deleteFeature,
-  moveFeature,
-  nestFeatureUnder,
 } = actions;
 
 export const createGroup = createAction('map/createGroup', () => ({
@@ -441,6 +406,11 @@ export const selectIsActiveFeature = (id: string) => (s) =>
 export const selectPeersActiveOnFeature = (id: string) =>
   createSelector([selectPeers], (peers) =>
     Object.values(peers).filter((peer) => peer.activeFeature === id),
+  );
+
+export const selectFeaturesList = (parentId: string) =>
+  createSelector([selectFeatures], (features) =>
+    computeFeaturesList(parentId, features),
   );
 
 export const selectFeaturesDisplayList = (parentId: string) =>

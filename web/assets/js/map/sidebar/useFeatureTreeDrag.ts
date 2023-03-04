@@ -1,120 +1,159 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { idxOfAt, ROOT_FEATURE, serializeAt } from '../feature/features';
+import { idxBetween } from '../feature/fracIdx';
 import { useAppDispatch } from '../hooks';
-import { moveFeature, nestFeatureUnder, setActive } from '../mapSlice';
+import { updateFeature, setActive } from '../mapSlice';
 
-const FEATURE = 'plantopo/feature';
-const FEAT_CLASS = 'tree-feature';
-const DRAGGED_CLASS = 'tree-feature--dragged';
-const INSERTPOINT_ABOVE = 'tree-feature--insertpoint-above';
-const INSERTPOINT_BELOW = 'tree-feature--insertpoint-below';
-const INSERTPOINT_FIRST_CHILD = 'tree-feature--insertpoint-first-child';
+const DT_TYPE = 'plantopo/feature';
+const ROOT = 'feature-tree__root';
+const FEATURE = 'feature-tree__parent';
+const DRAGGED = 'feature-tree__parent--dragged';
+const INSERTPOINT = 'feature-tree__insertpoint';
 
-export default function useFeatureTreeDrag(
-  treeRef: React.RefObject<HTMLDivElement>,
-) {
+export type DragState = {
+  type: 'dragState';
+  id: string;
+  beforeIdx: string | undefined;
+  afterIdx: string | undefined;
+  parentId: string;
+  at: string;
+};
+
+export default function useFeatureTreeDrag(): DragState | undefined {
   const dispatch = useAppDispatch();
+  const [pubState, setPubState] = useState<DragState | undefined>();
 
   useEffect(() => {
-    let elem: HTMLElement | undefined;
+    let draggedElem: HTMLElement | null;
+    let state: DragState | undefined;
 
     const handler = (e: DragEvent) => {
-      const treeElem = treeRef.current;
-      if (!e.dataTransfer || !treeElem) return;
+      if (!e.dataTransfer) return;
       const dt = e.dataTransfer;
 
       if (e.type === 'dragstart') {
         const targetFeatElem = closestFeature(e.target as HTMLElement);
         if (!targetFeatElem) return;
+        const id = elemFeature(targetFeatElem);
+        if (!id) throw new Error('unreachable');
 
-        elem = targetFeatElem as HTMLElement;
         dt.effectAllowed = 'move';
-        dt.setData(FEATURE, 'move');
-        elem.classList.add(DRAGGED_CLASS);
-        dispatch(setActive(elem.dataset.feature));
-      } else if (elem && e.type === 'dragover') {
+        dt.setData(DT_TYPE, 'move');
+
+        draggedElem = targetFeatElem as HTMLElement;
+        draggedElem.classList.add(DRAGGED);
+
+        dispatch(setActive(draggedElem.dataset.feature));
+
+        const { beforeIdx, afterIdx, parentId } = computePos(
+          draggedElem,
+          'after',
+        );
+        const at = serializeAt(parentId, idxBetween(beforeIdx, afterIdx));
+        state = {
+          id,
+          beforeIdx,
+          afterIdx,
+          parentId,
+          at,
+          type: 'dragState',
+        };
+        setPubState(state);
+      } else if (draggedElem && e.type === 'dragover') {
         e.preventDefault(); // allow drag over
+        const { clientY } = e;
 
         // For the x we just want anything inside the tree
-        const targetFeatOrChild = document.elementFromPoint(20, e.clientY);
-        if (!(targetFeatOrChild instanceof HTMLElement)) return;
-        const targetFeat = closestFeature(targetFeatOrChild);
+        let elemDraggedOver = document.elementFromPoint(20, clientY);
+        if (elemDraggedOver?.classList.contains(INSERTPOINT)) {
+          const bbox = elemDraggedOver.getBoundingClientRect();
+          const belowInsertpoint = clientY + bbox.height + 1;
+          elemDraggedOver = document.elementFromPoint(20, belowInsertpoint);
+        }
+        if (!(elemDraggedOver instanceof HTMLElement)) return;
+        const targetFeat = closestFeature(elemDraggedOver);
 
-        if (targetFeat && targetFeat === elem) {
+        let pos;
+
+        if (targetFeat && targetFeat === draggedElem) {
           // disallowed, keep the insert marker wherever it was before
+          return;
         } else if (targetFeat && targetFeat.dataset.featureType === 'group') {
           // Possibly nested under targetFeat
           const targetBox = targetFeat.getBoundingClientRect();
           const beforeTargetBottom = targetBox.y + targetBox.height / 3;
           const afterTargetTop = beforeTargetBottom + targetBox.height / 3;
 
-          if (e.clientY < beforeTargetBottom) {
-            setInsertFeat(treeElem, targetFeat, INSERTPOINT_ABOVE);
-          } else if (e.clientY > afterTargetTop) {
-            setInsertFeat(treeElem, targetFeat, INSERTPOINT_BELOW);
+          if (clientY < beforeTargetBottom) {
+            pos = 'before';
+          } else if (clientY > afterTargetTop) {
+            pos = 'after';
           } else {
-            const firstChild = targetFeat.querySelector(`.${FEAT_CLASS}`);
-            if (firstChild) {
-              setInsertFeat(
-                treeElem,
-                firstChild as HTMLElement,
-                INSERTPOINT_ABOVE,
-              );
-            } else {
-              setInsertFeat(treeElem, targetFeat, INSERTPOINT_FIRST_CHILD);
-            }
+            pos = 'firstChild';
           }
         } else if (targetFeat) {
           // Right before or after and at the same level as targetFeat
           const targetBox = targetFeat.getBoundingClientRect();
           const targetMiddle = targetBox.y + targetBox.height / 2;
-          if (e.clientY < targetMiddle) {
-            setInsertFeat(treeElem, targetFeat, INSERTPOINT_ABOVE);
+          if (clientY < targetMiddle) {
+            pos = 'before';
           } else {
-            setInsertFeat(treeElem, targetFeat, INSERTPOINT_BELOW);
+            pos = 'after';
           }
         } else {
           // Before first or after last
 
           // Since we keep dragged elements in the DOM there needs to be at
           // least one to get here
-          const all = treeElem.getElementsByClassName(FEAT_CLASS);
+          const all = document.getElementsByClassName(FEATURE);
           const first = all[0] as HTMLElement;
-          const last = all[all.length - 1] as HTMLElement;
           const firstBox = first.getBoundingClientRect();
 
-          if (e.clientY < firstBox.top + firstBox.height / 2) {
-            setInsertFeat(treeElem, first, INSERTPOINT_ABOVE);
+          if (clientY < firstBox.top + firstBox.height / 2) {
+            pos = 'first';
           } else {
-            setInsertFeat(treeElem, last, INSERTPOINT_BELOW);
+            pos = 'last';
           }
         }
-      } else if (elem && e.type === 'drop') {
-        const id = elem.dataset.feature!;
 
-        const beforeElem = treeElem.querySelector(`.${INSERTPOINT_BELOW}`);
-        const afterElem = treeElem.querySelector(`.${INSERTPOINT_ABOVE}`);
-        const beforeId = beforeElem?.getAttribute('data-feature') ?? undefined;
-        const afterId = afterElem?.getAttribute('data-feature') ?? undefined;
-
-        if (beforeId || afterId) {
-          dispatch(moveFeature({ id, afterId, beforeId }));
-        } else {
-          const parentElem = treeElem.querySelector(
-            `.${INSERTPOINT_FIRST_CHILD}`,
+        const update = computePos(targetFeat, pos);
+        if (
+          update.parentId != state?.parentId ||
+          update.beforeIdx != state?.beforeIdx ||
+          update.afterIdx != state?.afterIdx
+        ) {
+          const at = serializeAt(
+            update.parentId,
+            idxBetween(update.beforeIdx, update.afterIdx),
           );
-          if (!parentElem) {
-            console.error('no before, after, or parent elems');
-            return;
-          }
-          const parentId = parentElem.getAttribute('data-feature')!;
-          dispatch(nestFeatureUnder({ id, parentId }));
+          state = {
+            ...state!,
+            beforeIdx: update.beforeIdx,
+            afterIdx: update.afterIdx,
+            parentId: update.parentId,
+            at,
+          };
+          setPubState(state);
         }
+      } else if (draggedElem && e.type === 'drop') {
+        if (!state) return;
 
-        clearDragClasses(treeElem);
-        elem = undefined;
-      } else if (elem && e.type === 'dragend') {
-        clearDragClasses(treeElem);
-        elem = undefined;
+        dispatch(
+          updateFeature({
+            id: state.id,
+            update: { at: state.at },
+          }),
+        );
+
+        draggedElem.classList.remove(DRAGGED);
+        draggedElem = null;
+        state = undefined;
+        setPubState(state);
+      } else if (draggedElem && e.type === 'dragend') {
+        draggedElem.classList.remove(DRAGGED);
+        draggedElem = null;
+        state = undefined;
+        setPubState(state);
       }
     };
 
@@ -129,40 +168,95 @@ export default function useFeatureTreeDrag(
       window.removeEventListener('drop', handler);
       window.removeEventListener('dragend', handler);
     };
-  }, [dispatch, treeRef]);
+  }, [dispatch, setPubState]);
+
+  return pubState;
 }
 
-const closestFeature = (el: HTMLElement) =>
-  el.closest(`.${FEAT_CLASS}`) as HTMLElement | null;
+const computePos = (
+  targetFeat: HTMLElement | null,
+  pos: 'firstChild' | 'before' | 'after' | 'first' | 'last',
+): Pick<DragState, 'beforeIdx' | 'afterIdx' | 'parentId'> => {
+  let beforeIdx: string | undefined;
+  let afterIdx: string | undefined;
+  let parentId: string;
 
-const clearDragClasses = (treeElem: HTMLDivElement) => {
-  for (const cls of [
-    DRAGGED_CLASS,
-    INSERTPOINT_ABOVE,
-    INSERTPOINT_BELOW,
-    INSERTPOINT_FIRST_CHILD,
-  ]) {
-    for (const prevEl of treeElem.getElementsByClassName(cls)) {
-      prevEl.classList.remove(cls);
+  if (!targetFeat) {
+    if (pos === 'first') {
+      parentId = ROOT_FEATURE;
+      beforeIdx = undefined;
+      const afterAt = elemAt(document.querySelector(`.${FEATURE}`));
+      afterIdx = afterAt ? idxOfAt(afterAt) : undefined;
+    } else if (pos === 'last') {
+      parentId = ROOT_FEATURE;
+      const list = document.querySelectorAll(`.${ROOT} > .${FEATURE}`);
+      const beforeAt = elemAt(list[list.length - 1]);
+      beforeIdx = beforeAt ? idxOfAt(beforeAt) : undefined;
+      afterIdx = undefined;
+    } else {
+      throw new Error('if targetFeat null, pos must be first|last');
+    }
+  } else {
+    const targetId = targetFeat.dataset.feature;
+    const targetAt = targetFeat.dataset.featureAt;
+    if (!targetId || !targetAt) throw new Error('unreachable');
+    const targetIdx = idxOfAt(targetAt);
+
+    if (pos === 'firstChild') {
+      beforeIdx = undefined;
+      const afterAt = elemAt(targetFeat.querySelector(`.${FEATURE}`));
+      afterIdx = afterAt ? idxOfAt(afterAt) : undefined;
+      parentId = targetId;
+    } else if (pos === 'before') {
+      const parentElem = closestFeature(targetFeat.parentElement);
+      parentId = elemFeature(parentElem) ?? ROOT_FEATURE;
+
+      let prevElem = targetFeat.previousElementSibling;
+      if (prevElem && prevElem.classList.contains(INSERTPOINT)) {
+        prevElem = prevElem.previousElementSibling;
+      }
+      const beforeAt = elemAt(prevElem);
+      beforeIdx = beforeAt ? idxOfAt(beforeAt) : undefined;
+
+      afterIdx = targetIdx;
+    } else if (pos === 'after') {
+      const parentElem = closestFeature(targetFeat.parentElement);
+      parentId = elemFeature(parentElem) ?? ROOT_FEATURE;
+      beforeIdx = targetIdx;
+
+      let afterElem = targetFeat.nextElementSibling;
+      if (afterElem && afterElem.classList.contains(INSERTPOINT)) {
+        afterElem = afterElem.nextElementSibling;
+      }
+      const afterAt = elemAt(afterElem);
+      afterIdx = afterAt ? idxOfAt(afterAt) : undefined;
+    } else {
+      throw new Error('unreachable');
     }
   }
+
+  console.info({ targetFeat, pos, beforeIdx, afterIdx, parentId });
+
+  return {
+    beforeIdx,
+    afterIdx,
+    parentId,
+  };
 };
 
-const setInsertFeat = (
-  treeElem: HTMLDivElement,
-  el: HTMLElement,
-  className: string,
-) => {
-  for (const cls of [
-    INSERTPOINT_ABOVE,
-    INSERTPOINT_BELOW,
-    INSERTPOINT_FIRST_CHILD,
-  ]) {
-    for (const prevEl of treeElem.getElementsByClassName(cls)) {
-      if (!(prevEl === el && cls === className)) {
-        prevEl.classList.remove(cls);
-      }
-    }
-  }
-  el.classList.add(className);
+const closestFeature = (el: Element | null) =>
+  el?.closest(`.${FEATURE}`) as HTMLElement | null;
+
+const elemFeature = (el: Element | null) => {
+  if (!el) return undefined;
+  const id = el.getAttribute('data-feature');
+  if (!id) throw new Error('unreachable');
+  return id;
+};
+
+const elemAt = (el: Element | null) => {
+  if (!el) return undefined;
+  const at = el.getAttribute('data-feature-at');
+  if (!at) throw new Error('unreachable');
+  return at;
 };

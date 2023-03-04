@@ -10,7 +10,7 @@ export type Features = { [id: string]: Feature };
 
 export const ROOT_FEATURE = 'db0d225b-6fb4-444e-a18e-13f637036bff';
 
-export interface Base {
+export interface FeatureBase {
   id: Id;
   // Describes where this feature is visually in the tree
   //
@@ -21,7 +21,7 @@ export interface Base {
   visible?: boolean;
 }
 
-export interface GroupFeature extends Base {
+export interface GroupFeature extends FeatureBase {
   type: 'group';
   name?: string;
   details?: string;
@@ -31,7 +31,7 @@ export interface GroupFeature extends Base {
   childRouteLineStyle?: RouteLineStyle;
 }
 
-export interface PointFeature extends Base {
+export interface PointFeature extends FeatureBase {
   type: 'point';
   lngLat: LngLat;
   name?: string;
@@ -39,7 +39,7 @@ export interface PointFeature extends Base {
   style?: PointStyle;
 }
 
-export interface RouteFeature extends Base {
+export interface RouteFeature extends FeatureBase {
   type: 'route';
   name?: string;
   details?: string;
@@ -49,7 +49,7 @@ export interface RouteFeature extends Base {
   lineStyle?: RouteLineStyle;
 }
 
-export interface RoutePointFeature extends Base {
+export interface RoutePointFeature extends FeatureBase {
   type: 'route/point';
   lngLat: LngLat;
 }
@@ -124,6 +124,26 @@ interface RouteLineStyle {
 type Color = string; // hex rgba
 type Font = string; // JSON [primary, fallback]
 
+export const deleteFeatures = (
+  features: Features,
+  trash: Features,
+  toDelete: Feature,
+): { features: Features; trash: Features } => {
+  if (toDelete.type === 'group') {
+    for (const child of computeFeaturesList(toDelete.id, features)) {
+      ({ features, trash } = deleteFeatures(features, trash, child));
+    }
+  }
+
+  features = Object.fromEntries(
+    Object.entries(features).filter(([id, _feat]) => id !== toDelete.id),
+  );
+
+  trash = { ...trash, [toDelete.id]: toDelete };
+
+  return { features, trash };
+};
+
 export function nextFeature(
   features: Features,
   beforeId: string,
@@ -140,13 +160,21 @@ export function nextFeature(
   return list.at(beforeIdx + 1) || list.at(beforeIdx - 1);
 }
 
+export const computeFeaturesList = (
+  parentId: string,
+  features: Features,
+): Feature[] =>
+  Object.values(features).filter((f) => parentIdOf(f) === parentId);
+
 export const computeFeaturesDisplayList = (
   parentId: string,
   features: Features,
-) =>
-  Object.values(features)
-    .filter((f) => parentIdOf(f) === parentId)
-    .sort(featureCmp);
+): Feature[] =>
+  sortFeatures(computeFeaturesList(parentId, features)) as Feature[];
+
+export function sortFeatures<T extends FeatureBase>(features: T[]) {
+  return features.sort(featureCmp);
+}
 
 export function computeAtAfter(features: Features, beforeId?: string): string {
   const beforeFeature = beforeId !== undefined ? features[beforeId] : undefined;
@@ -181,13 +209,15 @@ export function computeAtAfter(features: Features, beforeId?: string): string {
 
 const UUID_STR_LEN = 36;
 
-export const parentIdOf = (f: Feature | undefined) =>
-  f ? f.at.substring(0, UUID_STR_LEN) : ROOT_FEATURE;
-export const idxOf = (f: Feature) => f.at.substring(UUID_STR_LEN + 1);
+export const parentIdOf = (f: FeatureBase | undefined) => parentIdOfAt(f?.at);
+export const parentIdOfAt = (at: string | undefined) =>
+  at ? at.substring(0, UUID_STR_LEN) : ROOT_FEATURE;
+export const idxOf = (f: FeatureBase) => idxOfAt(f.at);
+export const idxOfAt = (at: string) => at.substring(UUID_STR_LEN + 1);
 export const serializeAt = (parentId: string, idx: string) =>
   parentId + '.' + idx;
 
-const featureCmp = (a: Feature, b: Feature) => {
+function featureCmp<T extends FeatureBase>(a: T, b: T) {
   const aIdx = idxOf(a);
   const bIdx = idxOf(b);
   if (aIdx < bIdx) return -1;
@@ -195,7 +225,7 @@ const featureCmp = (a: Feature, b: Feature) => {
   if (a.id < b.id) return -1;
   if (a.id > b.id) return 1;
   return 0;
-};
+}
 
 export const serializeLngLat = (value: [number, number]) =>
   JSON.stringify(value);
