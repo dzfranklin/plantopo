@@ -1,0 +1,1 @@
+Maki sprites are cc0, see <https://github.com/mapbox/maki/blob/main/LICENSE.txt>
