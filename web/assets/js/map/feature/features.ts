@@ -9,6 +9,7 @@ export type Feature =
 export type Features = { [id: string]: Feature };
 
 export const ROOT_FEATURE = 'db0d225b-6fb4-444e-a18e-13f637036bff';
+export const DEFAULT_POINT_SPRITE = 'maki-circle-stroked';
 
 export interface FeatureBase {
   id: Id;

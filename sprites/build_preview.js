@@ -13,7 +13,7 @@ fs.readdirSync(__dirname + '/svg').forEach((file) => {
     multipass: true,
   });
 
-  out[fname] = optimized;
+  out[fname] = optimized.data;
 });
 
 

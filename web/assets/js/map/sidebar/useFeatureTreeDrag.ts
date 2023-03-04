@@ -7,7 +7,6 @@ import { updateFeature, setActive } from '../mapSlice';
 const DT_TYPE = 'plantopo/feature';
 const ROOT = 'feature-tree__root';
 const FEATURE = 'feature-tree__parent';
-const DRAGGED = 'feature-tree__parent--dragged';
 const INSERTPOINT = 'feature-tree__insertpoint';
 
 export type DragState = {
@@ -41,7 +40,6 @@ export default function useFeatureTreeDrag(): DragState | undefined {
         dt.setData(DT_TYPE, 'move');
 
         draggedElem = targetFeatElem as HTMLElement;
-        draggedElem.classList.add(DRAGGED);
 
         dispatch(setActive(draggedElem.dataset.feature));
 
@@ -59,17 +57,27 @@ export default function useFeatureTreeDrag(): DragState | undefined {
           type: 'dragState',
         };
         setPubState(state);
-      } else if (draggedElem && e.type === 'dragover') {
+      } else if (state && draggedElem && e.type === 'dragover') {
         e.preventDefault(); // allow drag over
         const { clientY } = e;
 
         // For the x we just want anything inside the tree
         let elemDraggedOver = document.elementFromPoint(20, clientY);
+
         if (elemDraggedOver?.classList.contains(INSERTPOINT)) {
           const bbox = elemDraggedOver.getBoundingClientRect();
           const belowInsertpoint = clientY + bbox.height + 1;
           elemDraggedOver = document.elementFromPoint(20, belowInsertpoint);
         }
+
+        let potentialOverlap = elemDraggedOver;
+        while (potentialOverlap) {
+          if (potentialOverlap === draggedElem) {
+            elemDraggedOver = draggedElem.nextElementSibling;
+          }
+          potentialOverlap = potentialOverlap.parentElement;
+        }
+
         if (!(elemDraggedOver instanceof HTMLElement)) return;
         const targetFeat = closestFeature(elemDraggedOver);
 
@@ -145,12 +153,10 @@ export default function useFeatureTreeDrag(): DragState | undefined {
           }),
         );
 
-        draggedElem.classList.remove(DRAGGED);
         draggedElem = null;
         state = undefined;
         setPubState(state);
       } else if (draggedElem && e.type === 'dragend') {
-        draggedElem.classList.remove(DRAGGED);
         draggedElem = null;
         state = undefined;
         setPubState(state);
@@ -234,8 +240,6 @@ const computePos = (
       throw new Error('unreachable');
     }
   }
-
-  console.info({ targetFeat, pos, beforeIdx, afterIdx, parentId });
 
   return {
     beforeIdx,

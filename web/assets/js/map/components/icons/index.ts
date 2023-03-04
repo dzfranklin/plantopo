@@ -1,4 +1,5 @@
 export { default as CloseIcon } from './CloseIcon';
+export { default as DropdownIcon } from './DropdownIcon';
 export { default as GoToMyLocationIcon } from './GoToMyLocationIcon';
 export { default as GripIcon } from './GripIcon';
 export { default as LayerSelectionIcon } from './LayerSelectionIcon';

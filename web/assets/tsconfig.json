@@ -8,5 +8,6 @@
     "strictNullChecks": true,
     "allowJs": true,
     "noEmit": true,
+    "resolveJsonModule": true
   }
 }

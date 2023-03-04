@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import classNames from '../../classNames';
-import { Feature, ROOT_FEATURE, sortFeatures } from '../feature/features';
+import {
+  DEFAULT_POINT_SPRITE,
+  Feature,
+  ROOT_FEATURE,
+  sortFeatures,
+} from '../feature/features';
 import { useAppDispatch, useAppSelector } from '../hooks';
 import {
   deleteFeature,
@@ -14,14 +19,18 @@ import {
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import '../components/contextMenu.css';
 import useFeatureTreeDrag, { DragState } from './useFeatureTreeDrag';
-import './featureDrag.css';
 import { AnimatePresence, motion } from 'framer-motion';
+import SpritePreview from './SpritePreview';
+import { FolderIcon } from '@heroicons/react/24/outline';
+import { RouteIcon, DropdownIcon } from '../components/icons';
 
 const UNNAMED_PLACEHOLDER = {
   group: 'Unnamed folder',
   point: 'Unnamed point',
   route: 'Unnamed route',
 };
+
+const LEVEL_INDENT_PX = 15;
 
 export default function FeatureTree() {
   const dispatch = useAppDispatch();
@@ -54,6 +63,7 @@ export default function FeatureTree() {
         parentId={ROOT_FEATURE}
         isExpanded={true}
         dragState={dragState}
+        level={0}
       />
     </div>
   );
@@ -63,10 +73,12 @@ const GroupChildren = ({
   parentId,
   isExpanded,
   dragState,
+  level,
 }: {
   parentId: string;
   isExpanded: boolean;
   dragState: DragState | undefined;
+  level: number;
 }) => {
   const featureList = useAppSelector(selectFeaturesList(parentId));
 
@@ -85,59 +97,63 @@ const GroupChildren = ({
   }
 
   return (
-    <ul
-      className={classNames(
-        parentId === ROOT_FEATURE ? 'feature-tree__root' : 'ml-[15px]',
+    <AnimatePresence initial={false}>
+      {!isExpanded && dragChild && (
+        <DragInsertPoint key="drag-insert-point" level={level} />
       )}
-    >
-      <AnimatePresence initial={false}>
-        {!isExpanded && dragChild && (
-          <DragInsertPoint key="drag-insert-point" />
-        )}
 
-        {isExpanded && (
-          <motion.div
-            key="children"
-            initial={'collapsed'}
-            animate={'open'}
-            exit={'collapsed'}
-            variants={{
-              open: { height: 'auto' },
-              collapsed: { height: 0 },
-            }}
-          >
-            {list.map((item) =>
-              item.type === 'dragState' ? (
-                <DragInsertPoint key="drag-insert-point" />
-              ) : (
-                <FeatureItem
-                  key={item.id}
-                  feature={item}
-                  dragState={dragState}
-                />
-              ),
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </ul>
+      {isExpanded && (
+        <motion.ul
+          key="children"
+          className={classNames(
+            parentId === ROOT_FEATURE && 'feature-tree__root',
+          )}
+          initial={'collapsed'}
+          animate={'open'}
+          exit={'collapsed'}
+          variants={{
+            open: {
+              opacity: 1,
+              height: 'auto',
+            },
+            collapsed: { opacity: 0, height: 0 },
+          }}
+        >
+          {list.map((item) =>
+            item.type === 'dragState' ? (
+              <DragInsertPoint key="drag-insert-point" level={level} />
+            ) : (
+              <FeatureItem
+                key={item.id}
+                feature={item}
+                dragState={dragState}
+                level={level}
+              />
+            ),
+          )}
+        </motion.ul>
+      )}
+    </AnimatePresence>
   );
 };
 
-const DragInsertPoint = () => (
-  <motion.li
+const DragInsertPoint = ({ level }: { level: number }) => (
+  <motion.div
     transition={{ duration: window.appSettings.disableAnimation ? 0 : 0.1 }}
     layoutId="drag-insert-point"
     className="feature-tree__insertpoint h-[1px] mx-auto bg-blue-500"
+    style={{ marginLeft: `${level * LEVEL_INDENT_PX}px` }}
   />
 );
 
 function FeatureItem({
   feature,
   dragState,
+  level,
 }: {
   feature: Feature;
   dragState: DragState | undefined;
+  level: number;
 }) {
   const { type } = feature;
 
@@ -146,6 +162,7 @@ function FeatureItem({
   const activePeers = useAppSelector(selectPeersActiveOnFeature(feature.id));
   const [isRename, setIsRename] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const isDragged = dragState && dragState.id === feature.id;
 
   if (type !== 'group' && type !== 'point' && type !== 'route') {
     console.info(`Unknown feature [type=${feature.type}]`, feature);
@@ -160,17 +177,31 @@ function FeatureItem({
       data-feature-at={feature.at}
       className="feature-tree__parent"
       layoutId={feature.id}
+      animate={isDragged ? 'dragged' : 'rest'}
+      variants={{
+        rest: { opacity: 1 },
+        dragged: { opacity: 0.4 },
+      }}
     >
       <div
         className={classNames(
-          'flex flex-row feature-tree__item grow',
+          'flex flex-row items-center gap-[6px] feature-tree__item grow',
           isActive && 'bg-blue-100',
           activePeers.length > 0 && 'border-dashed border-purple-500',
         )}
+        style={{
+          paddingLeft: `${level * LEVEL_INDENT_PX}px`,
+        }}
       >
-        {feature.type === 'group' && (
-          <button onClick={() => setIsExpanded(!isExpanded)}>Exp</button>
-        )}
+        <button
+          disabled={feature.type !== 'group'}
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="pl-[3px] self-stretch disabled:opacity-0"
+        >
+          <DropdownIcon className={classNames(!isExpanded && '-rotate-90')} />
+        </button>
+
+        <PreviewIcon feature={feature} />
 
         <ContextMenu.Root
           onOpenChange={(isOpen) => isOpen && dispatch(setActive(feature.id))}
@@ -181,7 +212,7 @@ function FeatureItem({
                 if (isActive) setIsRename(true);
                 else dispatch(setActive(feature.id));
               }}
-              className="flex flex-row overflow-x-hidden text-sm text-left truncate grow"
+              className="flex flex-row items-center overflow-x-hidden text-sm text-left truncate grow"
             >
               {isRename ? (
                 <input
@@ -202,7 +233,7 @@ function FeatureItem({
                     (e.key === 'Escape' || e.key === 'Enter') &&
                     setIsRename(false)
                   }
-                  className="bg-blue-100 grow"
+                  className="bg-blue-100 outline-none grow"
                 />
               ) : (
                 <span
@@ -222,11 +253,37 @@ function FeatureItem({
           parentId={feature.id}
           isExpanded={isExpanded}
           dragState={dragState}
+          level={level + 1}
         />
       )}
     </motion.li>
   );
 }
+const PreviewIcon = ({ feature }: { feature: Feature }) => {
+  if (feature.type === 'group') {
+    return <FolderIcon height="18px" />;
+  } else if (feature.type === 'point') {
+    return (
+      <SpritePreview
+        sprite={feature?.style?.['icon-image'] ?? DEFAULT_POINT_SPRITE}
+        fill={feature?.style?.['icon-color'] ?? 'black'}
+        opacity={feature?.style?.['icon-opacity'] ?? 1}
+        width="18px"
+        height="18px"
+      />
+    );
+  } else if (feature.type === 'route') {
+    return (
+      <RouteIcon
+        height="16px"
+        fill={feature?.lineStyle?.['line-color'] ?? 'black'}
+        opacity={feature?.lineStyle?.['line-opacity'] ?? 1}
+      />
+    );
+  } else {
+    return <></>;
+  }
+};
 
 const FeatureContextMenu = ({ feature, setIsRename }) => {
   const dispatch = useAppDispatch();
