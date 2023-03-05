@@ -59,7 +59,7 @@ export const computeLayers = (
         paint[prop] = (paint[prop] || 1) * opacity;
       }
 
-      for (const [ty, prop] of RESOLVED_IMAGE_PROPS[spec.type]) {
+      for (const [ty, prop] of RESOLVED_IMAGE_PROPS[spec.type] ?? []) {
         const map = ty === 'paint' ? paint : layout;
         if (map[prop] !== undefined) {
           map[prop] = ['concat', source.id + ':', map[prop]];
