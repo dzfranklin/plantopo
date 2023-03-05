@@ -15,6 +15,7 @@ declare global {
 }
 
 window._dbg = {
+  loadTime: performance.now(),
   computeStyleStats: {
     paintOnlyUpdates: 0,
     fullUpdates: 0,
@@ -58,6 +59,7 @@ createRoot(rootNode).render(
 declare global {
   interface Window {
     _dbg: {
+      loadTime: number;
       store?: AppStore;
       mapGL?: ml.Map;
       computeStyleStats: {

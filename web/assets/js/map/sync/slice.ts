@@ -46,7 +46,11 @@ const slice = createSlice({
       }
     },
     reportUpdate(state, _action: PayloadAction<JsonTemplateObject>) {
-      state.didInitialLoad = true;
+      if (!state.didInitialLoad) {
+        const elapsed = performance.now() - window._dbg.loadTime;
+        console.info(`Initial load (${elapsed / 1000}s)`);
+        state.didInitialLoad = true;
+      }
     },
     reportAwareUpdate(state, { payload }: PayloadAction<JsonObject[]>) {
       const list = payload as unknown as PeerAware[];
