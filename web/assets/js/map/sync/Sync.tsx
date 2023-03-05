@@ -2,20 +2,19 @@ import { SyncYAwareness, SyncYJson } from '@sanalabs/y-redux';
 import { useEffect, useState } from 'react';
 import { WebsocketProvider } from 'y-websocket';
 import * as Y from 'yjs';
-import { useAppDispatch, useAppSelector, useAppStore } from './hooks';
+import { useAppDispatch, useAppSelector, useAppStore } from '../hooks';
 import { Awareness as YAwareness } from 'y-protocols/awareness';
-import {
-  remoteUpdate,
-  selectLocalAware,
-  selectId,
-  WsStatus,
-  wsReportStatus,
-  selectData,
-  remoteAwareUpdate,
-  selectEnableLocalSave,
-} from './mapSlice';
-import { JsonObject, JsonTemplateObject } from '@sanalabs/json';
 import { IndexeddbPersistence } from 'y-indexeddb';
+import {
+  reportAwareUpdate,
+  reportSocketStatus,
+  reportUpdate,
+  selectEnableLocalSave,
+  selectSyncData,
+  selectSyncLocalAware,
+  SocketStatus,
+} from './slice';
+import { selectId } from '../mapSlice';
 
 const RESYNC_INTERVAL_MS = 1000 * 60 * 5;
 const MAX_BACKOFF_MS = 1000 * 30;
@@ -44,9 +43,9 @@ export default function MapSync() {
     ws.on('sync', (isSynced: boolean) => {
       console.debug('ws sync', { isSynced });
     });
-    ws.on('status', ({ status }: { status: WsStatus }) => {
+    ws.on('status', ({ status }: { status: SocketStatus }) => {
       console.debug('ws status', { status });
-      dispatch(wsReportStatus(status));
+      dispatch(reportSocketStatus(status));
     });
     ws.on('connection-close', (event: CloseEvent) => {
       console.debug('ws connection-close', event);
@@ -75,15 +74,13 @@ export default function MapSync() {
     <>
       <SyncYJson
         yJson={state.yData}
-        selectData={(s) => selectData(s) as unknown as JsonTemplateObject}
-        setData={remoteUpdate}
+        selectData={(s) => selectSyncData(s as any) as any}
+        setData={reportUpdate}
       />
       <SyncYAwareness
         awareness={state.yAwareness}
-        selectLocalAwarenessState={(s) =>
-          selectLocalAware(s) as JsonObject | undefined
-        }
-        setAwarenessStates={remoteAwareUpdate}
+        selectLocalAwarenessState={(s) => selectSyncLocalAware(s as any) as any}
+        setAwarenessStates={reportAwareUpdate}
       />
     </>
   );

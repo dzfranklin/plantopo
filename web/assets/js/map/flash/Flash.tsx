@@ -3,9 +3,9 @@ import {
   ExclamationCircleIcon,
 } from '@heroicons/react/20/solid';
 import { XMarkIcon } from '@heroicons/react/24/solid';
-import classNames from '../classNames';
-import { clearFlash, selectActiveFlash } from './flashSlice';
-import { useAppDispatch, useAppSelector } from './hooks';
+import classNames from '../../classNames';
+import { clearFlash, selectActiveFlash } from './slice';
+import { useAppDispatch, useAppSelector } from '../hooks';
 
 export default function Flash() {
   const dispatch = useAppDispatch();

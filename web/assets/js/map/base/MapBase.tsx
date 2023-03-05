@@ -6,23 +6,20 @@ import { useAppDispatch, useAppStore } from '../hooks';
 import {
   flyTo,
   reportViewAt,
-  selectGeolocation,
   selectTokens,
   selectViewAt,
+  selectSidebarOpen,
+} from '../mapSlice';
+import {
   selectLayerDatas,
   selectLayers,
   selectLayerSources,
-  ViewAt,
   selectIs3d,
-  selectInCreate,
-  mapClick,
-  selectFeatures,
   selectSprites,
-  setActive,
-  selectSidebarOpen,
-} from '../mapSlice';
+} from '../layers/slice';
+import { ViewAt } from '../ViewAt';
 import '../../globals';
-import { startListening, stopListening } from '../listener';
+import { startListening, stopListening } from '../store/listener';
 import '../../map';
 import {
   computeLayers,
@@ -32,16 +29,19 @@ import {
 import reportLayerDataRequest from './reportLayerDataRequest';
 import computeFeaturesGeoJson from './featuresGeoJson';
 import { DeltaType, diff, OperationType } from '@sanalabs/json';
-import { RootState } from '../store';
+import { RootState } from '../store/store';
 import { USER_FEATURES_DATA_ID } from './featuresLayer';
 import '../../../node_modules/maplibre-gl/dist/maplibre-gl.css';
-import { computeFeatureBbox } from '../feature/features';
+import { computeFeatureBbox, serializeLngLat } from '../features/features';
+import { selectGeolocation } from '../controls/slice';
+import * as featuresSlice from '../features/slice';
+import { v4 as uuid } from 'uuid';
+import { selectFeatures } from '../features/slice';
 
 export interface Props {
   isLoading: (_: boolean) => void;
 }
 
-const FEATURE_POINTER_TARGET_PX = 20;
 const FLY_TO_SPEED = 2.8;
 const FLY_TO_PADDING_PX = 100;
 
@@ -217,7 +217,7 @@ export default function MapBase(props: Props) {
         }
 
         const canvas = map.getCanvas();
-        if (selectInCreate(state)) {
+        if (featuresSlice.selectCreating(state)) {
           canvas.classList.add('cursor-crosshair');
         } else {
           canvas.classList.remove('cursor-crosshair');
@@ -270,7 +270,7 @@ export default function MapBase(props: Props) {
     startListening(flyToListener);
 
     const fitActiveListener = {
-      actionCreator: setActive,
+      actionCreator: featuresSlice.setActive,
       effect: async ({ payload }, l) => {
         if (!payload) return;
         const features = selectFeatures(l.getState());
@@ -313,30 +313,36 @@ export default function MapBase(props: Props) {
     });
 
     map.on('click', (evt) => {
-      const point = evt.point;
-      const features = map
-        .queryRenderedFeatures([
-          [
-            point.x - FEATURE_POINTER_TARGET_PX / 2,
-            point.y - FEATURE_POINTER_TARGET_PX / 2,
-          ],
-          [
-            point.x + FEATURE_POINTER_TARGET_PX / 2,
-            point.y + FEATURE_POINTER_TARGET_PX / 2,
-          ],
-        ])
-        .map((f) => ({
-          layer: f.layer.id,
-          properties: f.properties,
-        }));
+      // const FEATURE_POINTER_TARGET_PX = 20;
+      // const features = map
+      //   .queryRenderedFeatures([
+      //     [
+      //       point.x - FEATURE_POINTER_TARGET_PX / 2,
+      //       point.y - FEATURE_POINTER_TARGET_PX / 2,
+      //     ],
+      //     [
+      //       point.x + FEATURE_POINTER_TARGET_PX / 2,
+      //       point.y + FEATURE_POINTER_TARGET_PX / 2,
+      //     ],
+      //   ]);
 
-      dispatch(
-        mapClick({
-          lngLat: [evt.lngLat.lng, evt.lngLat.lat],
-          screen: [evt.point.x, evt.point.y],
-          features,
-        }),
-      );
+      const state = store.getState();
+      const featureCreating = featuresSlice.selectCreating(state);
+      if (featureCreating) {
+        const { type, at } = featureCreating;
+
+        if (type === 'point') {
+          const lngLat = serializeLngLat([evt.lngLat.lng, evt.lngLat.lat]);
+          dispatch(
+            featuresSlice.create({
+              id: uuid(),
+              at,
+              type: 'point',
+              lngLat,
+            }),
+          );
+        }
+      }
     });
 
     for (const evt of ['dataloading', 'dataabort', 'data']) {

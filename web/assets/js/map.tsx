@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import MapApp from './map/MapApp';
 import * as React from 'react';
 import * as ml from 'maplibre-gl';
-import { AppStore, initStore } from './map/store';
+import { AppStore, initStore } from './map/store/store';
 import { Provider } from 'react-redux';
 import { MotionConfig } from 'framer-motion';
 
@@ -33,10 +33,7 @@ const store = initStore({
   tokens: parseInit('tokens'),
   layerDatas: parseInit('layerDatas'),
   layerSources: parseInit('layerSources'),
-  localAware: {
-    user: window.currentUser ?? undefined,
-    viewAt: parseInit('viewAt'),
-  },
+  viewAt: parseInit('viewAt'),
 });
 window._dbg.store = store;
 

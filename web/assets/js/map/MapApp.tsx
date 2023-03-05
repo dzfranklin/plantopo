@@ -1,17 +1,18 @@
 import MapBase from './base/MapBase';
 import { useState } from 'react';
 import { useAppSelector } from './hooks';
-import { selectDataLoaded, selectShouldCreditOS } from './mapSlice';
 import LoadingIndicator from './base/LoadingIndicator';
 import classNames from '../classNames';
-import Flash from './Flash';
-import Controls from './Controls';
-import MapSync from './MapSync';
-import Sidebar from './Sidebar';
+import Flash from './flash/Flash';
+import Controls from './controls/Controls';
+import MapSync from './sync/Sync';
+import Sidebar from './sidebar/Sidebar';
 import { useGlobalKeyboardShortcuts } from './keyboardShortcuts';
+import { selectShouldCreditOS } from './layers/slice';
+import { selectDidInitialLoad } from './sync/slice';
 
 export default function MapApp() {
-  const dataLoaded = useAppSelector(selectDataLoaded);
+  const loaded = useAppSelector(selectDidInitialLoad);
   const [baseIsLoading, setBaseIsLoading] = useState(true);
   const creditOS = useAppSelector(selectShouldCreditOS);
 
@@ -21,7 +22,7 @@ export default function MapApp() {
     <div className="map-app">
       <MapSync />
 
-      {dataLoaded ? (
+      {loaded ? (
         <>
           <MapBase isLoading={setBaseIsLoading} />
           <CreditImages creditOS={creditOS} />

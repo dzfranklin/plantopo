@@ -10,7 +10,7 @@ import {
   useDragControls,
 } from 'framer-motion';
 import * as Slider from '@radix-ui/react-slider';
-import classNames from '../classNames';
+import classNames from '../../classNames';
 import {
   CloseIcon,
   GoToMyLocationIcon,
@@ -19,16 +19,18 @@ import {
   UploadIcon,
   ZoomInIcon,
   ZoomOutIcon,
-} from './components/icons';
-import { useAppDispatch, useAppSelector } from './hooks';
+} from '../components/icons';
+import { useAppDispatch, useAppSelector } from '../hooks';
 import {
   exitFullscreen,
-  requestGeolocation,
   requestFullscreen,
   zoomIn,
   zoomOut,
   selectGeolocation,
   clearGeolocation,
+  requestGeolocation,
+} from './slice';
+import {
   selectLayerSourceDisplayList,
   selectLayerSource,
   updateLayer,
@@ -38,11 +40,11 @@ import {
   setLayers,
   selectIs3d,
   setIs3d,
-} from './mapSlice';
-import Button from './components/Button';
+} from '../layers/slice';
+import Button from '../components/Button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMountain } from '@fortawesome/free-solid-svg-icons';
-import Tooltip from './components/Tooltip';
+import Tooltip from '../components/Tooltip';
 
 export default function Controls() {
   const dispatch = useAppDispatch();

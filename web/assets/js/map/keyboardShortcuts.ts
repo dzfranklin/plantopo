@@ -1,41 +1,63 @@
 import { useAppDispatch, useAppSelector, useAppStore } from './hooks';
+import { selectSidebarOpen } from './mapSlice';
+import { useEffect } from 'react';
+import { selectDidInitialLoad } from './sync/slice';
 import {
   cancelCreating,
-  deleteFeature,
-  selectActiveFeature,
-  selectDataLoaded,
-  selectInCreate,
-  enterLatlngPicker,
   createGroup,
-} from './mapSlice';
-import { useEffect } from 'react';
+  deleteFeature,
+  enterLatlngPicker,
+  moveActive,
+  selectActiveFeature,
+  selectCreating,
+} from './features/slice';
 
 export const useGlobalKeyboardShortcuts = () => {
   const store = useAppStore();
   const dispatch = useAppDispatch();
-  const dataLoaded = useAppSelector(selectDataLoaded);
+  const loaded = useAppSelector(selectDidInitialLoad);
 
   useEffect(() => {
-    if (!dataLoaded) return;
+    if (!loaded) return;
+    const sidebarOpen = selectSidebarOpen(store.getState());
+
     const handler = (event: KeyboardEvent) => {
-      const { key, ctrlKey, altKey } = event;
+      const { key, ctrlKey, altKey, metaKey, shiftKey } = event;
+      const anyMod = ctrlKey || altKey || metaKey || shiftKey;
       const state = store.getState();
       const active = selectActiveFeature(state);
-      const inCreate = selectInCreate(state);
+      const inCreate = !!selectCreating(state);
 
-      if (key === 'Delete' && active) {
-        dispatch(deleteFeature(active));
-      } else if (key === 'Escape' && inCreate) {
-        dispatch(cancelCreating());
+      let action;
+      if (!anyMod && key === 'Delete' && active) {
+        action = deleteFeature(active);
+      } else if (!anyMod && key === 'Escape' && inCreate) {
+        action = cancelCreating();
       } else if (ctrlKey && altKey && key === 'p') {
-        dispatch(enterLatlngPicker({ type: 'point' }));
+        action = enterLatlngPicker({ type: 'point' });
       } else if (ctrlKey && altKey && key === 'r') {
-        dispatch(enterLatlngPicker({ type: 'route' }));
+        action = enterLatlngPicker({ type: 'route' });
       } else if (ctrlKey && altKey && key === 'f') {
-        dispatch(createGroup());
+        action = createGroup();
+      } else if (sidebarOpen) {
+        if (!anyMod && key === 'ArrowDown') {
+          action = moveActive('down');
+        } else if (!anyMod && key === 'ArrowUp') {
+          action = moveActive('up');
+        } else if (!anyMod && key === 'ArrowRight') {
+          action = moveActive('in');
+        } else if (!anyMod && key === 'ArrowLeft') {
+          action = moveActive('out');
+        }
+      }
+
+      if (action) {
+        dispatch(action);
+        event.preventDefault();
+        event.stopPropagation();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [dataLoaded, dispatch, store]);
+  }, [loaded, dispatch, store]);
 };

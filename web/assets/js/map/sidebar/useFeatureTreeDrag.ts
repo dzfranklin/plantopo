@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { idxOfAt, ROOT_FEATURE, serializeAt } from '../feature/features';
-import { idxBetween } from '../feature/fracIdx';
+import { idxOfAt, ROOT_FEATURE, serializeAt } from '../features/features';
+import { idxBetween } from '../features/fracIdx';
+import { setActive, updateFeature } from '../features/slice';
 import { useAppDispatch } from '../hooks';
-import { updateFeature, setActive } from '../mapSlice';
 
 const DT_TYPE = 'plantopo/feature';
 const ROOT = 'feature-tree__root';

@@ -14,7 +14,7 @@ import {
 } from '@radix-ui/react-dropdown-menu';
 import { DotFilledIcon } from '@radix-ui/react-icons';
 import { useAppDispatch } from '../hooks';
-import { createGroup, enterLatlngPicker } from '../mapSlice';
+import { createGroup, enterLatlngPicker } from '../features/slice';
 import './dropdown.css';
 
 export default function AddDropdown() {

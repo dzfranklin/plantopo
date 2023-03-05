@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import AddDropdown from './sidebar/AddDropdown';
-import FeatureTree from './sidebar/FeatureTree';
+import AddDropdown from './AddDropdown';
+import FeatureTree from './FeatureTree';
 
 export default function Sidebar() {
   useEffect(() => {

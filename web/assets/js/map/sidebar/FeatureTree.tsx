@@ -5,17 +5,16 @@ import {
   Feature,
   ROOT_FEATURE,
   sortFeatures,
-} from '../feature/features';
+} from '../features/features';
 import { useAppDispatch, useAppSelector } from '../hooks';
 import {
   deleteFeature,
-  moveActive,
   selectFeaturesList,
   selectIsActiveFeature,
   selectPeersActiveOnFeature,
   setActive,
   updateFeature,
-} from '../mapSlice';
+} from '../features/slice';
 import * as ContextMenu from '@radix-ui/react-context-menu';
 import '../components/contextMenu.css';
 import useFeatureTreeDrag, { DragState } from './useFeatureTreeDrag';
@@ -33,26 +32,8 @@ const UNNAMED_PLACEHOLDER = {
 const LEVEL_INDENT_PX = 15;
 
 export default function FeatureTree() {
-  const dispatch = useAppDispatch();
   const ref = useRef<HTMLDivElement>(null);
   const dragState = useFeatureTreeDrag();
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Down' || e.key === 'ArrowDown') {
-        dispatch(moveActive('down'));
-        e.preventDefault();
-      } else if (e.key === 'Up' || e.key === 'ArrowUp') {
-        dispatch(moveActive('up'));
-        e.preventDefault();
-      } else if (e.key === 'Right' || e.key === 'ArrowRight') {
-        dispatch(moveActive('in'));
-        e.preventDefault();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [dispatch]);
 
   return (
     <div
@@ -163,6 +144,21 @@ function FeatureItem({
   const [isRename, setIsRename] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const isDragged = dragState && dragState.id === feature.id;
+
+  useEffect(() => {
+    if (isActive) {
+      const handler = (e: KeyboardEvent) => {
+        const { key, altKey, ctrlKey } = e;
+        if (!ctrlKey && altKey && key === 'r') {
+          setIsRename(true);
+        } else if (!ctrlKey && !altKey && key === 'Enter') {
+          setIsExpanded(!isExpanded);
+        }
+      };
+      window.addEventListener('keydown', handler);
+      return () => window.removeEventListener('keydown', handler);
+    }
+  }, [isActive, setIsRename, isExpanded, setIsExpanded]);
 
   if (type !== 'group' && type !== 'point' && type !== 'route') {
     console.info(`Unknown feature [type=${feature.type}]`, feature);
