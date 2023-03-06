@@ -104,5 +104,3 @@ export const computeSources = (layerDatas: {
 export const computeTerrain = (): mlStyle.TerrainSpecification => ({
   source: TERRAIN_SOURCE_ID,
 });
-
-// TODO: Figure out how to combine glyph and sprite. Maybe a special loader?
