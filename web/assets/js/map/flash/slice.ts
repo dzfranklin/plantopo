@@ -4,7 +4,7 @@ import type { RootState } from '../store/store';
 
 const INFO_CLEAR_AFTER = 3_000;
 
-interface FlashState {
+export interface FlashState {
   active?: Flash;
 }
 

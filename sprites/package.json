@@ -4,6 +4,6 @@
     "svgo": "^3.0.2"
   },
   "scripts": {
-    "build": "mbsprite bundle sprite sdf && node build_preview.js && mkdir -p ../web/priv/static/sprite && cp sprite/* ../web/priv/static/sprite/ && cp preview.json ../web/priv/static/sprite/preview.json"
+    "build": "mbsprite bundle sprite sdf && node build_preview.js && mkdir -p ../web/priv/static/sprite && cp sprite/* ../web/priv/static/sprite/ && cp preview.json ../web/assets/js/map/sprite/preview.json"
   }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import data from '../../../../priv/static/sprite/preview.json';
+import data from './preview.json';
 
 export default function SpritePreview(
   props: { sprite: string } & React.SVGProps<SVGSVGElement>,

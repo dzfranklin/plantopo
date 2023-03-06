@@ -4,3 +4,4 @@ node_modules/
 /playwright/.cache/
 /e2e/userStorageState.json
 .eslintcache
+*.tsbuildinfo

@@ -2,7 +2,7 @@ import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from './store/store';
 import { ViewAt } from './ViewAt';
 
-interface MapState {
+export interface MapState {
   sidebarOpen: boolean;
   tokens: Tokens;
   id: string;

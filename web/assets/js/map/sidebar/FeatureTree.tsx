@@ -19,7 +19,7 @@ import * as ContextMenu from '@radix-ui/react-context-menu';
 import '../components/contextMenu.css';
 import useFeatureTreeDrag, { DragState } from './useFeatureTreeDrag';
 import { AnimatePresence, motion } from 'framer-motion';
-import SpritePreview from './SpritePreview';
+import SpritePreview from '../sprite/SpritePreview';
 import { FolderIcon } from '@heroicons/react/24/outline';
 import { RouteIcon, DropdownIcon } from '../components/icons';
 

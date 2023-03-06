@@ -22,7 +22,7 @@ import {
 } from './features';
 import { v4 as uuid } from 'uuid';
 
-interface State {
+export interface State {
   creating?: {
     type: string;
     at: string;

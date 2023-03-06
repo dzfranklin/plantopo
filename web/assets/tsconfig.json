@@ -8,6 +8,17 @@
     "strictNullChecks": true,
     "allowJs": true,
     "noEmit": true,
-    "resolveJsonModule": true
-  }
+    "resolveJsonModule": true,
+    "types": [
+      "jest"
+    ],
+    "composite": true,
+  },
+  "include": [
+    ".",
+    "**/*.json"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+  ],
 }

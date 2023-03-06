@@ -3,7 +3,7 @@ import sortBy from '../util/sortBy';
 import { RootState } from '../store/store';
 import { Layer, LayerDatas, LayerSource, LayerSources } from './types';
 
-interface State {
+export interface State {
   datas: LayerDatas;
   sources: LayerSources;
   sync: {

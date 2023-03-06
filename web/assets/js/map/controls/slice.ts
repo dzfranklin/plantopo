@@ -11,7 +11,7 @@ import { startListening } from '../store/listener';
 import { RootState } from '../store/store';
 import { GeolocState } from './GeolocState';
 
-interface State {
+export interface State {
   geolocation: GeolocState;
 }
 

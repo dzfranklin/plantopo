@@ -9,7 +9,7 @@ import { RootState } from '../store/store';
 import { Aware, PeerAware, SyncData } from './types';
 import { CurrentUser } from '../../globals';
 
-interface State {
+export interface State {
   user: CurrentUser | null;
   didInitialLoad: boolean;
   onlineStatus: 'connecting' | 'connected' | 'reconnecting';
