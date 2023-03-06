@@ -101,6 +101,6 @@ export const selectSyncData = (state: RootState): SyncData => {
 export const selectSyncLocalAware = (state: RootState): Aware => {
   const user = state.sync.user ?? undefined;
   const viewAt = state.map.viewAt;
-  const activeFeature = state.features.activeFeature;
+  const activeFeature = state.features.active;
   return { user, viewAt, activeFeature };
 };

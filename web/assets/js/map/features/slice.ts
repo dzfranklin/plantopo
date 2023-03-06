@@ -27,7 +27,7 @@ interface State {
     type: string;
     at: string;
   };
-  activeFeature?: string;
+  active?: string;
   sync: {
     features: Features;
     featureTrash: Features;
@@ -36,7 +36,7 @@ interface State {
 
 const initialState: State = {
   creating: undefined,
-  activeFeature: undefined,
+  active: undefined,
   sync: {
     features: {},
     featureTrash: {},
@@ -58,29 +58,29 @@ const slice = createSlice({
     },
 
     setActive(state, { payload }: PayloadAction<string | undefined>) {
-      state.activeFeature = payload;
+      state.active = payload;
     },
     moveActive(
       state,
       { payload }: PayloadAction<'down' | 'up' | 'in' | 'out'>,
     ) {
       const features = state.sync.features;
-      const prevId = state.activeFeature;
+      const prevId = state.active;
       const prev = prevId ? features[prevId] : null;
 
       if (!prev) {
         const list = computeFeaturesDisplayList(ROOT_FEATURE, features);
         const next = list.at(0);
-        if (next) state.activeFeature = next.id;
+        if (next) state.active = next.id;
       } else if (payload === 'in') {
         if (prev.type !== 'group') return;
         const list = computeFeaturesDisplayList(prev.id, features);
         const next = list.at(0);
-        if (next) state.activeFeature = next.id;
+        if (next) state.active = next.id;
       } else if (payload === 'out') {
         const parentId = parentIdOf(prev);
         if (parentId !== ROOT_FEATURE) {
-          state.activeFeature = parentId;
+          state.active = parentId;
         }
       } else {
         const list = computeFeaturesDisplayList(parentIdOf(prev), features);
@@ -88,13 +88,13 @@ const slice = createSlice({
         let nextIdx = payload === 'up' ? prevIdx - 1 : prevIdx + 1;
         if (nextIdx > list.length - 1) nextIdx = 0;
         const next = list.at(nextIdx);
-        if (next) state.activeFeature = next.id;
+        if (next) state.active = next.id;
       }
     },
 
     enterLatlngPicker(state, { payload }: PayloadAction<{ type: string }>) {
       const features = state.sync.features;
-      const beforeId = state.activeFeature;
+      const beforeId = state.active;
       const at = computeAtAfter(features, beforeId);
       state.creating = {
         type: payload.type,
@@ -103,7 +103,7 @@ const slice = createSlice({
     },
     createGroup(state, { payload }: PayloadAction<{ id: string }>) {
       const features = state.sync.features;
-      const beforeId = state.activeFeature;
+      const beforeId = state.active;
       const at = computeAtAfter(features, beforeId);
       const { id } = payload;
       features[id] = castDraft({
@@ -111,12 +111,12 @@ const slice = createSlice({
         id,
         at,
       });
-      state.activeFeature = id;
+      state.active = id;
     },
     create(state, { payload }: PayloadAction<Feature>) {
       const features = state.sync.features;
       features[payload.id] = payload;
-      state.activeFeature = payload.id;
+      state.active = payload.id;
       state.creating = undefined;
     },
     cancelCreating(state, _action: PayloadAction<undefined>) {
@@ -145,7 +145,7 @@ const slice = createSlice({
         const nextActive =
           sibList.at(deletedDisplayIdx + 1) ||
           sibList.at(deletedDisplayIdx - 1);
-        state.activeFeature = nextActive?.id;
+        state.active = nextActive?.id;
       }
 
       const { features, trash } = deleteFeatures(
@@ -184,7 +184,7 @@ export const selectFeatures = (state: RootState) =>
 
 export const selectActiveFeature = (state: RootState): ActiveFeature => {
   const map = selectFeatures(state);
-  const id = state.features.activeFeature;
+  const id = state.features.active;
   if (!id) return;
   const feature = map[id];
   if (!feature) return;
@@ -197,8 +197,8 @@ export const selectActiveFeature = (state: RootState): ActiveFeature => {
   return feature as any;
 };
 
-export const selectIsActiveFeature = (id: string) => (s) =>
-  selectActiveFeature(s)?.id === id;
+export const selectIsActiveFeature = (id: string) => (state: RootState) =>
+  id && state.features.active === id;
 
 export const selectPeersActiveOnFeature = (id: string) =>
   createSelector([selectPeers], (peers) =>
