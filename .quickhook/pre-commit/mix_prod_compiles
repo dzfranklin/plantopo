@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+cd web && MIX_ENV=prod mix compile --all-warnings --no-compile --no-deps-check --warnings-as-errors
