@@ -42,6 +42,11 @@ export const computeLayers = (
 ): mlStyle.LayerSpecification[] => {
   const out = layers.flatMap((layer, idx) => {
     const source = layerSources[layer.sourceId];
+    if (!source) {
+      console.error('Skipping layer as no source', layer);
+      return [];
+    }
+
     return source.layerSpecs.map((spec) => {
       const out: mlStyle.LayerSpecification = {
         ...spec,

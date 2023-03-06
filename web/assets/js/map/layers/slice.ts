@@ -84,7 +84,7 @@ export const selectSprites = createSelector(
   (layers, sources) => {
     return layers
       .map((l) => sources[l.sourceId])
-      .filter((s) => !!s.sprite)
+      .filter((s) => !!s?.sprite)
       .map((s) => [s.id, s.sprite as string]);
   },
 );
@@ -114,8 +114,8 @@ export const selectShouldCreditOS = createSelector(
     if (!layers) return false;
     return layers
       .map((view) => layerSources[view.sourceId])
-      .flatMap((layerSource) => layerSource.dependencies)
+      .flatMap((layerSource) => layerSource?.dependencies)
       .map((dataSourceId) => dataSources[dataSourceId])
-      .some((dataSource) => dataSource.attribution === 'os');
+      .some((dataSource) => dataSource?.attribution === 'os');
   },
 );

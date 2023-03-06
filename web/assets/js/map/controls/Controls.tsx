@@ -179,6 +179,11 @@ function LayerItem({ layer, idx }) {
     });
   }, []);
 
+  if (!source) {
+    console.error('Missing source for layer', layer);
+    return <></>;
+  }
+
   return (
     <Reorder.Item
       value={layer}
