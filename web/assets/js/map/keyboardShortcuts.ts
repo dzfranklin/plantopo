@@ -9,6 +9,7 @@ import {
   moveActive,
   selectActiveFeature,
   selectCreating,
+  setActive,
 } from './features/slice';
 import { selectSidebarOpen } from './sidebar/slice';
 
@@ -33,6 +34,8 @@ export const useGlobalKeyboardShortcuts = () => {
         action = deleteFeature(active);
       } else if (!anyMod && key === 'Escape' && inCreate) {
         action = cancelCreating();
+      } else if (!anyMod && key === 'Escape' && active) {
+        action = setActive(undefined);
       } else if (ctrlKey && altKey && key === 'p') {
         action = enterLatlngPicker({ type: 'point' });
       } else if (ctrlKey && altKey && key === 'r') {
