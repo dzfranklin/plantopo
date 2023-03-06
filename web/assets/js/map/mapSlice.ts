@@ -3,7 +3,6 @@ import type { RootState } from './store/store';
 import { ViewAt } from './ViewAt';
 
 export interface MapState {
-  sidebarOpen: boolean;
   tokens: Tokens;
   id: string;
   viewAt: ViewAt;
@@ -50,4 +49,3 @@ const select = (s: RootState) => s.map;
 export const selectId = (s) => select(s).id;
 export const selectTokens = (s) => select(s).tokens;
 export const selectViewAt = (s) => select(s).viewAt;
-export const selectSidebarOpen = (s) => select(s).sidebarOpen;

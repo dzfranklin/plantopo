@@ -3,13 +3,7 @@ import * as mlStyle from '@maplibre/maplibre-gl-style-spec';
 import * as ml from 'maplibre-gl';
 import deepEqual from 'react-fast-compare';
 import { useAppDispatch, useAppStore } from '../hooks';
-import {
-  flyTo,
-  reportViewAt,
-  selectTokens,
-  selectViewAt,
-  selectSidebarOpen,
-} from '../mapSlice';
+import { flyTo, reportViewAt, selectTokens, selectViewAt } from '../mapSlice';
 import {
   selectLayerDatas,
   selectLayers,
@@ -37,6 +31,7 @@ import { selectGeolocation } from '../controls/slice';
 import * as featuresSlice from '../features/slice';
 import { v4 as uuid } from 'uuid';
 import { selectFeatures } from '../features/slice';
+import { selectSidebarOpen } from '../sidebar/slice';
 
 export interface Props {
   isLoading: (_: boolean) => void;

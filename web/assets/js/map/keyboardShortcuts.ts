@@ -1,5 +1,4 @@
 import { useAppDispatch, useAppSelector, useAppStore } from './hooks';
-import { selectSidebarOpen } from './mapSlice';
 import { useEffect } from 'react';
 import { selectDidInitialLoad } from './sync/slice';
 import {
@@ -11,6 +10,7 @@ import {
   selectActiveFeature,
   selectCreating,
 } from './features/slice';
+import { selectSidebarOpen } from './sidebar/slice';
 
 export const useGlobalKeyboardShortcuts = () => {
   const store = useAppStore();

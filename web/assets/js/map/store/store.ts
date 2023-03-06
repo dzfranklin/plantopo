@@ -5,6 +5,7 @@ import layersReducer from '../layers/slice';
 import syncReducer from '../sync/slice';
 import controlsReducer from '../controls/slice';
 import featuresReducer from '../features/slice';
+import sidebarReducer from '../sidebar/slice';
 import { middleware as listenerMiddleware } from './listener';
 
 export const initStore = (initState) =>
@@ -16,13 +17,13 @@ export const initStore = (initState) =>
       controls: controlsReducer,
       flash: flashReducer,
       features: featuresReducer,
+      sidebar: sidebarReducer,
     },
     middleware: (getDefault) => getDefault().prepend(listenerMiddleware),
     preloadedState: {
       map: {
         id: initState.id,
         tokens: initState.tokens,
-        sidebarOpen: true,
         viewAt: initState.viewAt,
       },
       layers: {

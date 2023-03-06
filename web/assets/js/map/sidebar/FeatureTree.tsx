@@ -36,10 +36,7 @@ export default function FeatureTree() {
   const dragState = useFeatureTreeDrag();
 
   return (
-    <div
-      ref={ref}
-      className="flex flex-col pt-1 mx-[4px] overflow-y-auto border-t border-gray-300 grow"
-    >
+    <div ref={ref} className="flex flex-col pt-1 mx-[4px] overflow-y-auto grow">
       <GroupChildren
         parentId={ROOT_FEATURE}
         isExpanded={true}
