@@ -19,7 +19,6 @@ export const useGlobalKeyboardShortcuts = () => {
 
   useEffect(() => {
     if (!loaded) return;
-    const sidebarOpen = selectSidebarOpen(store.getState());
 
     const handler = (event: KeyboardEvent) => {
       const { key, ctrlKey, altKey, metaKey, shiftKey } = event;
@@ -27,6 +26,7 @@ export const useGlobalKeyboardShortcuts = () => {
       const state = store.getState();
       const active = selectActiveFeature(state);
       const inCreate = !!selectCreating(state);
+      const sidebarOpen = selectSidebarOpen(state);
 
       let action;
       if (!anyMod && key === 'Delete' && active) {
