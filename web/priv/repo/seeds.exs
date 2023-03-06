@@ -129,3 +129,47 @@ satellite_data =
 
 Repo.insert!(osv_source, on_conflict: :replace_all, conflict_target: :id)
 Repo.insert!(osv_data, on_conflict: :replace_all, conflict_target: :id)
+
+usgs_topo_data =
+  %{
+    id: "usgs_topo",
+    spec: %{
+      type: "raster",
+      tiles: [
+        "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/WMTS/tile/1.0.0/USGSTopo/default/GoogleMapsCompatible/{z}/{y}/{x}.png"
+      ],
+      tileSize: 256,
+      maxzoom: 16,
+      bounds: [
+        -2.003750785759102e7,
+        -3.0242455261924103e7,
+        2.003872561259901e7,
+        3.0240972179360494e7
+      ],
+      attribution:
+        ~S[
+          USGS The National Map: National Boundaries Dataset, 3DEP Elevation Program, Geographic Names Information System, National Hydrography Dataset, National Land
+          Cover Database, National Structures Dataset, and National Transportation Dataset; USGS Global Ecosystems; U.S. Census Bureau TIGER/Line data; USFS Road Data;
+          Natural Earth Data; U.S. Department of State Humanitarian Information Unit; and NOAA National Centers for Environmental Information, U.S. Coastal Relief Model.
+        ]
+        |> String.trim()
+        |> String.split("\n")
+        |> Enum.map(&String.trim/1)
+        |> Enum.join(" ")
+    }
+  }
+  |> LayerData.changeset()
+  |> Repo.insert!(on_conflict: :replace_all, conflict_target: :id)
+
+%{
+  name: "USGS Topo",
+  layer_specs: [
+    %{
+      id: "layer",
+      source: usgs_topo_data.id,
+      type: "raster"
+    }
+  ]
+}
+|> LayerSource.changeset()
+|> Repo.insert!(on_conflict: :replace_all, conflict_target: :id)
