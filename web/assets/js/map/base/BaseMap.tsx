@@ -189,7 +189,9 @@ export default function BaseMap(props: Props) {
                   } else {
                     throw new Error('Unreachable');
                   }
-                  map.setPaintProperty(layer.id, op.key, value);
+                  map.setPaintProperty(layer.id, op.key, value, {
+                    validate: false,
+                  });
                 }
               } else {
                 moveLayer(map, prevLayers, layerOp.index, layer);
