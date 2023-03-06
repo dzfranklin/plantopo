@@ -1,8 +1,8 @@
-defmodule PlanTopo.Reports.LayerDataRequest do
+defmodule PlanTopo.Reports.TileLoadReport do
   use PlanTopo.Schema
 
   @primary_key {:id, :id, autogenerate: true}
-  schema "reported_layer_data_requests" do
+  schema "tile_load_reports" do
     field :alleged_user_id, Ecto.UUID
     field :at, :utc_datetime
     field :source, :string

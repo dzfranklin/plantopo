@@ -20,7 +20,7 @@ import {
   computeSources,
   computeTerrain as makeTerrain,
 } from '../computeStyle';
-import reportLayerDataRequest from './reportLayerDataRequest';
+import reportTileLoad from './reportTileLoad';
 import computeFeaturesGeoJson from './featuresGeoJson';
 import { DeltaType, diff, OperationType } from '@sanalabs/json';
 import { RootState } from '../store/store';
@@ -235,7 +235,7 @@ export default function BaseMap(props: Props) {
         tileId &&
         sourceId !== USER_FEATURES_DATA_ID
       ) {
-        reportLayerDataRequest(sourceId, tileId.x, tileId.y, tileId.z);
+        reportTileLoad(sourceId, tileId.x, tileId.y, tileId.z);
       }
     });
 

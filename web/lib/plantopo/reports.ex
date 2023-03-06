@@ -1,40 +1,18 @@
 defmodule PlanTopo.Reports do
   alias PlanTopo.Repo
-  alias __MODULE__.LayerDataRequest
+  alias __MODULE__.TileLoadReport
 
-  def insert_layer_data_requests!(alleged_user_id, requests) do
+  def report_tile_loads!(alleged_user_id, requests) do
+    Logger.put_process_level(self(), :info)
+
     Repo.transaction!(fn ->
-      for %{"url" => url, "at" => at} <- requests do
-        parsed = URI.parse(url)
-        [path_seg_1, path_seg_2] = parse_path_segments(parsed.path)
-
-        %{
-          alleged_user_id: alleged_user_id,
-          at: DateTime.from_unix!(at, :millisecond),
-          url: url,
-          host: parsed.host,
-          path: parsed.path,
-          path_seg_1: path_seg_1,
-          path_seg_2: path_seg_2
-        }
-        |> LayerDataRequest.changeset()
+      for req <- requests do
+        req
+        |> Map.update!("at", &DateTime.from_unix!(&1, :millisecond))
+        |> Map.put("alleged_user_id", alleged_user_id)
+        |> TileLoadReport.changeset()
         |> Repo.insert!()
       end
     end)
   end
-
-  defp parse_path_segments(path) do
-    parts =
-      path
-      |> String.trim_leading("/")
-      |> String.split("/")
-
-    [
-      nilify_empty_str(Enum.at(parts, 0)),
-      nilify_empty_str(Enum.at(parts, 1))
-    ]
-  end
-
-  defp nilify_empty_str(""), do: nil
-  defp nilify_empty_str(s), do: s
 end
