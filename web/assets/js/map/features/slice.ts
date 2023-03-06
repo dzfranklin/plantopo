@@ -173,7 +173,7 @@ export const {
   deleteFeature,
 } = actions;
 
-export const createGroup = createAction('map/createGroup', () => ({
+export const createGroup = createAction('features/createGroup', () => ({
   payload: { id: uuid() },
 }));
 

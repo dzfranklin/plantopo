@@ -38,11 +38,11 @@ export default slice.reducer;
 const { actions } = slice;
 export const { clearGeolocation } = actions;
 
-export const requestGeolocation = createAction('map/requestGeolocation');
-export const zoomIn = createAction('map/zoomIn');
-export const zoomOut = createAction('map/zoomOut');
-export const requestFullscreen = createAction('map/requestFullscreen'); // Requires transient user activation
-export const exitFullscreen = createAction('map/exitFullscreen');
+export const requestGeolocation = createAction('controls/requestGeolocation');
+export const zoomIn = createAction('controls/zoomIn');
+export const zoomOut = createAction('controls/zoomOut');
+export const requestFullscreen = createAction('controls/requestFullscreen'); // Requires transient user activation
+export const exitFullscreen = createAction('controls/exitFullscreen');
 
 export const selectGeolocation = (state: RootState) =>
   state.controls.geolocation;
