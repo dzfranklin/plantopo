@@ -21,6 +21,7 @@ import {
   RouteFeature,
 } from './features';
 import { v4 as uuid } from 'uuid';
+import { startListening } from '../store/listener';
 
 export interface State {
   creating?: {
@@ -59,37 +60,6 @@ const slice = createSlice({
 
     setActive(state, { payload }: PayloadAction<string | undefined>) {
       state.active = payload;
-    },
-    moveActive(
-      state,
-      { payload }: PayloadAction<'down' | 'up' | 'in' | 'out'>,
-    ) {
-      const features = state.sync.features;
-      const prevId = state.active;
-      const prev = prevId ? features[prevId] : null;
-
-      if (!prev) {
-        const list = computeFeaturesDisplayList(ROOT_FEATURE, features);
-        const next = list.at(0);
-        if (next) state.active = next.id;
-      } else if (payload === 'in') {
-        if (prev.type !== 'group') return;
-        const list = computeFeaturesDisplayList(prev.id, features);
-        const next = list.at(0);
-        if (next) state.active = next.id;
-      } else if (payload === 'out') {
-        const parentId = parentIdOf(prev);
-        if (parentId !== ROOT_FEATURE) {
-          state.active = parentId;
-        }
-      } else {
-        const list = computeFeaturesDisplayList(parentIdOf(prev), features);
-        const prevIdx = list.findIndex((f) => f.id === prevId);
-        let nextIdx = payload === 'up' ? prevIdx - 1 : prevIdx + 1;
-        if (nextIdx > list.length - 1) nextIdx = 0;
-        const next = list.at(nextIdx);
-        if (next) state.active = next.id;
-      }
     },
 
     enterLatlngPicker(state, { payload }: PayloadAction<{ type: string }>) {
@@ -166,16 +136,56 @@ export const {
   sync,
   create,
   setActive,
-  moveActive,
   enterLatlngPicker,
   cancelCreating,
   updateFeature,
   deleteFeature,
 } = actions;
 
+export const moveActive = createAction<'down' | 'up' | 'in' | 'out'>(
+  'features/moveActive',
+);
 export const createGroup = createAction('features/createGroup', () => ({
   payload: { id: uuid() },
 }));
+
+startListening({
+  actionCreator: moveActive,
+  effect: ({ payload }, l) => {
+    const state = l.getState();
+    const features = state.features.sync.features;
+    const prevId = state.features.active;
+    const prev = prevId ? features[prevId] : null;
+
+    let nextActive;
+    if (!prev) {
+      const list = computeFeaturesDisplayList(ROOT_FEATURE, features);
+      const next = list.at(0);
+      if (next) nextActive = next.id;
+    } else if (payload === 'in') {
+      if (prev.type !== 'group') return;
+      const list = computeFeaturesDisplayList(prev.id, features);
+      const next = list.at(0);
+      if (next) nextActive = next.id;
+    } else if (payload === 'out') {
+      const parentId = parentIdOf(prev);
+      if (parentId !== ROOT_FEATURE) {
+        nextActive = parentId;
+      }
+    } else {
+      const list = computeFeaturesDisplayList(parentIdOf(prev), features);
+      const prevIdx = list.findIndex((f) => f.id === prevId);
+      let nextIdx = payload === 'up' ? prevIdx - 1 : prevIdx + 1;
+      if (nextIdx > list.length - 1) nextIdx = 0;
+      const next = list.at(nextIdx);
+      if (next) nextActive = next.id;
+    }
+
+    if (nextActive) {
+      l.dispatch(setActive(nextActive));
+    }
+  },
+});
 
 export const selectCreating = (state: RootState) => state.features.creating;
 
