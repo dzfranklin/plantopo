@@ -4,825 +4,943 @@
     "height": 30,
     "x": 0,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-airfield": {
     "width": 30,
     "height": 30,
     "x": 30,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-airport": {
     "width": 30,
     "height": 30,
     "x": 60,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-alcohol-shop": {
     "width": 30,
     "height": 30,
     "x": 90,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-america-football": {
     "width": 30,
     "height": 30,
     "x": 120,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-art-gallery": {
     "width": 30,
     "height": 30,
     "x": 150,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-bakery": {
     "width": 30,
     "height": 30,
     "x": 180,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-bank": {
     "width": 30,
     "height": 30,
     "x": 210,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-bar": {
     "width": 30,
     "height": 30,
     "x": 240,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-baseball": {
     "width": 30,
     "height": 30,
     "x": 270,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-basketball": {
     "width": 30,
     "height": 30,
     "x": 300,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-beer": {
     "width": 30,
     "height": 30,
     "x": 330,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-bicycle": {
     "width": 30,
     "height": 30,
     "x": 360,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-building": {
     "width": 30,
     "height": 30,
     "x": 390,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-bus": {
     "width": 30,
     "height": 30,
     "x": 420,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-cafe": {
     "width": 30,
     "height": 30,
     "x": 450,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-camera": {
     "width": 30,
     "height": 30,
     "x": 480,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-campsite": {
     "width": 30,
     "height": 30,
     "x": 510,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-car": {
     "width": 30,
     "height": 30,
     "x": 540,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-cemetery": {
     "width": 30,
     "height": 30,
     "x": 570,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-chemist": {
     "width": 30,
     "height": 30,
     "x": 600,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-cinema": {
     "width": 30,
     "height": 30,
     "x": 630,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-circle-stroked": {
     "width": 30,
     "height": 30,
     "x": 660,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-circle": {
     "width": 30,
     "height": 30,
     "x": 690,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-city": {
     "width": 30,
     "height": 30,
     "x": 720,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-clothing-store": {
     "width": 30,
     "height": 30,
     "x": 750,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-college": {
     "width": 30,
     "height": 30,
     "x": 780,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-commercial": {
     "width": 30,
     "height": 30,
     "x": 810,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-cricket": {
     "width": 30,
     "height": 30,
     "x": 840,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-cross": {
     "width": 30,
     "height": 30,
     "x": 870,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-dam": {
     "width": 30,
     "height": 30,
     "x": 900,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-danger": {
     "width": 30,
     "height": 30,
     "x": 930,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-dentist": {
     "width": 30,
     "height": 30,
     "x": 960,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-disability": {
     "width": 30,
     "height": 30,
     "x": 990,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-dog-park": {
     "width": 30,
     "height": 30,
     "x": 1020,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-embassy": {
     "width": 30,
     "height": 30,
     "x": 1050,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-emergency-telephone": {
     "width": 30,
     "height": 30,
     "x": 1080,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-entrance": {
     "width": 30,
     "height": 30,
     "x": 1110,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-farm": {
     "width": 30,
     "height": 30,
     "x": 1140,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-fast-food": {
     "width": 30,
     "height": 30,
     "x": 1170,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-ferry": {
     "width": 30,
     "height": 30,
     "x": 1200,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-fire-station": {
     "width": 30,
     "height": 30,
     "x": 1230,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-fuel": {
     "width": 30,
     "height": 30,
     "x": 1260,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-garden": {
     "width": 30,
     "height": 30,
     "x": 1290,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-gift": {
     "width": 30,
     "height": 30,
     "x": 1320,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-golf": {
     "width": 30,
     "height": 30,
     "x": 1350,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-grocery": {
     "width": 30,
     "height": 30,
     "x": 1380,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-hairdresser": {
     "width": 30,
     "height": 30,
     "x": 1410,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-harbor": {
     "width": 30,
     "height": 30,
     "x": 1440,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-heart": {
     "width": 30,
     "height": 30,
     "x": 1470,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-heliport": {
     "width": 30,
     "height": 30,
     "x": 1500,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-hospital": {
     "width": 30,
     "height": 30,
     "x": 1530,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-ice-cream": {
     "width": 30,
     "height": 30,
     "x": 1560,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-industrial": {
     "width": 30,
     "height": 30,
     "x": 1590,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-land-use": {
     "width": 30,
     "height": 30,
     "x": 1620,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-laundry": {
     "width": 30,
     "height": 30,
     "x": 1650,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-library": {
     "width": 30,
     "height": 30,
     "x": 1680,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-lighthouse": {
     "width": 30,
     "height": 30,
     "x": 1710,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-lodging": {
     "width": 30,
     "height": 30,
     "x": 1740,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-logging": {
     "width": 30,
     "height": 30,
     "x": 1770,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-london-underground": {
     "width": 30,
     "height": 30,
     "x": 1800,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-marker-stroked": {
     "width": 30,
     "height": 30,
     "x": 1830,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-marker": {
     "width": 30,
     "height": 30,
     "x": 1860,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-minefield": {
     "width": 30,
     "height": 30,
     "x": 1890,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-mobilephone": {
     "width": 30,
     "height": 30,
     "x": 1920,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-monument": {
     "width": 30,
     "height": 30,
     "x": 1950,
     "y": 0,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-museum": {
     "width": 30,
     "height": 30,
     "x": 0,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-music": {
     "width": 30,
     "height": 30,
     "x": 30,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-oil-well": {
     "width": 30,
     "height": 30,
     "x": 60,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-park": {
     "width": 30,
     "height": 30,
     "x": 90,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-park2": {
     "width": 30,
     "height": 30,
     "x": 120,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-parking-garage": {
     "width": 30,
     "height": 30,
     "x": 150,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-parking": {
     "width": 30,
     "height": 30,
     "x": 180,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-pharmacy": {
     "width": 30,
     "height": 30,
     "x": 210,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-pitch": {
     "width": 30,
     "height": 30,
     "x": 240,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-place-of-worship": {
     "width": 30,
     "height": 30,
     "x": 270,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-playground": {
     "width": 30,
     "height": 30,
     "x": 300,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-police": {
     "width": 30,
     "height": 30,
     "x": 330,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-polling-place": {
     "width": 30,
     "height": 30,
     "x": 360,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-post": {
     "width": 30,
     "height": 30,
     "x": 390,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-prison": {
     "width": 30,
     "height": 30,
     "x": 420,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-rail-above": {
     "width": 30,
     "height": 30,
     "x": 450,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-rail-light": {
     "width": 30,
     "height": 30,
     "x": 480,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-rail-metro": {
     "width": 30,
     "height": 30,
     "x": 510,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-rail-underground": {
     "width": 30,
     "height": 30,
     "x": 540,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-rail": {
     "width": 30,
     "height": 30,
     "x": 570,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-religious-christian": {
     "width": 30,
     "height": 30,
     "x": 600,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-religious-jewish": {
     "width": 30,
     "height": 30,
     "x": 630,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-religious-muslim": {
     "width": 30,
     "height": 30,
     "x": 660,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-restaurant": {
     "width": 30,
     "height": 30,
     "x": 690,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-roadblock": {
     "width": 30,
     "height": 30,
     "x": 720,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-rocket": {
     "width": 30,
     "height": 30,
     "x": 750,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-school": {
     "width": 30,
     "height": 30,
     "x": 780,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-scooter": {
     "width": 30,
     "height": 30,
     "x": 810,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-shop": {
     "width": 30,
     "height": 30,
     "x": 840,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-skiing": {
     "width": 30,
     "height": 30,
     "x": 870,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-slaughterhouse": {
     "width": 30,
     "height": 30,
     "x": 900,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-soccer": {
     "width": 30,
     "height": 30,
     "x": 930,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-square-stroked": {
     "width": 30,
     "height": 30,
     "x": 960,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-square": {
     "width": 30,
     "height": 30,
     "x": 990,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-star-stroked": {
     "width": 30,
     "height": 30,
     "x": 1020,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-star": {
     "width": 30,
     "height": 30,
     "x": 1050,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-suitcase": {
     "width": 30,
     "height": 30,
     "x": 1080,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-swimming": {
     "width": 30,
     "height": 30,
     "x": 1110,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-telephone": {
     "width": 30,
     "height": 30,
     "x": 1140,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-tennis": {
     "width": 30,
     "height": 30,
     "x": 1170,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-theatre": {
     "width": 30,
     "height": 30,
     "x": 1200,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-toilets": {
     "width": 30,
     "height": 30,
     "x": 1230,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-town-hall": {
     "width": 30,
     "height": 30,
     "x": 1260,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-town": {
     "width": 30,
     "height": 30,
     "x": 1290,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-triangle-stroked": {
     "width": 30,
     "height": 30,
     "x": 1320,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-triangle": {
     "width": 30,
     "height": 30,
     "x": 1350,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-village": {
     "width": 30,
     "height": 30,
     "x": 1380,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-warehouse": {
     "width": 30,
     "height": 30,
     "x": 1410,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-waste-basket": {
     "width": 30,
     "height": 30,
     "x": 1440,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-water": {
     "width": 30,
     "height": 30,
     "x": 1470,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-wetland": {
     "width": 30,
     "height": 30,
     "x": 1500,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   },
   "maki-zoo": {
     "width": 30,
     "height": 30,
     "x": 1530,
     "y": 30,
-    "pixelRatio": 1
+    "pixelRatio": 1,
+    "sdf": true
   }
 }

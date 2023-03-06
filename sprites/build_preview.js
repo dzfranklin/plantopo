@@ -6,14 +6,14 @@ const out = {};
 fs.readdirSync(__dirname + '/svg').forEach((file) => {
   const fpath = __dirname + '/svg/' + file;
   const svg = fs.readFileSync(fpath, 'utf8');
-  const fname = fpath.split('/').pop().split('.')[0];
+  const name = fpath.split('/').pop().split('.')[0];
 
   const optimized = optimize(svg, {
     path: fpath,
     multipass: true,
   });
 
-  out[fname] = optimized.data;
+  out['feature:' + name] = optimized.data;
 });
 
 
