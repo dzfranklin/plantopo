@@ -77,7 +77,7 @@ Repo.insert!(%LayerSource{
   ]
 })
 
-Repo.insert(%LayerSource{
+Repo.insert!(%LayerSource{
   name: "Hillshading",
   default_opacity: 0.25,
   dependencies: [terrain],
