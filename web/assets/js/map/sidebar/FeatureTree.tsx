@@ -6,7 +6,7 @@ import {
   ROOT_FEATURE,
   sortFeatures,
 } from '../features/features';
-import { useAppDispatch, useAppSelector } from '../hooks';
+import { useAppDispatch, useAppSelector, useAppStore } from '../hooks';
 import {
   deleteFeature,
   selectFeaturesList,
@@ -136,9 +136,10 @@ function FeatureItem({
   dragState: DragState | undefined;
   level: number;
 }) {
-  const { type } = feature;
+  const { id, type } = feature;
 
   const dispatch = useAppDispatch();
+  const store = useAppStore();
   const isActive = useAppSelector(selectIsActiveFeature(feature.id));
   const activePeers = useAppSelector(selectPeersActiveOnFeature(feature.id));
   const [isRename, setIsRename] = useState(false);
@@ -146,19 +147,20 @@ function FeatureItem({
   const isDragged = dragState && dragState.id === feature.id;
 
   useEffect(() => {
-    if (isActive) {
-      const handler = (e: KeyboardEvent) => {
+    const handler = (e: KeyboardEvent) => {
+      const state = store.getState();
+      if (selectIsActiveFeature(id)(state)) {
         const { key, altKey, ctrlKey } = e;
         if (!ctrlKey && altKey && key === 'r') {
           setIsRename(true);
         } else if (!ctrlKey && !altKey && key === 'Enter') {
-          setIsExpanded(!isExpanded);
+          setIsExpanded((prev) => !prev);
         }
-      };
-      window.addEventListener('keydown', handler);
-      return () => window.removeEventListener('keydown', handler);
-    }
-  }, [isActive, setIsRename, isExpanded, setIsExpanded]);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [id, store, setIsRename, setIsExpanded]);
 
   if (type !== 'group' && type !== 'point' && type !== 'route') {
     console.info(`Unknown feature [type=${feature.type}]`, feature);
