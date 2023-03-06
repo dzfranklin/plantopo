@@ -1,4 +1,4 @@
-import MapBase from './base/MapBase';
+import BaseMap from './base/BaseMap';
 import { useState } from 'react';
 import { useAppSelector } from './hooks';
 import LoadingIndicator from './base/LoadingIndicator';
@@ -24,7 +24,7 @@ export default function MapApp() {
 
       {loaded ? (
         <>
-          <MapBase isLoading={setBaseIsLoading} />
+          <BaseMap isLoading={setBaseIsLoading} />
           <CreditImages creditOS={creditOS} />
           <LoadingIndicator isLoading={baseIsLoading} />
 

@@ -45,7 +45,7 @@ export interface Props {
 const FLY_TO_SPEED = 2.8;
 const FLY_TO_PADDING_PX = 100;
 
-export default function MapBase(props: Props) {
+export default function BaseMap(props: Props) {
   const store = useAppStore();
   const dispatch = useAppDispatch();
   const { isLoading } = props;
