@@ -12,17 +12,24 @@
 alias PlanTopo.{Repo, Accounts, Maps}
 alias Maps.{LayerData, LayerSource}
 
-{:ok, user} =
-  Accounts.register_user(%{
-    email: "test@example.com",
-    username: "test",
-    password: "testpassword"
-  })
+_user =
+  case Accounts.get_user_by_email("test@example.com") do
+    nil ->
+      {:ok, user} =
+        Accounts.register_user(%{
+          email: "test@example.com",
+          username: "test",
+          password: "testpassword"
+        })
 
-# TODO: Add some kind of vector streets
+      user
+
+    user ->
+      user
+  end
 
 terrain =
-  Repo.insert!(%LayerData{
+  %{
     id: "terrain",
     spec: %{
       type: "raster-dem",
@@ -50,10 +57,12 @@ terrain =
         |> Enum.map(&String.trim/1)
         |> Enum.join(" ")
     }
-  })
+  }
+  |> LayerData.changeset()
+  |> Repo.insert!(on_conflict: :replace_all, conflict_target: :id)
 
 satellite_data =
-  Repo.insert!(%LayerData{
+  %{
     id: "mapbox.satellite",
     attribution: "mapbox",
     spec: %{
@@ -63,11 +72,13 @@ satellite_data =
       ],
       maxzoom: 21
     }
-  })
+  }
+  |> LayerData.changeset()
+  |> Repo.insert!(on_conflict: :replace_all, conflict_target: :id)
 
-Repo.insert!(%LayerSource{
+%{
+  id: "1497ba46-18b9-46fa-a7a8-ca6d44dc61ec",
   name: "Satellite",
-  dependencies: [satellite_data],
   layer_specs: [
     %{
       id: "layer",
@@ -75,12 +86,14 @@ Repo.insert!(%LayerSource{
       type: "raster"
     }
   ]
-})
+}
+|> LayerSource.changeset()
+|> Repo.insert!(on_conflict: :replace_all, conflict_target: :id)
 
-Repo.insert!(%LayerSource{
+%{
+  id: "bff70b3e-d824-4aba-9a4b-0f99749e93ab",
   name: "Hillshading",
   default_opacity: 0.25,
-  dependencies: [terrain],
   layer_specs: [
     %{
       id: "layer",
@@ -93,19 +106,26 @@ Repo.insert!(%LayerSource{
       }
     }
   ]
-})
+}
+|> LayerSource.changeset()
+|> Repo.insert!(on_conflict: :replace_all, conflict_target: :id)
 
 # TODO: Layer sources should have fine-grained clip paths so that we can clip around the uk.
 # Or at least bboxes
 
-Maps.import_mapbox_style!(
-  File.read!("priv/os_style.json"),
-  %{"name" => "Ordinance Survey Vector"},
-  fn %{"id" => "esri", "spec" => spec} ->
-    %{
-      "id" => "os.vector",
-      "attribution" => "os",
-      "spec" => spec
-    }
-  end
-)
+{osv_source, [osv_data]} =
+  Maps.import_mapbox_style(
+    "2417837b-7f85-4cd6-8d6c-b11532efef13",
+    File.read!("priv/os_style.json"),
+    %{"name" => "Ordinance Survey Vector"},
+    fn %{"id" => "esri", "spec" => spec} ->
+      %{
+        "id" => "os.vector",
+        "attribution" => "os",
+        "spec" => spec
+      }
+    end
+  )
+
+Repo.insert!(osv_source, on_conflict: :replace_all, conflict_target: :id)
+Repo.insert!(osv_data, on_conflict: :replace_all, conflict_target: :id)

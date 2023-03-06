@@ -18,7 +18,7 @@ defmodule PlanTopo.Maps.LayerSource do
 
   def changeset(source \\ %__MODULE__{}, attrs) do
     source
-    |> cast(attrs, [:name, :default_opacity, :layer_specs, :glyphs, :sprite])
+    |> cast(attrs, [:id, :name, :default_opacity, :layer_specs, :glyphs, :sprite])
     |> cast_assoc(:dependencies)
     |> validate_required([:name, :layer_specs])
   end

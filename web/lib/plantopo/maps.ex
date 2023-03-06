@@ -190,7 +190,7 @@ defmodule PlanTopo.Maps do
     |> Repo.all()
   end
 
-  def import_mapbox_style!(sty, fallbacks \\ %{}, transform_dep \\ & &1) do
+  def import_mapbox_style(source_id, sty, fallbacks \\ %{}, transform_dep \\ & &1) do
     sty = Jason.decode!(sty)
 
     %{
@@ -226,13 +226,15 @@ defmodule PlanTopo.Maps do
         end
       end)
 
-    LayerSource.changeset(%{
-      name: name,
-      layer_specs: layers,
-      glyphs: glyphs,
-      sprite: sprite,
-      dependencies: transformed_deps
-    })
-    |> Repo.insert!()
+    {
+      LayerSource.changeset(%{
+        id: source_id,
+        name: name,
+        layer_specs: layers,
+        glyphs: glyphs,
+        sprite: sprite
+      }),
+      Enum.map(transformed_deps, &LayerData.changeset/1)
+    }
   end
 end
