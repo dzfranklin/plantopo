@@ -1,4 +1,4 @@
-import { Features } from '../features/features';
+import { Features } from '../features/types';
 import { Layer } from '../layers/types';
 import { ViewAt } from '../ViewAt';
 

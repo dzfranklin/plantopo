@@ -26,7 +26,7 @@ import { DeltaType, diff, OperationType } from '@sanalabs/json';
 import { RootState } from '../store/store';
 import { USER_FEATURES_DATA_ID } from './featuresLayer';
 import '../../../node_modules/maplibre-gl/dist/maplibre-gl.css';
-import { computeFeatureBbox, serializeLngLat } from '../features/features';
+import { computeFeatureBbox, serializeLngLat } from '../features/algorithms';
 import { selectGeolocation } from '../controls/slice';
 import * as featuresSlice from '../features/slice';
 import { v4 as uuid } from 'uuid';

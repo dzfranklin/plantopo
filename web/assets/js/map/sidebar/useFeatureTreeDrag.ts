@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { idxOfAt, ROOT_FEATURE, serializeAt } from '../features/features';
-import { idxBetween } from '../features/fracIdx';
+import { idxOfAt, serializeAt, idxBetween } from '../features/algorithms';
+import { ROOT_FEATURE } from '../features/types';
 import { setActive, updateFeature } from '../features/slice';
 import { useAppDispatch } from '../hooks';
 

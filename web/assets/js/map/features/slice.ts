@@ -12,14 +12,16 @@ import {
   computeFeaturesDisplayList,
   computeFeaturesList,
   deleteFeatures,
+  parentIdOf,
+} from './algorithms';
+import {
   Feature,
   Features,
   GroupFeature,
-  parentIdOf,
   PointFeature,
   ROOT_FEATURE,
   RouteFeature,
-} from './features';
+} from './types';
 import { v4 as uuid } from 'uuid';
 import { startListening } from '../store/listener';
 

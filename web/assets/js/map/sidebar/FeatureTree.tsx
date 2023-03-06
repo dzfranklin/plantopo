@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import classNames from '../../classNames';
-import {
-  DEFAULT_POINT_SPRITE,
-  Feature,
-  ROOT_FEATURE,
-  sortFeatures,
-} from '../features/features';
+import { sortFeatures } from '../features/algorithms';
+import { DEFAULT_POINT_SPRITE, Feature, ROOT_FEATURE } from '../features/types';
 import { useAppDispatch, useAppSelector, useAppStore } from '../hooks';
 import {
   deleteFeature,

@@ -1,4 +1,5 @@
-import { deserializeLngLat, Features } from '../features/features';
+import { deserializeLngLat } from '../features/algorithms';
+import { Features } from '../features/types';
 
 export default function computeFeaturesGeoJson(
   map: Features,

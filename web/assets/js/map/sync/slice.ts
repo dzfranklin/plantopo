@@ -4,7 +4,7 @@ import { Layer } from '../layers/types';
 import { startListening } from '../store/listener';
 import * as layersSlice from '../layers/slice';
 import * as featuresSlice from '../features/slice';
-import { Features } from '../features/features';
+import { Features } from '../features/types';
 import { RootState } from '../store/store';
 import { Aware, PeerAware, SyncData } from './types';
 import { CurrentUser } from '../../globals';
