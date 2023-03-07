@@ -21,7 +21,7 @@ use yrs::{
         decoder::{Decode, DecoderV1},
         encoder::{Encode, Encoder, EncoderV1},
     },
-    Doc, Map, ReadTxn, StateVector, Transact, Update, WriteTxn,
+    Doc, Map, ReadTxn, StateVector, Transact, TransactionMut, Update,
 };
 
 // NOTE: We aren't sent users that can't view the document, so we only check edit operations
@@ -344,8 +344,11 @@ fn handle_recv(
     Ok(())
 }
 
-fn fix_doc(_tx: &mut impl WriteTxn) {
-    // TODO:
+fn fix_doc(tx: &mut TransactionMut) {
+    let _data = match tx.get_map("data") {
+        Some(data) => data,
+        None => return,
+    };
 }
 
 fn make_doc_snapshot(doc: &Doc, after_error: Option<String>) -> Snapshot {
