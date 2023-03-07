@@ -70,7 +70,7 @@ type LngLat = string; // lng, lat as JSON [number, number]
 // check out sana labs diff
 
 // symbol layer
-interface PointStyle {
+export interface PointStyle {
   // Icon paint
   'icon-color'?: Color;
   'icon-halo-blur'?: number;
@@ -79,14 +79,14 @@ interface PointStyle {
   'icon-opacity'?: number;
   // Icon layout
   'icon-anchor'?: string;
-  'icon-image'?: string; // Figure out a good naming scheme
+  'icon-image'?: string;
   'icon-offset'?: string; // JSON [number, number]
   'icon-size'?: number;
   // Text paint
   'text-color'?: Color;
   'text-halo-blur'?: number;
   'text-halo-color'?: Color;
-  'text-halo-number'?: number;
+  'text-halo-width'?: number;
   'text-opacity'?: number;
   // Text layout
   'text-anchor'?: string;
@@ -97,16 +97,9 @@ interface PointStyle {
   'text-offset'?: string; // JSON [number, number]
   'text-rotate'?: number;
   'text-size'?: number;
-  // Always layout
-  // 'icon-allow-overlap': true
-  // 'icon-ignore-placement': true
-  // 'symbol-sort-key': idx
-  // 'text-allow-overlap': true;
-  // 'text-field': the geojson prop name
-  // 'text-ignore-placement': true
 }
 
-interface RouteLineStyle {
+export interface RouteLineStyle {
   // Paint
   'line-blur'?: number;
   'line-color'?: Color;

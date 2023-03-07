@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import classNames from '../../classNames';
 import { sortFeatures } from '../features/algorithms';
-import { DEFAULT_POINT_SPRITE, Feature, ROOT_FEATURE } from '../features/types';
+import { Feature, ROOT_FEATURE } from '../features/types';
 import { useAppDispatch, useAppSelector, useAppStore } from '../hooks';
 import {
-  deleteFeature,
   selectFeaturesList,
   selectIsActiveFeature,
   selectPeersActiveOnFeature,
@@ -12,12 +11,15 @@ import {
   updateFeature,
 } from '../features/slice';
 import * as ContextMenu from '@radix-ui/react-context-menu';
+import * as Popover from '@radix-ui/react-popover';
 import '../components/contextMenu.css';
 import useFeatureTreeDrag, { DragState } from './useFeatureTreeDrag';
 import { AnimatePresence, motion } from 'framer-motion';
 import SpritePreview from '../sprite/SpritePreview';
 import { FolderIcon } from '@heroicons/react/24/outline';
 import { RouteIcon, DropdownIcon } from '../components/icons';
+import StylePopover from './StylePopover';
+import FeatureContextMenu from './FeatureContextMenu';
 
 const UNNAMED_PLACEHOLDER = {
   group: 'Unnamed folder',
@@ -137,6 +139,7 @@ function FeatureItem({
   const activePeers = useAppSelector(selectPeersActiveOnFeature(feature.id));
   const [isRename, setIsRename] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [styleOpen, setStyleOpen] = useState(false);
   const isDragged = dragState && dragState.id === feature.id;
 
   useEffect(() => {
@@ -146,14 +149,19 @@ function FeatureItem({
         const { key, altKey, ctrlKey } = e;
         if (!ctrlKey && altKey && key === 'r') {
           setIsRename(true);
+          e.preventDefault();
         } else if (!ctrlKey && !altKey && key === 'Enter') {
           setIsExpanded((prev) => !prev);
+          e.preventDefault();
+        } else if (!ctrlKey && altKey && key === 's') {
+          setStyleOpen(true);
+          e.preventDefault();
         }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [id, store, setIsRename, setIsExpanded]);
+  }, [id, store, setIsRename, setIsExpanded, setStyleOpen]);
 
   if (type !== 'group' && type !== 'point' && type !== 'route') {
     console.info(`Unknown feature [type=${feature.type}]`, feature);
@@ -174,70 +182,80 @@ function FeatureItem({
         dragged: { opacity: 0.4 },
       }}
     >
-      <div
-        className={classNames(
-          'flex flex-row items-center gap-[6px] feature-tree__item grow',
-          isActive && 'bg-blue-100',
-          activePeers.length > 0 && 'border-dashed border-purple-500',
-        )}
-        style={{
-          paddingLeft: `${level * LEVEL_INDENT_PX}px`,
-        }}
-      >
-        <button
-          disabled={feature.type !== 'group'}
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="pl-[3px] self-stretch disabled:opacity-0"
+      <Popover.Root open={styleOpen} onOpenChange={setStyleOpen} modal={true}>
+        <div
+          className={classNames(
+            'flex flex-row items-center gap-[6px] feature-tree__item grow',
+            isActive && 'bg-blue-100',
+            activePeers.length > 0 && 'border-dashed border-purple-500',
+          )}
+          style={{
+            paddingLeft: `${level * LEVEL_INDENT_PX}px`,
+          }}
         >
-          <DropdownIcon className={classNames(!isExpanded && '-rotate-90')} />
-        </button>
+          <button
+            disabled={feature.type !== 'group'}
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="pl-[3px] self-stretch disabled:opacity-0"
+          >
+            <DropdownIcon className={classNames(!isExpanded && '-rotate-90')} />
+          </button>
 
-        <PreviewIcon feature={feature} />
+          <Popover.Trigger>
+            <PreviewIcon feature={feature} />
+          </Popover.Trigger>
 
-        <ContextMenu.Root
-          onOpenChange={(isOpen) => isOpen && dispatch(setActive(feature.id))}
-        >
-          <ContextMenu.Trigger asChild>
-            <button
-              onClick={() => {
-                if (isActive) setIsRename(true);
-                else dispatch(setActive(feature.id));
-              }}
-              className="flex flex-row items-center overflow-x-hidden text-sm text-left truncate grow"
-            >
-              {isRename ? (
-                <input
-                  placeholder={UNNAMED_PLACEHOLDER[feature.type]}
-                  value={feature.name || ''}
-                  onChange={(e) =>
-                    dispatch(
-                      updateFeature({
-                        id: feature.id,
-                        update: { name: e.target.value },
-                      }),
-                    )
-                  }
-                  autoFocus
-                  onFocus={(e) => e.currentTarget.select()}
-                  onBlur={() => setIsRename(false)}
-                  onKeyDown={(e) =>
-                    (e.key === 'Escape' || e.key === 'Enter') &&
-                    setIsRename(false)
-                  }
-                  className="bg-blue-100 outline-none grow"
-                />
-              ) : (
-                <span
-                  className={classNames('grow', !feature.name && 'opacity-60')}
-                >
-                  {feature.name || UNNAMED_PLACEHOLDER[feature.type]}
-                </span>
-              )}
-            </button>
-          </ContextMenu.Trigger>
-          <FeatureContextMenu feature={feature} setIsRename={setIsRename} />
-        </ContextMenu.Root>
-      </div>
+          <ContextMenu.Root
+            onOpenChange={(isOpen) => isOpen && dispatch(setActive(feature.id))}
+          >
+            <ContextMenu.Trigger asChild>
+              <button
+                onClick={() => {
+                  if (isActive) setIsRename(true);
+                  else dispatch(setActive(feature.id));
+                }}
+                className="flex flex-row items-center overflow-x-hidden text-sm text-left truncate grow"
+              >
+                {isRename ? (
+                  <input
+                    placeholder={UNNAMED_PLACEHOLDER[feature.type]}
+                    value={feature.name || ''}
+                    onChange={(e) =>
+                      dispatch(
+                        updateFeature(feature.id, { name: e.target.value }),
+                      )
+                    }
+                    autoFocus
+                    onFocus={(e) => e.currentTarget.select()}
+                    onBlur={() => setIsRename(false)}
+                    onKeyDown={(e) =>
+                      (e.key === 'Escape' || e.key === 'Enter') &&
+                      setIsRename(false)
+                    }
+                    className="bg-blue-100 outline-none grow"
+                  />
+                ) : (
+                  <span
+                    className={classNames(
+                      'grow',
+                      !feature.name && 'opacity-60',
+                    )}
+                  >
+                    {feature.name || UNNAMED_PLACEHOLDER[feature.type]}
+                  </span>
+                )}
+              </button>
+            </ContextMenu.Trigger>
+            <FeatureContextMenu
+              feature={feature}
+              setIsRename={setIsRename}
+              setStyleOpen={setStyleOpen}
+            />
+          </ContextMenu.Root>
+        </div>
+
+        <StylePopover feature={feature} />
+      </Popover.Root>
 
       {type === 'group' && (
         <GroupChildren
@@ -254,15 +272,21 @@ const PreviewIcon = ({ feature }: { feature: Feature }) => {
   if (feature.type === 'group') {
     return <FolderIcon height="18px" />;
   } else if (feature.type === 'point') {
-    return (
-      <SpritePreview
-        sprite={feature?.style?.['icon-image'] ?? DEFAULT_POINT_SPRITE}
-        fill={feature?.style?.['icon-color'] ?? 'black'}
-        opacity={feature?.style?.['icon-opacity'] ?? 1}
-        width="18px"
-        height="18px"
-      />
-    );
+    const sprite = feature?.style?.['icon-image'];
+
+    if (sprite) {
+      return (
+        <SpritePreview
+          sprite={sprite}
+          fill={feature?.style?.['icon-color'] ?? 'black'}
+          opacity={feature?.style?.['icon-opacity'] ?? 1}
+          width="18px"
+          height="18px"
+        />
+      );
+    } else {
+      return <div className="w-[18px] h-[18px]" />;
+    }
   } else if (feature.type === 'route') {
     return (
       <RouteIcon
@@ -274,31 +298,4 @@ const PreviewIcon = ({ feature }: { feature: Feature }) => {
   } else {
     return <></>;
   }
-};
-
-const FeatureContextMenu = ({ feature, setIsRename }) => {
-  const dispatch = useAppDispatch();
-
-  return (
-    <ContextMenu.Portal>
-      <ContextMenu.Content
-        className="ContextMenuContent"
-        loop={true}
-        collisionPadding={5}
-      >
-        <ContextMenu.Item
-          onClick={() => setTimeout(() => setIsRename(true))}
-          className="ContextMenuItem"
-        >
-          Rename <div className="RightSlot">Alt+R</div>
-        </ContextMenu.Item>
-        <ContextMenu.Item
-          onClick={() => dispatch(deleteFeature(feature))}
-          className="ContextMenuItem"
-        >
-          Delete <div className="RightSlot">Del</div>
-        </ContextMenu.Item>
-      </ContextMenu.Content>
-    </ContextMenu.Portal>
-  );
 };

@@ -1,5 +1,8 @@
-export default function sortBy<T, B>(list: T[], key: (item: T) => B) {
-  return list.slice().sort((a, b) => {
+export default function sortBy<T, B>(
+  list: Iterable<T> | ArrayLike<T>,
+  key: (item: T) => B,
+) {
+  return Array.from(list).sort((a, b) => {
     const keyA = key(a);
     const keyB = key(b);
     if (keyA < keyB) return -1;

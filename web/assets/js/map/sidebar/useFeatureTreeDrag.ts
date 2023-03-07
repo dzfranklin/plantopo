@@ -146,12 +146,7 @@ export default function useFeatureTreeDrag(): DragState | undefined {
       } else if (draggedElem && e.type === 'drop') {
         if (!state) return;
 
-        dispatch(
-          updateFeature({
-            id: state.id,
-            update: { at: state.at },
-          }),
-        );
+        dispatch(updateFeature(state.id, { at: state.at }));
 
         draggedElem = null;
         state = undefined;

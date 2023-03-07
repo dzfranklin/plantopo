@@ -327,14 +327,7 @@ export default function BaseMap(props: Props) {
 
         if (type === 'point') {
           const lngLat = serializeLngLat([evt.lngLat.lng, evt.lngLat.lat]);
-          dispatch(
-            featuresSlice.create({
-              id: uuid(),
-              at,
-              type: 'point',
-              lngLat,
-            }),
-          );
+          dispatch(featuresSlice.createPoint({ at, lngLat }));
         }
       }
     });

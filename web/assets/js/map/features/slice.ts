@@ -24,6 +24,8 @@ import {
 } from './types';
 import { v4 as uuid } from 'uuid';
 import { startListening } from '../store/listener';
+import isObject from '../util/isObject';
+import sortBy from '../util/sortBy';
 
 export interface State {
   creating?: {
@@ -85,9 +87,17 @@ const slice = createSlice({
       });
       state.active = id;
     },
-    create(state, { payload }: PayloadAction<Feature>) {
-      const features = state.sync.features;
-      features[payload.id] = payload;
+    createPoint(
+      state,
+      { payload }: PayloadAction<Pick<PointFeature, 'id' | 'at' | 'lngLat'>>,
+    ) {
+      state.sync.features[payload.id] = {
+        id: payload.id,
+        type: 'point',
+        at: payload.at,
+        lngLat: payload.lngLat,
+        style: {},
+      };
       state.active = payload.id;
       state.creating = undefined;
     },
@@ -99,10 +109,17 @@ const slice = createSlice({
       state,
       { payload }: PayloadAction<{ id: string; update: Partial<Feature> }>,
     ) {
+      // Note that the prop of a prop is never an object
       const feature = state.sync.features[payload.id];
       if (!feature) throw new Error('updateFeature: not found');
       for (const prop in payload.update) {
-        feature[prop] = payload.update[prop];
+        const updateVal = payload.update[prop];
+
+        if (isObject(updateVal)) {
+          feature[prop] = { ...feature[prop], ...updateVal };
+        } else {
+          feature[prop] = { ...feature[prop], ...updateVal };
+        }
       }
     },
     deleteFeature(state, { payload }: PayloadAction<Feature>) {
@@ -136,11 +153,9 @@ const actions = slice.actions;
 
 export const {
   sync,
-  create,
   setActive,
   enterLatlngPicker,
   cancelCreating,
-  updateFeature,
   deleteFeature,
 } = actions;
 
@@ -150,6 +165,18 @@ export const moveActive = createAction<'down' | 'up' | 'in' | 'out'>(
 export const createGroup = createAction('features/createGroup', () => ({
   payload: { id: uuid() },
 }));
+export const createPoint = createAction(
+  'features/createPoint',
+  ({ at, lngLat }: Pick<PointFeature, 'at' | 'lngLat'>) => ({
+    payload: { id: uuid(), at, lngLat },
+  }),
+);
+export const updateFeature = createAction(
+  'features/updateFeature',
+  (id: string, update: Partial<Feature>) => ({
+    payload: { id, update },
+  }),
+);
 
 startListening({
   actionCreator: moveActive,
@@ -235,4 +262,55 @@ export const selectFirstTopLevelFeature = createSelector(
 export const selectLastTopLevelFeature = createSelector(
   [selectFeaturesDisplayList(ROOT_FEATURE)],
   (list) => list.at(-1),
+);
+
+const COMMON_COUNT = 14;
+// prettier-ignore
+const DEFAULT_COMMON = [
+  'feature:maki-circle', 'feature:maki-circle-stroked', 'feature:maki-triangle',
+  'feature:maki-triangle-stroked', 'feature:maki-square', 'feature:maki-square-stroked',
+  'feature:maki-star', 'feature:maki-star-stroked', 'feature:maki-heart', 'feature:maki-embassy',
+  'feature:maki-marker', 'feature:maki-marker-stroked', 'feature:maki-campsite',
+  'feature:maki-parking', 'feature:maki-water',
+];
+
+export const selectCommonSprites = createSelector(
+  [selectFeatures],
+  (features) => {
+    const counts = new Map<string, number>();
+    for (const feature of Object.values(features)) {
+      if (feature.type === 'point') {
+        const sprite = feature.style?.['icon-image'];
+        if (sprite) {
+          counts.set(sprite, (counts.get(sprite) || 0) + 1);
+        }
+      } else if (feature.type === 'group') {
+        const pointSprite = feature.childPointStyle?.['icon-image'];
+        if (pointSprite) {
+          counts.set(pointSprite, (counts.get(pointSprite) || 0) + 1);
+        }
+
+        const routeSprite = feature.childRouteLabelStyle?.['icon-image'];
+        if (routeSprite) {
+          counts.set(routeSprite, (counts.get(routeSprite) || 0) + 1);
+        }
+      } else if (feature.type === 'route') {
+        const sprite = feature.labelStyle?.['icon-image'];
+        if (sprite) counts.set(sprite, (counts.get(sprite) || 0) + 1);
+      }
+    }
+
+    const out = sortBy(counts.entries(), ([_sprite, count]) => count)
+      .slice(0, COMMON_COUNT - 1)
+      .map(([sprite, _count]) => sprite);
+
+    for (const sprite of DEFAULT_COMMON) {
+      if (out.length === COMMON_COUNT) break;
+      if (!out.includes(sprite)) {
+        out.push(sprite);
+      }
+    }
+
+    return out;
+  },
 );
