@@ -110,9 +110,6 @@ satellite_data =
 |> LayerSource.changeset()
 |> Repo.insert!(on_conflict: :replace_all, conflict_target: :id)
 
-# TODO: Layer sources should have fine-grained clip paths so that we can clip around the uk.
-# Or at least bboxes
-
 {osv_source, [osv_data]} =
   Maps.import_mapbox_style(
     "2417837b-7f85-4cd6-8d6c-b11532efef13",
