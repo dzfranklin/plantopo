@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 
-type Child = ReactNode | string | undefined;
-type ComponentChildren = Child | Child[];
+export type ComponentChild = ReactNode | string | undefined;
+type ComponentChildren = ComponentChild | ComponentChild[];
 
 export default ComponentChildren;

@@ -7,14 +7,13 @@ import Controls from './controls/Controls';
 import MapSync from './sync/Sync';
 import Sidebar from './sidebar/Sidebar';
 import { useGlobalKeyboardShortcuts } from './keyboardShortcuts';
-import { selectShouldCreditOS } from './layers/slice';
 import { selectDidInitialLoad } from './sync/slice';
-import { AnimatePresence, motion } from 'framer-motion';
+import Attribution from './Attribution';
 
 export default function MapApp() {
   const loaded = useAppSelector(selectDidInitialLoad);
   const [baseIsLoading, setBaseIsLoading] = useState(true);
-  const creditOS = useAppSelector(selectShouldCreditOS);
+  const [attrib, setAttrib] = useState<string[]>([]);
 
   useGlobalKeyboardShortcuts();
 
@@ -24,8 +23,8 @@ export default function MapApp() {
 
       {loaded ? (
         <>
-          <BaseMap isLoading={setBaseIsLoading} />
-          <CreditImages creditOS={creditOS} />
+          <BaseMap isLoading={setBaseIsLoading} setAttribution={setAttrib} />
+          <Attribution value={attrib} />
           <LoadingIndicator isLoading={baseIsLoading} />
 
           <Sidebar />
@@ -38,29 +37,5 @@ export default function MapApp() {
 
       <Flash />
     </div>
-  );
-}
-
-function CreditImages(props: { creditOS: boolean }) {
-  return (
-    <motion.div
-      layout
-      className="credit-images pointer-events-none flex flex-row gap-2 h-[32px] pb-[8px] pl-[8px]"
-    >
-      <img src="/images/mapbox_logo.svg" className="h-full" />
-
-      <AnimatePresence initial={false}>
-        {props.creditOS && (
-          <motion.img
-            layoutId="credit-os"
-            src="/images/os_logo.svg"
-            className="h-full"
-            exit={{ opacity: 0 }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          />
-        )}
-      </AnimatePresence>
-    </motion.div>
   );
 }

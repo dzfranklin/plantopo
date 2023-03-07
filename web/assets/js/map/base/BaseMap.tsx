@@ -30,6 +30,7 @@ import { selectSidebarOpen } from '../sidebar/slice';
 
 export interface Props {
   isLoading: (_: boolean) => void;
+  setAttribution: (_: string[]) => void;
 }
 
 const FLY_TO_SPEED = 2.8;
@@ -38,7 +39,7 @@ const FLY_TO_PADDING_PX = 100;
 export default function BaseMap(props: Props) {
   const store = useAppStore();
   const dispatch = useAppDispatch();
-  const { isLoading } = props;
+  const { isLoading, setAttribution } = props;
 
   const nodeRef = useRef<HTMLDivElement>(null);
 
@@ -67,6 +68,7 @@ export default function BaseMap(props: Props) {
       bearing: initialViewAt?.bearing,
       zoom: initialViewAt?.zoom,
       keyboard: false,
+      attributionControl: false,
       transformRequest: (urlS) => {
         const url = new URL(urlS);
         const params = url.searchParams;
@@ -343,13 +345,34 @@ export default function BaseMap(props: Props) {
       });
     }
 
+    for (const evt of ['styledata', 'sourcedata', 'terrain']) {
+      map.on(evt, (e) => {
+        if (
+          e?.['sourceDataType'] === 'metadata' ||
+          e?.['sourceDataType'] === 'visibility' ||
+          e?.['dataType'] === 'style' ||
+          e?.['type'] === 'terrain'
+        ) {
+          const list = new Set<string>();
+          for (const cache of Object.values(map.style.sourceCaches)) {
+            if (cache.used || cache.usedForTerrain) {
+              const attrib = cache.getSource().attribution;
+              if (attrib) list.add(attrib);
+            }
+          }
+          const value = Array.from(list.values()).sort();
+          setAttribution(value);
+        }
+      });
+    }
+
     return () => {
       stopListening(flyToListener);
       stopListening(fitActiveListener);
       storeUnsubscribe?.();
       map.remove();
     };
-  }, [dispatch, isLoading, store]);
+  }, [dispatch, isLoading, store, setAttribution]);
 
   return <div ref={nodeRef} className="map-base" />;
 }
