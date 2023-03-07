@@ -84,9 +84,6 @@ startListening({
 
 // Selectors
 
-export const selectDidInitialLoad = (state: RootState) =>
-  state.sync.didInitialLoad;
-
 export const selectPeers = (state: RootState) => state.sync.peerAwares || {};
 
 export const selectEnableLocalSave = (state: RootState) =>

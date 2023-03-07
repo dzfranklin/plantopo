@@ -1,6 +1,5 @@
-import { useAppDispatch, useAppSelector, useAppStore } from './hooks';
+import { useAppDispatch, useAppStore } from './hooks';
 import { useEffect } from 'react';
-import { selectDidInitialLoad } from './sync/slice';
 import {
   cancelCreating,
   createGroup,
@@ -16,11 +15,8 @@ import { selectSidebarOpen } from './sidebar/slice';
 export const useGlobalKeyboardShortcuts = () => {
   const store = useAppStore();
   const dispatch = useAppDispatch();
-  const loaded = useAppSelector(selectDidInitialLoad);
 
   useEffect(() => {
-    if (!loaded) return;
-
     const handler = (event: KeyboardEvent) => {
       const { key, ctrlKey, altKey, metaKey, shiftKey } = event;
       const anyMod = ctrlKey || altKey || metaKey || shiftKey;
@@ -62,5 +58,5 @@ export const useGlobalKeyboardShortcuts = () => {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [loaded, dispatch, store]);
+  }, [dispatch, store]);
 };
