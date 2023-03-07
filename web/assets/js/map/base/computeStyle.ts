@@ -2,8 +2,8 @@ import * as mlStyle from '@maplibre/maplibre-gl-style-spec';
 import {
   USER_FEATURES_DATA_ID,
   USER_FEATURE_LAYER_SPECS,
-} from './base/featuresLayer';
-import { Layer, LayerData, LayerSource } from './layers/types';
+} from './featuresLayer';
+import { Layer, LayerData, LayerSource } from '../layers/types';
 
 const ATTRIBUTION = {
   os: `Contains OS data &copy; Crown copyright and database rights ${new Date().getFullYear()}`,

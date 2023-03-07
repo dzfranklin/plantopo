@@ -15,11 +15,7 @@ import { ViewAt } from '../ViewAt';
 import '../../globals';
 import { startListening, stopListening } from '../store/listener';
 import '../../map';
-import {
-  computeLayers,
-  computeSources,
-  computeTerrain as makeTerrain,
-} from '../computeStyle';
+import { computeLayers, computeSources, computeTerrain } from './computeStyle';
 import reportTileLoad from './reportTileLoad';
 import computeFeaturesGeoJson from './featuresGeoJson';
 import { DeltaType, diff, OperationType } from '@sanalabs/json';
@@ -29,7 +25,6 @@ import '../../../node_modules/maplibre-gl/dist/maplibre-gl.css';
 import { computeFeatureBbox, serializeLngLat } from '../features/algorithms';
 import { selectGeolocation } from '../controls/slice';
 import * as featuresSlice from '../features/slice';
-import { v4 as uuid } from 'uuid';
 import { selectFeatures } from '../features/slice';
 import { selectSidebarOpen } from '../sidebar/slice';
 
@@ -114,7 +109,7 @@ export default function BaseMap(props: Props) {
         const is3d = selectIs3d(state);
         if (!prevState || is3d !== selectIs3d(prevState)) {
           if (is3d) {
-            const terrain = makeTerrain();
+            const terrain = computeTerrain();
             map.setTerrain(terrain);
           } else {
             // Workaround type def bug
