@@ -1,11 +1,13 @@
 import Config
 
-config :plantopo, :frontend_tokens,
-  mapbox: System.fetch_env!("PLANTOPO_MAPBOX_ACCESS_TOKEN"),
-  os: System.fetch_env!("PLANTOPO_OS_API_KEY"),
-  maptiler: System.fetch_env!("PLANTOPO_MAPTILER_KEY")
+Dotenv.load!()
 
-config :locus, :license_key, System.fetch_env!("PLANTOPO_MAXMIND_LICENSE_KEY")
+config :plantopo, :frontend_tokens,
+  mapbox: System.fetch_env!("MAPBOX_ACCESS_TOKEN"),
+  os: System.fetch_env!("OS_API_KEY"),
+  maptiler: System.fetch_env!("MAPTILER_KEY")
+
+config :locus, :license_key, System.fetch_env!("MAXMIND_LICENSE_KEY")
 
 # config/runtime.exs is executed for all environments, including
 # during releases. It is executed after compilation and before the
@@ -27,19 +29,15 @@ if System.get_env("PHX_SERVER") do
   config :plantopo, PlanTopoWeb.Endpoint, server: true
 end
 
-if config_env() == :prod do
-  database_url =
-    System.get_env("DATABASE_URL") ||
-      raise """
-      environment variable DATABASE_URL is missing.
-      For example: ecto://USER:PASS@HOST/DATABASE
-      """
+if config_env() != :test do
+  config :plantopo, PlanTopo.Repo, url: System.fetch_env!("DATABASE_URL")
+end
 
+if config_env() == :prod do
   maybe_ipv6 = if System.get_env("ECTO_IPV6"), do: [:inet6], else: []
 
   config :plantopo, PlanTopo.Repo,
     # ssl: true,
-    url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
     socket_options: maybe_ipv6
 

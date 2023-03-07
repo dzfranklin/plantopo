@@ -26,10 +26,6 @@ config :plantopo, :minio_server, s3_config
 
 # Configure your database
 config :plantopo, PlanTopo.Repo,
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database: "plantopo_dev",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10

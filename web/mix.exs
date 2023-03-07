@@ -62,6 +62,7 @@ defmodule PlanTopo.MixProject do
       {:locus, "~> 2.3"},
       {:geo, "~> 3.4"},
       {:rexbug, "~> 1.0"},
+      {:dotenv, "~> 3.1"},
       {:bimap, "~> 1.3"}
     ]
   end
