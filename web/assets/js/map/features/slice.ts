@@ -118,7 +118,7 @@ const slice = createSlice({
         if (isObject(updateVal)) {
           feature[prop] = { ...feature[prop], ...updateVal };
         } else {
-          feature[prop] = { ...feature[prop], ...updateVal };
+          feature[prop] = updateVal;
         }
       }
     },
