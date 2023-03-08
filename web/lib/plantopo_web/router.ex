@@ -67,7 +67,7 @@ defmodule PlanTopoWeb.Router do
   # end
 
   scope "/api", PlanTopoWeb do
-    post "/report_tile_loads", ReportTileLoads, :post
+    post "/report_tile_loads", ReportTileLoadsController, :post
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development

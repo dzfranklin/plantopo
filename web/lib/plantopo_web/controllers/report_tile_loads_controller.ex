@@ -1,4 +1,4 @@
-defmodule PlanTopoWeb.ReportTileLoads do
+defmodule PlanTopoWeb.ReportTileLoadsController do
   use PlanTopoWeb, :controller
   alias PlanTopo.Reports
 
