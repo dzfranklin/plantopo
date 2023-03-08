@@ -14,7 +14,7 @@ defmodule PlanTopoWeb.Sync.Socket do
     role = Maps.role(user, map)
 
     if role in [:viewer, :editor, :owner] do
-      {:cowboy_websocket, req, [map: req.qs, meta: %{user: user.id, role: role}]}
+      {:cowboy_websocket, req, [map: map, meta: %{user: user.id, role: role}]}
     else
       {:error, :role}
     end
