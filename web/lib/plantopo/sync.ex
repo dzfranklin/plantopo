@@ -1,7 +1,7 @@
 defmodule PlanTopo.Sync do
-  def connect!(map, meta) do
+  def connect!(map, meta, fallback_center) do
     {:ok, engine} = GenServer.call(__MODULE__.Manager, {:get, map})
-    :ok = GenServer.call(engine, {:connect, meta})
+    :ok = GenServer.call(engine, {:connect, %{meta: meta, fallback_center: fallback_center}})
     engine
   end
 

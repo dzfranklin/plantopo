@@ -3,7 +3,6 @@ defmodule PlanTopo.Sync.Engine do
   Manages the synchronization of a single map
   """
   use GenServer, restart: :temporary
-  alias PlanTopo.Maps
   require Logger
 
   defp config, do: Application.fetch_env!(:plantopo, __MODULE__)
@@ -12,8 +11,6 @@ defmodule PlanTopo.Sync.Engine do
     opts = Keyword.put(opts, :map, map)
     GenServer.start_link(__MODULE__, opts)
   end
-
-  # TODO: Snapshot before termination
 
   @impl true
   def init(opts) do
@@ -24,7 +21,6 @@ defmodule PlanTopo.Sync.Engine do
       map: map,
       port: port,
       sockets: BiMap.new(),
-      save_every: Keyword.fetch!(opts, :save_every_millis),
       exit_timeout: Keyword.fetch!(opts, :exit_timeout_millis),
       next_id: 0
     }
@@ -35,7 +31,7 @@ defmodule PlanTopo.Sync.Engine do
   end
 
   @impl true
-  def handle_call({:connect, meta}, {caller, _}, state) do
+  def handle_call({:connect, %{meta: meta, fallback_center: fallback_center}}, {caller, _}, state) do
     if BiMap.has_key?(state.sockets, caller) do
       {:reply, {:error, :already_connected}, state}
     else
@@ -48,9 +44,20 @@ defmodule PlanTopo.Sync.Engine do
       }
 
       Process.monitor(caller)
-      send_cmd(state, {:connect, {id, meta}})
 
-      Logger.info("Connected #{inspect(caller)} to #{state.map} as #{inspect(meta)}")
+      send_cmd(
+        state,
+        {:connect,
+         %{
+           socket: id,
+           meta: meta,
+           fallback_center: fallback_center
+         }}
+      )
+
+      Logger.info(
+        "Connected #{inspect(caller)} to #{state.map} as #{inspect(meta)} [fallback_center=#{inspect(fallback_center)}]"
+      )
 
       {:reply, :ok, state, state.exit_timeout}
     end

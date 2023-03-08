@@ -1,7 +1,6 @@
 import Config
 
-config :plantopo, PlanTopo.Sync.Engine,
-  cmd: "../sync_server_engine/debug_run.sh",
+config :plantopo, PlanTopo.Sync.Engine, cmd: "../sync_server_engine/debug_run.sh"
 
 s3_config = [
   access_key_id: "admin",

@@ -34,7 +34,6 @@ const store = initStore({
   tokens: parseInit('tokens'),
   layerDatas: parseInit('layerDatas'),
   layerSources: parseInit('layerSources'),
-  viewAt: parseInit('viewAt'),
 });
 window._dbg.store = store;
 

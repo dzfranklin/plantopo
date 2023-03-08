@@ -16,7 +16,13 @@ serde = { version = "1.0.152", features = ["derive"] }
 serde_bytes = "0.11.9"
 serde_eetf = "0.2.0"
 serde_json = { version = "1.0.93", features = ["raw_value"] }
-sqlx = { version = "0.6.2", features = ["postgres", "runtime-tokio-native-tls", "uuid", "chrono", "json"] }
+sqlx = { version = "0.6.2", features = [
+  "postgres",
+  "runtime-tokio-native-tls",
+  "uuid",
+  "chrono",
+  "json",
+] }
 tokio = { version = "1.26.0", features = ["macros", "rt", "sync", "time"] }
 uuid = { version = "1.3.0", features = ["serde"] }
 y-sync = "0.2.0"

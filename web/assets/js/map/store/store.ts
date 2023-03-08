@@ -24,7 +24,6 @@ export const initStore = (initState) =>
       map: {
         id: initState.id,
         tokens: initState.tokens,
-        viewAt: initState.viewAt,
       },
       layers: {
         datas: initState.layerDatas,

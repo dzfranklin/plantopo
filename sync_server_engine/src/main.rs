@@ -15,8 +15,8 @@ use erlang_port::{IOPort, PortReceive, PortSend};
 use lib0::any::Any as YAny;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use sqlx::{Connection, PgConnection};
-use tokio::{select, sync::oneshot, time::sleep};
+use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
+use tokio::{select, spawn, sync::oneshot, time::sleep, task::spawn_blocking};
 use uuid::Uuid;
 use y_sync::{
     awareness::Awareness,
@@ -28,10 +28,11 @@ use yrs::{
         decoder::{Decode, DecoderV1},
         encoder::{Encode, Encoder, EncoderV1},
     },
-    Doc, Map, ReadTxn, StateVector, Transact, TransactionMut, Update, Snapshot,
+    Doc, Map, ReadTxn, Snapshot, StateVector, Transact, TransactionMut, Update,
 };
 
 const SAVE_INTERVAL: Duration = Duration::from_secs(10);
+const FALLBACK_ZOOM: f64 = 8.0;
 
 // NOTE: We aren't sent users that can't view the document, so we only check edit operations
 
@@ -40,7 +41,11 @@ struct SocketId(u32);
 
 #[derive(Debug, Deserialize)]
 enum Input {
-    Connect(SocketId, InputSocketMeta),
+    Connect {
+        socket: SocketId,
+        meta: InputSocketMeta,
+        fallback_center: Center,
+    },
     Recv(SocketId, ByteBuf),
     Leave(SocketId),
 }
@@ -62,7 +67,6 @@ struct InputSocketMeta {
 struct SocketMeta {
     user: Option<UserId>,
     role: Role,
-    view_at: Option<ViewAt>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
@@ -75,16 +79,19 @@ enum Role {
     Owner,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+struct Center(f64, f64);
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
 struct ViewAt {
-    center: (f64, f64),
+    center: Center,
     zoom: f64,
     pitch: f64,
     bearing: f64,
 }
 
 #[allow(non_snake_case)]
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 struct AwarenessJson {
     viewAt: Option<ViewAt>,
     #[serde(flatten)]
@@ -95,6 +102,10 @@ struct AwarenessJson {
 struct MapId(Uuid);
 
 type Sockets = HashMap<SocketId, SocketMeta>;
+type UserViewAts = HashMap<UserId, ViewAt>;
+type Db = Arc<Pool<Postgres>>;
+
+const INITIAL_VIEW_AT_TAG: u8 = 10;
 
 macro_rules! log {
     ($fmt:literal) => {
@@ -112,16 +123,20 @@ async fn main() -> eyre::Result<()> {
     let map_id = MapId(Uuid::from_str(map_id).wrap_err("parse map id")?);
 
     let IOPort {
-        mut sender,
+        sender,
         mut receiver,
     } = unsafe {
         use erlang_port::PacketSize;
         erlang_port::nouse_stdio(PacketSize::Four)
     };
 
-    // Note we don't need a connection pool because we only query from the save loop
     let db_url = env::var("DATABASE_URL").wrap_err("DATABASE_URL")?;
-    let mut db = PgConnection::connect(&db_url).await?;
+    // TODO: This will exhaust the 100 max conns. We should pool above ecto & this
+    let db = PgPoolOptions::new()
+        .max_connections(10)
+        .connect(&db_url)
+        .await?;
+    let db = Arc::new(db);
 
     let aware = {
         let doc = create_doc();
@@ -134,22 +149,37 @@ async fn main() -> eyre::Result<()> {
         Arc::new(parking_lot::Mutex::new(Awareness::new(doc)))
     };
 
-    let sockets: Arc<parking_lot::Mutex<Sockets>> = Default::default();
+    let user_view_ats: Arc<parking_lot::Mutex<UserViewAts>> = Default::default();
 
     let (tx_close, mut rx_close) = oneshot::channel::<eyre::Result<()>>();
 
     // Main loop
     let aware2 = aware.clone();
-    let sockets2 = sockets.clone();
-    tokio::spawn(async move {
-        let mut send = |value: Output| sender.send(value);
+    let db2 = db.clone();
+    let user_view_ats2 = user_view_ats.clone();
+    spawn_blocking(move || {
+        let mut sockets: Sockets = Default::default();
+        let sender = Arc::new(parking_lot::Mutex::new(sender));
+        // TODO: Add a pr for a failable api for erlang_port so we save if the fd is closed
+        // instead of just crashing on a broken pipe. This happens if the engine.ex crashes
+        let send = move |val: Output| sender.lock().send(val);
+        let send = Box::leak(Box::new(send));
 
-        // TODO: Add a pr for a failable api for erlang_port so we snapshot if we
+
+        // TODO: Add a pr for a failable api for erlang_port so we save if we
         // get an invalid msg instead of just crashing
         for input in receiver.iter::<Input>() {
             let mut aware = aware2.lock();
-            let mut sockets = sockets2.lock();
-            if let Err(err) = process(&mut aware, &mut sockets, input, &mut send) {
+            let mut user_view_ats = user_view_ats2.lock();
+            if let Err(err) = process(
+                map_id,
+                &db2,
+                &mut aware,
+                &mut sockets,
+                &mut user_view_ats,
+                input,
+                &*send,
+            ) {
                 tx_close.send(Err(err)).unwrap();
                 return;
             }
@@ -179,18 +209,14 @@ async fn main() -> eyre::Result<()> {
         };
 
         let view_ats: Vec<_> = {
-            let sockets = sockets.lock();
-            sockets
+            let user_view_ats = user_view_ats.lock();
+            user_view_ats
                 .iter()
-                .filter_map(|(_id, meta)| {
-                    let user = meta.user?;
-                    let value = meta.view_at.clone()?;
-                    Some((user, value))
-                })
+                .map(|(user, value)| (*user, value.clone()))
                 .collect()
         };
 
-        save_to_db(&mut db, map_id, snapshot, as_update, data, view_ats).await?;
+        save_to_db(&db, map_id, snapshot, as_update, data, view_ats).await?;
 
         if let Some(res) = done {
             return res;
@@ -199,17 +225,23 @@ async fn main() -> eyre::Result<()> {
 }
 
 fn process(
+    map_id: MapId,
+    db: &Db,
     aware: &mut Awareness,
     sockets: &mut Sockets,
+    user_view_ats: &mut UserViewAts,
     input: Input,
-    mut output: impl FnMut(Output),
+    output: impl Fn(Output) + Send + 'static,
 ) -> eyre::Result<()> {
     match input {
-        Input::Connect(id, input) => {
+        Input::Connect {
+            socket: id,
+            meta: input,
+            fallback_center,
+        } => {
             let socket_meta = SocketMeta {
                 user: input.user,
                 role: input.role,
-                view_at: None,
             };
 
             if let Some(existing) = sockets.insert(id, socket_meta) {
@@ -221,14 +253,35 @@ fn process(
             let update = aware.update()?;
             Message::Sync(SyncMessage::SyncStep1(sv)).encode(&mut enc);
             Message::Awareness(update).encode(&mut enc);
-
             output(Output::Send(id, ByteBuf::from(enc.to_vec())));
+
+            if let Some(user) = input.user {
+                if let Some(value) = user_view_ats.get(&user) {
+                    output(Output::Send(id, enc_initial_view_at(value)?));
+                } else {
+                    let db = db.clone();
+                    spawn(async move {
+                        load_initial_view_at_from_db(db, map_id, user, id, output).await;
+                    });
+                }
+            } else {
+                let value = ViewAt {
+                    center: fallback_center,
+                    zoom: FALLBACK_ZOOM,
+                    pitch: 0.0,
+                    bearing: 0.0,
+                };
+                output(Output::Send(id, enc_initial_view_at(&value)?));
+            }
 
             Ok(())
         }
         Input::Recv(id, msg) => {
             let meta = sockets.get_mut(&id).ok_or_else(|| eyre!("not connected"))?;
-            if let Err(err) = handle_recv(aware, id, meta, msg.into_vec(), &mut output) {
+
+            if let Err(err) =
+                handle_recv(aware, id, meta, user_view_ats, msg.into_vec(), &output)
+            {
                 output(Output::SocketFatalError(id, format!("handle_msg: {err}")));
             }
             Ok(())
@@ -243,12 +296,20 @@ fn process(
     }
 }
 
+fn enc_initial_view_at(value: &ViewAt) -> eyre::Result<ByteBuf> {
+    let mut enc = EncoderV1::new();
+    let value = serde_json::to_vec(&value)?;
+    Message::Custom(INITIAL_VIEW_AT_TAG, value).encode(&mut enc);
+    Ok(ByteBuf::from(enc.to_vec()))
+}
+
 fn handle_recv(
     aware: &mut Awareness,
     id: SocketId,
     meta: &mut SocketMeta,
+    user_view_ats: &mut UserViewAts,
     msg: Vec<u8>,
-    mut output: impl FnMut(Output),
+    output: impl Fn(Output),
 ) -> eyre::Result<()> {
     let mut dec = DecoderV1::from(msg.as_slice());
     let reader = sync::MessageReader::new(&mut dec);
@@ -308,29 +369,27 @@ fn handle_recv(
                 output(Output::Send(id, ByteBuf::from(reply.encode_v1())))
             }
             Message::Awareness(update) => {
-                {
-                    let mut entries = update.iter();
-
-                    if let Some((_, entry)) = entries.next() {
-                        if entry.json == "null" {
-                            return Ok(());
-                        }
-
-                        let value: AwarenessJson = match serde_json::from_str(&entry.json) {
-                            Ok(value) => value,
-                            Err(err) => {
-                                log!("Failed to parse awareness json: {}: {}", &err, &entry.json);
-                                return Ok(());
-                            }
-                        };
-
-                        if let Some(view_at) = value.viewAt {
-                            meta.view_at = Some(view_at);
-                        }
-                    }
-
-                    if entries.next().is_some() {
+                let entry = {
+                    let mut iter = update.iter();
+                    let entry = match iter.next() {
+                        Some((_, entry)) => entry,
+                        None => return Ok(()),
+                    };
+                    if iter.next().is_some() {
                         return Err(eyre!("Awareness update with multiple clients"));
+                    }
+                    entry
+                };
+
+                let value = if entry.json == "null" {
+                    AwarenessJson::default()
+                } else {
+                    serde_json::from_str(&entry.json).wrap_err("parse aware json")?
+                };
+
+                if let Some(value) = value.viewAt {
+                    if let Some(user) = meta.user {
+                        user_view_ats.insert(user, value);
                     }
                 }
 
@@ -372,7 +431,7 @@ fn read_root_json(tx: &impl ReadTxn) -> YAny {
 }
 
 async fn save_to_db(
-    db: &mut PgConnection,
+    db: &Db,
     map_id: MapId,
     snapshot: Snapshot,
     as_update: Vec<u8>,
@@ -396,7 +455,7 @@ async fn save_to_db(
     let snapshot_changed = match prev_snapshot {
         None => true,
         Some(prev) => {
-            let prev = prev.snapshot.expect("snapshot IS NOT NULL");
+            let prev = prev.snapshot;
             let prev = Snapshot::decode_v1(&prev)?;
             prev != snapshot
         }
@@ -414,7 +473,7 @@ async fn save_to_db(
     }
 
     for (user, value) in view_ats {
-        let (center_lng, center_lat) = value.center;
+        let Center(center_lng, center_lat) = value.center;
         #[rustfmt::skip]
         sqlx::query!(r#"
             INSERT INTO map_view_ats (user_id, map_id, center_lng, center_lat, zoom, pitch, bearing, updated_at, inserted_at)
@@ -427,4 +486,34 @@ async fn save_to_db(
 
     tx.commit().await?;
     Ok(())
+}
+
+async fn load_initial_view_at_from_db(db: Db, map: MapId, user: UserId, socket_id: SocketId, output: impl Fn(Output)) {
+    async fn inner(db: Db, map: MapId, user: UserId, socket_id: SocketId, output: impl Fn(Output)) -> eyre::Result<()> {
+        let mut db = db.acquire().await?;
+
+        #[rustfmt::skip]
+        let value = sqlx::query!(r#"
+            SELECT center_lng, center_lat, zoom, pitch, bearing
+            FROM map_view_ats
+            WHERE map_id = $1 AND user_id = $2
+        "#, map.0, user.0).fetch_optional(&mut db).await?;
+
+        let value = match value {
+            Some(value) => ViewAt {
+                center: Center(value.center_lng, value.center_lat),
+                zoom: value.zoom,
+                pitch: value.pitch,
+                bearing: value.bearing,
+            },
+            None => return Ok(()),
+        };
+
+        output(Output::Send(socket_id, enc_initial_view_at(&value)?));
+
+        Ok(())
+    }
+    if let Err(e) = inner(db, map, user, socket_id, output).await {
+        log!("error in load_initial_view_at_from_db: {:?}", e);
+    }
 }

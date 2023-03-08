@@ -5,7 +5,8 @@ import { ViewAt } from './ViewAt';
 export interface MapState {
   tokens: Tokens;
   id: string;
-  viewAt: ViewAt;
+  viewAt?: ViewAt;
+  initialViewAt?: ViewAt;
 }
 
 export interface Tokens {
@@ -21,6 +22,9 @@ const mapSlice = createSlice({
     reportViewAt(state, { payload }: PayloadAction<ViewAt>) {
       state.viewAt = payload;
     },
+    syncInitialViewAt(state, { payload }: PayloadAction<ViewAt>) {
+      state.initialViewAt = payload;
+    },
   },
 });
 
@@ -29,7 +33,7 @@ export default mapSlice.reducer;
 // Actions
 
 const actions = mapSlice.actions;
-export const { reportViewAt } = actions;
+export const { reportViewAt, syncInitialViewAt } = actions;
 
 // Intercepted by map
 interface FlyToOptions {
@@ -49,3 +53,4 @@ const select = (s: RootState) => s.map;
 export const selectId = (s) => select(s).id;
 export const selectTokens = (s) => select(s).tokens;
 export const selectViewAt = (s) => select(s).viewAt;
+export const selectInitialViewAt = (s) => select(s).initialViewAt;

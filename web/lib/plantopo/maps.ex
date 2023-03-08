@@ -6,7 +6,7 @@ defmodule PlanTopo.Maps do
   import Ecto.Query, warn: false
   alias PlanTopo.AuthError, warn: false
   alias PlanTopo.{Repo, Accounts.User}
-  alias __MODULE__.{Meta, Snapshot, ViewAt, LayerData, LayerSource, Role}
+  alias __MODULE__.{Meta, ViewAt, LayerData, LayerSource, Role}
   require Logger
 
   def create!(%User{id: user_id}, attrs) do
@@ -89,41 +89,10 @@ defmodule PlanTopo.Maps do
     end
   end
 
-  def get_view_at(%User{id: user_id} = user, map_id, ip) do
-    record =
-      ViewAt
-      |> where(user_id: ^user_id, map_id: ^map_id)
-      |> Repo.one()
-
-    if is_nil(record) do
-      get_fallback_view_at(user.id, map_id, ip)
-    else
-      record
-    end
-  end
-
-  def get_view_at(nil, map_id, ip) do
-    get_fallback_view_at(nil, map_id, ip)
-  end
-
-  defp get_fallback_view_at(user_id, map_id, ip) do
-    {lng, lat} = get_fallback_center(ip)
-
-    %ViewAt{
-      user_id: user_id,
-      map_id: map_id,
-      bearing: 0,
-      pitch: 0,
-      zoom: 8,
-      center_lng: lng,
-      center_lat: lat
-    }
-  end
-
   # London
   @default_fallback_center {-0.0955, 51.5095}
 
-  defp get_fallback_center(ip) do
+  def lookup_fallback_center(ip) do
     with {:ok, %{"location" => location}} <- :locus.lookup(:city, ip) do
       {location["longitude"], location["latitude"]}
     else

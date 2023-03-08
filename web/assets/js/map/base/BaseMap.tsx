@@ -3,7 +3,13 @@ import * as mlStyle from '@maplibre/maplibre-gl-style-spec';
 import * as ml from 'maplibre-gl';
 import deepEqual from 'react-fast-compare';
 import { useAppDispatch, useAppStore } from '../hooks';
-import { flyTo, reportViewAt, selectTokens, selectViewAt } from '../mapSlice';
+import {
+  flyTo,
+  reportViewAt,
+  selectInitialViewAt,
+  selectTokens,
+  selectViewAt,
+} from '../mapSlice';
 import {
   selectLayerDatas,
   selectLayers,
@@ -63,10 +69,10 @@ export default function BaseMap(props: Props) {
         glyphs: 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf',
         sprite: [{ id: 'feature', url: spriteUrl.toString() }],
       },
-      center: initialViewAt?.center,
-      pitch: initialViewAt?.pitch,
-      bearing: initialViewAt?.bearing,
-      zoom: initialViewAt?.zoom,
+      center: initialViewAt?.center ?? [0, 0],
+      pitch: initialViewAt?.pitch ?? 0,
+      bearing: initialViewAt?.bearing ?? 0,
+      zoom: initialViewAt?.zoom ?? 0,
       keyboard: false,
       attributionControl: false,
       transformRequest: (urlS) => {
@@ -92,12 +98,19 @@ export default function BaseMap(props: Props) {
     const geoLocMarker = new ml.Marker({ element: createGeolocMarkerElem() });
 
     let storeUnsubscribe;
+    let setInitialViewAt = false;
     map.on('load', () => {
       let prevState: RootState | undefined;
       let prevLayers: mlStyle.LayerSpecification[] | undefined;
       const addedSprites = new Set();
       const matchStates = () => {
         const state = store.getState();
+
+        const initialViewAt = selectInitialViewAt(state);
+        if (initialViewAt && !setInitialViewAt) {
+          setInitialViewAt = true;
+          map.jumpTo(initialViewAt);
+        }
 
         const featureMap = selectFeatures(state);
         if (!prevState || featureMap !== selectFeatures(prevState)) {

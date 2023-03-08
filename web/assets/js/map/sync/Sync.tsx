@@ -14,10 +14,13 @@ import {
   selectSyncLocalAware,
   SocketStatus,
 } from './slice';
-import { selectId } from '../mapSlice';
+import * as decoding from 'lib0/decoding';
+import { selectId, syncInitialViewAt } from '../mapSlice';
 
 const RESYNC_INTERVAL_MS = 1000 * 60 * 5;
 const MAX_BACKOFF_MS = 1000 * 30;
+
+const INITIAL_VIEW_AT_TAG = 10;
 
 export default function MapSync() {
   const dispatch = useAppDispatch();
@@ -53,6 +56,10 @@ export default function MapSync() {
     ws.on('connection-error', (event: CloseEvent) => {
       console.debug('ws connection-error', event);
     });
+    ws.messageHandlers[INITIAL_VIEW_AT_TAG] = (_enc, dec, _ws, _es, _ty) => {
+      const value = JSON.parse(decoding.readVarString(dec));
+      dispatch(syncInitialViewAt(value));
+    };
 
     if (selectEnableLocalSave(store.getState())) {
       const idb = new IndexeddbPersistence(`map/${id}`, yDoc);

@@ -10,11 +10,18 @@ defmodule PlanTopoWeb.Sync.Socket do
   @impl :cowboy_websocket
   def init(req, _opts) do
     map = req.qs
+    peer = get_peer(req)
     user = get_user_or_nil(req)
     role = Maps.role(user, map)
+    fallback_center = Maps.lookup_fallback_center(peer)
 
     if role in [:viewer, :editor, :owner] do
-      {:cowboy_websocket, req, [map: map, meta: %{user: user.id, role: role}]}
+      {:cowboy_websocket, req,
+       [
+         map: map,
+         meta: %{user: user.id, role: role},
+         fallback_center: fallback_center
+       ]}
     else
       {:error, :role}
     end
@@ -24,8 +31,9 @@ defmodule PlanTopoWeb.Sync.Socket do
   def websocket_init(opts) do
     map = Keyword.fetch!(opts, :map)
     meta = Keyword.fetch!(opts, :meta)
+    fallback_center = Keyword.fetch!(opts, :fallback_center)
 
-    engine = Sync.connect!(map, meta)
+    engine = Sync.connect!(map, meta, fallback_center)
     Process.monitor(engine)
 
     {:ok, engine}
@@ -58,6 +66,15 @@ defmodule PlanTopoWeb.Sync.Socket do
       {:stop, engine}
     else
       {:noreply, engine}
+    end
+  end
+
+  defp get_peer(req) do
+    # Note: The ip we get here is potentially forged. We only use it for the initial center position
+    with header when not is_nil(header) <- Map.get(req.headers, "x-forwarded-for") do
+      RemoteIp.from([{"x-forwarded-for", header}])
+    else
+      nil -> req.peer
     end
   end
 
