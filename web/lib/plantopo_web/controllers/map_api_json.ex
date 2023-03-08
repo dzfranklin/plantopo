@@ -4,7 +4,7 @@ defmodule PlanTopoWeb.MapJSON do
 
   def view_at(%ViewAt{} = v) do
     %{
-      center: v.center,
+      center: [v.center_lng, v.center_lat],
       zoom: v.zoom,
       pitch: v.pitch,
       bearing: v.bearing

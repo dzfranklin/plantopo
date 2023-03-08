@@ -18,7 +18,7 @@ defmodule PlanTopo.Sync.Engine do
   @impl true
   def init(opts) do
     map = Keyword.fetch!(opts, :map)
-    port = Keyword.fetch!(opts, :cmd) |> open_port()
+    port = Keyword.fetch!(opts, :cmd) |> open_port(map)
 
     state = %{
       map: map,
@@ -29,12 +29,8 @@ defmodule PlanTopo.Sync.Engine do
       next_id: 0
     }
 
-    snapshot = Maps.fetch_snapshot(map)
-    send_cmd(state, {:init, if(snapshot, do: snapshot.state, else: nil)})
-
-    schedule_save(state)
-
     Logger.info("Created engine [map=#{inspect(map)}]")
+
     {:ok, state, state.exit_timeout}
   end
 
@@ -97,13 +93,6 @@ defmodule PlanTopo.Sync.Engine do
   end
 
   @impl true
-  def handle_info(:scheduled_save, state) do
-    schedule_save(state)
-    send_cmd(state, :req_snapshots_if_changed)
-    {:noreply, state, state.exit_timeout}
-  end
-
-  @impl true
   def handle_info({port, msg}, state) when is_port(port) do
     if port == state.port do
       case msg do
@@ -113,7 +102,7 @@ defmodule PlanTopo.Sync.Engine do
 
         {:exit_status, status} ->
           Logger.error("Nonezero exit status: #{status}")
-          {:stop, :port_exit, state, state.exit_timeout}
+          {:stop, :port_exit, state}
       end
     else
       {:noreply, state, state.exit_timeout}
@@ -137,60 +126,9 @@ defmodule PlanTopo.Sync.Engine do
     {:noreply, state, state.exit_timeout}
   end
 
-  def handle_port({:map_snapshot, snapshot}, state) do
-    spawn_link(fn ->
-      Maps.record_snapshot!(state.map, convert_snapshot!(snapshot))
-    end)
-
-    {:noreply, state, state.exit_timeout}
-  end
-
-  def handle_port({:meta_snapshot, views_at}, state) do
-    spawn_link(fn ->
-      Enum.map(views_at, fn {user_id, value} ->
-        value
-        |> Map.put(:user_id, user_id)
-        |> Map.put(:map_id, state.map)
-        |> Map.update!(:center, fn {lng, lat} -> [lng, lat] end)
-      end)
-      |> Maps.update_views_at!()
-    end)
-
-    {:noreply, state, state.exit_timeout}
-  end
-
-  def handle_port({:socket_fatal_error, {id, error}}, state) do
-    pid = fetch_socket_pid(state, id)
-    Logger.info("socket_fatal_error [pid=#{inspect(pid)} id=#{inspect(id)}]: #{inspect(error)}")
-
-    case pid do
-      {:ok, pid} ->
-        send(pid, {:sync, :fatal, error})
-        state = Map.update!(state, :sockets, &BiMap.delete(&1, pid, id))
-        {:noreply, state, state.exit_tiimeout}
-
-      :error ->
-        {:noreply, state, state.exit_timeout}
-    end
-  end
-
-  def handle_port({:fatal_error, {error, snapshot}}, state) do
-    if is_nil(snapshot) do
-      Logger.error("Fatal error without snapshot: #{inspect(error)}")
-    else
-      Logger.error("Fatal error (with snapshot): #{inspect(error)}")
-      Maps.record_snapshot!(state.map, convert_snapshot!(snapshot))
-    end
-
-    {:stop, {:port_fatal, error}, state}
-  end
-
-  defp convert_snapshot!(snapshot) do
-    Map.update!(snapshot, :snapshot_at, &DateTime.from_unix!/1)
-  end
-
-  defp open_port(bin) do
+  defp open_port(bin, map_id) do
     Port.open({:spawn_executable, bin}, [
+      {:args, [map_id]},
       {:packet, 4},
       :nouse_stdio,
       :binary,
@@ -200,10 +138,6 @@ defmodule PlanTopo.Sync.Engine do
 
   defp send_cmd(state, cmd) do
     Port.command(state.port, :erlang.term_to_binary(cmd))
-  end
-
-  defp schedule_save(state) do
-    Process.send_after(self(), :scheduled_save, state.save_every)
   end
 
   defp fetch_socket_id(state, pid) do

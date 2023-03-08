@@ -32,12 +32,13 @@ defmodule PlanTopo.Repo.Migrations.CreateMapSourceData do
       timestamps()
     end
 
-    create table(:map_snapshots) do
-      add :map_id, references(:maps, on_delete: :delete_all)
-      add :state, :binary
-      add :data, :jsonb
-      add :snapshot_at, :naive_datetime
-      add :after_error, :string
+    create table(:map_snapshots, primary_key: false) do
+      add :id, :bigserial, primary_key: true
+      add :map_id, references(:maps, on_delete: :delete_all), required: true
+      add :snapshot, :binary, required: true
+      add :as_update, :binary, required: true
+      add :data, :jsonb, required: true
+      add :snapshot_at, :naive_datetime, required: true
     end
 
     create index(:map_snapshots, [:map_id])
@@ -46,10 +47,11 @@ defmodule PlanTopo.Repo.Migrations.CreateMapSourceData do
       add :user_id, references(:users, on_delete: :delete_all), primary_key: true
       add :map_id, references(:maps, on_delete: :delete_all), primary_key: true
 
-      add :center, {:array, :float}
-      add :zoom, :float
-      add :pitch, :float
-      add :bearing, :float
+      add :center_lng, :float, required: true
+      add :center_lat, :float, required: true
+      add :zoom, :float, required: true
+      add :pitch, :float, required: true
+      add :bearing, :float, required: true
 
       timestamps()
     end

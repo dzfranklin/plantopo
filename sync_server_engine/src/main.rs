@@ -1,15 +1,22 @@
 use std::{
     collections::HashMap,
-    time::{SystemTime, UNIX_EPOCH},
+    env::{self, args},
+    hash::Hash,
+    str::FromStr,
+    sync::Arc,
+    time::Duration,
 };
 
 #[allow(unused)]
 use eyre::{eyre, WrapErr};
 
+use chrono::offset::Utc;
 use erlang_port::{IOPort, PortReceive, PortSend};
 use lib0::any::Any as YAny;
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
+use sqlx::{Connection, PgConnection};
+use tokio::{select, sync::oneshot, time::sleep};
 use uuid::Uuid;
 use y_sync::{
     awareness::Awareness,
@@ -21,8 +28,10 @@ use yrs::{
         decoder::{Decode, DecoderV1},
         encoder::{Encode, Encoder, EncoderV1},
     },
-    Doc, Map, ReadTxn, StateVector, Transact, TransactionMut, Update,
+    Doc, Map, ReadTxn, StateVector, Transact, TransactionMut, Update, Snapshot,
 };
+
+const SAVE_INTERVAL: Duration = Duration::from_secs(10);
 
 // NOTE: We aren't sent users that can't view the document, so we only check edit operations
 
@@ -31,9 +40,6 @@ struct SocketId(u32);
 
 #[derive(Debug, Deserialize)]
 enum Input {
-    #[serde(with = "serde_bytes")]
-    Init(Option<Vec<u8>>),
-    ReqSnapshotsIfChanged,
     Connect(SocketId, InputSocketMeta),
     Recv(SocketId, ByteBuf),
     Leave(SocketId),
@@ -44,19 +50,7 @@ enum Input {
 enum Output {
     Send(SocketId, ByteBuf),
     Broadcast(ByteBuf),
-    MapSnapshot(Snapshot),
-    MetaSnapshot(HashMap<UserId, ViewAt>),
     SocketFatalError(SocketId, String),
-    FatalError(String, Option<Snapshot>),
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-struct Snapshot {
-    state: ByteBuf,
-    data: String,
-    snapshot_at: u64,
-    after_error: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -64,15 +58,14 @@ struct InputSocketMeta {
     user: Option<UserId>,
     role: Role,
 }
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct SocketMeta {
     user: Option<UserId>,
     role: Role,
     view_at: Option<ViewAt>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, Hash, PartialEq, Eq)]
 struct UserId(Uuid);
 
 #[derive(Debug, Deserialize, Copy, Clone, Eq, PartialEq)]
@@ -82,7 +75,7 @@ enum Role {
     Owner,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 struct ViewAt {
     center: (f64, f64),
     zoom: f64,
@@ -98,6 +91,9 @@ struct AwarenessJson {
     other: HashMap<String, serde_json::Value>,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct MapId(Uuid);
+
 type Sockets = HashMap<SocketId, SocketMeta>;
 
 macro_rules! log {
@@ -109,7 +105,12 @@ macro_rules! log {
     };
 }
 
-fn main() -> eyre::Result<()> {
+#[tokio::main]
+async fn main() -> eyre::Result<()> {
+    let args: Vec<String> = args().skip(1).collect();
+    let map_id = args.get(0).ok_or_else(|| eyre!("missing map id arg"))?;
+    let map_id = MapId(Uuid::from_str(map_id).wrap_err("parse map id")?);
+
     let IOPort {
         mut sender,
         mut receiver,
@@ -118,73 +119,92 @@ fn main() -> eyre::Result<()> {
         erlang_port::nouse_stdio(PacketSize::Four)
     };
 
-    let mut aware = None;
-    let mut sockets: Sockets = HashMap::new();
-    let mut doc_changed_since_snapshot = false;
-    let mut views_at_changed_since_snapshot = false;
+    // Note we don't need a connection pool because we only query from the save loop
+    let db_url = env::var("DATABASE_URL").wrap_err("DATABASE_URL")?;
+    let mut db = PgConnection::connect(&db_url).await?;
 
-    // TODO: Add a pr for a failable api for erlang_port so we snapshot if we
-    // get an invalid msg instead of just crashing
+    let aware = {
+        let doc = create_doc();
+        if let Some(state) = Option::<Vec<u8>>::None {
+            // todo load from db
+            let state = Update::decode_v1(&state)?;
+            let mut tx = doc.transact_mut();
+            tx.apply_update(state);
+        }
+        Arc::new(parking_lot::Mutex::new(Awareness::new(doc)))
+    };
 
-    for input in receiver.iter::<Input>() {
-        if let Err(fatal_err) = process(
-            &mut aware,
-            &mut sockets,
-            &mut doc_changed_since_snapshot,
-            &mut views_at_changed_since_snapshot,
-            input,
-            |output| sender.send(output),
-        ) {
-            let msg = fatal_err.to_string();
-            let snapshot = aware
-                .as_ref()
-                .map(|aware| make_doc_snapshot(aware.doc(), Some(msg.clone())));
-            sender.send(Output::FatalError(msg, snapshot));
-            return Err(fatal_err);
+    let sockets: Arc<parking_lot::Mutex<Sockets>> = Default::default();
+
+    let (tx_close, mut rx_close) = oneshot::channel::<eyre::Result<()>>();
+
+    // Main loop
+    let aware2 = aware.clone();
+    let sockets2 = sockets.clone();
+    tokio::spawn(async move {
+        let mut send = |value: Output| sender.send(value);
+
+        // TODO: Add a pr for a failable api for erlang_port so we snapshot if we
+        // get an invalid msg instead of just crashing
+        for input in receiver.iter::<Input>() {
+            let mut aware = aware2.lock();
+            let mut sockets = sockets2.lock();
+            if let Err(err) = process(&mut aware, &mut sockets, input, &mut send) {
+                tx_close.send(Err(err)).unwrap();
+                return;
+            }
+        }
+
+        tx_close.send(Ok(())).expect("Failed to send close ok");
+    });
+
+    // Save loop
+    loop {
+        let mut done = None;
+        select! {
+            res = &mut rx_close => {
+                done = Some(res.unwrap());
+             }
+            _ = sleep(SAVE_INTERVAL) => {}
+        }
+
+        let (snapshot, as_update, data) = {
+            let aware = aware.lock();
+            let tx = aware.doc().transact();
+            let snapshot = tx.snapshot();
+            let state = tx.encode_state_as_update_v1(&StateVector::default());
+            let mut data = String::new();
+            read_root_json(&tx).to_json(&mut data);
+            (snapshot, state, data)
+        };
+
+        let view_ats: Vec<_> = {
+            let sockets = sockets.lock();
+            sockets
+                .iter()
+                .filter_map(|(_id, meta)| {
+                    let user = meta.user?;
+                    let value = meta.view_at.clone()?;
+                    Some((user, value))
+                })
+                .collect()
+        };
+
+        save_to_db(&mut db, map_id, snapshot, as_update, data, view_ats).await?;
+
+        if let Some(res) = done {
+            return res;
         }
     }
-
-    Ok(())
 }
 
 fn process(
-    aware: &mut Option<Awareness>,
+    aware: &mut Awareness,
     sockets: &mut Sockets,
-    doc_changed_since_snapshot: &mut bool,
-    views_at_changed_since_snapshot: &mut bool,
     input: Input,
     mut output: impl FnMut(Output),
 ) -> eyre::Result<()> {
     match input {
-        Input::Init(state) => {
-            if aware.is_some() {
-                return Err(eyre!("already initialized"));
-            }
-            let doc = create_doc();
-
-            if let Some(state) = state {
-                let state = Update::decode_v1(&state)?;
-                let mut tx = doc.transact_mut();
-                tx.apply_update(state);
-            }
-
-            *aware = Some(Awareness::new(doc));
-            Ok(())
-        }
-        Input::ReqSnapshotsIfChanged => {
-            let aware = aware.as_ref().ok_or_else(|| eyre!("not initialized"))?;
-            if *doc_changed_since_snapshot {
-                let snapshot = make_doc_snapshot(aware.doc(), None);
-                output(Output::MapSnapshot(snapshot));
-                *doc_changed_since_snapshot = false;
-            }
-            if *views_at_changed_since_snapshot {
-                let snapshot = make_views_at_snapshot(sockets);
-                output(Output::MetaSnapshot(snapshot));
-                *views_at_changed_since_snapshot = false;
-            }
-            Ok(())
-        }
         Input::Connect(id, input) => {
             let socket_meta = SocketMeta {
                 user: input.user,
@@ -195,7 +215,6 @@ fn process(
             if let Some(existing) = sockets.insert(id, socket_meta) {
                 return Err(eyre!("socket {id:?} already connected to {existing:?}"));
             }
-            let aware = aware.as_mut().ok_or_else(|| eyre!("not initialized"))?;
 
             let mut enc = EncoderV1::new();
             let sv = aware.doc().transact().state_vector();
@@ -208,17 +227,8 @@ fn process(
             Ok(())
         }
         Input::Recv(id, msg) => {
-            let aware = aware.as_mut().ok_or_else(|| eyre!("not initialized"))?;
             let meta = sockets.get_mut(&id).ok_or_else(|| eyre!("not connected"))?;
-            if let Err(err) = handle_recv(
-                aware,
-                doc_changed_since_snapshot,
-                views_at_changed_since_snapshot,
-                id,
-                meta,
-                msg.into_vec(),
-                &mut output,
-            ) {
+            if let Err(err) = handle_recv(aware, id, meta, msg.into_vec(), &mut output) {
                 output(Output::SocketFatalError(id, format!("handle_msg: {err}")));
             }
             Ok(())
@@ -235,8 +245,6 @@ fn process(
 
 fn handle_recv(
     aware: &mut Awareness,
-    doc_changed_since_snapshot: &mut bool,
-    views_at_changed_since_snapshot: &mut bool,
     id: SocketId,
     meta: &mut SocketMeta,
     msg: Vec<u8>,
@@ -274,7 +282,6 @@ fn handle_recv(
                     let update = txn.encode_update_v1();
                     let bcast = Message::Sync(SyncMessage::Update(update));
                     output(Output::Broadcast(ByteBuf::from(bcast.encode_v1())));
-                    *doc_changed_since_snapshot = true;
                 }
                 SyncMessage::Update(raw) => {
                     if !(meta.role == Role::Editor || meta.role == Role::Owner) {
@@ -290,7 +297,6 @@ fn handle_recv(
                     let update = txn.encode_update_v1();
                     let bcast = Message::Sync(SyncMessage::Update(update));
                     output(Output::Broadcast(ByteBuf::from(bcast.encode_v1())));
-                    *doc_changed_since_snapshot = true;
                 }
             },
             Message::Auth(reason) => {
@@ -332,8 +338,6 @@ fn handle_recv(
 
                 let bcast = Message::Awareness(update);
                 output(Output::Broadcast(ByteBuf::from(bcast.encode_v1())));
-
-                *views_at_changed_since_snapshot = true;
             }
             Message::Custom(tag, _data) => {
                 log!("Client unexpectedly sent custom message with tag {:?}", tag);
@@ -351,37 +355,6 @@ fn fix_doc(tx: &mut TransactionMut) {
     };
 }
 
-fn make_doc_snapshot(doc: &Doc, after_error: Option<String>) -> Snapshot {
-    let tx = doc.transact();
-    let state = tx.encode_state_as_update_v1(&StateVector::default());
-    let state = ByteBuf::from(state);
-
-    let mut data = String::new();
-    read_root_json(&tx).to_json(&mut data);
-
-    let snapshot_at = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-
-    Snapshot {
-        state,
-        data,
-        snapshot_at,
-        after_error,
-    }
-}
-
-fn make_views_at_snapshot(sockets: &Sockets) -> HashMap<UserId, ViewAt> {
-    let mut views_at = HashMap::new();
-    for (_, meta) in sockets.iter() {
-        if let (Some(user), Some(view_at)) = (meta.user.as_ref(), meta.view_at.as_ref()) {
-            views_at.insert(user.clone(), view_at.clone());
-        }
-    }
-    views_at
-}
-
 fn create_doc() -> Doc {
     let doc = Doc::new();
     let data = doc.get_or_insert_map("data");
@@ -396,4 +369,62 @@ fn read_root_json(tx: &impl ReadTxn) -> YAny {
     tx.get_map("data")
         .map(|s| s.to_json(tx))
         .unwrap_or(lib0::any::Any::Undefined)
+}
+
+async fn save_to_db(
+    db: &mut PgConnection,
+    map_id: MapId,
+    snapshot: Snapshot,
+    as_update: Vec<u8>,
+    data: String,
+    view_ats: Vec<(UserId, ViewAt)>,
+) -> eyre::Result<()> {
+    // Note: We only have on engine per map so we don't need to worry about concurrent updates
+
+    let mut tx = db.begin().await?;
+
+    let now = Utc::now().naive_utc();
+
+    #[rustfmt::skip]    
+    let prev_snapshot = sqlx::query!(r#"
+        SELECT snapshot
+        FROM map_snapshots
+        WHERE (map_id = $1 AND snapshot IS NOT NULL)
+        ORDER BY snapshot_at DESC LIMIT 1
+    "#, map_id.0).fetch_optional(&mut tx).await?;
+
+    let snapshot_changed = match prev_snapshot {
+        None => true,
+        Some(prev) => {
+            let prev = prev.snapshot.expect("snapshot IS NOT NULL");
+            let prev = Snapshot::decode_v1(&prev)?;
+            prev != snapshot
+        }
+    };
+
+    if snapshot_changed {
+        let snapshot = snapshot.encode_v1();
+        let data: serde_json::Value = serde_json::from_str(&data)?;
+
+        #[rustfmt::skip]
+        sqlx::query!(r#"
+            INSERT INTO map_snapshots (map_id, snapshot, as_update, data, snapshot_at)
+            VALUES ($1, $2, $3, $4, $5)
+        "#, map_id.0, snapshot, as_update, data, now).execute(&mut tx).await?;
+    }
+
+    for (user, value) in view_ats {
+        let (center_lng, center_lat) = value.center;
+        #[rustfmt::skip]
+        sqlx::query!(r#"
+            INSERT INTO map_view_ats (user_id, map_id, center_lng, center_lat, zoom, pitch, bearing, updated_at, inserted_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ON CONFLICT (user_id, map_id)
+            DO UPDATE SET center_lng = $3, center_lat = $4, zoom = $5, pitch = $6, bearing = $7, updated_at = $8
+        "#, user.0, map_id.0, center_lng, center_lat, value.zoom, value.pitch, value.bearing, now, now)
+            .execute(&mut tx).await?;
+    }
+
+    tx.commit().await?;
+    Ok(())
 }

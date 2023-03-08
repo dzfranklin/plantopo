@@ -9,4 +9,4 @@ if [[ ${BUILD_STATUS} -ne 0 ]]; then
   exit ${BUILD_STATUS}
 fi
 
-exec ./target/debug/plantopo_sync_server_engine
+exec ./target/debug/plantopo_sync_server_engine "${@:1}"

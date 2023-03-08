@@ -7,7 +7,8 @@ defmodule PlanTopo.Maps.ViewAt do
     belongs_to :user, User, primary_key: true
     belongs_to :map, Maps.Meta, primary_key: true
 
-    field :center, {:array, :float}
+    field :center_lng, :float
+    field :center_lat, :float
     field :zoom, :float
     field :pitch, :float
     field :bearing, :float

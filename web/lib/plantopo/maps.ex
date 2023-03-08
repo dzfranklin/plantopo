@@ -7,7 +7,6 @@ defmodule PlanTopo.Maps do
   alias PlanTopo.AuthError, warn: false
   alias PlanTopo.{Repo, Accounts.User}
   alias __MODULE__.{Meta, Snapshot, ViewAt, LayerData, LayerSource, Role}
-  alias Ecto.Multi
   require Logger
 
   def create!(%User{id: user_id}, attrs) do
@@ -90,21 +89,6 @@ defmodule PlanTopo.Maps do
     end
   end
 
-  def fetch_snapshot(map_id) do
-    where(Snapshot, map_id: ^map_id)
-    |> order_by(desc: :snapshot_at)
-    |> limit(1)
-    |> Repo.one()
-  end
-
-  def record_snapshot!(map_id, value) do
-    Repo.transaction!(fn ->
-      Map.put(value, :map_id, map_id)
-      |> Snapshot.changeset()
-      |> Repo.insert!()
-    end)
-  end
-
   def get_view_at(%User{id: user_id} = user, map_id, ip) do
     record =
       ViewAt
@@ -122,36 +106,26 @@ defmodule PlanTopo.Maps do
     get_fallback_view_at(nil, map_id, ip)
   end
 
-  def update_views_at!(views_at) do
-    Enum.reduce(views_at, Multi.new(), fn value, multi ->
-      Multi.insert(
-        multi,
-        value.user_id,
-        ViewAt.changeset(value),
-        on_conflict: :replace_all,
-        conflict_target: [:user_id, :map_id]
-      )
-    end)
-    |> Repo.transaction!()
-  end
-
   defp get_fallback_view_at(user_id, map_id, ip) do
+    {lng, lat} = get_fallback_center(ip)
+
     %ViewAt{
       user_id: user_id,
       map_id: map_id,
       bearing: 0,
       pitch: 0,
       zoom: 8,
-      center: get_fallback_center(ip)
+      center_lng: lng,
+      center_lat: lat
     }
   end
 
   # London
-  @default_fallback_center [-0.0955, 51.5095]
+  @default_fallback_center {-0.0955, 51.5095}
 
   defp get_fallback_center(ip) do
     with {:ok, %{"location" => location}} <- :locus.lookup(:city, ip) do
-      [location["longitude"], location["latitude"]]
+      {location["longitude"], location["latitude"]}
     else
       :not_found ->
         Logger.info("geoip data not found for: #{inspect(ip)}")

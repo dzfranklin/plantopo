@@ -2,7 +2,6 @@ import Config
 
 config :plantopo, PlanTopo.Sync.Engine,
   cmd: "../sync_server_engine/debug_run.sh",
-  save_every_millis: 1000 * 30,
 
 s3_config = [
   access_key_id: "admin",
