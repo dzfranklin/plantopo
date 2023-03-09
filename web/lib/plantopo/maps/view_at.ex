@@ -16,9 +16,15 @@ defmodule PlanTopo.Maps.ViewAt do
     timestamps()
   end
 
-  def changeset(at \\ %__MODULE__{}, attrs) do
+  def meta_changeset(at \\ %__MODULE__{}, attrs) do
     at
-    |> cast(attrs, [:user_id, :map_id, :center, :zoom, :pitch, :bearing])
-    |> validate_required([:user_id, :map_id, :center, :zoom, :pitch, :bearing])
+    |> cast(attrs, [:user_id, :map_id])
+    |> validate_required([:user_id, :map_id])
+  end
+
+  def value_changeset(at \\ %__MODULE__{}, attrs) do
+    at
+    |> cast(attrs, [:center_lng, :center_lat, :zoom, :pitch, :bearing])
+    |> validate_required([:user_id, :map_id, :center_lng, :center_lat, :zoom, :pitch, :bearing])
   end
 end

@@ -6,7 +6,7 @@ defmodule PlanTopo.Maps do
   import Ecto.Query, warn: false
   alias PlanTopo.AuthError, warn: false
   alias PlanTopo.{Repo, Accounts.User}
-  alias __MODULE__.{Meta, ViewAt, LayerData, LayerSource, Role}
+  alias __MODULE__.{ViewAt, Meta, Snapshot, LayerData, LayerSource, Role}
   require Logger
 
   def create!(%User{id: user_id}, attrs) do
@@ -87,6 +87,54 @@ defmodule PlanTopo.Maps do
     else
       raise "Cannot give everyone owner role"
     end
+  end
+
+  def get_snapshot(map_id) do
+    Snapshot
+    |> where(map_id: ^map_id)
+    |> order_by(desc: :snapshot_at)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  def get_last_snapshot_snapshot(map_id) do
+    Snapshot
+    |> select([s], s.snapshot)
+    |> where(map_id: ^map_id)
+    |> order_by(desc: :snapshot_at)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  def save_snapshot(attrs) do
+    Snapshot.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def get_view_at(user_id, map_id) do
+    ViewAt
+    |> where(user_id: ^user_id, map_id: ^map_id)
+    |> Repo.one()
+  end
+
+  def update_view_at(user_id, map_id, attrs) do
+    ViewAt.meta_changeset(%{user_id: user_id, map_id: map_id})
+    |> ViewAt.value_changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def make_fallback_view_at(user_id, map_id, center) do
+    {lng, lat} = center
+
+    %ViewAt{
+      user_id: user_id,
+      map_id: map_id,
+      bearing: 0,
+      pitch: 0,
+      zoom: 8,
+      center_lng: lng,
+      center_lat: lat
+    }
   end
 
   # London

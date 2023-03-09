@@ -12,6 +12,7 @@ defmodule PlanTopo.Application do
       [
         # Start the Telemetry supervisor
         PlanTopoWeb.Telemetry,
+        {Task.Supervisor, name: PlanTopo.TaskSupervisor},
         # Start the Ecto repository
         PlanTopo.Repo,
         # Start the PubSub system

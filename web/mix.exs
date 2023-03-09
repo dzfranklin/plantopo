@@ -64,6 +64,7 @@ defmodule PlanTopo.MixProject do
       {:rexbug, "~> 1.0"},
       {:dotenv, "~> 3.1"},
       {:remote_ip, "~> 1.1"},
+      {:rustler, "~> 0.27.0"},
       {:bimap, "~> 1.3"}
     ]
   end

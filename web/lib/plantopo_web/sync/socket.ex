@@ -49,14 +49,8 @@ defmodule PlanTopoWeb.Sync.Socket do
   end
 
   @impl true
-  def websocket_info({:sync, :send, msg}, engine) do
+  def websocket_info({:send, msg}, engine) do
     {:reply, {:binary, msg}, engine}
-  end
-
-  @impl true
-  def websocket_info({:sync, :fatal, error}, engine) do
-    Logger.warn("Stopping socket as engine reported a socket fatal error: #{inspect(error)}")
-    {:stop, engine}
   end
 
   @impl true

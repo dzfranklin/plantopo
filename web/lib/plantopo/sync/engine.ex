@@ -3,155 +3,288 @@ defmodule PlanTopo.Sync.Engine do
   Manages the synchronization of a single map
   """
   use GenServer, restart: :temporary
+  alias PlanTopo.Maps
+  import PlanTopo.Sync.EngineNative
   require Logger
 
-  defp config, do: Application.fetch_env!(:plantopo, __MODULE__)
+  @initial_view_at_tag 10
+  @save_every_millis 1000 * 30
+  @timeout_millis 1000 * 60
 
-  def start_link(map, opts \\ config()) do
-    opts = Keyword.put(opts, :map, map)
-    GenServer.start_link(__MODULE__, opts)
+  def start_link(map, _ \\ []) do
+    GenServer.start_link(__MODULE__, map: map)
   end
 
   @impl true
   def init(opts) do
     map = Keyword.fetch!(opts, :map)
-    port = Keyword.fetch!(opts, :cmd) |> open_port(map)
 
-    state = %{
-      map: map,
-      port: port,
-      sockets: BiMap.new(),
-      exit_timeout: Keyword.fetch!(opts, :exit_timeout_millis),
-      next_id: 0
-    }
+    state =
+      %{
+        map: map,
+        aware: awareness_new(),
+        sockets: Map.new(),
+        user_view_ats: Map.new(),
+        last_recv: DateTime.utc_now()
+      }
+      |> bump_timeout()
 
-    Logger.info("Created engine [map=#{inspect(map)}]")
+    case Maps.get_snapshot(map) do
+      nil ->
+        Logger.info("Created engine [map=#{inspect(map)}] from blank")
 
-    {:ok, state, state.exit_timeout}
+      snapshot ->
+        :ok = apply_update(state.aware, snapshot.as_update)
+        Logger.info("Created engine [map=#{inspect(map)}] from snapshot")
+    end
+
+    Process.send_after(self(), :snapshot, @save_every_millis)
+
+    {:ok, state}
+  end
+
+  @impl true
+  def terminate(reason, state) do
+    if reason != :normal do
+      Logger.warn("Sync engine terminating abnormally: #{inspect(reason)}")
+    end
+
+    save_state(state, false)
+
+    reason
   end
 
   @impl true
   def handle_call({:connect, %{meta: meta, fallback_center: fallback_center}}, {caller, _}, state) do
-    if BiMap.has_key?(state.sockets, caller) do
+    if Map.has_key?(state.sockets, caller) do
       {:reply, {:error, :already_connected}, state}
     else
-      id = state.next_id
-
-      state = %{
-        state
-        | sockets: BiMap.put(state.sockets, caller, id),
-          next_id: id + 1
-      }
-
+      state = %{state | sockets: Map.put(state.sockets, caller, meta)}
       Process.monitor(caller)
 
-      send_cmd(
-        state,
-        {:connect,
-         %{
-           socket: id,
-           meta: meta,
-           fallback_center: fallback_center
-         }}
-      )
+      enc = message_encoder_new()
+      :ok = encode_intro(state.aware, enc)
 
-      Logger.info(
-        "Connected #{inspect(caller)} to #{state.map} as #{inspect(meta)} [fallback_center=#{inspect(fallback_center)}]"
-      )
+      case meta.user do
+        nil ->
+          view_at = Maps.make_fallback_view_at(nil, state.map, fallback_center)
+          :ok = message_encoder_write(enc, initial_view_at_msg(view_at))
 
-      {:reply, :ok, state, state.exit_timeout}
+        user_id ->
+          case Map.get(state.user_view_ats, user_id) do
+            nil ->
+              run_task(fn ->
+                view_at = Maps.get_view_at(user_id, state.map)
+
+                if not is_nil(view_at) do
+                  {:ok, msg} = message_encode(initial_view_at_msg(view_at))
+                  send(caller, {:send, msg})
+                end
+              end)
+
+            value ->
+              Logger.warn("got from mem")
+              :ok = message_encoder_write(enc, initial_view_at_msg(value))
+          end
+      end
+
+      {:ok, msg} = message_encoder_finish(enc)
+      send(caller, {:send, msg})
+
+      Logger.info("Connected #{inspect(caller)} to #{state.map} as #{inspect(meta)}")
+
+      {:reply, :ok, bump_timeout(state)}
     end
   end
 
   @impl true
   def handle_call({:recv, msg}, {caller, _}, state) do
-    case fetch_socket_id(state, caller) do
-      {:ok, id} ->
-        send_cmd(state, {:recv, {id, msg}})
-        {:reply, :ok, state, state.exit_timeout}
+    aware = state.aware
+
+    case Map.fetch(state.sockets, caller) do
+      {:ok, meta} ->
+        {reply, state} =
+          case msg do
+            {:sync_step1, sv} ->
+              {:ok, update} = encode_state_as_update(aware, sv)
+              {:ok, reply} = message_encode({:sync_step2, update})
+              send(caller, {:send, reply})
+              {:ok, state}
+
+            {:sync_step2, update} ->
+              if meta.role == :editor || meta.role == :owner do
+                :ok = apply_update(aware, update)
+                {:ok, bcast} = message_encode({:sync_update, update})
+                broadcast(state, caller, bcast)
+                {:ok, state}
+              else
+                {{:error, :permission_denied}, state}
+              end
+
+            {:sync_update, update} ->
+              if meta.role == :editor || meta.role == :owner do
+                :ok = apply_update(aware, update)
+                {:ok, bcast} = message_encode({:sync_update, update})
+                broadcast(state, caller, bcast)
+                {:ok, state}
+              else
+                {{:error, :permission_denied}, state}
+              end
+
+            :awareness_query ->
+              {:ok, update} = encode_awareness_update(aware)
+              {:ok, reply} = message_encode({:awareness_update, update})
+              send(caller, {:send, reply})
+              {:ok, state}
+
+            {:awareness_update, update} ->
+              state =
+                with {:ok, user_id} <- Map.fetch(meta, :user),
+                     {:ok, update_map} <- awareness_update_to_map(update),
+                     [{_client, {_clock, json}}] <- Map.to_list(update_map),
+                     {:ok, json} when is_map(json) <- Jason.decode(json),
+                     {:ok, view_at} <- Map.fetch(json, "viewAt") do
+                  %{state | user_view_ats: Map.put(state.user_view_ats, user_id, view_at)}
+                else
+                  _ ->
+                    state
+                end
+
+              :ok = apply_awareness_update(aware, update)
+              broadcast(state, caller, message_encode({:awareness_update, update}))
+              {:ok, state}
+
+            msg ->
+              Logger.debug("Unhandled msg: #{inspect(msg)}")
+              {:ok, state}
+          end
+
+        {:reply, reply, bump_timeout(state)}
 
       :error ->
-        {:reply, {:error, :not_connected}, state, state.exit_timeout}
+        {:reply, {:error, :not_connected}, state}
     end
+
+    {:reply, :ok, state}
   end
 
   @impl true
   def handle_info({:DOWN, _ref, :process, caller, _reason}, state) do
-    case fetch_socket_id(state, caller) do
-      {:ok, id} ->
-        send_cmd(state, {:leave, id})
-        state = Map.update!(state, :sockets, &BiMap.delete(&1, caller, id))
-        Logger.info("Disconnected #{inspect(caller)} from #{state.map}")
-        {:noreply, state, state.exit_timeout}
-
-      :error ->
-        {:stop, :unexpected_down, state.exit_timeout}
+    if Map.has_key?(state.sockets, caller) do
+      state = Map.update!(state, :sockets, &Map.delete(&1, caller))
+      Logger.info("Disconnected #{inspect(caller)} from #{state.map}")
+      {:noreply, state}
+    else
+      {:noreply, state}
     end
   end
 
   @impl true
   def handle_info(:timeout, state) do
-    if BiMap.size(state.sockets) == 0 do
+    if map_size(state.sockets) == 0 do
       Logger.info("Stopping engine for #{state.map} as no connected sockets for timeout")
       {:stop, :normal, state}
     else
-      {:noreply, state, state.exit_timeout}
+      {:noreply, state}
     end
   end
 
   @impl true
-  def handle_info({port, msg}, state) when is_port(port) do
-    if port == state.port do
-      case msg do
-        {:data, msg} ->
-          msg = :erlang.binary_to_term(msg)
-          handle_port(msg, state)
+  def handle_info(:snapshot, state) do
+    save_state(state, true)
+    {:noreply, state}
+  end
 
-        {:exit_status, status} ->
-          Logger.error("Nonezero exit status: #{status}")
-          {:stop, :port_exit, state}
+  @impl true
+  def handle_info({ref, :task_ok}, state) when is_reference(ref) do
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info({ref, {:error, err}}, state) when is_reference(ref) do
+    Logger.error("Async task failed: #{inspect(err)}")
+    {:stop, err, state}
+  end
+
+  defp bump_timeout(state) do
+    Map.update(state, :timeout_timer, nil, fn old ->
+      if old, do: Process.cancel_timer(old)
+      Process.send_after(self(), :timeout, @timeout_millis)
+    end)
+  end
+
+  defp broadcast(state, except, data) do
+    for peer <- Map.keys(state.sockets) do
+      if peer != except do
+        send(peer, {:send, data})
       end
-    else
-      {:noreply, state, state.exit_timeout}
     end
   end
 
-  def handle_port({:send, {id, msg}}, state) do
-    case fetch_socket_pid(state, id) do
-      {:ok, pid} -> send(pid, {:sync, :send, msg})
-      :error -> nil
+  defp initial_view_at_msg(value) do
+    json =
+      Jason.encode!(%{
+        center: [value.center_lng, value.center_lat],
+        zoom: value.zoom,
+        pitch: value.pitch,
+        bearing: value.bearing
+      })
+
+    {:custom, @initial_view_at_tag, json}
+  end
+
+  defp save_state(state, async?) do
+    aware = state.aware
+    map_id = state.map
+
+    prev_snapshot_snapshot = Maps.get_last_snapshot_snapshot(map_id)
+
+    # Note that we can't lock aware asyncronously
+    map_task =
+      case serialize_snapshot_if_changed(aware, prev_snapshot_snapshot) do
+        {:error, error} ->
+          Logger.error("Failed to snapshot state: #{inspect(error)}")
+          nil
+
+        {:ok, nil} ->
+          nil
+
+        {:ok, snapshot_snapshot} ->
+          {:ok, as_update} = encode_state_as_update(aware, nil)
+          {:ok, data} = serialize_data(aware)
+
+          attrs = %{
+            map_id: map_id,
+            snapshot: snapshot_snapshot,
+            as_update: as_update,
+            data: data,
+            snapshot_at: DateTime.utc_now()
+          }
+
+          run_task(fn ->
+            attrs = Map.update!(attrs, :data, &Jason.decode!/1)
+            {:ok, _} = Maps.save_snapshot(attrs)
+          end)
+      end
+
+    view_at_tasks =
+      for {user_id, view_at} <- state.user_view_ats do
+        run_task(fn ->
+          {:ok, _} = Maps.update_view_at(user_id, map_id, view_at)
+        end)
+      end
+
+    if !async? do
+      [map_task | view_at_tasks]
+      |> Enum.filter(&(!is_nil(&1)))
+      |> Task.await_many()
     end
-
-    {:noreply, state, state.exit_timeout}
   end
 
-  def handle_port({:broadcast, msg}, state) do
-    for pid <- BiMap.keys(state.sockets) do
-      send(pid, {:sync, :send, msg})
-    end
-
-    {:noreply, state, state.exit_timeout}
-  end
-
-  defp open_port(bin, map_id) do
-    Port.open({:spawn_executable, bin}, [
-      {:args, [map_id]},
-      {:packet, 4},
-      :nouse_stdio,
-      :binary,
-      :exit_status
-    ])
-  end
-
-  defp send_cmd(state, cmd) do
-    Port.command(state.port, :erlang.term_to_binary(cmd))
-  end
-
-  defp fetch_socket_id(state, pid) do
-    BiMap.fetch(state.sockets, pid)
-  end
-
-  defp fetch_socket_pid(state, id) do
-    BiMap.fetch_key(state.sockets, id)
+  defp run_task(fun) do
+    Task.Supervisor.async(PlanTopo.TaskSupervisor, fn ->
+      fun.()
+      :task_ok
+    end)
   end
 end

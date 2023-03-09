@@ -1,0 +1,22 @@
+[package]
+name = "plantopo_sync_engine"
+version = "0.1.0"
+authors = []
+edition = "2021"
+
+[lib]
+name = "plantopo_sync_engine"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+env_logger = "0.10.0"
+lib0 = "0.16.3"
+rustler = "0.27.0"
+try-lock = "0.2.4"
+y-sync = "0.2.0"
+yrs = "0.16.2"
+
+[patch.crates-io]
+# y-sync = { git = "https://github.com/danielzfranklin/y-sync" }
+y-sync = { path = "../../../../y-sync" }
