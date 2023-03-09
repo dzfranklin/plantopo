@@ -16,13 +16,17 @@ pub struct Awareness(Lock<YAwareness>);
 
 type AwareRef = ResourceArc<Awareness>;
 
+const NON_EMPTY: &str = "__non_empty";
 #[rustler::nif]
 pub fn awareness_new() -> AwareRef {
     let doc = Doc::new();
     let data = doc.get_or_insert_map("data");
     {
         let mut tx = doc.transact_mut();
-        data.insert(&mut tx, "__no_empty", true);
+
+        if !data.contains_key(&tx, NON_EMPTY) {
+            data.insert(&mut tx, NON_EMPTY, true);
+        }
     }
     let inner = YAwareness::new(doc);
     ResourceArc::new(Awareness(Lock::new(inner)))

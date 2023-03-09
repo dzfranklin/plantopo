@@ -11,14 +11,12 @@ import { CurrentUser } from '../../globals';
 
 export interface State {
   user: CurrentUser | null;
-  didInitialLoad: boolean;
   onlineStatus: 'connecting' | 'connected' | 'reconnecting';
   enableLocalSave: boolean;
   peerAwares: { [clientId: number]: PeerAware };
 }
 
 const initialState: State = {
-  didInitialLoad: false,
   user: window.currentUser,
   onlineStatus: 'connecting',
   enableLocalSave: true,
@@ -45,13 +43,7 @@ const slice = createSlice({
         }
       }
     },
-    reportUpdate(state, _action: PayloadAction<JsonTemplateObject>) {
-      if (!state.didInitialLoad) {
-        const elapsed = performance.now() - window._dbg.loadTime;
-        console.info(`Initial load (${elapsed / 1000}s)`);
-        state.didInitialLoad = true;
-      }
-    },
+    reportUpdate(_state, _action: PayloadAction<JsonTemplateObject>) {},
     reportAwareUpdate(state, { payload }: PayloadAction<JsonObject[]>) {
       const list = payload as unknown as PeerAware[];
       state.peerAwares = {};
