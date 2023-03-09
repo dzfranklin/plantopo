@@ -115,7 +115,7 @@ defmodule PlanTopo.Sync.Engine do
               if meta.role == :editor || meta.role == :owner do
                 :ok = apply_update(aware, update)
                 {:ok, bcast} = message_encode({:sync_update, update})
-                broadcast(state, caller, bcast)
+                broadcast(state, bcast)
                 {:ok, state}
               else
                 {{:error, :permission_denied}, state}
@@ -125,7 +125,7 @@ defmodule PlanTopo.Sync.Engine do
               if meta.role == :editor || meta.role == :owner do
                 :ok = apply_update(aware, update)
                 {:ok, bcast} = message_encode({:sync_update, update})
-                broadcast(state, caller, bcast)
+                broadcast(state, bcast)
                 {:ok, state}
               else
                 {{:error, :permission_denied}, state}
@@ -151,7 +151,8 @@ defmodule PlanTopo.Sync.Engine do
                 end
 
               :ok = apply_awareness_update(aware, update)
-              broadcast(state, caller, message_encode({:awareness_update, update}))
+              {:ok, bcast} = message_encode({:awareness_update, update})
+              broadcast(state, bcast)
               {:ok, state}
 
             msg ->
@@ -213,11 +214,9 @@ defmodule PlanTopo.Sync.Engine do
     end)
   end
 
-  defp broadcast(state, except, data) do
+  defp broadcast(state, data) do
     for peer <- Map.keys(state.sockets) do
-      if peer != except do
-        send(peer, {:send, data})
-      end
+      send(peer, {:send, data})
     end
   end
 
