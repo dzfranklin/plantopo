@@ -5,6 +5,7 @@ defmodule PlanTopo.Sync.Manager do
   use GenServer
   require Logger
   alias PlanTopo.Sync
+  require OpenTelemetry.Tracer, as: Tracer
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -17,19 +18,25 @@ defmodule PlanTopo.Sync.Manager do
   end
 
   @impl true
-  def handle_call({:get, map}, _from, state) do
-    engine = BiMap.get(state, map)
+  def handle_call({:get, map, parent_span}, _from, state) do
+    link = OpenTelemetry.link(parent_span)
 
-    if is_nil(engine) do
-      case Sync.Engine.start_link(map) do
-        {:ok, engine} ->
-          {:reply, {:ok, engine}, BiMap.put(state, map, engine)}
+    Tracer.with_span "manager get engine", %{links: [link], attributes: [{"map", map}]} do
+      engine = BiMap.get(state, map)
 
-        {:error, error} ->
-          {:reply, {:error, error}, state}
+      if is_nil(engine) do
+        case Sync.Engine.start_link(map: map, init_parent_span: parent_span) do
+          {:ok, engine} ->
+            Tracer.add_event("replying with new engine", [])
+            {:reply, {:ok, engine}, BiMap.put(state, map, engine)}
+
+          {:error, error} ->
+            {:reply, {:error, error}, state}
+        end
+      else
+        Tracer.add_event("replying with existing engine", [])
+        {:reply, {:ok, engine}, state}
       end
-    else
-      {:reply, {:ok, engine}, state}
     end
   end
 
@@ -47,14 +54,19 @@ defmodule PlanTopo.Sync.Manager do
 
   @impl true
   def handle_info({:EXIT, engine, reason}, state) do
-    map = BiMap.get_key(state, engine)
-    state = BiMap.delete_key(state, map)
+    Tracer.with_span "manager handle exit" do
+      map = BiMap.get_key(state, engine)
+      state = BiMap.delete_key(state, map)
 
-    case reason do
-      :normal -> nil
-      reason -> Logger.warn("Engine exited abnormally [map=#{inspect(map)}]: #{inspect(reason)}")
+      case reason do
+        :normal ->
+          nil
+
+        reason ->
+          Logger.warn("Engine exited abnormally [map=#{inspect(map)}]: #{inspect(reason)}")
+      end
+
+      {:noreply, state}
     end
-
-    {:noreply, state}
   end
 end

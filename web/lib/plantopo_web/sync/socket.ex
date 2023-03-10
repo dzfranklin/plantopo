@@ -2,6 +2,7 @@ defmodule PlanTopoWeb.Sync.Socket do
   @behaviour :cowboy_websocket
   require Logger
   alias PlanTopo.{Sync, Accounts, Maps}
+  require OpenTelemetry.Tracer, as: Tracer
 
   @session_options Application.compile_env!(:plantopo, :session_options)
   @session_signing_salt Keyword.fetch!(@session_options, :signing_salt)
@@ -16,27 +17,48 @@ defmodule PlanTopoWeb.Sync.Socket do
     fallback_center = Maps.lookup_fallback_center(peer)
 
     if role in [:viewer, :editor, :owner] do
+      user_id = if(!is_nil(user), do: user.id)
+
       {:cowboy_websocket, req,
        [
          map: map,
-         meta: %{user: user.id, role: role},
-         fallback_center: fallback_center
+         meta: %{user: user_id, role: role},
+         fallback_center: fallback_center,
+         peer: peer
        ]}
     else
-      {:error, :role}
+      throw("invalid role")
     end
   end
 
   @impl :cowboy_websocket
   def websocket_init(opts) do
-    map = Keyword.fetch!(opts, :map)
-    meta = Keyword.fetch!(opts, :meta)
-    fallback_center = Keyword.fetch!(opts, :fallback_center)
+    Tracer.with_span "sync socket init" do
+      map = Keyword.fetch!(opts, :map)
+      meta = Keyword.fetch!(opts, :meta)
+      fallback_center = Keyword.fetch!(opts, :fallback_center)
+      peer = Keyword.fetch!(opts, :peer)
 
-    engine = Sync.connect!(map, meta, fallback_center)
-    Process.monitor(engine)
+      Tracer.set_attributes(%{
+        map: map,
+        user: meta.user,
+        role: meta.role,
+        peer: inspect(peer),
+        fallback_center: fallback_center
+      })
 
-    {:ok, engine}
+      engine = Sync.connect!(map, meta, fallback_center, Tracer.current_span_ctx())
+      Process.monitor(engine)
+
+      {:ok, engine}
+    end
+  end
+
+  @impl :cowboy_websocket
+  def terminate(reason, _partial_req, _engine) do
+    Tracer.add_event("sync socket terminate", reason: reason)
+    Tracer.end_span()
+    :ok
   end
 
   @impl :cowboy_websocket
@@ -44,8 +66,10 @@ defmodule PlanTopoWeb.Sync.Socket do
 
   @impl :cowboy_websocket
   def websocket_handle({:binary, msg}, engine) do
-    Sync.handle_recv!(engine, msg)
-    {:ok, engine}
+    Tracer.with_span "sync socket handle binary" do
+      Sync.handle_recv!(engine, msg, Tracer.current_span_ctx())
+      {:ok, engine}
+    end
   end
 
   @impl true

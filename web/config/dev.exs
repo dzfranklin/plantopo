@@ -1,5 +1,8 @@
 import Config
 
+config :opentelemetry_exporter,
+  otlp_endpoint: "http://localhost:4318"
+
 s3_config = [
   access_key_id: "admin",
   secret_access_key: "adminkey",

@@ -17,7 +17,7 @@ pub enum Message<'a> {
     SyncStep2(Binary<'a>),
     SyncUpdate(Binary<'a>),
     Auth(Option<String>),
-    AwarenessQuery,
+    AwarenessQuery(()), // () is so that Message always encodes to tuple
     AwarenessUpdate(ResourceArc<AwarenessUpdate>),
     Custom(u8, Binary<'a>),
 }
@@ -44,7 +44,7 @@ pub fn message_decode<'a>(env: Env<'a>, data: Binary) -> Result<Term<'a>> {
                 }
             },
             sync::Message::Auth(reason) => Message::Auth(reason),
-            sync::Message::AwarenessQuery => Message::AwarenessQuery,
+            sync::Message::AwarenessQuery => Message::AwarenessQuery(()),
             sync::Message::Awareness(update) => {
                 Message::AwarenessUpdate(AwarenessUpdate::new(update))
             }
@@ -113,7 +113,7 @@ pub(crate) fn _encode(enc: &mut EncoderV1, value: Message) {
                 enc.write_var(PERMISSION_GRANTED);
             }
         }
-        Message::AwarenessQuery => {
+        Message::AwarenessQuery(()) => {
             enc.write_var(MSG_QUERY_AWARENESS);
         }
         Message::AwarenessUpdate(update) => {

@@ -65,6 +65,12 @@ defmodule PlanTopo.MixProject do
       {:dotenv, "~> 3.1"},
       {:remote_ip, "~> 1.1"},
       {:rustler, "~> 0.27.0"},
+      {:opentelemetry, "~> 1.2"},
+      {:opentelemetry_phoenix, "~> 1.1"},
+      {:opentelemetry_cowboy, "~> 0.2.0"},
+      {:opentelemetry_api, "~> 1.2"},
+      {:opentelemetry_ecto, "~> 1.1"},
+      {:opentelemetry_exporter, "~> 1.4"},
       {:bimap, "~> 1.3"}
     ]
   end

@@ -8,6 +8,12 @@ defmodule PlanTopo.Application do
 
   @impl true
   def start(_type, _args) do
+    :opentelemetry_cowboy.setup()
+    OpentelemetryPhoenix.setup(adapter: :cowboy2)
+    OpentelemetryEcto.setup([:plantopo, :repo])
+
+    :ok = :locus.start_loader(:city, {:maxmind, "GeoLite2-City"})
+
     children =
       [
         # Start the Telemetry supervisor
@@ -28,14 +34,8 @@ defmodule PlanTopo.Application do
       ]
       |> Enum.filter(&(!is_nil(&1)))
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: PlanTopo.Supervisor]
-    {:ok, sup_pid} = Supervisor.start_link(children, opts)
-
-    :ok = :locus.start_loader(:city, {:maxmind, "GeoLite2-City"})
-
-    {:ok, sup_pid}
+    Supervisor.start_link(children, opts)
   end
 
   # Tell Phoenix to update the endpoint configuration
