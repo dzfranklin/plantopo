@@ -34,7 +34,7 @@ defmodule PlanTopo.Sync.Engine do
         Logger.info("Created engine [map=#{inspect(map)}] from blank")
 
       snapshot ->
-        :ok = apply_update(state.aware, snapshot.as_update)
+        {:ok, _update} = apply_update(state.aware, snapshot.as_update)
         Logger.info("Created engine [map=#{inspect(map)}] from snapshot")
     end
 
@@ -113,7 +113,7 @@ defmodule PlanTopo.Sync.Engine do
 
             {:sync_step2, update} ->
               if meta.role == :editor || meta.role == :owner do
-                :ok = apply_update(aware, update)
+                {:ok, update} = apply_update(aware, update)
                 {:ok, bcast} = message_encode({:sync_update, update})
                 broadcast(state, bcast)
                 {:ok, state}
@@ -123,7 +123,7 @@ defmodule PlanTopo.Sync.Engine do
 
             {:sync_update, update} ->
               if meta.role == :editor || meta.role == :owner do
-                :ok = apply_update(aware, update)
+                {:ok, update} = apply_update(aware, update)
                 {:ok, bcast} = message_encode({:sync_update, update})
                 broadcast(state, bcast)
                 {:ok, state}

@@ -17,6 +17,7 @@ pub struct Awareness(Lock<YAwareness>);
 type AwareRef = ResourceArc<Awareness>;
 
 const NON_EMPTY: &str = "__non_empty";
+
 #[rustler::nif]
 pub fn awareness_new() -> AwareRef {
     let doc = Doc::new();
@@ -42,15 +43,29 @@ pub fn encode_awareness_update(env: Env, aware: AwareRef) -> Result<Binary> {
 }
 
 #[rustler::nif]
-pub fn apply_update(aware: AwareRef, update: Binary) -> EmptyResult {
-    let update = Update::decode_v1(update.as_slice()).map_err(|e| err!(decode, e))?;
-    aware
-        .0
-        .try_lock()?
-        .doc_mut()
-        .transact_mut()
-        .apply_update(update);
-    Ok!()
+pub fn apply_update<'a>(
+    env: Env<'a>,
+    aware: AwareRef,
+    raw_update: Binary<'a>,
+) -> Result<Binary<'a>> {
+    let update = Update::decode_v1(raw_update.as_slice()).map_err(|e| err!(decode, e))?;
+
+    let mut lock = aware.0.try_lock()?;
+    let mut tx = lock.doc_mut().transact_mut();
+
+    tx.apply_update(update);
+    let dirty = false;
+
+    // TODO: set dirty if we fix anything
+
+    if dirty {
+        let value = tx.encode_update_v1();
+        let mut out = OwnedBinary::new(value.len()).expect("alloc failed");
+        out.copy_from_slice(&value);
+        Ok!(Binary::from_owned(out, env))
+    } else {
+        Ok!(raw_update)
+    }
 }
 
 #[rustler::nif]
