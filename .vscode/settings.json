@@ -2,7 +2,6 @@
     "elixirLS.projectDir": "./web",
     "rust-analyzer.linkedProjects": [
         "./reproj_os_leisure/Cargo.toml",
-        "./sync_server_engine/Cargo.toml",
         "./web/native/plantopo_sync_engine/Cargo.toml",
     ],
     "files.exclude": {
