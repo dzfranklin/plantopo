@@ -29,12 +29,12 @@ defmodule PlanTopo.Sync.Engine do
       }
       |> bump_timeout()
 
-    case Maps.get_snapshot(map) do
+    case Maps.get_last_snapshot_as_update(map) do
       nil ->
         Logger.info("Created engine [map=#{inspect(map)}] from blank")
 
-      snapshot ->
-        {:ok, _update} = apply_update(state.aware, snapshot.as_update)
+      snapshot_update ->
+        {:ok, _update} = apply_update(state.aware, snapshot_update)
         Logger.info("Created engine [map=#{inspect(map)}] from snapshot")
     end
 

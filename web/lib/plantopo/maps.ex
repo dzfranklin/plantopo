@@ -89,7 +89,7 @@ defmodule PlanTopo.Maps do
     end
   end
 
-  def get_snapshot(map_id) do
+  def get_last_snapshot(map_id) do
     Snapshot
     |> where(map_id: ^map_id)
     |> order_by(desc: :snapshot_at)
@@ -100,6 +100,15 @@ defmodule PlanTopo.Maps do
   def get_last_snapshot_snapshot(map_id) do
     Snapshot
     |> select([s], s.snapshot)
+    |> where(map_id: ^map_id)
+    |> order_by(desc: :snapshot_at)
+    |> limit(1)
+    |> Repo.one()
+  end
+
+  def get_last_snapshot_as_update(map_id) do
+    Snapshot
+    |> select([s], s.as_update)
     |> where(map_id: ^map_id)
     |> order_by(desc: :snapshot_at)
     |> limit(1)
