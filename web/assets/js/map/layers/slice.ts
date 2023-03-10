@@ -1,13 +1,14 @@
 import { createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import sortBy from '../util/sortBy';
 import { RootState } from '../store/store';
-import { Layer, LayerDatas, LayerSource, LayerSources } from './types';
+import { Layer, LayerDatas, Layers, LayerSource, LayerSources } from './types';
+import { idxBetween } from '../features/fracIdx';
 
 export interface State {
   datas: LayerDatas;
   sources: LayerSources;
   sync: {
-    layers: Layer[];
+    layers: Layers;
     is3d: boolean;
   };
 }
@@ -16,7 +17,7 @@ const initialState: State = {
   datas: {},
   sources: {},
   sync: {
-    layers: [],
+    layers: {},
     is3d: false,
   },
 };
@@ -31,28 +32,30 @@ const slice = createSlice({
 
     updateLayer(
       state,
-      { payload }: PayloadAction<{ idx: number; value: Partial<Layer> }>,
+      { payload }: PayloadAction<{ sourceId: string; value: Partial<Layer> }>,
     ) {
-      const layer = state.sync.layers[payload.idx];
+      const layer = state.sync.layers[payload.sourceId];
       for (const prop in payload.value) {
+        if (prop === 'sourceId') throw new Error('Cannot update sourceId');
         layer[prop] = payload.value[prop];
       }
     },
-    removeLayer(state, { payload }: PayloadAction<number>) {
-      state.sync.layers.splice(payload, 1);
+    removeLayer(state, { payload }: PayloadAction<string>) {
+      delete state.sync.layers[payload];
     },
     addLayer(
       state,
       { payload: { sourceId } }: PayloadAction<{ sourceId: string }>,
     ) {
       const source = state.sources[sourceId];
-      state.sync.layers.push({
-        sourceId: sourceId,
+      const layers = state.sync.layers;
+      const list = computeLayerOrder(layers);
+      const idx = idxBetween(list.at(-1)?.idx, undefined);
+      layers[sourceId] = {
+        sourceId,
+        idx,
         opacity: source.defaultOpacity || 1.0,
-      });
-    },
-    setLayers(state, { payload }: PayloadAction<Layer[]>) {
-      state.sync.layers = payload;
+      };
     },
 
     setIs3d(state, { payload }: PayloadAction<boolean>) {
@@ -63,13 +66,15 @@ const slice = createSlice({
 
 export default slice.reducer;
 
-export const { sync, updateLayer, removeLayer, addLayer, setLayers, setIs3d } =
+export const { sync, updateLayer, removeLayer, addLayer, setIs3d } =
   slice.actions;
 
 // Selectors
 
-export const selectLayers = (state: RootState): Layer[] =>
-  state.layers.sync.layers;
+export const selectLayers = createSelector(
+  [(s: RootState) => s.layers.sync.layers],
+  (layers) => computeLayerOrder(layers),
+);
 
 export const selectIs3d = (state: RootState): boolean => state.layers.sync.is3d;
 
@@ -89,24 +94,24 @@ export const selectSprites = createSelector(
   },
 );
 
-export const selectLayerSourceDisplayList = (state: RootState) => {
-  const layers = selectLayers(state);
-  const sources = selectLayerSources(state);
+export const selectLayerSourceDisplayList = createSelector(
+  [selectLayers, selectLayerSources],
+  (layers, sources) => {
+    const used = new Set<string>();
+    for (const layer of layers) {
+      used.add(layer.sourceId);
+    }
 
-  const used = {};
-  for (const layer of layers) {
-    used[layer.sourceId] = true;
-  }
+    const list = Object.values(sources).filter((v) => !used.has(v.id));
 
-  const list = Object.values(sources).filter((v) => !used[v.id]);
-
-  return sortBy(list, (v) => v.name);
-};
+    return sortBy(list, (v) => v.name);
+  },
+);
 
 export const selectLayerSource =
-  (id: number) =>
+  (sourceId: string) =>
   (state: RootState): LayerSource =>
-    selectLayerSources(state)[id];
+    selectLayerSources(state)[sourceId];
 
 export const selectShouldCreditOS = createSelector(
   [selectLayers, selectLayerSources, selectLayerDatas],
@@ -119,3 +124,12 @@ export const selectShouldCreditOS = createSelector(
       .some((dataSource) => dataSource?.attribution === 'os');
   },
 );
+
+const computeLayerOrder = (layers: Layers) =>
+  Object.values(layers).sort((a, b) => {
+    if (a.idx < b.idx) return -1;
+    if (a.idx > b.idx) return 1;
+    if (a.sourceId < b.sourceId) return -1;
+    if (a.sourceId > b.sourceId) return 1;
+    return 0;
+  });

@@ -28,7 +28,7 @@ export const initStore = (initState) =>
       layers: {
         datas: initState.layerDatas,
         sources: initState.layerSources,
-        sync: { layers: [], is3d: false },
+        sync: { layers: {}, is3d: false },
       },
     },
   });

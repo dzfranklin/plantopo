@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { JsonObject, JsonTemplateObject } from '@sanalabs/json';
-import { Layer } from '../layers/types';
+import { Layers } from '../layers/types';
 import { startListening } from '../store/listener';
 import * as layersSlice from '../layers/slice';
 import * as featuresSlice from '../features/slice';
@@ -64,7 +64,7 @@ export default slice.reducer;
 startListening({
   actionCreator: slice.actions.reportUpdate,
   effect: ({ payload }, l) => {
-    const layers = (payload['layers'] ?? []) as unknown as Layer[];
+    const layers = (payload['layers'] ?? {}) as unknown as Layers;
     const is3d = (payload['is3d'] ?? false) as boolean;
     l.dispatch(layersSlice.sync({ layers, is3d }));
 

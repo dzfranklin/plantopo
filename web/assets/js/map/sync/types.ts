@@ -1,5 +1,5 @@
 import { Features } from '../features/types';
-import { Layer } from '../layers/types';
+import { Layers } from '../layers/types';
 import { ViewAt } from '../ViewAt';
 
 export type PeerAware = Aware & { clientId: number; isCurrentClient: boolean };
@@ -11,7 +11,7 @@ export interface Aware {
 }
 
 export interface SyncData {
-  layers: Layer[];
+  layers: Layers;
   is3d: boolean;
   features: Features;
   featureTrash: Features;

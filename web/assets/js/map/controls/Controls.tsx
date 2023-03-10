@@ -37,7 +37,6 @@ import {
   selectLayers,
   removeLayer,
   addLayer,
-  setLayers,
   selectIs3d,
   setIs3d,
 } from '../layers/slice';
@@ -45,6 +44,8 @@ import Button from '../components/Button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMountain } from '@fortawesome/free-solid-svg-icons';
 import Tooltip from '../components/Tooltip';
+import { Layer } from '../layers/types';
+import { idxBetween } from '../features/fracIdx';
 
 export default function Controls() {
   const dispatch = useAppDispatch();
@@ -126,6 +127,26 @@ function LayerSelect({ close }) {
   const viewLayers = useAppSelector(selectLayers);
   const sourceList = useAppSelector(selectLayerSourceDisplayList);
 
+  const onReoder = useCallback(
+    (newList: Layer[]) => {
+      for (let i = 0; i < newList.length; i++) {
+        const newItem = newList[i];
+        if (viewLayers[i].sourceId !== newItem.sourceId) {
+          dispatch(
+            updateLayer({
+              sourceId: newItem.sourceId,
+              value: {
+                idx: idxBetween(newList[i - 1]?.idx, newList[i + 1]?.idx),
+              },
+            }),
+          );
+          break;
+        }
+      }
+    },
+    [viewLayers, dispatch],
+  );
+
   return (
     <motion.div
       initial={{ height: 0 }}
@@ -138,13 +159,9 @@ function LayerSelect({ close }) {
         layoutScroll
         className="grow overflow-y-scroll -mr-[16px] pr-[16px]"
       >
-        <Reorder.Group
-          axis="y"
-          values={viewLayers}
-          onReorder={(v) => dispatch(setLayers(v))}
-        >
+        <Reorder.Group axis="y" values={viewLayers} onReorder={onReoder}>
           {viewLayers.map((v, i) => (
-            <LayerItem key={v.sourceId} layer={v} idx={i} />
+            <LayerItem key={v.sourceId} layer={v} isFirst={i === 0} />
           ))}
         </Reorder.Group>
 
@@ -166,9 +183,10 @@ function LayerSelect({ close }) {
   );
 }
 
-function LayerItem({ layer, idx }) {
+function LayerItem({ layer, isFirst }: { layer: Layer; isFirst: boolean }) {
+  const { sourceId } = layer;
   const dispatch = useAppDispatch();
-  const source = useAppSelector(selectLayerSource(layer.sourceId));
+  const source = useAppSelector(selectLayerSource(sourceId));
   const reorderControls = useDragControls();
 
   // Workaround for <https://github.com/framer/motion/issues/1597>
@@ -194,7 +212,7 @@ function LayerItem({ layer, idx }) {
     >
       <Tooltip title="Remove">
         <button
-          onClick={() => dispatch(removeLayer(idx))}
+          onClick={() => dispatch(removeLayer(sourceId))}
           className="-ml-1 mr-[8px]"
         >
           <CloseIcon className="fill-gray-500 w-[20px]" />
@@ -211,17 +229,17 @@ function LayerItem({ layer, idx }) {
       <div className="flex flex-col justify-center grow">
         <div>{source.name}</div>
 
-        {idx !== 0 && (
+        {!isFirst && (
           <Tooltip title="Opacity">
             <Slider.Root
               min={0}
               max={1}
               step={0.01}
-              value={[layer.opacity]}
+              value={[layer.opacity || 1]}
               onValueChange={([opacity]) => {
                 dispatch(
                   updateLayer({
-                    idx,
+                    sourceId,
                     value: { opacity },
                   }),
                 );

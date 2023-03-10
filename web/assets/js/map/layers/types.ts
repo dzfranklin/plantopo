@@ -25,7 +25,10 @@ export interface LayerSource {
   layerSpecs: mlStyle.LayerSpecification[];
 }
 
+export type Layers = Record<string, Layer>;
+
 export interface Layer {
   sourceId: string;
+  idx: string;
   opacity?: number;
 }
