@@ -5,6 +5,7 @@ defmodule PlanTopo.AccountsTest do
 
   import PlanTopo.AccountsFixtures
   alias PlanTopo.Accounts.{User, UserToken}
+  import Ecto.Changeset
 
   describe "get_user_by_email/1" do
     test "does not return the user if the email does not exist" do
@@ -38,7 +39,7 @@ defmodule PlanTopo.AccountsTest do
   describe "get_user!/1" do
     test "raises if id is invalid" do
       assert_raise Ecto.NoResultsError, fn ->
-        Accounts.get_user!(-1)
+        Accounts.get_user!("e9b38418-dc32-4a97-8c24-134e1cd46f26")
       end
     end
 
@@ -97,7 +98,7 @@ defmodule PlanTopo.AccountsTest do
   describe "change_user_registration/2" do
     test "returns a changeset" do
       assert %Ecto.Changeset{} = changeset = Accounts.change_user_registration(%User{})
-      assert changeset.required == [:password, :email]
+      assert changeset.required == [:password, :email, :username]
     end
 
     test "allows fields to be set" do
