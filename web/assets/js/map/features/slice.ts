@@ -1,9 +1,4 @@
-import {
-  createAction,
-  createSelector,
-  createSlice,
-  PayloadAction,
-} from '@reduxjs/toolkit';
+import { createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { castDraft } from 'immer';
 import { RootState } from '../store/store';
 import { selectPeers } from '../sync/slice';
@@ -112,52 +107,69 @@ const slice = createSlice({
         at,
       };
     },
-    createGroup(state, { payload }: PayloadAction<{ id: string }>) {
-      const features = state.sync.features;
-      const beforeId = state.active;
-      const at = computeAtAfter(features, beforeId);
-      const { id } = payload;
-      features[id] = castDraft({
-        type: 'group',
-        id,
-        at,
-      });
-      state.active = id;
+    createGroup: {
+      reducer(state, { payload }: PayloadAction<{ id: string }>) {
+        const features = state.sync.features;
+        const beforeId = state.active;
+        const at = computeAtAfter(features, beforeId);
+        const { id } = payload;
+        features[id] = castDraft({
+          type: 'group',
+          id,
+          at,
+        });
+        state.active = id;
+      },
+      prepare() {
+        return {
+          payload: { id: uuid() },
+        };
+      },
     },
-    createPoint(
-      state,
-      { payload }: PayloadAction<Pick<PointFeature, 'id' | 'at' | 'lngLat'>>,
-    ) {
-      state.sync.features[payload.id] = {
-        id: payload.id,
-        type: 'point',
-        at: payload.at,
-        lngLat: payload.lngLat,
-        style: { ...DEFAULT_POINT_STYLE },
-      };
-      state.active = payload.id;
-      state.creating = undefined;
+    createPoint: {
+      reducer(
+        state,
+        { payload }: PayloadAction<Pick<PointFeature, 'id' | 'at' | 'lngLat'>>,
+      ) {
+        state.sync.features[payload.id] = {
+          id: payload.id,
+          type: 'point',
+          at: payload.at,
+          lngLat: payload.lngLat,
+          style: { ...DEFAULT_POINT_STYLE },
+        };
+        state.active = payload.id;
+        state.creating = undefined;
+      },
+      prepare: ({ at, lngLat }: Pick<PointFeature, 'at' | 'lngLat'>) => ({
+        payload: { id: uuid(), at, lngLat },
+      }),
     },
     cancelCreating(state, _action: PayloadAction<undefined>) {
       state.creating = undefined;
     },
 
-    updateFeature(
-      state,
-      { payload }: PayloadAction<{ id: string; update: Partial<Feature> }>,
-    ) {
-      // Note that the prop of a prop is never an object
-      const feature = state.sync.features[payload.id];
-      if (!feature) throw new Error('updateFeature: not found');
-      for (const prop in payload.update) {
-        const updateVal = payload.update[prop];
+    updateFeature: {
+      reducer(
+        state,
+        { payload }: PayloadAction<{ id: string; update: Partial<Feature> }>,
+      ) {
+        // Note that the prop of a prop is never an object
+        const feature = state.sync.features[payload.id];
+        if (!feature) throw new Error('updateFeature: not found');
+        for (const prop in payload.update) {
+          const updateVal = payload.update[prop];
 
-        if (isObject(updateVal)) {
-          feature[prop] = { ...feature[prop], ...updateVal };
-        } else {
-          feature[prop] = updateVal;
+          if (isObject(updateVal)) {
+            feature[prop] = { ...feature[prop], ...updateVal };
+          } else {
+            feature[prop] = updateVal;
+          }
         }
-      }
+      },
+      prepare: (id: string, update: Partial<Feature>) => ({
+        payload: { id, update },
+      }),
     },
     deleteFeature(state, { payload }: PayloadAction<Feature>) {
       const data = state.sync;
@@ -195,23 +207,10 @@ export const {
   cancelCreating,
   deleteFeature,
   moveActive,
+  createGroup,
+  createPoint,
+  updateFeature,
 } = actions;
-
-export const createGroup = createAction('features/createGroup', () => ({
-  payload: { id: uuid() },
-}));
-export const createPoint = createAction(
-  'features/createPoint',
-  ({ at, lngLat }: Pick<PointFeature, 'at' | 'lngLat'>) => ({
-    payload: { id: uuid(), at, lngLat },
-  }),
-);
-export const updateFeature = createAction(
-  'features/updateFeature',
-  (id: string, update: Partial<Feature>) => ({
-    payload: { id, update },
-  }),
-);
 
 export const selectCreating = (state: RootState) => state.features.creating;
 
