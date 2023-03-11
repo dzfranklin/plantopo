@@ -19,7 +19,18 @@ window._dbg = {
     paintOnlyUpdates: 0,
     fullUpdates: 0,
   },
-  sync: {},
+  sync: {
+    verboseLogs: false,
+  },
+};
+
+const _debug = window.console.debug;
+window.console.debug = (...args: any[]) => {
+  if (typeof args[0] === 'string' && args[0].startsWith('[SyncY')) {
+    // Suppress noisy logs from y-redux
+    if (!window._dbg?.sync?.verboseLogs) return;
+  }
+  _debug(...args);
 };
 
 const rootNode = document.getElementById('map-app-root')!;
@@ -68,6 +79,7 @@ declare global {
         yDoc?: unknown;
         idb?: unknown;
         ws?: unknown;
+        verboseLogs: boolean;
       };
     };
   }
