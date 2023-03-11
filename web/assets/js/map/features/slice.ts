@@ -26,6 +26,7 @@ import { v4 as uuid } from 'uuid';
 import { startListening } from '../store/listener';
 import isObject from '../util/isObject';
 import sortBy from '../util/sortBy';
+import { DEFAULT_POINT_STYLE } from './defaultStyle';
 
 export interface State {
   creating?: {
@@ -96,7 +97,7 @@ const slice = createSlice({
         type: 'point',
         at: payload.at,
         lngLat: payload.lngLat,
-        style: {},
+        style: { ...DEFAULT_POINT_STYLE },
       };
       state.active = payload.id;
       state.creating = undefined;
