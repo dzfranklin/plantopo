@@ -23,7 +23,6 @@ import {
   RouteFeature,
 } from './types';
 import { v4 as uuid } from 'uuid';
-import { startListening } from '../store/listener';
 import isObject from '../util/isObject';
 import sortBy from '../util/sortBy';
 import { DEFAULT_POINT_STYLE } from './defaultStyle';
@@ -65,6 +64,43 @@ const slice = createSlice({
 
     setActive(state, { payload }: PayloadAction<string | undefined>) {
       state.active = payload;
+    },
+
+    moveActive(
+      state,
+      { payload }: PayloadAction<'down' | 'up' | 'in' | 'out'>,
+    ) {
+      const features = state.sync.features;
+      const prevId = state.active;
+      const prev = prevId ? features[prevId] : null;
+
+      let nextActive: string | undefined;
+      if (!prev) {
+        const list = computeFeaturesDisplayList(ROOT_FEATURE, features);
+        const next = list.at(0);
+        if (next) nextActive = next.id;
+      } else if (payload === 'in') {
+        if (prev.type !== 'group') return;
+        const list = computeFeaturesDisplayList(prev.id, features);
+        const next = list.at(0);
+        if (next) nextActive = next.id;
+      } else if (payload === 'out') {
+        const parentId = parentIdOf(prev);
+        if (parentId !== ROOT_FEATURE) {
+          nextActive = parentId;
+        }
+      } else {
+        const list = computeFeaturesDisplayList(parentIdOf(prev), features);
+        const prevIdx = list.findIndex((f) => f.id === prevId);
+        let nextIdx = payload === 'up' ? prevIdx - 1 : prevIdx + 1;
+        if (nextIdx > list.length - 1) nextIdx = 0;
+        const next = list.at(nextIdx);
+        if (next) nextActive = next.id;
+      }
+
+      if (nextActive) {
+        state.active = nextActive;
+      }
     },
 
     enterLatlngPicker(state, { payload }: PayloadAction<{ type: string }>) {
@@ -158,11 +194,9 @@ export const {
   enterLatlngPicker,
   cancelCreating,
   deleteFeature,
+  moveActive,
 } = actions;
 
-export const moveActive = createAction<'down' | 'up' | 'in' | 'out'>(
-  'features/moveActive',
-);
 export const createGroup = createAction('features/createGroup', () => ({
   payload: { id: uuid() },
 }));
@@ -178,44 +212,6 @@ export const updateFeature = createAction(
     payload: { id, update },
   }),
 );
-
-startListening({
-  actionCreator: moveActive,
-  effect: ({ payload }, l) => {
-    const state = l.getState();
-    const features = state.features.sync.features;
-    const prevId = state.features.active;
-    const prev = prevId ? features[prevId] : null;
-
-    let nextActive;
-    if (!prev) {
-      const list = computeFeaturesDisplayList(ROOT_FEATURE, features);
-      const next = list.at(0);
-      if (next) nextActive = next.id;
-    } else if (payload === 'in') {
-      if (prev.type !== 'group') return;
-      const list = computeFeaturesDisplayList(prev.id, features);
-      const next = list.at(0);
-      if (next) nextActive = next.id;
-    } else if (payload === 'out') {
-      const parentId = parentIdOf(prev);
-      if (parentId !== ROOT_FEATURE) {
-        nextActive = parentId;
-      }
-    } else {
-      const list = computeFeaturesDisplayList(parentIdOf(prev), features);
-      const prevIdx = list.findIndex((f) => f.id === prevId);
-      let nextIdx = payload === 'up' ? prevIdx - 1 : prevIdx + 1;
-      if (nextIdx > list.length - 1) nextIdx = 0;
-      const next = list.at(nextIdx);
-      if (next) nextActive = next.id;
-    }
-
-    if (nextActive) {
-      l.dispatch(setActive(nextActive));
-    }
-  },
-});
 
 export const selectCreating = (state: RootState) => state.features.creating;
 
