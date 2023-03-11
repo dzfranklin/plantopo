@@ -6,7 +6,7 @@ export interface MapState {
   tokens: Tokens;
   id: string;
   viewAt?: ViewAt;
-  initialViewAt?: ViewAt;
+  initialViewAt?: ViewAt | null;
 }
 
 export interface Tokens {
@@ -23,7 +23,17 @@ const mapSlice = createSlice({
       state.viewAt = payload;
     },
     syncInitialViewAt(state, { payload }: PayloadAction<ViewAt>) {
-      state.initialViewAt = payload;
+      if (state.initialViewAt === null) {
+        console.warn('Rejecting initial view at as timed out');
+      } else {
+        state.initialViewAt = payload;
+      }
+    },
+    timeoutInitialViewAt(state, _action: PayloadAction<void>) {
+      if (state.initialViewAt === undefined) {
+        console.warn('Timed out initial view at');
+        state.initialViewAt = null;
+      }
     },
   },
 });
@@ -33,7 +43,8 @@ export default mapSlice.reducer;
 // Actions
 
 const actions = mapSlice.actions;
-export const { reportViewAt, syncInitialViewAt } = actions;
+export const { reportViewAt, syncInitialViewAt, timeoutInitialViewAt } =
+  actions;
 
 // Intercepted by map
 interface FlyToOptions {

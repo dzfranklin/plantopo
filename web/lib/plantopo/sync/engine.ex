@@ -3,6 +3,7 @@ defmodule PlanTopo.Sync.Engine do
   Manages the synchronization of a single map
   """
   use GenServer, restart: :temporary
+  alias PlanTopo.Maps.ViewAt
   alias PlanTopo.Maps
   import PlanTopo.Sync.EngineNative
   require Logger
@@ -84,7 +85,6 @@ defmodule PlanTopo.Sync.Engine do
         Process.monitor(caller)
 
         enc = message_encoder_new()
-        :ok = encode_intro(state.aware, enc)
 
         case meta.user do
           nil ->
@@ -116,6 +116,7 @@ defmodule PlanTopo.Sync.Engine do
             end
         end
 
+        :ok = encode_intro(state.aware, enc)
         {:ok, msg} = message_encoder_finish(enc)
         send(caller, {:send, msg})
 
@@ -133,23 +134,23 @@ defmodule PlanTopo.Sync.Engine do
     Tracer.with_span "engine recv", %{links: [link]} do
       case Map.fetch(state.sockets, caller) do
         {:ok, meta} ->
-          Enum.reduce_while(messages, :ok, fn msg, _acc ->
+          Enum.reduce_while(messages, {:ok, state}, fn msg, {:ok, state} ->
             Tracer.with_span "process_msg", %{
               attributes: [{"msg_type", elem(msg, 0)}, {"meta", meta}]
             } do
               case process_msg(state, meta, caller, msg) do
-                :ok ->
-                  {:cont, :ok}
+                {:ok, state} ->
+                  {:cont, {:ok, state}}
 
-                {:error, error} ->
+                {:error, error, state} ->
                   Tracer.add_event("error", error: error)
-                  {:error, error}
+                  {:error, {:error, error, state}}
               end
             end
           end)
           |> case do
-            :ok -> {:reply, :ok, bump_timeout(state)}
-            {:error, error} -> {:reply, {:error, error}, bump_timeout(state)}
+            {:ok, state} -> {:reply, :ok, bump_timeout(state)}
+            {:error, error, state} -> {:reply, {:error, error}, bump_timeout(state)}
           end
 
         :error ->
@@ -213,16 +214,16 @@ defmodule PlanTopo.Sync.Engine do
         {:ok, update} = encode_state_as_update(aware, sv)
         {:ok, reply} = message_encode({:sync_step2, update})
         send(caller, {:send, reply})
-        :ok
+        {:ok, state}
 
       {:sync_step2, update} ->
         if meta.role == :editor || meta.role == :owner do
           {:ok, update} = apply_update(aware, update)
           {:ok, bcast} = message_encode({:sync_update, update})
           broadcast(state, bcast)
-          :ok
+          {:ok, state}
         else
-          {:error, :permission_denied}
+          {:error, :permission_denied, state}
         end
 
       {:sync_update, update} ->
@@ -230,16 +231,16 @@ defmodule PlanTopo.Sync.Engine do
           {:ok, update} = apply_update(aware, update)
           {:ok, bcast} = message_encode({:sync_update, update})
           broadcast(state, bcast)
-          :ok
+          {:ok, state}
         else
-          {:error, :permission_denied}
+          {{:error, :permission_denied}, state}
         end
 
       {:awareness_query, nil} ->
         {:ok, update} = encode_awareness_update(aware)
         {:ok, reply} = message_encode({:awareness_update, update})
         send(caller, {:send, reply})
-        :ok
+        {:ok, state}
 
       {:awareness_update, update} ->
         state =
@@ -247,7 +248,21 @@ defmodule PlanTopo.Sync.Engine do
                {:ok, update_map} <- awareness_update_to_map(update),
                [{_client, {_clock, json}}] <- Map.to_list(update_map),
                {:ok, json} when is_map(json) <- Jason.decode(json),
-               {:ok, view_at} <- Map.fetch(json, "viewAt") do
+               {:ok, view_at} <- Map.fetch(json, "viewAt"),
+               %{
+                 "center" => [center_lng, center_lat],
+                 "zoom" => zoom,
+                 "pitch" => pitch,
+                 "bearing" => bearing
+               } <- view_at,
+               %Ecto.Changeset{valid?: true, changes: view_at} <-
+                 ViewAt.value_changeset(%{
+                   center_lng: center_lng,
+                   center_lat: center_lat,
+                   zoom: zoom,
+                   pitch: pitch,
+                   bearing: bearing
+                 }) do
             %{state | user_view_ats: Map.put(state.user_view_ats, user_id, view_at)}
           else
             _ ->
@@ -257,11 +272,11 @@ defmodule PlanTopo.Sync.Engine do
         :ok = apply_awareness_update(aware, update)
         {:ok, bcast} = message_encode({:awareness_update, update})
         broadcast(state, bcast)
-        :ok
+        {:ok, state}
 
       msg ->
         Logger.debug("Unhandled msg: #{inspect(msg)}")
-        :ok
+        {:ok, state}
     end
   end
 

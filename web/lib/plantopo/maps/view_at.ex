@@ -25,6 +25,6 @@ defmodule PlanTopo.Maps.ViewAt do
   def value_changeset(at \\ %__MODULE__{}, attrs) do
     at
     |> cast(attrs, [:center_lng, :center_lat, :zoom, :pitch, :bearing])
-    |> validate_required([:user_id, :map_id, :center_lng, :center_lat, :zoom, :pitch, :bearing])
+    |> validate_required([:center_lng, :center_lat, :zoom, :pitch, :bearing])
   end
 end

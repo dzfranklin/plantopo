@@ -15,10 +15,11 @@ import {
   SocketStatus,
 } from './slice';
 import * as decoding from 'lib0/decoding';
-import { selectId, syncInitialViewAt } from '../mapSlice';
+import { selectId, syncInitialViewAt, timeoutInitialViewAt } from '../mapSlice';
 
 const RESYNC_INTERVAL_MS = 1000 * 60 * 5;
 const MAX_BACKOFF_MS = 1000 * 30;
+export const APPLY_INITIAL_VIEW_AT_TIMEOUT_MS = 1_000;
 
 const INITIAL_VIEW_AT_TAG = 10;
 
@@ -33,6 +34,10 @@ export default function MapSync() {
   } | null>(null);
 
   useEffect(() => {
+    const initialViewAtTimeout = setTimeout(() => {
+      store.dispatch(timeoutInitialViewAt());
+    }, APPLY_INITIAL_VIEW_AT_TIMEOUT_MS);
+
     const yDoc = new Y.Doc({ gc: true });
     window._dbg.sync.yDoc = yDoc;
     const yData = yDoc.getMap('data') as Y.Map<unknown>;
@@ -58,6 +63,7 @@ export default function MapSync() {
     });
     ws.messageHandlers[INITIAL_VIEW_AT_TAG] = (_enc, dec, _ws, _es, _ty) => {
       const value = JSON.parse(decoding.readVarString(dec));
+      console.debug('got initial view at', value);
       dispatch(syncInitialViewAt(value));
     };
 
@@ -71,6 +77,7 @@ export default function MapSync() {
 
     setState({ yAwareness, yData });
     return () => {
+      clearTimeout(initialViewAtTimeout);
       ws.destroy();
       yDoc.destroy();
     };

@@ -129,7 +129,7 @@ defmodule PlanTopo.Maps do
   def update_view_at(user_id, map_id, attrs) do
     ViewAt.meta_changeset(%{user_id: user_id, map_id: map_id})
     |> ViewAt.value_changeset(attrs)
-    |> Repo.insert()
+    |> Repo.insert(conflict_target: [:user_id, :map_id], on_conflict: :replace_all)
   end
 
   def make_fallback_view_at(user_id, map_id, center) do

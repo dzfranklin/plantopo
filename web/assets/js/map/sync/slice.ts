@@ -8,6 +8,7 @@ import { Features } from '../features/types';
 import { RootState } from '../store/store';
 import { Aware, PeerAware, SyncData } from './types';
 import { CurrentUser } from '../../globals';
+import { ViewAt } from '../ViewAt';
 
 export interface State {
   user: CurrentUser | null;
@@ -92,7 +93,15 @@ export const selectSyncData = (state: RootState): SyncData => {
 
 export const selectSyncLocalAware = (state: RootState): Aware => {
   const user = state.sync.user ?? undefined;
-  const viewAt = state.map.viewAt;
   const activeFeature = state.features.active;
+
+  let viewAt: ViewAt | undefined;
+  if (state.map.initialViewAt === undefined) {
+    // If we haven't loaded it yet and it hasn't timed out, don't sync over it
+    viewAt = undefined;
+  } else {
+    viewAt = state.map.viewAt;
+  }
+
   return { user, viewAt, activeFeature };
 };
