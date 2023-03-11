@@ -41,6 +41,7 @@ export interface Props {
 
 const FLY_TO_SPEED = 2.8;
 const FLY_TO_PADDING_PX = 100;
+const APPLY_INITIAL_VIEW_AT_TIMEOUT_MS = 1_000;
 
 export default function BaseMap(props: Props) {
   const store = useAppStore();
@@ -99,6 +100,7 @@ export default function BaseMap(props: Props) {
 
     let storeUnsubscribe;
     let setInitialViewAt = false;
+    const loadTime = Date.now();
     map.on('load', () => {
       let prevState: RootState | undefined;
       let prevLayers: mlStyle.LayerSpecification[] | undefined;
@@ -107,7 +109,11 @@ export default function BaseMap(props: Props) {
         const state = store.getState();
 
         const initialViewAt = selectInitialViewAt(state);
-        if (initialViewAt && !setInitialViewAt) {
+        if (
+          initialViewAt &&
+          !setInitialViewAt &&
+          Date.now() - loadTime < APPLY_INITIAL_VIEW_AT_TIMEOUT_MS
+        ) {
           setInitialViewAt = true;
           map.jumpTo(initialViewAt);
         }
