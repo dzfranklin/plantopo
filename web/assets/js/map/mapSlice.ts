@@ -1,5 +1,5 @@
 import { createAction, createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { RootState } from './store/store';
+import type { RootState } from './store/type';
 import { ViewAt } from './ViewAt';
 
 export interface MapState {

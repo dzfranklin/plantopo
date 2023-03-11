@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { startListening } from '../store/listener';
-import type { RootState } from '../store/store';
+import type { RootState } from '../store/type';
 
 const INFO_CLEAR_AFTER = 3_000;
 

@@ -1,6 +1,6 @@
 import { createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import sortBy from '../util/sortBy';
-import { RootState } from '../store/store';
+import { RootState } from '../store/type';
 import { Layer, LayerDatas, Layers, LayerSource, LayerSources } from './types';
 import { idxBetween } from '../features/fracIdx';
 

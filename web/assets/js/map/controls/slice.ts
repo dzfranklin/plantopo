@@ -8,7 +8,7 @@ import { flash } from '../flash/slice';
 import { LngLat } from '../LngLat';
 import { flyTo, selectViewAt } from '../mapSlice';
 import { startListening } from '../store/listener';
-import { RootState } from '../store/store';
+import { RootState } from '../store/type';
 import { GeolocState } from './GeolocState';
 
 export interface State {

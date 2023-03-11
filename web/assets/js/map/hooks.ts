@@ -4,7 +4,7 @@ import {
   useSelector,
   useStore,
 } from 'react-redux';
-import type { RootState, AppDispatch, AppStore } from './store/store';
+import type { RootState, AppDispatch, AppStore } from './store/type';
 
 export const useAppStore = useStore as unknown as () => AppStore;
 export const useAppDispatch: () => AppDispatch = useDispatch;

@@ -1,6 +1,6 @@
 import { createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { castDraft } from 'immer';
-import { RootState } from '../store/store';
+import { RootState } from '../store/type';
 import { selectPeers } from '../sync/slice';
 import {
   computeAtAfter,

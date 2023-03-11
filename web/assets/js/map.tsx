@@ -3,8 +3,7 @@ import './map/layout.css';
 import { createRoot } from 'react-dom/client';
 import MapApp from './map/MapApp';
 import * as React from 'react';
-import * as ml from 'maplibre-gl';
-import { AppStore, initStore } from './map/store/store';
+import { initStore } from './map/store/store';
 import { Provider } from 'react-redux';
 import { MotionConfig } from 'framer-motion';
 
@@ -59,8 +58,8 @@ declare global {
   interface Window {
     _dbg: {
       loadTime: number;
-      store?: AppStore;
-      mapGL?: ml.Map;
+      store?: any;
+      mapGL?: any;
       computeStyleStats: {
         paintOnlyUpdates: number;
         fullUpdates: number;

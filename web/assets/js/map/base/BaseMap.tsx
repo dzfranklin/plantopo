@@ -25,7 +25,7 @@ import { computeLayers, computeSources, computeTerrain } from './computeStyle';
 import reportTileLoad from './reportTileLoad';
 import computeFeaturesGeoJson from './featuresGeoJson';
 import { DeltaType, diff, OperationType } from '@sanalabs/json';
-import { RootState } from '../store/store';
+import { RootState } from '../store/type';
 import { USER_FEATURES_DATA_ID } from './featuresLayer';
 import '../../../node_modules/maplibre-gl/dist/maplibre-gl.css';
 import { computeFeatureBbox, serializeLngLat } from '../features/algorithms';
