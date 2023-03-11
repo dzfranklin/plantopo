@@ -15,7 +15,11 @@ import {
   SocketStatus,
 } from './slice';
 import * as decoding from 'lib0/decoding';
-import { selectId, syncInitialViewAt, timeoutInitialViewAt } from '../mapSlice';
+import {
+  selectId,
+  syncInitialViewAt,
+  maybeTimeoutInitialViewAt,
+} from '../mapSlice';
 
 const RESYNC_INTERVAL_MS = 1000 * 60 * 5;
 const MAX_BACKOFF_MS = 1000 * 30;
@@ -35,7 +39,7 @@ export default function MapSync() {
 
   useEffect(() => {
     const initialViewAtTimeout = setTimeout(() => {
-      store.dispatch(timeoutInitialViewAt());
+      store.dispatch(maybeTimeoutInitialViewAt());
     }, APPLY_INITIAL_VIEW_AT_TIMEOUT_MS);
 
     const yDoc = new Y.Doc({ gc: true });

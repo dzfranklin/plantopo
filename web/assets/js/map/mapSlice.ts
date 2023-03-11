@@ -29,7 +29,7 @@ const mapSlice = createSlice({
         state.initialViewAt = payload;
       }
     },
-    timeoutInitialViewAt(state, _action: PayloadAction<void>) {
+    maybeTimeoutInitialViewAt(state, _action: PayloadAction<void>) {
       if (state.initialViewAt === undefined) {
         console.warn('Timed out initial view at');
         state.initialViewAt = null;
@@ -43,7 +43,7 @@ export default mapSlice.reducer;
 // Actions
 
 const actions = mapSlice.actions;
-export const { reportViewAt, syncInitialViewAt, timeoutInitialViewAt } =
+export const { reportViewAt, syncInitialViewAt, maybeTimeoutInitialViewAt } =
   actions;
 
 // Intercepted by map
