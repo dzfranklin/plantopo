@@ -14,10 +14,10 @@ defmodule PlanTopoWeb.Sync.Socket do
     peer = get_peer(req)
     user = get_user_or_nil(req)
     role = Maps.role(user, map)
-    fallback_center = Maps.lookup_fallback_center(peer)
 
     if role in [:viewer, :editor, :owner] do
       user_id = if(!is_nil(user), do: user.id)
+      fallback_center = Maps.lookup_fallback_center(peer)
 
       {:cowboy_websocket, req,
        [
@@ -27,7 +27,8 @@ defmodule PlanTopoWeb.Sync.Socket do
          peer: peer
        ]}
     else
-      throw("invalid role")
+      req = :cowboy_req.reply(403, %{"content-type" => "text/plain"}, "Forbidden", req)
+      {:ok, req, nil}
     end
   end
 
