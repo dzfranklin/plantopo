@@ -92,7 +92,7 @@ defmodule PlanTopoWeb.Sync.Socket do
     with header when not is_nil(header) <- Map.get(req.headers, "x-forwarded-for") do
       RemoteIp.from([{"x-forwarded-for", header}])
     else
-      nil -> req.peer
+      nil -> elem(req.peer, 0)
     end
   end
 
