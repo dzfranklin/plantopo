@@ -1,7 +1,7 @@
 import { createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { castDraft } from 'immer';
 import { RootState } from '../store/type';
-import { selectPeers } from '../sync/slice';
+import { selectPeers, syncAction } from '../sync/slice';
 import {
   computeAtAfter,
   computeFeaturesDisplayList,
@@ -195,6 +195,14 @@ const slice = createSlice({
       data.featureTrash = trash;
     },
   },
+  extraReducers(builder) {
+    builder.addCase(syncAction, (state, { payload }) => {
+      const features = (payload['features'] ?? {}) as unknown as Features;
+      const featureTrash = (payload['featureTrash'] ??
+        {}) as unknown as Features;
+      state.sync = { features, featureTrash };
+    });
+  },
 });
 
 export default slice.reducer;
@@ -216,6 +224,9 @@ export const selectCreating = (state: RootState) => state.features.creating;
 
 export const selectFeatures = (state: RootState) =>
   state.features.sync.features;
+
+export const selectFeatureTrash = (state: RootState) =>
+  state.features.sync.featureTrash;
 
 export const selectActiveFeature = (state: RootState): ActiveFeature => {
   const map = selectFeatures(state);

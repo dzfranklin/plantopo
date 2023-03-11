@@ -8,10 +8,8 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import {
   reportAwareUpdate,
   reportSocketStatus,
-  reportUpdate,
+  syncAction,
   selectEnableLocalSave,
-  selectSyncData,
-  selectSyncLocalAware,
   SocketStatus,
 } from './slice';
 import * as decoding from 'lib0/decoding';
@@ -20,6 +18,9 @@ import {
   syncInitialViewAt,
   maybeTimeoutInitialViewAt,
 } from '../mapSlice';
+import { selectSyncData, selectSyncLocalAware } from './syncSelectors';
+import { RootState } from '../store/type';
+import { JsonTemplateObject } from '@sanalabs/json';
 
 const RESYNC_INTERVAL_MS = 1000 * 60 * 5;
 const MAX_BACKOFF_MS = 1000 * 30;
@@ -92,12 +93,14 @@ export default function MapSync() {
     <>
       <SyncYJson
         yJson={state.yData}
-        selectData={(s) => selectSyncData(s as any) as any}
-        setData={reportUpdate}
+        selectData={(state: RootState) => selectSyncData(state) as any}
+        setData={syncAction}
       />
       <SyncYAwareness
         awareness={state.yAwareness}
-        selectLocalAwarenessState={(s) => selectSyncLocalAware(s as any) as any}
+        selectLocalAwarenessState={(state: RootState) =>
+          selectSyncLocalAware(state) as any
+        }
         setAwarenessStates={reportAwareUpdate}
       />
     </>

@@ -34,7 +34,7 @@ import {
   selectLayerSourceDisplayList,
   selectLayerSource,
   updateLayer,
-  selectLayers,
+  selectLayerDisplayList,
   removeLayer,
   addLayer,
   selectIs3d,
@@ -124,7 +124,7 @@ export default function Controls() {
 
 function LayerSelect({ close }) {
   const dispatch = useAppDispatch();
-  const viewLayers = useAppSelector(selectLayers);
+  const viewLayers = useAppSelector(selectLayerDisplayList);
   const sourceList = useAppSelector(selectLayerSourceDisplayList);
 
   const onReoder = useCallback(

@@ -1,8 +1,14 @@
-import { createSelector, createSlice, PayloadAction } from '@reduxjs/toolkit';
+import {
+  ActionReducerMapBuilder,
+  createSelector,
+  createSlice,
+  PayloadAction,
+} from '@reduxjs/toolkit';
 import sortBy from '../util/sortBy';
 import { RootState } from '../store/type';
 import { Layer, LayerDatas, Layers, LayerSource, LayerSources } from './types';
 import { idxBetween } from '../features/fracIdx';
+import { syncAction } from '../sync/slice';
 
 export interface State {
   datas: LayerDatas;
@@ -26,10 +32,6 @@ const slice = createSlice({
   name: 'layers',
   initialState,
   reducers: {
-    sync: (state, action: PayloadAction<State['sync']>) => {
-      state.sync = action.payload;
-    },
-
     updateLayer(
       state,
       { payload }: PayloadAction<{ sourceId: string; value: Partial<Layer> }>,
@@ -62,18 +64,25 @@ const slice = createSlice({
       state.sync.is3d = payload;
     },
   },
+  extraReducers(builder: ActionReducerMapBuilder<State>) {
+    builder.addCase(syncAction, (state, { payload }) => {
+      const layers = (payload['layers'] ?? {}) as unknown as Layers;
+      const is3d = (payload['is3d'] ?? false) as boolean;
+      state.sync = { layers, is3d };
+    });
+  },
 });
 
 export default slice.reducer;
 
-export const { sync, updateLayer, removeLayer, addLayer, setIs3d } =
-  slice.actions;
+export const { updateLayer, removeLayer, addLayer, setIs3d } = slice.actions;
 
 // Selectors
 
-export const selectLayers = createSelector(
-  [(s: RootState) => s.layers.sync.layers],
-  (layers) => computeLayerOrder(layers),
+export const selectLayers = (s: RootState) => s.layers.sync.layers;
+
+export const selectLayerDisplayList = createSelector([selectLayers], (layers) =>
+  computeLayerOrder(layers),
 );
 
 export const selectIs3d = (state: RootState): boolean => state.layers.sync.is3d;
@@ -85,7 +94,7 @@ export const selectLayerDatas = (state: RootState): LayerDatas =>
   state.layers.datas;
 
 export const selectSprites = createSelector(
-  [selectLayers, selectLayerSources],
+  [selectLayerDisplayList, selectLayerSources],
   (layers, sources) => {
     return layers
       .map((l) => sources[l.sourceId])
@@ -95,7 +104,7 @@ export const selectSprites = createSelector(
 );
 
 export const selectLayerSourceDisplayList = createSelector(
-  [selectLayers, selectLayerSources],
+  [selectLayerDisplayList, selectLayerSources],
   (layers, sources) => {
     const used = new Set<string>();
     for (const layer of layers) {
@@ -114,7 +123,7 @@ export const selectLayerSource =
     selectLayerSources(state)[sourceId];
 
 export const selectShouldCreditOS = createSelector(
-  [selectLayers, selectLayerSources, selectLayerDatas],
+  [selectLayerDisplayList, selectLayerSources, selectLayerDatas],
   (layers, layerSources, dataSources) => {
     if (!layers) return false;
     return layers

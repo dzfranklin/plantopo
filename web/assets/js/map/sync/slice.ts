@@ -1,14 +1,8 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { JsonObject, JsonTemplateObject } from '@sanalabs/json';
-import { Layers } from '../layers/types';
-import { startListening } from '../store/listener';
-import * as layersSlice from '../layers/slice';
-import * as featuresSlice from '../features/slice';
-import { Features } from '../features/types';
 import { RootState } from '../store/type';
-import { Aware, PeerAware, SyncData } from './types';
+import { PeerAware } from './types';
 import { CurrentUser } from '../../globals';
-import { ViewAt } from '../ViewAt';
 
 export interface State {
   user: CurrentUser | null;
@@ -47,7 +41,7 @@ const slice = createSlice({
         }
       }
     },
-    reportUpdate(_state, _action: PayloadAction<JsonTemplateObject>) {},
+    syncAction(_state, _action: PayloadAction<JsonTemplateObject>) {},
     reportAwareUpdate(state, { payload }: PayloadAction<JsonObject[]>) {
       const list = payload as unknown as PeerAware[];
       state.peerAwares = {};
@@ -60,48 +54,14 @@ const slice = createSlice({
   },
 });
 
-export const { reportUpdate, reportSocketStatus, reportAwareUpdate } =
+export const { syncAction, reportSocketStatus, reportAwareUpdate } =
   slice.actions;
 
 export default slice.reducer;
 
-startListening({
-  actionCreator: slice.actions.reportUpdate,
-  effect: ({ payload }, l) => {
-    const layers = (payload['layers'] ?? {}) as unknown as Layers;
-    const is3d = (payload['is3d'] ?? false) as boolean;
-    l.dispatch(layersSlice.sync({ layers, is3d }));
-
-    const features = (payload['features'] ?? {}) as unknown as Features;
-    const featureTrash = (payload['featureTrash'] ?? {}) as unknown as Features;
-    l.dispatch(featuresSlice.sync({ features, featureTrash }));
-  },
-});
-
 // Selectors
 
-export const selectPeers = (state: RootState) => state.sync.peerAwares || {};
+export const selectPeers = (state: RootState) => state.sync.peerAwares;
 
 export const selectEnableLocalSave = (state: RootState) =>
   state.sync.enableLocalSave;
-
-export const selectSyncData = (state: RootState): SyncData => {
-  const { layers, is3d } = state.layers.sync;
-  const { features, featureTrash } = state.features.sync;
-  return { layers, is3d, features, featureTrash };
-};
-
-export const selectSyncLocalAware = (state: RootState): Aware => {
-  const user = state.sync.user ?? undefined;
-  const activeFeature = state.features.active;
-
-  let viewAt: ViewAt | undefined;
-  if (state.map.initialViewAt === undefined) {
-    // If we haven't loaded it yet and it hasn't timed out, don't sync over it
-    viewAt = undefined;
-  } else {
-    viewAt = state.map.viewAt;
-  }
-
-  return { user, viewAt, activeFeature };
-};

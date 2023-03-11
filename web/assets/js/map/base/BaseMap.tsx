@@ -12,7 +12,7 @@ import {
 } from '../mapSlice';
 import {
   selectLayerDatas,
-  selectLayers,
+  selectLayerDisplayList,
   selectLayerSources,
   selectIs3d,
   selectSprites,
@@ -146,7 +146,7 @@ export default function BaseMap(props: Props) {
 
         const layers = computeLayers(
           selectLayerSources(state),
-          selectLayers(state),
+          selectLayerDisplayList(state),
         );
         if (!prevLayers) {
           for (const layer of layers) {
