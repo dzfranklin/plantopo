@@ -36,16 +36,16 @@ defmodule PlanTopo.Sync.Engine do
         }
         |> bump_timeout()
 
-      snapshot_update = Maps.get_last_snapshot_as_update(map)
-      Tracer.add_event("loaded last snapshot", is_nil: is_nil(snapshot_update))
+      saved_update = Maps.get_autosave_as_update(map)
+      Tracer.add_event("loaded last snapshot", is_nil: is_nil(saved_update))
 
-      case snapshot_update do
+      case saved_update do
         nil ->
           Logger.info("Created engine [map=#{inspect(map)}] from blank")
 
-        snapshot_update ->
+        saved_update ->
           Tracer.with_span "apply snapshot" do
-            {:ok, _update} = apply_update(state.aware, snapshot_update)
+            {:ok, _update} = apply_update(state.aware, saved_update)
             Logger.info("Created engine [map=#{inspect(map)}] from snapshot")
           end
       end
@@ -310,11 +310,11 @@ defmodule PlanTopo.Sync.Engine do
       aware = state.aware
       map_id = state.map
 
-      prev_snapshot_snapshot = Maps.get_last_snapshot_snapshot(map_id)
+      prev_save_snapshot = Maps.get_autosave_snapshot(map_id)
 
       # Note that we can't lock aware asyncronously
       map_task =
-        case serialize_snapshot_if_changed(aware, prev_snapshot_snapshot) do
+        case serialize_snapshot_if_changed(aware, prev_save_snapshot) do
           {:error, error} ->
             Logger.error("Failed to snapshot state: #{inspect(error)}")
             nil
@@ -322,21 +322,21 @@ defmodule PlanTopo.Sync.Engine do
           {:ok, nil} ->
             nil
 
-          {:ok, snapshot_snapshot} ->
+          {:ok, snapshot} ->
             {:ok, as_update} = encode_state_as_update(aware, nil)
             {:ok, data} = serialize_data(aware)
 
             attrs = %{
               map_id: map_id,
-              snapshot: snapshot_snapshot,
+              snapshot: snapshot,
               as_update: as_update,
               data: data,
-              snapshot_at: DateTime.utc_now()
+              saved_at: DateTime.utc_now()
             }
 
             run_task(fn ->
               attrs = Map.update!(attrs, :data, &Jason.decode!/1)
-              {:ok, _} = Maps.save_snapshot(attrs)
+              {:ok, _} = Maps.autosave(attrs)
             end)
         end
 

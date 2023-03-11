@@ -4,10 +4,13 @@ defmodule PlanTopo.Maps do
   """
 
   import Ecto.Query, warn: false
+  alias Ecto.Changeset
   alias PlanTopo.AuthError, warn: false
   alias PlanTopo.{Repo, Accounts.User}
-  alias __MODULE__.{ViewAt, Meta, Snapshot, LayerData, LayerSource, Role}
+  alias __MODULE__.{ViewAt, Meta, AutoSave, HistorySave, LayerData, LayerSource, Role}
   require Logger
+
+  @hx_interval_secs 60 * 60
 
   def create!(%User{id: user_id}, attrs) do
     Repo.transaction!(fn ->
@@ -89,35 +92,52 @@ defmodule PlanTopo.Maps do
     end
   end
 
-  def get_last_snapshot(map_id) do
-    Snapshot
-    |> where(map_id: ^map_id)
-    |> order_by(desc: :snapshot_at)
-    |> limit(1)
-    |> Repo.one()
-  end
-
-  def get_last_snapshot_snapshot(map_id) do
-    Snapshot
+  def get_autosave_snapshot(map_id) do
+    AutoSave
     |> select([s], s.snapshot)
     |> where(map_id: ^map_id)
-    |> order_by(desc: :snapshot_at)
-    |> limit(1)
     |> Repo.one()
   end
 
-  def get_last_snapshot_as_update(map_id) do
-    Snapshot
+  def get_autosave_as_update(map_id) do
+    AutoSave
     |> select([s], s.as_update)
     |> where(map_id: ^map_id)
-    |> order_by(desc: :snapshot_at)
-    |> limit(1)
     |> Repo.one()
   end
 
-  def save_snapshot(attrs) do
-    Snapshot.changeset(attrs)
-    |> Repo.insert()
+  def autosave(attrs) do
+    value = AutoSave.changeset(attrs)
+    map_id = Changeset.get_field(value, :map_id)
+
+    Repo.transaction(fn ->
+      prev_auto = Repo.get(AutoSave, map_id)
+
+      prev_hx_at =
+        HistorySave
+        |> where(map_id: ^map_id)
+        |> order_by(desc: :saved_at)
+        |> select([s], s.saved_at)
+        |> limit(1)
+        |> Repo.one()
+
+      if not is_nil(prev_auto) do
+        if is_nil(prev_hx_at) or DateTime.diff(prev_auto.saved_at, prev_hx_at) > @hx_interval_secs do
+          prev_auto
+          |> Map.from_struct()
+          |> HistorySave.changeset()
+          |> Repo.insert!()
+        end
+      end
+
+      Repo.insert!(value, conflict_target: :map_id, on_conflict: :replace_all)
+    end)
+  end
+
+  def list_all_history_saves(map_id) do
+    HistorySave
+    |> where(map_id: ^map_id)
+    |> Repo.all()
   end
 
   def get_view_at(user_id, map_id) do
