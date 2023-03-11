@@ -41,7 +41,7 @@ const slice = createSlice({
         }
       }
     },
-    syncAction(_state, _action: PayloadAction<JsonTemplateObject>) {},
+    syncData(_state, _action: PayloadAction<JsonTemplateObject>) {},
     reportAwareUpdate(state, { payload }: PayloadAction<JsonObject[]>) {
       const list = payload as unknown as PeerAware[];
       state.peerAwares = {};
@@ -54,7 +54,7 @@ const slice = createSlice({
   },
 });
 
-export const { syncAction, reportSocketStatus, reportAwareUpdate } =
+export const { syncData, reportSocketStatus, reportAwareUpdate } =
   slice.actions;
 
 export default slice.reducer;

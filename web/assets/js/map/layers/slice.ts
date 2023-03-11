@@ -8,7 +8,7 @@ import sortBy from '../util/sortBy';
 import { RootState } from '../store/type';
 import { Layer, LayerDatas, Layers, LayerSource, LayerSources } from './types';
 import { idxBetween } from '../features/fracIdx';
-import { syncAction } from '../sync/slice';
+import { syncData } from '../sync/slice';
 
 export interface State {
   datas: LayerDatas;
@@ -65,7 +65,7 @@ const slice = createSlice({
     },
   },
   extraReducers(builder: ActionReducerMapBuilder<State>) {
-    builder.addCase(syncAction, (state, { payload }) => {
+    builder.addCase(syncData, (state, { payload }) => {
       const layers = (payload['layers'] ?? {}) as unknown as Layers;
       const is3d = (payload['is3d'] ?? false) as boolean;
       state.sync = { layers, is3d };

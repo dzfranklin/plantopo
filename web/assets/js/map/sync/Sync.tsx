@@ -8,7 +8,7 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import {
   reportAwareUpdate,
   reportSocketStatus,
-  syncAction,
+  syncData,
   selectEnableLocalSave,
   SocketStatus,
 } from './slice';
@@ -94,7 +94,7 @@ export default function MapSync() {
       <SyncYJson
         yJson={state.yData}
         selectData={(state: RootState) => selectSyncData(state) as any}
-        setData={syncAction}
+        setData={syncData}
       />
       <SyncYAwareness
         awareness={state.yAwareness}
