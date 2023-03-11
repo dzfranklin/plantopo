@@ -16,10 +16,13 @@ export interface State {
   peerAwares: { [clientId: number]: PeerAware };
 }
 
+const searchParams = new URLSearchParams(location.search);
+const disableLocalSave = searchParams.has('noLocal') ?? false;
+
 const initialState: State = {
   user: window.currentUser,
   onlineStatus: 'connecting',
-  enableLocalSave: true,
+  enableLocalSave: !disableLocalSave,
   peerAwares: {},
 };
 
