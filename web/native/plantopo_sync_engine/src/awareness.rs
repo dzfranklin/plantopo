@@ -7,7 +7,7 @@ use y_sync::{
 use yrs::{
     types::ToJson,
     updates::{decoder::Decode, encoder::Encode as _},
-    Doc, Map, ReadTxn, Snapshot, StateVector as YStateVector, Transact, Update,
+    Doc, ReadTxn, Snapshot, StateVector as YStateVector, Transact, Update,
 };
 
 use crate::{AwarenessUpdate, EmptyResult, Lock, MessageEncoder, Result, StateVector};
@@ -16,19 +16,10 @@ pub struct Awareness(Lock<YAwareness>);
 
 type AwareRef = ResourceArc<Awareness>;
 
-const NON_EMPTY: &str = "__non_empty";
-
 #[rustler::nif]
 pub fn awareness_new() -> AwareRef {
     let doc = Doc::new();
-    let data = doc.get_or_insert_map("data");
-    {
-        let mut tx = doc.transact_mut();
-
-        if !data.contains_key(&tx, NON_EMPTY) {
-            data.insert(&mut tx, NON_EMPTY, true);
-        }
-    }
+    doc.get_or_insert_map("data");
     let inner = YAwareness::new(doc);
     ResourceArc::new(Awareness(Lock::new(inner)))
 }
