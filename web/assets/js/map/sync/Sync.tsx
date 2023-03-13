@@ -26,7 +26,6 @@ import {
   selectSyncLocalAware,
   selectSyncPeerAwares,
 } from './syncSelectors';
-import { RootState } from '../store/type';
 
 const RESYNC_INTERVAL_MS = 1000 * 60 * 5;
 const MAX_BACKOFF_MS = 1000 * 30;
@@ -99,17 +98,13 @@ export default function MapSync() {
     <>
       <SyncYJson
         yJson={state.yData}
-        selectData={(state: RootState) => selectSyncData(state)}
+        selectData={selectSyncData}
         setData={syncData}
       />
       <SyncYAwareness
         awareness={state.yAwareness}
-        selectLocalAwarenessState={(state: RootState) =>
-          selectSyncLocalAware(state)
-        }
-        selectPeerAwarenessStates={(state: RootState) =>
-          selectSyncPeerAwares(state)
-        }
+        selectLocalAwarenessState={selectSyncLocalAware}
+        selectPeerAwarenessStates={selectSyncPeerAwares}
         setPeerAwarenessStates={syncPeerAwares}
       />
     </>
