@@ -13,8 +13,15 @@ import { selectInitialViewAt, selectViewAt } from '../mapSlice';
 // in esbuild. Without this some of the selectors were importing as undefined.
 
 export const selectSyncData: (state: RootState) => SyncData = createSelector(
-  [selectLayers, selectIs3d, selectFeatures, selectFeatureTrash],
-  (layers, is3d, features, featureTrash) => ({
+  [
+    (s: RootState) => s.sync.unknownData,
+    selectLayers,
+    selectIs3d,
+    selectFeatures,
+    selectFeatureTrash,
+  ],
+  (unknownData, layers, is3d, features, featureTrash) => ({
+    ...unknownData,
     layers,
     is3d,
     features,

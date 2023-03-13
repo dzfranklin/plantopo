@@ -15,6 +15,8 @@ export interface AwareData extends JsonObject {
   [other: string]: any;
 }
 
+export const KNOWN_SYNC_DATA = ['layers', 'is3d', 'features', 'featureTrash'];
+
 export interface SyncData extends JsonTemplateObject {
   layers?: Layers;
   is3d?: boolean;

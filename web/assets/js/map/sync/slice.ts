@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../store/type';
-import { PeerAwareData, SyncData } from './types';
+import { KNOWN_SYNC_DATA, PeerAwareData, SyncData } from './types';
 import { CurrentUser } from '../../globals';
 
 export interface State {
@@ -8,6 +8,7 @@ export interface State {
   onlineStatus: 'connecting' | 'connected' | 'reconnecting';
   enableLocalSave: boolean;
   peerAwares: Record<number, PeerAwareData>;
+  unknownData: Record<string, unknown>;
 }
 
 const searchParams = new URLSearchParams(location.search);
@@ -18,6 +19,7 @@ const initialState: State = {
   onlineStatus: 'connecting',
   enableLocalSave: !disableLocalSave,
   peerAwares: {},
+  unknownData: {},
 };
 
 export type SocketStatus = 'disconnected' | 'connecting' | 'connected';
@@ -40,7 +42,12 @@ const slice = createSlice({
         state.onlineStatus = 'reconnecting';
       }
     },
-    syncData(_state, _action: PayloadAction<SyncData>) {},
+    syncData(state, { payload }: PayloadAction<SyncData>) {
+      const isUnknown = ([k, _v]) => !KNOWN_SYNC_DATA.includes(k);
+      state.unknownData = Object.fromEntries(
+        Array.from(Object.entries(payload)).filter(isUnknown),
+      );
+    },
     syncPeerAwares(
       state,
       { payload }: PayloadAction<Record<number, PeerAwareData>>,
