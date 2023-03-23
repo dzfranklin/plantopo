@@ -82,6 +82,7 @@ export interface PointStyle {
   'icon-image'?: string;
   'icon-offset'?: string; // JSON [number, number]
   'icon-size'?: number;
+  'icon-size-zoomed-out-multiplier'?: number;
   // Text paint
   'text-color'?: Color;
   'text-halo-blur'?: number;

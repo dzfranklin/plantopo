@@ -14,7 +14,14 @@ export const USER_FEATURE_LAYER_SPECS: mlStyle.LayerSpecification[] = [
       'icon-anchor': ['coalesce', ['get', 'style:icon-anchor'], 'center'],
       'icon-image': ['get', 'style:icon-image'],
       'icon-offset': ['coalesce', ['get', 'style:icon-offset'], ['literal', [0, 0]]],
-      'icon-size': ['coalesce', ['get', 'style:icon-size'], 1],
+      'icon-size': ['interpolate', ['linear'],
+        ['zoom'],
+        0, ['*',
+          ['coalesce', ['get', 'style:icon-size-zoomed-out-multiplier'], 1],
+          ['coalesce', ['get', 'style:icon-size'], 1],
+        ],
+        12, ['coalesce', ['get', 'style:icon-size'], 1],
+      ],
 
       // Text layout
       'text-anchor': ['coalesce', ['get', 'style:text-anchor'], 'top'],
