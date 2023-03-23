@@ -1,8 +1,4 @@
-export type Feature =
-  | GroupFeature
-  | PointFeature
-  | RouteFeature
-  | RoutePointFeature;
+export type Feature = GroupFeature | PointFeature | RouteFeature;
 
 export type Features = { [id: string]: Feature };
 
@@ -11,10 +7,8 @@ export const DEFAULT_POINT_SPRITE = 'maki-circle-stroked';
 
 export interface FeatureBase {
   id: Id;
-  // Describes where this feature is visually in the tree
-  //
-  // RoutePoint parent must be Route.All others must have a FeatureGroup or
-  // null as the parent
+  // Describes where this feature is visually in the tree. Must have a
+  // FeatureGroup or null as the parent.
   at: Index;
   // Use filter set on the style
   visible?: boolean;
@@ -46,11 +40,7 @@ export interface RouteFeature extends FeatureBase {
   // 'symbol-placement': 'line' (or maybe 'line-center'), but we want it to always be visible
   labelStyle?: PointStyle;
   lineStyle?: RouteLineStyle;
-}
-
-export interface RoutePointFeature extends FeatureBase {
-  type: 'route/point';
-  lngLat: LngLat;
+  points: string;
 }
 
 type Id = string; // Hyphenated UUID
