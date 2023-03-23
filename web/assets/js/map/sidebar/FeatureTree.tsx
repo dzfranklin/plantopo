@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import classNames from '../../classNames';
 import { sortFeatures } from '../features/algorithms';
 import { Feature, ROOT_FEATURE } from '../features/types';
@@ -30,11 +30,10 @@ const UNNAMED_PLACEHOLDER = {
 const LEVEL_INDENT_PX = 15;
 
 export default function FeatureTree() {
-  const ref = useRef<HTMLDivElement>(null);
   const dragState = useFeatureTreeDrag();
 
   return (
-    <div ref={ref} className="flex flex-col pt-1 mx-[4px] overflow-y-auto grow">
+    <div className="flex flex-col pt-1 mx-[4px] overflow-y-auto grow">
       <GroupChildren
         parentId={ROOT_FEATURE}
         isExpanded={true}
