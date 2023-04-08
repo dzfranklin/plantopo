@@ -20,6 +20,7 @@ import { FolderIcon } from '@heroicons/react/24/outline';
 import { RouteIcon, DropdownIcon } from '../components/icons';
 import StylePopover from './StylePopover';
 import FeatureContextMenu from './FeatureContextMenu';
+import { useFeatureChildren } from '../sync/hooks';
 
 const UNNAMED_PLACEHOLDER = {
   group: 'Unnamed folder',
@@ -28,6 +29,8 @@ const UNNAMED_PLACEHOLDER = {
 };
 
 const LEVEL_INDENT_PX = 15;
+
+// TODO: Maybe to avoid unnecessary re-renders the sidebar should do the subscribing itself, with each group only looking at its direct children?
 
 export default function FeatureTree() {
   const dragState = useFeatureTreeDrag();
@@ -55,7 +58,7 @@ const GroupChildren = ({
   dragState: DragState | undefined;
   level: number;
 }) => {
-  const featureList = useAppSelector(selectFeaturesList(parentId));
+  const childIds = useFeatureChildren(parentId);
 
   let dragChild: DragState | undefined;
   if (dragState && dragState.parentId === parentId) {
@@ -63,13 +66,14 @@ const GroupChildren = ({
   }
 
   let list: (Feature | DragState)[] = [];
-  if (isExpanded) {
-    if (dragChild) {
-      list = sortFeatures([dragChild, ...featureList]);
-    } else {
-      list = sortFeatures(featureList);
-    }
-  }
+  // TODO:
+  // if (isExpanded) {
+  //   if (dragChild) {
+  //     list = sortFeatures([dragChild, ...featureList]);
+  //   } else {
+  //     list = sortFeatures(featureList);
+  //   }
+  // }
 
   return (
     <AnimatePresence initial={false}>
@@ -130,142 +134,143 @@ function FeatureItem({
   dragState: DragState | undefined;
   level: number;
 }) {
-  const { id, type } = feature;
+  // const { id, type } = feature;
 
-  const dispatch = useAppDispatch();
-  const store = useAppStore();
-  const isActive = useAppSelector(selectIsActiveFeature(feature.id));
-  const activePeers = useAppSelector(selectPeersActiveOnFeature(feature.id));
-  const [isRename, setIsRename] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [styleOpen, setStyleOpen] = useState(false);
-  const isDragged = dragState && dragState.id === feature.id;
+  // const dispatch = useAppDispatch();
+  // const store = useAppStore();
+  // const isActive = useAppSelector(selectIsActiveFeature(feature.id));
+  // const activePeers = useAppSelector(selectPeersActiveOnFeature(feature.id));
+  // const [isRename, setIsRename] = useState(false);
+  // const [isExpanded, setIsExpanded] = useState(false);
+  // const [styleOpen, setStyleOpen] = useState(false);
+  // const isDragged = dragState && dragState.id === feature.id;
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const state = store.getState();
-      if (selectIsActiveFeature(id)(state)) {
-        const { key, altKey, ctrlKey } = e;
-        if (!ctrlKey && altKey && key === 'r') {
-          setIsRename(true);
-          e.preventDefault();
-        } else if (!ctrlKey && !altKey && key === 'Enter') {
-          setIsExpanded((prev) => !prev);
-          e.preventDefault();
-        } else if (!ctrlKey && altKey && key === 's') {
-          setStyleOpen(true);
-          e.preventDefault();
-        }
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [id, store, setIsRename, setIsExpanded, setStyleOpen]);
+  // useEffect(() => {
+  //   const handler = (e: KeyboardEvent) => {
+  //     const state = store.getState();
+  //     if (selectIsActiveFeature(id)(state)) {
+  //       const { key, altKey, ctrlKey } = e;
+  //       if (!ctrlKey && altKey && key === 'r') {
+  //         setIsRename(true);
+  //         e.preventDefault();
+  //       } else if (!ctrlKey && !altKey && key === 'Enter') {
+  //         setIsExpanded((prev) => !prev);
+  //         e.preventDefault();
+  //       } else if (!ctrlKey && altKey && key === 's') {
+  //         setStyleOpen(true);
+  //         e.preventDefault();
+  //       }
+  //     }
+  //   };
+  //   window.addEventListener('keydown', handler);
+  //   return () => window.removeEventListener('keydown', handler);
+  // }, [id, store, setIsRename, setIsExpanded, setStyleOpen]);
 
-  if (type !== 'group' && type !== 'point' && type !== 'route') {
-    console.info(`Unknown feature [type=${feature.type}]`, feature);
-    return <></>;
-  }
+  // if (type !== 'group' && type !== 'point' && type !== 'route') {
+  //   // console.info(`Unknown feature [type=${feature.type}]`, feature);
+  //   return <></>;
+  // }
 
-  return (
-    <motion.li
-      draggable={isRename ? 'false' : 'true'}
-      data-feature={feature.id}
-      data-feature-type={feature.type}
-      data-feature-at={feature.at}
-      className="feature-tree__parent"
-      layoutId={feature.id}
-      animate={isDragged ? 'dragged' : 'rest'}
-      variants={{
-        rest: { opacity: 1 },
-        dragged: { opacity: 0.4 },
-      }}
-    >
-      <Popover.Root open={styleOpen} onOpenChange={setStyleOpen} modal={true}>
-        <div
-          className={classNames(
-            'flex flex-row items-center gap-[6px] feature-tree__item grow',
-            isActive && 'bg-blue-100',
-            activePeers.length > 0 && 'border-dashed border-purple-500',
-          )}
-          style={{
-            paddingLeft: `${level * LEVEL_INDENT_PX}px`,
-          }}
-        >
-          <button
-            disabled={feature.type !== 'group'}
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="pl-[3px] self-stretch disabled:opacity-0"
-          >
-            <DropdownIcon className={classNames(!isExpanded && '-rotate-90')} />
-          </button>
+  // return (
+  //   <motion.li
+  //     draggable={isRename ? 'false' : 'true'}
+  //     data-feature={feature.id}
+  //     data-feature-type={feature.type}
+  //     data-feature-at={feature.at}
+  //     className="feature-tree__parent"
+  //     layoutId={feature.id}
+  //     animate={isDragged ? 'dragged' : 'rest'}
+  //     variants={{
+  //       rest: { opacity: 1 },
+  //       dragged: { opacity: 0.4 },
+  //     }}
+  //   >
+  //     <Popover.Root open={styleOpen} onOpenChange={setStyleOpen} modal={true}>
+  //       <div
+  //         className={classNames(
+  //           'flex flex-row items-center gap-[6px] feature-tree__item grow',
+  //           isActive && 'bg-blue-100',
+  //           activePeers.length > 0 && 'border-dashed border-purple-500',
+  //         )}
+  //         style={{
+  //           paddingLeft: `${level * LEVEL_INDENT_PX}px`,
+  //         }}
+  //       >
+  //         <button
+  //           disabled={feature.type !== 'group'}
+  //           onClick={() => setIsExpanded(!isExpanded)}
+  //           className="pl-[3px] self-stretch disabled:opacity-0"
+  //         >
+  //           <DropdownIcon className={classNames(!isExpanded && '-rotate-90')} />
+  //         </button>
 
-          <Popover.Trigger className="flex flex-col justify-center">
-            <PreviewIcon feature={feature} />
-          </Popover.Trigger>
+  //         <Popover.Trigger className="flex flex-col justify-center">
+  //           <PreviewIcon feature={feature} />
+  //         </Popover.Trigger>
 
-          <ContextMenu.Root
-            onOpenChange={(isOpen) => isOpen && dispatch(setActive(feature.id))}
-          >
-            <ContextMenu.Trigger asChild>
-              <button
-                onClick={() => {
-                  if (isActive) setIsRename(true);
-                  else dispatch(setActive(feature.id));
-                }}
-                className="flex flex-row items-center overflow-x-hidden text-sm text-left truncate grow"
-              >
-                {isRename ? (
-                  <input
-                    placeholder={UNNAMED_PLACEHOLDER[feature.type]}
-                    value={feature.name || ''}
-                    onChange={(e) =>
-                      dispatch(
-                        updateFeature(feature.id, { name: e.target.value }),
-                      )
-                    }
-                    autoFocus
-                    onFocus={(e) => e.currentTarget.select()}
-                    onBlur={() => setIsRename(false)}
-                    onKeyDown={(e) =>
-                      (e.key === 'Escape' || e.key === 'Enter') &&
-                      setIsRename(false)
-                    }
-                    className="bg-blue-100 outline-none grow"
-                  />
-                ) : (
-                  <span
-                    className={classNames(
-                      'grow',
-                      !feature.name && 'opacity-60',
-                    )}
-                  >
-                    {feature.name || UNNAMED_PLACEHOLDER[feature.type]}
-                  </span>
-                )}
-              </button>
-            </ContextMenu.Trigger>
-            <FeatureContextMenu
-              feature={feature}
-              setIsRename={setIsRename}
-              setStyleOpen={setStyleOpen}
-            />
-          </ContextMenu.Root>
-        </div>
+  //         <ContextMenu.Root
+  //           onOpenChange={(isOpen) => isOpen && dispatch(setActive(feature.id))}
+  //         >
+  //           <ContextMenu.Trigger asChild>
+  //             <button
+  //               onClick={() => {
+  //                 if (isActive) setIsRename(true);
+  //                 else dispatch(setActive(feature.id));
+  //               }}
+  //               className="flex flex-row items-center overflow-x-hidden text-sm text-left truncate grow"
+  //             >
+  //               {isRename ? (
+  //                 <input
+  //                   placeholder={UNNAMED_PLACEHOLDER[feature.type]}
+  //                   value={feature.name || ''}
+  //                   onChange={(e) =>
+  //                     dispatch(
+  //                       updateFeature(feature.id, { name: e.target.value }),
+  //                     )
+  //                   }
+  //                   autoFocus
+  //                   onFocus={(e) => e.currentTarget.select()}
+  //                   onBlur={() => setIsRename(false)}
+  //                   onKeyDown={(e) =>
+  //                     (e.key === 'Escape' || e.key === 'Enter') &&
+  //                     setIsRename(false)
+  //                   }
+  //                   className="bg-blue-100 outline-none grow"
+  //                 />
+  //               ) : (
+  //                 <span
+  //                   className={classNames(
+  //                     'grow',
+  //                     !feature.name && 'opacity-60',
+  //                   )}
+  //                 >
+  //                   {feature.name || UNNAMED_PLACEHOLDER[feature.type]}
+  //                 </span>
+  //               )}
+  //             </button>
+  //           </ContextMenu.Trigger>
+  //           <FeatureContextMenu
+  //             feature={feature}
+  //             setIsRename={setIsRename}
+  //             setStyleOpen={setStyleOpen}
+  //           />
+  //         </ContextMenu.Root>
+  //       </div>
 
-        <StylePopover feature={feature} />
-      </Popover.Root>
+  //       <StylePopover feature={feature} />
+  //     </Popover.Root>
 
-      {type === 'group' && (
-        <GroupChildren
-          parentId={feature.id}
-          isExpanded={isExpanded}
-          dragState={dragState}
-          level={level + 1}
-        />
-      )}
-    </motion.li>
-  );
+  //     {type === 'group' && (
+  //       <GroupChildren
+  //         parentId={feature.id}
+  //         isExpanded={isExpanded}
+  //         dragState={dragState}
+  //         level={level + 1}
+  //       />
+  //     )}
+  //   </motion.li>
+  // );
+  return <></>;
 }
 const PreviewIcon = ({ feature }: { feature: Feature }) => {
   if (feature.type === 'group') {

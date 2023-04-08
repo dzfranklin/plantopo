@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+  <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+</head>
+
+<body>
+  <script type="importmap">
+    {
+      "imports": {
+        "core.js": "./core.js"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import init, * as sync from './web.js';
+    init().then(() => {
+      console.info('Initialized');
+      window.sync = sync;
+    });
+  </script>
+
+  SyncClient playground.
+</body>
+
+</html>

@@ -5,6 +5,13 @@ export type Features = { [id: string]: Feature };
 export const ROOT_FEATURE = 'db0d225b-6fb4-444e-a18e-13f637036bff';
 export const DEFAULT_POINT_SPRITE = 'maki-circle-stroked';
 
+export const FEATURE_TYPES = new Set(['group', 'point', 'route']);
+export type FeatureType = 'group' | 'point' | 'route';
+export const isFeatureType = (type: unknown): type is FeatureType =>
+  typeof type === 'string' && FEATURE_TYPES.has(type);
+
+// TODO: We no longer need the json string hack now we're doing sync manually
+
 export interface FeatureBase {
   id: Id;
   // Describes where this feature is visually in the tree. Must have a
@@ -26,7 +33,7 @@ export interface GroupFeature extends FeatureBase {
 
 export interface PointFeature extends FeatureBase {
   type: 'point';
-  lngLat: LngLat;
+  lngLat?: LngLat;
   name?: string;
   details?: string;
   style?: PointStyle;
@@ -40,11 +47,11 @@ export interface RouteFeature extends FeatureBase {
   // 'symbol-placement': 'line' (or maybe 'line-center'), but we want it to always be visible
   labelStyle?: PointStyle;
   lineStyle?: RouteLineStyle;
-  points: string;
+  points?: string;
 }
 
 type Id = string; // Hyphenated UUID
-type Index = string; // parent uuid concatenated with fracIdx
+export type Index = [string, string]; // parent uuid concatenated with fracIdx
 type LngLat = string; // lng, lat as JSON [number, number]
 
 // We're styling with a subset of ml styles. For now a little input box with

@@ -1,0 +1,5 @@
+[workspace]
+members = ["core", "web", "server", "cli"]
+
+[profile.release]
+lto = true

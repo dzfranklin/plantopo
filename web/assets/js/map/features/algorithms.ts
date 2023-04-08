@@ -96,7 +96,7 @@ export const idxOfAt = (at: string) => at.substring(UUID_STR_LEN + 1);
 export const serializeAt = (parentId: string, idx: string) =>
   parentId + '.' + idx;
 
-function featureCmp<T extends FeatureBase>(a: T, b: T) {
+export function featureCmp<T extends FeatureBase>(a: T, b: T) {
   const aIdx = idxOf(a);
   const bIdx = idxOf(b);
   if (aIdx < bIdx) return -1;

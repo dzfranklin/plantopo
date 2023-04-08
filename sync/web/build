@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Usage: ./watch or ./watch --debug
+
+BUILD_CMD="wasm-pack build --reference-types --target web $*"
+echo "$BUILD_CMD"
+
+mkdir -p pkg
+echo "*" >pkg/.gitignore
+cp ./dev.html ./pkg/index.html
+$BUILD_CMD
+sed -i "s/new URL('web_bg.wasm', import.meta.url)/new URL('\/assets\/web_bg.wasm', location.href)/g" pkg/web.js
+cp ./pkg/web_bg.wasm ../../web/priv/static/assets/

@@ -3,6 +3,8 @@
     "rust-analyzer.linkedProjects": [
         "./reproj_os_leisure/Cargo.toml",
         "./web/native/plantopo_sync_engine/Cargo.toml",
+        "./sync/Cargo.toml",
+        "./sync/core/Cargo.toml"
     ],
     "files.exclude": {
         "/web/_build/**": true,
@@ -12,5 +14,5 @@
     "editor.tabSize": 2,
     "eslint.workingDirectories": [
         "web/assets"
-    ]
+    ],
 }
