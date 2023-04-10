@@ -462,7 +462,7 @@ async fn upgraded_ws_handler(
                 }
                 SyncProto::Error(error) => {
                     tracing::warn!("client reported error: {error}");
-                    return Err("client reported error");
+                    return Ok(()); // No point in sending back to client
                 }
                 other => {
                     tracing::info!("Ignoring unrecognized message: {other:?}");

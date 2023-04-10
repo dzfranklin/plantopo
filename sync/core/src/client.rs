@@ -1,8 +1,6 @@
 use crate::prelude::*;
 use rand_chacha::ChaCha20Rng;
 
-// Create TPMap. Make Layers a GMap
-
 pub struct Client<LayerOrderSub, FeatureOrderSub, LayerAttrSub, FeatureAttrSub> {
     id: ClientId,
     rng: ChaCha20Rng,
@@ -873,7 +871,6 @@ mod tests {
         let pt = feature::Id(ts);
         client.apply(Op::new(ts, op::Action::CreateFeature(feature::Type::GROUP)));
 
-        eprintln!("{:#?}", client.clock);
         assert_eq!(client.clock.get(client.id).counter(), 43);
         assert_eq!(client.clock.get(peer).counter(), 42);
 

@@ -21,15 +21,6 @@ static mut FROM_LOCAL_ID: BTreeMap<u32, AnyId> = BTreeMap::new();
 static mut TO_LOCAL_ID: BTreeMap<AnyId, u32> = BTreeMap::new();
 static mut CLIENT: Option<Client> = None;
 
-fn client() -> Result<&'static mut Client> {
-    unsafe {
-        // Safety: Single-threaded and we never change the client once set
-        CLIENT
-            .as_mut()
-            .ok_or_else(|| "client not initialized".into())
-    }
-}
-
 #[wasm_bindgen]
 pub fn setup(id: u32) -> Result<()> {
     let id = ClientId(id);
@@ -41,6 +32,15 @@ pub fn setup(id: u32) -> Result<()> {
         CLIENT = Some(sync_core::Client::new(id));
     }
     Ok(())
+}
+
+fn client() -> Result<&'static mut Client> {
+    unsafe {
+        // Safety: Single-threaded and we never change the client once set
+        CLIENT
+            .as_mut()
+            .ok_or_else(|| "client not initialized".into())
+    }
 }
 
 #[wasm_bindgen]
