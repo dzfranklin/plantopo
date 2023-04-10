@@ -324,8 +324,8 @@ where
     }
 
     fn _create_feature(&mut self, ty: feature::Type, ts: LInstant) -> Result<()> {
-        let id = feature::Id(ts);
-        let feature = Feature::new(ts, id, ty);
+        let feature = Feature::new(ts, ty);
+        let id = feature.id();
 
         self.features
             .insert(id, feature)

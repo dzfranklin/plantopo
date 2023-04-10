@@ -11,7 +11,6 @@ use crate::prelude::*;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Feature {
     id: feature::Id,
-    create_ts: LInstant,
     ty: feature::Type,
     data: WritableData,
 }
@@ -24,10 +23,9 @@ pub struct WritableData {
 }
 
 impl Feature {
-    pub fn new(ts: LInstant, id: feature::Id, ty: feature::Type) -> Self {
+    pub fn new(ts: LInstant, ty: feature::Type) -> Self {
         Self {
-            id,
-            create_ts: ts,
+            id: feature::Id(ts),
             ty,
             data: WritableData {
                 trashed: LwwReg::new(false, ts),
@@ -38,7 +36,7 @@ impl Feature {
     }
 
     pub fn create_ts(&self) -> LInstant {
-        self.create_ts
+        self.id.0
     }
 
     pub fn id(&self) -> feature::Id {
