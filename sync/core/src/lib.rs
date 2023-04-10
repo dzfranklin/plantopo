@@ -2,16 +2,6 @@
 #![cfg_attr(not(any(test, feature = "std")), no_std)]
 #![allow(clippy::new_without_default)]
 
-macro_rules! test_log {
-    ($($arg:tt)*) => {{
-        #[cfg(test)]
-        {
-          eprint!("[{}:{}] ", file!(), line!());
-          eprintln!($($arg)*);
-        }
-    }};
-}
-
 extern crate alloc;
 
 mod any_id;

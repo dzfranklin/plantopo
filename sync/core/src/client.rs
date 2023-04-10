@@ -217,16 +217,15 @@ where
         out
     }
 
+    #[tracing::instrument(skip(self))]
     pub fn apply(&mut self, op: Op) {
-        test_log!("apply: {:?} (self is {:?})", &op, self.clock);
-
         let Op { ts, action } = op;
 
         self.clock.set(ts);
         let prev = self.clock.get(self.id);
         self.clock.set(prev.with_counter(prev.max_counter(ts) + 1));
 
-        let _res = match action {
+        let res = match action {
             op::Action::MoveLayer { id, at } => self._move_layer(id, at, ts),
             op::Action::SetLayerAttr { id, key, value } => self._set_layer_attr(id, key, value, ts),
             op::Action::CreateFeature(ty) => self._create_feature(ty, ts),
@@ -238,7 +237,7 @@ where
             op::Action::DeleteFeature(id) => self._delete_feature(id, ts),
         };
 
-        test_log!("apply:\tresult {:?}", _res);
+        tracing::info!("Apply result: {res:?}");
     }
 
     pub fn subscribe_feature_order(&mut self, parent: feature::Id, sub: FeatureOrderSub) -> u32 {
@@ -735,6 +734,7 @@ mod tests {
     use super::*;
     #[allow(unused)]
     use pretty_assertions::{assert_eq, assert_ne};
+    use tracing_subscriber::prelude::*;
 
     type LayerOrderSub = Box<dyn Fn(LayerOrderIter<'_>) + Send + Sync>;
     type FeatureOrderSub = Box<dyn Fn(FeatureOrderIter<'_>) + Send + Sync>;
@@ -745,6 +745,14 @@ mod tests {
         static ONCE: std::sync::Once = std::sync::Once::new();
         ONCE.call_once(|| {
             color_eyre::install().unwrap();
+            tracing_subscriber::registry()
+                .with(
+                    tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                        "plantopo_sync_server=info,plantopo_sync_core=info".into()
+                    }),
+                )
+                .with(tracing_subscriber::fmt::layer())
+                .init()
         });
         let id = ClientId(1);
         Client::new(id)

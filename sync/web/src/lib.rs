@@ -21,6 +21,11 @@ static mut FROM_LOCAL_ID: BTreeMap<u32, AnyId> = BTreeMap::new();
 static mut TO_LOCAL_ID: BTreeMap<AnyId, u32> = BTreeMap::new();
 static mut CLIENT: Option<Client> = None;
 
+#[wasm_bindgen(start)]
+pub fn start() {
+    tracing_wasm::set_as_global_default();
+}
+
 #[wasm_bindgen]
 pub fn setup(id: u32) -> Result<()> {
     let id = ClientId(id);
