@@ -2,10 +2,9 @@ use std::{env, net::SocketAddr, process::Stdio, str::FromStr};
 
 use eyre::{eyre, Result, WrapErr};
 use futures_util::{stream::StreamExt, SinkExt};
-use plantopo_sync_core as sync_core;
 use serde::{Deserialize, Serialize};
 use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     process::Command,
 };
 use tokio_tungstenite::tungstenite::Message;
