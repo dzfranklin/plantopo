@@ -1,25 +1,20 @@
 #![allow(non_snake_case)]
 
-use std::{borrow::Cow, collections::BTreeMap, fmt};
+mod error;
 
-use js_sys::Function;
+use error::Error;
+
+use std::{io::Write, str::FromStr};
+
+use capnp::{message::Builder, serialize_packed};
+use js_sys::{Array, JsString, Object, Reflect};
 use plantopo_sync_core as sync_core;
-use serde_wasm_bindgen as serde_wasm;
-use sync_core::{
-    feature, AnyId, AttrIter, AttrValue, ClientId, FeatureOrderIter, LayerOrderIter, SyncProto,
-};
-use wasm_bindgen::{prelude::*, throw_str};
+use rand_chacha::ChaCha20Rng;
+use rand_core::SeedableRng;
+use sync_core::{attr, delta_capnp, feature, layer, ClientId, LInstant, MapId, SmallVec, Uuid};
+use wasm_bindgen::{intern, prelude::*};
 
-pub type Result<T> = std::result::Result<T, WebError>;
-
-type LayerOrderSub = Box<dyn Fn(LayerOrderIter<'_>)>;
-type FeatureOrderSub = Box<dyn Fn(FeatureOrderIter<'_>)>;
-type AttrSub = Box<dyn Fn(AttrIter<'_>)>;
-type Client = sync_core::Client<LayerOrderSub, FeatureOrderSub, AttrSub, AttrSub>;
-
-static mut FROM_LOCAL_ID: BTreeMap<u32, AnyId> = BTreeMap::new();
-static mut TO_LOCAL_ID: BTreeMap<AnyId, u32> = BTreeMap::new();
-static mut CLIENT: Option<Client> = None;
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[wasm_bindgen(start)]
 pub fn start() {
@@ -27,381 +22,369 @@ pub fn start() {
 }
 
 #[wasm_bindgen]
-pub fn setup(id: u32) -> Result<()> {
-    let id = ClientId(id);
-    unsafe {
-        if CLIENT.is_some() {
-            // Required so that we can hand out static lifetimes in `client()`
-            return Err("client already initialized".into());
-        }
-        CLIENT = Some(sync_core::Client::new(id));
+pub struct Client {
+    inner: sync_core::Client,
+    cp_alloc: capnp::message::HeapAllocator,
+    last_delta: Option<Vec<u8>>,
+}
+
+#[wasm_bindgen]
+impl Client {
+    #[wasm_bindgen(constructor)]
+    pub fn constructor(map_id: &str, client_id: u64) -> Result<Client> {
+        let map_id = MapId::from_str(map_id).map_err(|_| "parse map_id from uuid str")?;
+        let client_id = ClientId(client_id);
+        let rng = ChaCha20Rng::from_entropy();
+        let inner = sync_core::Client::new(client_id, map_id, rng);
+
+        Ok(Self {
+            inner,
+            cp_alloc: capnp::message::HeapAllocator::default(),
+            last_delta: None,
+        })
     }
-    Ok(())
-}
 
-fn client() -> Result<&'static mut Client> {
-    unsafe {
-        // Safety: Single-threaded and we never change the client once set
-        CLIENT
-            .as_mut()
-            .ok_or_else(|| "client not initialized".into())
+    #[wasm_bindgen]
+    pub fn merge(&mut self, delta: &[u8]) -> Result<()> {
+        let opts = capnp::message::ReaderOptions::default();
+        let segments = capnp::serialize::BufferSegments::new(delta, opts)?;
+        let reader = capnp::message::Reader::new(segments, opts);
+        let root = reader.get_root::<delta_capnp::delta::Reader>()?;
+
+        self.inner.merge(root)?;
+
+        Ok(())
     }
-}
 
-#[wasm_bindgen]
-pub fn handleRecv(data: &[u8]) -> Result<()> {
-    let req = SyncProto::from_bytes(&data)?;
-    match req {
-        SyncProto::Broadcast(op) => {
-            client()?.apply(op);
-            Ok(())
-        }
-        SyncProto::Sync(ops) => {
-            let client = client()?;
-            for op in ops {
-                client.apply(op);
-            }
-            Ok(())
-        }
-        SyncProto::Error(err) => Err(format!("received error: {err}").into()),
-        _ => Ok(()),
+    #[wasm_bindgen]
+    pub fn lastDelta(&mut self) -> Option<Box<[u8]>> {
+        self.last_delta.take().map(|v| v.into_boxed_slice())
     }
-}
 
-#[wasm_bindgen]
-pub fn encodeReqSync() -> Result<Vec<u8>> {
-    let clock = client()?.clock();
-    SyncProto::RequestSync(Cow::Borrowed(clock))
-        .to_bytes()
-        .map_err(Into::into)
-}
-
-#[wasm_bindgen]
-pub fn subscribeFeatureOrder(parent: u32, sub: Function) -> Result<u32> {
-    let out = js_sys::Array::new();
-    let handle = client()?.subscribe_feature_order(
-        lid(parent)?.try_into()?,
-        Box::new(move |v| {
-            out.set_length(0);
-            for id in v {
-                out.push(&JsValue::from(make_lid(id.into())));
-            }
-            let _ = sub.call1(&JsValue::NULL, &out);
-        }),
-    );
-    Ok(handle)
-}
-
-#[wasm_bindgen]
-pub fn unsubscribeFeatureOrder(handle: u32) -> Result<()> {
-    client()?.unsubscribe_feature_order(handle);
-    Ok(())
-}
-
-#[wasm_bindgen]
-pub fn featureAttrs(feature: u32) -> Result<JsValue> {
-    let v = client()?.feature_attrs(lid(feature)?.try_into()?);
-    Ok(serde_wasm::to_value(&v)?)
-}
-
-#[wasm_bindgen]
-pub fn subscribeFeatureAttrs(feature: u32, sub: Function) -> Result<u32> {
-    Ok(client()?.subscribe_feature_attrs(
-        lid(feature)?.try_into()?,
-        Box::new(move |v| {
-            if let Ok(v) = serde_wasm::to_value(&v) {
-                let _ = sub.call1(&JsValue::NULL, &v);
-            } else {
-                throw_str("serialize in subscribe_feature_attrs callback");
-            }
-        }),
-    ))
-}
-
-#[wasm_bindgen]
-pub fn unsubscribeFeatureAttrs(handle: u32) -> Result<()> {
-    client()?.unsubscribe_feature_attrs(handle);
-    Ok(())
-}
-
-#[wasm_bindgen]
-pub fn createFeature(ty: u8) -> Result<JsValue> {
-    let (id, op) = client()?.create_feature(feature::Type(ty))?;
-    let id = make_lid(id.into());
-    let op = op.to_bytes()?;
-
-    let out = js_sys::Object::new();
-    js_sys::Reflect::set(&out, &"id".into(), &id.into())?;
-    js_sys::Reflect::set(&out, &"op".into(), &serde_wasm::to_value(&op)?)?;
-    Ok(out.into())
-}
-
-#[wasm_bindgen]
-pub fn setFeatureTrashed(id: u32, value: bool) -> Result<Vec<u8>> {
-    client()?
-        .set_feature_trashed(lid(id)?.try_into()?, value)?
-        .to_bytes()
-        .map_err(Into::into)
-}
-
-#[wasm_bindgen]
-pub fn setFeatureAttr(id: u32, key: &str, value: JsValue) -> Result<Vec<u8>> {
-    client()?
-        .set_feature_attr(lid(id)?.try_into()?, key, to_attr_value(value)?)?
-        .to_bytes()
-        .map_err(Into::into)
-}
-
-#[wasm_bindgen]
-pub fn subscribeLayerOrder(sub: Function) -> Result<u32> {
-    let out = js_sys::Array::new();
-    let handle = client()?.subscribe_layer_order(Box::new(move |v| {
-        for id in v {
-            out.push(&JsValue::from(make_lid(id.into())));
+    #[wasm_bindgen]
+    pub fn layerOrder(&self) -> Array {
+        let out = Array::new();
+        for id in self.inner.layer_order() {
+            let id = layer_to_js(id);
+            out.push(&id);
         }
-        let _ = sub.call1(&JsValue::NULL, &out);
-    }));
-    Ok(handle)
-}
+        out
+    }
 
-#[wasm_bindgen]
-pub fn unsubscribeLayerOrder(handle: u32) -> Result<()> {
-    client()?.unsubscribe_layer_order(handle);
-    Ok(())
-}
+    #[wasm_bindgen]
+    pub fn layerAttrs(&mut self, layer: &str) -> Result<Option<Object>> {
+        let layer = layer_from_js(layer)?;
+        let Some(attrs) = self.inner.layer_attrs(&layer) else { return Ok(None); };
 
-#[wasm_bindgen]
-pub fn subscribeLayerAttrs(layer: u32, sub: Function) -> Result<u32> {
-    let handle = client()?.subscribe_layer_attrs(
-        lid(layer)?.try_into()?,
-        Box::new(move |v| {
-            if let Ok(v) = serde_wasm::to_value(&v) {
-                let _ = sub.call1(&JsValue::NULL, &v);
-            } else {
-                throw_str("serialize in subscribe_layer_attrs callback");
-            }
-        }),
-    );
-    Ok(handle)
-}
+        let obj = Object::new();
+        for (k, v) in attrs {
+            let k: u16 = k.into();
+            let v = attr_to_js(v);
+            Reflect::set_u32(&obj, k as u32, &v).map_err(Error::from_js)?;
+        }
 
-#[wasm_bindgen]
-pub fn unsubscribeLayerAttrs(handle: u32) -> Result<()> {
-    client()?.unsubscribe_layer_attrs(handle);
-    Ok(())
-}
+        Ok(Some(obj))
+    }
 
-#[wasm_bindgen]
-pub fn layerAttrs(layer: u32) -> Result<JsValue> {
-    let v = client()?.layer_attrs(lid(layer)?.try_into()?);
-    Ok(serde_wasm::to_value(&v)?)
-}
+    #[wasm_bindgen]
+    pub fn setLayerAttr(&mut self, layer: &str, key: u16, value: JsValue) -> Result<()> {
+        let layer = layer_from_js(layer)?;
+        let key = attr::Key::from(key);
+        let value = attr_from_js(value)?;
 
-#[wasm_bindgen]
-pub fn moveFeature(
-    id: u32,
-    parent: u32,
-    before: Option<u32>,
-    after: Option<u32>,
-) -> Result<Vec<u8>> {
-    let before = if let Some(before) = before {
-        let before = lid(before)?.try_into()?;
-        Some(before)
-    } else {
-        None
-    };
+        let mut b = Builder::new(&mut self.cp_alloc);
+        self.inner
+            .set_layer_attr(b.init_root(), layer, key, value)?;
 
-    let after = if let Some(after) = after {
-        let after = lid(after)?.try_into()?;
-        Some(after)
-    } else {
-        None
-    };
+        let mut out = Vec::with_capacity(64);
+        serialize_packed::write_message(&mut out, &b).unwrap();
+        self.last_delta = Some(out);
 
-    client()?
-        .move_feature(
-            lid(id)?.try_into()?,
-            lid(parent)?.try_into()?,
-            before,
-            after,
-        )?
-        .to_bytes()
-        .map_err(Into::into)
-}
+        Ok(())
+    }
 
-#[wasm_bindgen]
-pub fn deleteFeature(id: u32) -> Result<Vec<u8>> {
-    client()?
-        .delete_feature(lid(id)?.try_into()?)?
-        .to_bytes()
-        .map_err(Into::into)
-}
+    #[wasm_bindgen]
+    pub fn moveLayer(
+        &mut self,
+        layer: &str,
+        before: Option<String>,
+        after: Option<String>,
+    ) -> Result<()> {
+        let layer = layer_from_js(layer)?;
+        let before = before.as_deref().map(layer_from_js).transpose()?;
+        let after = after.as_deref().map(layer_from_js).transpose()?;
 
-#[wasm_bindgen]
-pub fn moveLayer(id: u32, before: Option<u32>, after: Option<u32>) -> Result<Vec<u8>> {
-    let before = if let Some(before) = before {
-        let before = lid(before)?.try_into()?;
-        Some(before)
-    } else {
-        None
-    };
+        let mut b = Builder::new(&mut self.cp_alloc);
+        self.inner.move_layer(b.init_root(), layer, before, after)?;
 
-    let after = if let Some(after) = after {
-        let after = lid(after)?.try_into()?;
-        Some(after)
-    } else {
-        None
-    };
+        let mut out = Vec::with_capacity(64);
+        serialize_packed::write_message(&mut out, &b).unwrap();
+        self.last_delta = Some(out);
 
-    client()?
-        .move_layer(lid(id)?.try_into()?, before, after)?
-        .to_bytes()
-        .map_err(Into::into)
-}
+        Ok(())
+    }
 
-#[wasm_bindgen]
-pub fn removeLayer(id: u32) -> Result<Vec<u8>> {
-    client()?
-        .remove_layer(lid(id)?.try_into()?)?
-        .to_bytes()
-        .map_err(Into::into)
-}
+    #[wasm_bindgen]
+    pub fn removeLayer(&mut self, layer: &str) -> Result<()> {
+        let layer = layer_from_js(layer)?;
 
-#[wasm_bindgen]
-pub fn setLayerAttr(id: u32, key: &str, value: JsValue) -> Result<Vec<u8>> {
-    client()?
-        .set_layer_attr(lid(id)?.try_into()?, key.into(), to_attr_value(value)?)?
-        .to_bytes()
-        .map_err(Into::into)
-}
+        let mut b = Builder::new(&mut self.cp_alloc);
+        self.inner.remove_layer(b.init_root(), layer)?;
 
-#[wasm_bindgen]
-pub fn debug() -> Result<String> {
-    client().map(|c| format!("{:#?}", c))
-}
+        let mut out = Vec::with_capacity(64);
+        serialize_packed::write_message(&mut out, &b).unwrap();
+        self.last_delta = Some(out);
 
-#[wasm_bindgen]
-pub fn debugLocalId(id: u32) -> Result<String> {
-    lid(id).map(|id| format!("{:?}", id))
-}
+        Ok(())
+    }
 
-#[wasm_bindgen]
-pub fn debugIdTables() -> String {
-    unsafe {
-        // Safety: No concurrency
-        format!(
-            "TO_LOCAL_ID: {:#?}\nFROM_LOCAL_ID: {:#?}",
-            TO_LOCAL_ID, FROM_LOCAL_ID
+    #[wasm_bindgen]
+    pub fn featureOrder(&self, parent: &str) -> Result<Option<Array>> {
+        let parent = feature_from_js(parent)?;
+
+        let Some(order) = self.inner.feature_order(parent) else { return Ok(None); };
+
+        let out = Array::new();
+        for id in order {
+            let id = feature_to_js(id);
+            out.push(&id);
+        }
+        Ok(Some(out))
+    }
+
+    #[wasm_bindgen]
+    pub fn featureAttrs(&mut self, feature: &str) -> Result<Option<Object>> {
+        let feature = feature_from_js(feature)?;
+
+        let obj = Object::new();
+
+        let Some(ty) = self.inner.feature_ty(feature) else { return Ok(None)};
+        Reflect::set(
+            &obj,
+            &JsValue::from_str(intern("type")),
+            &JsValue::from_f64(ty.into_inner() as f64),
         )
-    }
-}
+        .map_err(Error::from_js)?;
 
-fn lid(id: u32) -> Result<AnyId> {
-    if id == 0 {
-        Err("0 is never a local id".into())
-    } else if id == 1 {
-        Ok(AnyId::Feature(feature::Id::ROOT))
-    } else {
-        unsafe {
-            // Safety: No concurrency
-            FROM_LOCAL_ID
-                .get(&id)
-                .copied()
-                .ok_or_else(|| "nonexistant local id".into())
+        let Some(attrs) = self.inner.feature_attrs(feature) else { return Ok(None)};
+        for (k, v) in attrs {
+            let k: u16 = k.into();
+            let v = attr_to_js(v);
+            Reflect::set_u32(&obj, k as u32, &v).map_err(Error::from_js)?;
         }
+
+        Ok(Some(obj))
+    }
+
+    #[wasm_bindgen]
+    pub fn createFeature(&mut self, ty: u8) -> Result<JsString> {
+        let mut b = Builder::new(&mut self.cp_alloc);
+        let id = self.inner.create_feature(b.init_root(), ty.into())?;
+
+        let mut out = Vec::with_capacity(64);
+        serialize_packed::write_message(&mut out, &b)?;
+        self.last_delta = Some(out);
+
+        Ok(feature_to_js(id))
+    }
+
+    #[wasm_bindgen]
+    pub fn setFeatureAttr(&mut self, feature: &str, key: u16, value: JsValue) -> Result<()> {
+        let feature = feature_from_js(feature)?;
+        let key = attr::Key::from(key);
+        let value = attr_from_js(value)?;
+
+        let mut b = Builder::new(&mut self.cp_alloc);
+        self.inner
+            .set_feature_attr(b.init_root(), feature, key, value)?;
+
+        let mut out = Vec::with_capacity(64);
+        serialize_packed::write_message(&mut out, &b).unwrap();
+        self.last_delta = Some(out);
+
+        Ok(())
+    }
+
+    #[wasm_bindgen]
+    pub fn moveFeature(
+        &mut self,
+        feature: &str,
+        parent: &str,
+        before: Option<String>,
+        after: Option<String>,
+    ) -> Result<()> {
+        let feature = feature_from_js(feature)?;
+        let parent = feature_from_js(parent)?;
+        let before = before.as_deref().map(feature_from_js).transpose()?;
+        let after = after.as_deref().map(feature_from_js).transpose()?;
+
+        let mut b = Builder::new(&mut self.cp_alloc);
+        self.inner
+            .move_feature(b.init_root(), feature, parent, before, after)?;
+
+        let mut out = Vec::with_capacity(64);
+        serialize_packed::write_message(&mut out, &b).unwrap();
+        self.last_delta = Some(out);
+
+        Ok(())
+    }
+
+    #[wasm_bindgen]
+    pub fn deleteFeature(&mut self, feature: &str) -> Result<()> {
+        let feature = feature_from_js(feature)?;
+
+        let mut b = Builder::new(&mut self.cp_alloc);
+        self.inner.delete_feature(b.init_root(), feature)?;
+
+        let mut out = Vec::with_capacity(64);
+        serialize_packed::write_message(&mut out, &b).unwrap();
+        self.last_delta = Some(out);
+
+        Ok(())
+    }
+
+    #[wasm_bindgen]
+    pub fn toString(&self) -> String {
+        format!("{:#?}", self.inner)
     }
 }
 
-fn make_lid(rid: AnyId) -> u32 {
-    unsafe {
-        // Safety: No concurrency
-
-        if let Some(&lid) = TO_LOCAL_ID.get(&rid) {
-            lid
-        } else {
-            // Note: We skip 0 because it's falsy in JS and reserve 1 for the root
-            // feature.
-            let lid = TO_LOCAL_ID.len() as u32 + 2;
-
-            TO_LOCAL_ID.insert(rid, lid);
-            FROM_LOCAL_ID.insert(lid, rid);
-
-            lid
-        }
+fn feature_from_js(value: &str) -> Result<feature::Id> {
+    let value = value.as_bytes();
+    if value[0] != b'F' {
+        return Err("feature id missing prefix".into());
     }
+    let value = &value[1..];
+
+    let sep = value
+        .iter()
+        .position(|&b| b == b'@')
+        .ok_or("missing separator")?;
+
+    let counter = &value[..sep];
+    let client = &value[sep + 1..];
+
+    let counter = hex_to_u64(counter)?;
+    let client = hex_to_u64(client)?;
+
+    Ok(feature::Id(LInstant::new(client.into(), counter)))
 }
 
-fn to_attr_value(value: JsValue) -> Result<AttrValue> {
+fn layer_from_js(value: &str) -> Result<layer::Id> {
+    let value = value.as_bytes();
+    if value[0] != b'L' {
+        return Err("layer id missing prefix".into());
+    }
+    let value = &value[1..];
+    let uuid =
+        Uuid::try_parse_ascii(&value).map_err(|_| "failed to parse layer id as ascii uuid")?;
+    Ok(layer::Id(uuid))
+}
+
+fn feature_to_js(id: feature::Id) -> JsString {
+    let mut out = vec![b'F'];
+    u64_to_hex(id.0.counter, &mut out);
+    out.push(b'@');
+    u64_to_hex(id.0.client.into(), &mut out);
+    let out: Vec<u16> = out.into_iter().map(|b| b as u16).collect();
+    JsString::from_char_code(&out)
+}
+
+fn layer_to_js(id: layer::Id) -> JsString {
+    let mut out = vec![b'L'];
+    let uuid: Uuid = id.into();
+    write!(out, "{}", uuid).expect("infallible write");
+    let out: Vec<u16> = out.into_iter().map(|b| b as u16).collect();
+    JsString::from_char_code(&out)
+}
+
+fn hex_to_u64(x: &[u8]) -> Result<u64> {
+    let mut result: u64 = 0;
+    for i in x {
+        result *= 16;
+        result += (*i as char).to_digit(16).ok_or("invalid hex digit")? as u64;
+    }
+    Ok(result)
+}
+
+fn u64_to_hex(x: u64, out: &mut Vec<u8>) {
+    write!(out, "{:x}", x).expect("infallible write");
+}
+
+fn attr_from_js(value: JsValue) -> Result<attr::Value> {
+    use attr::Value;
     if value.is_null() || value.is_undefined() {
-        Ok(AttrValue::None)
+        Ok(Value::None)
     } else if let Some(value) = value.as_bool() {
-        Ok(AttrValue::Bool(value))
+        Ok(Value::Bool(value))
     } else if let Some(v) = value.as_string() {
-        Ok(AttrValue::String(v.into()))
+        Ok(Value::String(v.into()))
     } else if let Some(v) = value.as_f64() {
-        Ok(AttrValue::number(v))
-    } else if let Ok(v) = serde_wasm::from_value::<Vec<f64>>(value.clone()) {
-        Ok(AttrValue::number_array(v.into_iter()))
-    } else if let Ok(v) = serde_wasm::from_value::<Vec<String>>(value) {
-        let v = v.into_iter().map(|v| v.into()).collect();
-        Ok(AttrValue::StringArray(v))
+        Ok(Value::number(v))
     } else {
-        Err("invalid value".into())
-    }
-}
+        let mut iter = js_sys::try_iter(&value)
+            .map_err(Error::from_js)?
+            .ok_or("expected iterable")?;
 
-#[derive(Debug)]
-pub enum WebError {
-    Static(&'static str),
-    Dynamic(JsValue),
-}
+        let first = iter
+            .next()
+            .ok_or("expected iterable to not be empty")?
+            .map_err(Error::from_js)?;
 
-impl std::error::Error for WebError {}
-
-impl fmt::Display for WebError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Static(s) => write!(f, "{}", s),
-            Self::Dynamic(v) => write!(f, "{:?}", v),
+        if let Some(first) = first.as_f64() {
+            let mut out = SmallVec::new();
+            out.push(first.into());
+            for v in iter {
+                let v = v
+                    .map_err(Error::from_js)?
+                    .as_f64()
+                    .ok_or("type of subsequent iterable item must match first: expected number")?;
+                out.push(v.into());
+            }
+            Ok(Value::NumberArray(out))
+        } else if let Some(first) = first.as_string() {
+            let mut out = SmallVec::new();
+            out.push(first.into());
+            for v in iter {
+                let v = v
+                    .map_err(Error::from_js)?
+                    .as_string()
+                    .ok_or("type of subsequent iterable item must match first: expected string")?;
+                out.push(v.into());
+            }
+            Ok(Value::StringArray(out))
+        } else {
+            Err("expected iterable of numbers or strings".into())
         }
     }
 }
 
-impl From<&'static str> for WebError {
-    fn from(s: &'static str) -> Self {
-        Self::Static(s)
-    }
-}
-
-impl From<String> for WebError {
-    fn from(s: String) -> Self {
-        Self::Dynamic(s.into())
-    }
-}
-
-impl From<JsValue> for WebError {
-    fn from(v: JsValue) -> Self {
-        Self::Dynamic(v)
-    }
-}
-
-impl From<serde_wasm_bindgen::Error> for WebError {
-    fn from(e: serde_wasm_bindgen::Error) -> Self {
-        Self::Dynamic(e.into())
-    }
-}
-
-impl From<postcard::Error> for WebError {
-    fn from(e: postcard::Error) -> Self {
-        Self::Dynamic(e.to_string().into())
-    }
-}
-
-impl From<WebError> for JsValue {
-    fn from(e: WebError) -> Self {
-        match e {
-            WebError::Static(s) => JsValue::from(JsError::new(s)),
-            WebError::Dynamic(v) => v,
+fn attr_to_js(value: &attr::Value) -> JsValue {
+    use attr::Value;
+    match value {
+        Value::None => JsValue::null(),
+        Value::Bool(v) => (*v).into(),
+        Value::Number(v) => JsValue::from_f64(v.into_inner()),
+        Value::NumberArray(v) => {
+            let out = Array::new_with_length(v.len() as u32);
+            for (i, v) in v.into_iter().enumerate() {
+                let v = JsValue::from_f64(v.into_inner());
+                out.set(i as u32, v);
+            }
+            out.into()
+        }
+        Value::String(v) => JsValue::from_str(v.as_str()),
+        Value::StringArray(v) => {
+            let out = Array::new_with_length(v.len() as u32);
+            for (i, v) in v.into_iter().enumerate() {
+                let v = JsValue::from_str(&v);
+                out.set(i as u32, v);
+            }
+            out.into()
+        }
+        value => {
+            tracing::info!(?value, "Unknown attr value, returning null");
+            JsValue::null()
         }
     }
 }

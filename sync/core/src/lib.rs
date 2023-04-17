@@ -1,37 +1,45 @@
-#![feature(const_trait_impl, let_chains)]
+#![feature(const_trait_impl, let_chains, error_in_core)]
 #![cfg_attr(not(any(test, feature = "std")), no_std)]
 #![allow(clippy::new_without_default)]
 
 extern crate alloc;
 
-mod any_id;
-mod attr;
+macro_rules! capnp_files {
+    ($($name:ident),*) => {
+        $(
+            #[allow(unused)]
+            pub mod $name {
+                include!(concat!(env!("OUT_DIR"), "/", stringify!($name), ".rs"));
+            }
+        )*
+    };
+}
+capnp_files!(delta_capnp, sync_capnp, save_capnp, types_capnp);
+
+pub mod attr;
+pub mod feature;
+pub mod layer;
+
+mod capnp_support;
 mod client;
 mod client_id;
-pub mod feature;
+mod error;
 mod frac_idx;
-mod g_map;
+mod l_clock;
 mod l_instant;
-pub mod layer;
 mod lww_reg;
-mod merge;
-pub mod op;
+mod map_id;
 mod prelude;
-mod subscriber_registry;
-mod sync_proto;
-mod tp_map;
-mod v_clock;
 
-pub type Result<T> = core::result::Result<T, &'static str>;
-pub use any_id::AnyId;
-pub use attr::AttrValue;
-pub use client::{AttrIter, Client, FeatureOrderIter, LayerOrderIter};
+pub use attr::Value;
+pub use client::Client;
 pub use client_id::ClientId;
+pub use error::Error;
+pub use l_clock::LClock;
 pub use l_instant::LInstant;
-pub use merge::Merge;
-pub use op::Op;
-pub use sync_proto::SyncProto;
-pub use v_clock::VClock;
+pub use map_id::MapId;
+
+pub type Result<T> = core::result::Result<T, Error>;
 
 pub use smallvec::SmallVec;
 pub use smol_str::SmolStr;

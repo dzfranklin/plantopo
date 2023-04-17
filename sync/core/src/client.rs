@@ -1,802 +1,420 @@
-use crate::prelude::*;
-use rand_chacha::ChaCha20Rng;
+use crate::{capnp_support::*, delta_capnp, prelude::*, save_capnp};
 
-pub struct Client<LayerOrderSub, FeatureOrderSub, LayerAttrSub, FeatureAttrSub> {
+#[derive(Debug)]
+pub struct Client {
     id: ClientId,
-    rng: ChaCha20Rng,
-    clock: VClock,
-    features: TPMap<feature::Id, Feature>,
-    feature_order: BTreeMap<feature::Id, SmallVec<[(FracIdx, feature::Id); 1024]>>,
-    feature_order_subs: SubscriberRegistry<feature::Id, FeatureOrderSub>,
-    feature_attr_subs: SubscriberRegistry<feature::Id, FeatureAttrSub>,
-    layers: GMap<layer::Id, Layer>,
-    layer_order: SmallVec<[(FracIdx, layer::Id); 16]>,
-    layer_order_subs: SubscriberRegistry<(), LayerOrderSub>,
-    layer_attr_subs: SubscriberRegistry<layer::Id, LayerAttrSub>,
+    map_id: MapId,
+    rng: RngType,
+    clock: LClock,
+    features: feature::Store,
+    layers: layer::Store,
 }
 
-// We need to manually implement Debug so that the impl doesn't require the
-// subscribers to be debug.
-impl<LOS, FOS, LAS, FAS> fmt::Debug for Client<LOS, FOS, LAS, FAS> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Client")
-            .field("id", &self.id)
-            .field("rng", &self.rng)
-            .field("clock", &self.clock)
-            .field("features", &self.features)
-            .field("feature_order", &self.feature_order)
-            .field("feature_order_subs", &self.feature_order_subs)
-            .field("feature_attr_subs", &self.feature_attr_subs)
-            .field("layers", &self.layers)
-            .field("layer_order", &self.layer_order)
-            .field("layer_order_subs", &self.layer_order_subs)
-            .field("layer_attr_subs", &self.layer_attr_subs)
-            .finish()
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ClientSave<'a> {
-    id: ClientId,
-    clock: Cow<'a, VClock>,
-    rng: ChaCha20Rng,
-    features: Cow<'a, TPMap<feature::Id, Feature>>,
-    layers: Cow<'a, GMap<layer::Id, Layer>>,
-}
-
-impl<LayerOrderSub, FeatureOrderSub, LayerAttrSub, FeatureAttrSub>
-    Client<LayerOrderSub, FeatureOrderSub, LayerAttrSub, FeatureAttrSub>
-where
-    LayerOrderSub: Fn(LayerOrderIter<'_>),
-    FeatureOrderSub: Fn(FeatureOrderIter<'_>),
-    LayerAttrSub: Fn(AttrIter<'_>),
-    FeatureAttrSub: Fn(AttrIter<'_>),
-{
-    pub fn new(id: ClientId) -> Self {
+impl Client {
+    pub fn new(id: ClientId, map_id: MapId, rng: RngType) -> Self {
         Self {
             id,
-            rng: ChaCha20Rng::seed_from_u64(id.0 as u64),
-            clock: VClock::new(),
-            features: TPMap::new(),
-            feature_order: BTreeMap::new(),
-            feature_order_subs: SubscriberRegistry::new(),
-            feature_attr_subs: SubscriberRegistry::new(),
-            layers: GMap::new(),
-            layer_order: SmallVec::new(),
-            layer_order_subs: SubscriberRegistry::new(),
-            layer_attr_subs: SubscriberRegistry::new(),
-        }
-    }
-
-    pub fn restore(bytes: &[u8]) -> core::result::Result<Self, postcard::Error> {
-        let ClientSave {
-            id,
-            clock,
+            map_id,
             rng,
-            features,
-            layers,
-        } = postcard::from_bytes(bytes)?;
-
-        let clock = clock.into_owned();
-        let features = features.into_owned();
-        let layers = layers.into_owned();
-
-        let mut feature_order = BTreeMap::new();
-        for (_, feature) in features.iter() {
-            let at = match feature.at().as_value() {
-                Some(at) => at.clone(),
-                None => continue,
-            };
-
-            let sibs = feature_order.entry(at.parent).or_insert_with(SmallVec::new);
-            // We insert out of order and then sort once per vec
-            sibs.push((at.idx, feature.id()));
+            clock: LClock::new(id, 1),
+            features: Default::default(),
+            layers: Default::default(),
         }
-        for (_, sibs) in feature_order.iter_mut() {
-            sibs.sort();
-        }
-
-        let mut layer_order = SmallVec::new();
-        for (&id, layer) in layers.iter() {
-            if let Some(at) = layer.at.as_value() {
-                // We insert out of order and then sort once
-                layer_order.push((at.clone(), id));
-            }
-        }
-        layer_order.sort();
-
-        Ok(Self {
-            id,
-            clock,
-            rng,
-            features,
-            feature_order,
-            feature_order_subs: SubscriberRegistry::new(),
-            feature_attr_subs: SubscriberRegistry::new(),
-            layers,
-            layer_order,
-            layer_attr_subs: SubscriberRegistry::new(),
-            layer_order_subs: SubscriberRegistry::new(),
-        })
-    }
-
-    pub fn save(&self) -> core::result::Result<alloc::vec::Vec<u8>, postcard::Error> {
-        let value = ClientSave {
-            id: self.id,
-            clock: Cow::Borrowed(&self.clock),
-            rng: self.rng.clone(),
-            features: Cow::Borrowed(&self.features),
-            layers: Cow::Borrowed(&self.layers),
-        };
-        postcard::to_allocvec(&value)
     }
 
     pub fn id(&self) -> ClientId {
         self.id
     }
 
-    pub fn clock(&self) -> &VClock {
-        &self.clock
+    pub fn map_id(&self) -> MapId {
+        self.map_id
     }
 
-    pub fn unseen_by(&self, peer: &VClock) -> alloc::vec::Vec<Op> {
-        let mut out = alloc::vec::Vec::new();
-
-        for (_, f) in self.features.iter() {
-            if !peer.has_observed(f.create_ts()) {
-                out.push(Op::new(f.create_ts(), op::Action::CreateFeature(f.ty())));
-            }
-
-            if !peer.has_observed(f.trashed().ts()) && f.trashed().ts() > f.create_ts() {
-                out.push(Op::new(
-                    f.trashed().ts(),
-                    op::Action::SetFeatureTrashed {
-                        id: f.id(),
-                        value: *f.trashed().as_value(),
-                    },
-                ));
-            }
-
-            if !peer.has_observed(f.at().ts()) && f.at().ts() > f.create_ts() {
-                out.push(Op::new(
-                    f.at().ts(),
-                    op::Action::MoveFeature {
-                        id: f.id(),
-                        at: f.at().as_value().clone(),
-                    },
-                ));
-            }
-
-            for (key, value) in f.attrs().iter() {
-                if !peer.has_observed(value.ts()) {
-                    out.push(Op::new(
-                        value.ts(),
-                        op::Action::SetFeatureAttr {
-                            id: f.id(),
-                            key: key.clone(),
-                            value: value.as_value().clone(),
-                        },
-                    ));
-                }
-            }
-        }
-
-        for (&f, ts) in self.features.iter_dead() {
-            if !peer.has_observed(ts) {
-                out.push(Op::new(ts, op::Action::DeleteFeature(f)));
-            }
-        }
-
-        for (_, l) in self.layers.iter() {
-            if !peer.has_observed(l.at.ts()) {
-                out.push(Op::new(
-                    l.at.ts(),
-                    op::Action::MoveLayer {
-                        id: l.id,
-                        at: l.at.as_value().clone(),
-                    },
-                ));
-            }
-
-            for (key, value) in l.attrs.iter() {
-                if !peer.has_observed(value.ts()) {
-                    out.push(Op::new(
-                        value.ts(),
-                        op::Action::SetLayerAttr {
-                            id: l.id,
-                            key: key.clone(),
-                            value: value.as_value().clone(),
-                        },
-                    ));
-                }
-            }
-        }
-
-        out.sort_by_key(|op| op.ts);
-
-        out
+    pub fn now(&self) -> LInstant {
+        self.clock.now()
     }
 
-    #[tracing::instrument(skip(self))]
-    pub fn apply(&mut self, op: Op) {
-        let Op { ts, action } = op;
-
-        self.clock.set(ts);
-        let prev = self.clock.get(self.id);
-        self.clock.set(prev.with_counter(prev.max_counter(ts) + 1));
-
-        let res = match action {
-            op::Action::MoveLayer { id, at } => self._move_layer(id, at, ts),
-            op::Action::SetLayerAttr { id, key, value } => self._set_layer_attr(id, key, value, ts),
-            op::Action::CreateFeature(ty) => self._create_feature(ty, ts),
-            op::Action::MoveFeature { id, at } => self._move_feature(id, at, ts),
-            op::Action::SetFeatureTrashed { id, value } => self._set_feature_trashed(id, value, ts),
-            op::Action::SetFeatureAttr { id, key, value } => {
-                self._set_feature_attr(id, key, value, ts)
-            }
-            op::Action::DeleteFeature(id) => self._delete_feature(id, ts),
-        };
-
-        tracing::info!("Apply result: {res:?}");
-    }
-
-    pub fn subscribe_feature_order(&mut self, parent: feature::Id, sub: FeatureOrderSub) -> u32 {
-        {
-            let children = self.feature_children(parent);
-            sub(children);
-        }
-        self.feature_order_subs.insert(parent, sub)
-    }
-
-    pub fn unsubscribe_feature_order(&mut self, handle: u32) {
-        self.feature_order_subs.remove(handle);
-    }
-
-    pub fn feature_children(&self, parent: feature::Id) -> FeatureOrderIter {
-        if let Some(sibs) = self.feature_order.get(&parent) {
-            FeatureOrderIter(Some(sibs.iter()))
-        } else {
-            FeatureOrderIter(None)
-        }
-    }
-
-    pub fn subscribe_feature_attrs(&mut self, feature: feature::Id, sub: FeatureAttrSub) -> u32 {
-        if let Some(attrs) = self.feature_attrs(feature) {
-            sub(attrs);
-        }
-        self.feature_attr_subs.insert(feature, sub)
-    }
-
-    pub fn unsubscribe_feature_attrs(&mut self, handle: u32) {
-        self.feature_attr_subs.remove(handle);
-    }
-
-    pub fn feature_attrs(&self, feature: feature::Id) -> Option<AttrIter> {
+    #[tracing::instrument(skip_all)]
+    pub fn merge(&mut self, delta: delta_capnp::delta::Reader) -> Result<()> {
+        self.layers.merge(&mut self.clock, &delta.get_layers()?)?;
         self.features
-            .get(&feature)
-            .map(|feature| AttrIter(feature.attrs().iter()))
-    }
-
-    pub fn subscribe_layer_order(&mut self, sub: LayerOrderSub) -> u32 {
-        sub(self.layer_order());
-        self.layer_order_subs.insert((), sub)
-    }
-
-    pub fn unsubscribe_layer_order(&mut self, handle: u32) {
-        self.layer_order_subs.remove(handle);
-    }
-
-    pub fn layer_order(&self) -> LayerOrderIter {
-        LayerOrderIter(self.layer_order.iter())
-    }
-
-    pub fn subscribe_layer_attrs(&mut self, layer: layer::Id, sub: LayerAttrSub) -> u32 {
-        if let Some(attrs) = self.layer_attrs(layer) {
-            sub(attrs);
-        }
-        self.layer_attr_subs.insert(layer, sub)
-    }
-
-    pub fn unsubscribe_layer_attrs(&mut self, handle: u32) {
-        self.layer_attr_subs.remove(handle);
-    }
-
-    pub fn layer_attrs(&self, layer: layer::Id) -> Option<AttrIter> {
-        if let Some(layer) = self.layers.get(&layer) {
-            if layer.at.as_value().is_none() {
-                return None;
-            }
-            Some(AttrIter(layer.attrs.iter()))
-        } else {
-            None
-        }
-    }
-
-    pub fn create_feature(&mut self, ty: feature::Type) -> Result<(feature::Id, Op)> {
-        let ts = self.clock.tick(self.id);
-        self._create_feature(ty, ts)?;
-        let id = feature::Id(ts);
-        let op = Op::new(ts, op::Action::CreateFeature(ty));
-        Ok((id, op))
-    }
-
-    fn _create_feature(&mut self, ty: feature::Type, ts: LInstant) -> Result<()> {
-        let feature = Feature::new(ts, ty);
-        let id = feature.id();
-
-        self.features
-            .insert(id, feature)
-            .map_err(|_| "feature not valid for insertion")?;
-
-        if ty == feature::Type::GROUP {
-            self.feature_order.insert(id, SmallVec::new());
-        }
-
+            .merge(&mut self.clock, &delta.get_features()?)?;
+        self.clock.tick();
         Ok(())
     }
 
-    pub fn set_feature_trashed(&mut self, id: feature::Id, value: bool) -> Result<Op> {
-        let ts = self.clock.tick(self.id);
-        self._set_feature_trashed(id, value, ts)?;
-        Ok(Op::new(ts, op::Action::SetFeatureTrashed { id, value }))
+    #[tracing::instrument(skip_all)]
+    pub fn save(&self, mut b: save_capnp::save::Builder) {
+        b.set_client_id(self.id.into());
+        write_uuid(b.reborrow().init_map_id(), self.map_id.into());
+        self.write_state(b.reborrow().init_state());
     }
 
-    fn _set_feature_trashed(&mut self, id: feature::Id, value: bool, ts: LInstant) -> Result<()> {
-        self.features
-            .merge_value(
-                id,
-                feature::WritableData {
-                    trashed: LwwReg::new(value, ts),
-                    ..Default::default()
-                },
-            )
-            .map_err(|_| "cannot trash nonexistant")
+    #[tracing::instrument(skip_all)]
+    pub fn restore(save: save_capnp::save::Reader, rng: RngType) -> Result<Self> {
+        let id: ClientId = save.get_client_id().into();
+        let map_id: MapId = read_uuid(save.get_map_id()?).into();
+        let mut client = Self::new(id, map_id, rng);
+        client.merge(save.get_state()?)?;
+        Ok(client)
     }
 
+    pub fn write_state(&self, mut b: delta_capnp::delta::Builder) {
+        self.layers.save(b.reborrow().init_layers());
+        self.features.save(b.init_features());
+    }
+
+    pub fn layer_order(&self) -> layer::OrderIter {
+        self.layers.order()
+    }
+
+    pub fn layer_attrs(&self, id: &layer::Id) -> Option<attr::Iter> {
+        self.layers.attrs(id)
+    }
+
+    #[tracing::instrument(skip(self, out))]
+    pub fn set_layer_attr(
+        &mut self,
+        mut out: delta_capnp::delta::Builder,
+        id: layer::Id,
+        key: attr::Key,
+        value: attr::Value,
+    ) -> Result<()> {
+        if !self.layers.contains(&id) {
+            return Err("layer to set attr on not found".into());
+        }
+
+        // Serialize
+        let mut b = out.reborrow().init_layers().init_value(1).get(0);
+        write_uuid(b.reborrow().init_id(), id.into());
+        write_attr(
+            b.init_attrs().init_value(1).get(0),
+            key,
+            &value,
+            self.clock.now(),
+        );
+
+        self.merge(out.reborrow_as_reader())
+    }
+
+    /// Note that all layers implicitly exist for all time.
+    #[tracing::instrument(skip(self, out))]
+    pub fn move_layer(
+        &mut self,
+        mut out: delta_capnp::delta::Builder,
+        id: layer::Id,
+        before: Option<layer::Id>,
+        after: Option<layer::Id>,
+    ) -> Result<()> {
+        let before_idx = if let Some(before) = before {
+            self.layers.get_at(&before).wrap_err("get before")?
+        } else {
+            None
+        };
+        let after_idx = if let Some(after) = after {
+            self.layers.get_at(&after).wrap_err("get after")?
+        } else {
+            None
+        };
+
+        let idx = FracIdx::between(before_idx, after_idx, &mut self.rng);
+        tracing::trace!(?idx, ?before_idx, ?after_idx);
+
+        // Serialize
+        let mut b = out.reborrow().init_layers().init_value(1).get(0);
+        write_uuid(b.reborrow().init_id(), id.into());
+        write_frac_idx(b.reborrow().init_at(), &idx);
+        write_l_instant(b.init_at_ts(), self.clock.now());
+
+        self.merge(out.reborrow_as_reader())
+    }
+
+    #[tracing::instrument(skip(self, out))]
+    pub fn remove_layer(
+        &mut self,
+        mut out: delta_capnp::delta::Builder,
+        id: layer::Id,
+    ) -> Result<()> {
+        if !self.layers.contains(&id) {
+            return Err("layer to remove not found".into());
+        }
+
+        // Serialize
+        let mut b = out.reborrow().init_layers().init_value(1).get(0);
+        write_uuid(b.reborrow().init_id(), id.into());
+        write_l_instant(b.init_at_ts(), self.clock.now());
+
+        self.merge(out.reborrow_as_reader())
+    }
+
+    pub fn feature_order(&self, parent: feature::Id) -> Option<feature::OrderIter> {
+        self.features.order(parent)
+    }
+
+    pub fn feature_ty(&self, feature: feature::Id) -> Option<feature::Type> {
+        self.features.ty(feature)
+    }
+
+    pub fn feature_attrs(&self, feature: feature::Id) -> Option<attr::Iter> {
+        self.features.attrs(feature)
+    }
+
+    #[tracing::instrument(skip(self, out))]
+    pub fn create_feature(
+        &mut self,
+        mut out: delta_capnp::delta::Builder,
+        ty: feature::Type,
+    ) -> Result<feature::Id> {
+        let id = feature::Id(self.clock.now());
+
+        // Serialize
+        let mut b = out.reborrow().init_features().init_live(1).get(0);
+        write_l_instant(b.reborrow().init_id(), id.into());
+        b.set_type(ty.into());
+
+        self.merge(out.reborrow_as_reader())?;
+        Ok(id)
+    }
+
+    #[tracing::instrument(skip(self, out))]
     pub fn set_feature_attr(
         &mut self,
+        mut out: delta_capnp::delta::Builder,
         id: feature::Id,
-        key: impl Into<SmolStr>,
-        value: AttrValue,
-    ) -> Result<Op> {
-        let key = key.into();
-        let ts = self.clock.tick(self.id);
-        self._set_feature_attr(id, key.clone(), value.clone(), ts)?;
-        Ok(Op::new(ts, op::Action::SetFeatureAttr { id, key, value }))
-    }
-
-    fn _set_feature_attr(
-        &mut self,
-        id: feature::Id,
-        key: SmolStr,
-        value: AttrValue,
-        ts: LInstant,
+        key: attr::Key,
+        value: attr::Value,
     ) -> Result<()> {
-        self.features
-            .merge_value(
-                id,
-                feature::WritableData {
-                    attrs: GMap::from_entries([(key, LwwReg::new(value, ts))]),
-                    ..Default::default()
-                },
-            )
-            .map_err(|_| "cannot set feature attr on nonexistant")
+        let ty = self
+            .feature_ty(id)
+            .ok_or("feature to set attr on not found")?;
+
+        // Serialize
+        let mut b = out.reborrow().init_features().init_live(1).get(0);
+        write_l_instant(b.reborrow().init_id(), id.into());
+        b.set_type(ty.into());
+        write_attr(
+            b.init_attrs().init_value(1).get(0),
+            key,
+            &value,
+            self.clock.now(),
+        );
+
+        self.merge(out.reborrow_as_reader())
     }
 
+    /// Write a delta corresponding to the  move.
+    #[tracing::instrument(skip(self, out))]
     pub fn move_feature(
         &mut self,
+        mut out: delta_capnp::delta::Builder,
         id: feature::Id,
         parent: feature::Id,
         before: Option<feature::Id>,
         after: Option<feature::Id>,
-    ) -> Result<Op> {
-        let before = if let Some(id) = before {
-            let at = self
-                .features
-                .get(&id)
-                .ok_or("missing feature")?
-                .at()
-                .as_value()
-                .as_ref()
-                .ok_or("missing at")?;
-            Some(at)
-        } else {
-            None
-        };
-        let after = if let Some(id) = after {
-            let at = self
-                .features
-                .get(&id)
-                .ok_or("missing feature")?
-                .at()
-                .as_value()
-                .as_ref()
-                .ok_or("missing at")?;
-            Some(at)
-        } else {
-            None
-        };
-
-        if let Some(before) = before && before.parent != parent {
-            return Err("not parent of before");
-        }
-        if let Some(after) = after && after.parent != parent {
-            return Err("not parent of after");
-        }
-        if let Some(before) = before && let Some(after) = after && before == after {
-            return Err("before and after are the same");
-        }
-
-        let before = before.map(|v| &v.idx);
-        let after = after.map(|v| &v.idx);
-
-        let idx = FracIdx::between(before, after, &mut self.rng);
-        let at = feature::At { parent, idx };
-
-        let ts = self.clock.tick(self.id);
-        self._move_feature(id, Some(at.clone()), ts)?;
-        Ok(Op::new(ts, op::Action::MoveFeature { id, at: Some(at) }))
-    }
-
-    fn _move_feature(
-        &mut self,
-        id: feature::Id,
-        at: Option<feature::At>,
-        ts: LInstant,
     ) -> Result<()> {
-        let prev_parent = self
-            .features
-            .get(&id)
-            .and_then(|f| f.at().as_value().as_ref())
-            .map(|at| at.parent);
+        // Compute
 
-        self.features
-            .merge_value(
-                id,
-                feature::WritableData {
-                    at: LwwReg::new(at.clone(), ts),
-                    ..Default::default()
-                },
-            )
-            .map_err(|_| "cannot move nonexistant")?;
+        let ty = self.features.ty(id).ok_or("feature to move not found")?;
 
-        let mut changed_parent = None;
-
-        if let Some(prev_parent) = prev_parent {
-            if let Some(prev_sibs) = self.feature_order.get_mut(&prev_parent) {
-                prev_sibs.retain(|(_, sib)| sib != &id);
-            }
-
-            if let Some(at) = &at && at.parent != prev_parent {
-                changed_parent = Some(prev_parent);
-            }
-        }
-
-        if let Some(at) = at {
-            let at_parent = at.parent;
-
-            let sibs = self
-                .feature_order
-                .entry(at.parent)
-                .or_insert_with(SmallVec::new);
-
-            let elem = (at.idx, id);
-            match sibs.binary_search(&elem) {
-                Ok(_) => {}
-                Err(idx) => {
-                    sibs.insert(idx, elem);
-                }
-            }
-
-            self.feature_order_subs
-                .call(&at_parent, self.feature_children(at_parent));
-        }
-
-        if let Some(prev_parent) = changed_parent {
-            self.feature_order_subs
-                .call(&prev_parent, self.feature_children(prev_parent));
-        }
-
-        Ok(())
-    }
-
-    pub fn delete_feature(&mut self, id: feature::Id) -> Result<Op> {
-        let ts = self.clock.tick(self.id);
-        self._delete_feature(id, ts)?;
-        Ok(Op::new(ts, op::Action::DeleteFeature(id)))
-    }
-
-    fn _delete_feature(&mut self, id: feature::Id, ts: LInstant) -> Result<()> {
-        if !self.features.contains_key(&id) {
-            // We deliberately allow deleting a nonexistant feature to
-            // simplify snapshotting the state as a list of ops: You only need
-            // to keep deletions, not matching creates.
-            //
-            // If the feature doesn't exist no one else can know about it,
-            // so we don't have to worry about subscribers or children.
+        let before_at = if let Some(before) = before {
             self.features
-                .delete(id, ts)
-                .map_err(|_| "already deleted")?;
-            return Ok(());
-        }
-
-        fn inner<LOS, FOS, LAS, FAS>(
-            client: &mut Client<LOS, FOS, LAS, FAS>,
-            id: feature::Id,
-            ts: LInstant,
-            dirty_parents: &mut BTreeSet<feature::Id>,
-        ) {
-            if let Ok(feat) = client.features.delete(id, ts) {
-                if let Some(at) = feat.at().as_value() {
-                    if let Some(sibs) = client.feature_order.get_mut(&at.parent) {
-                        sibs.retain(|(_, sib)| sib != &feat.id());
-                    }
-                }
-
-                if feat.ty() == feature::Type::GROUP {
-                    let direct_children = client
-                        .feature_order
-                        .remove(&id)
-                        .unwrap_or_else(SmallVec::new);
-
-                    for (_, child) in direct_children {
-                        inner(client, child, ts.with_tick(), dirty_parents);
-                    }
-                }
-
-                if feat.ty() == feature::Type::GROUP {
-                    dirty_parents.insert(id);
-                }
-                if let Some(at) = feat.at().as_value() {
-                    dirty_parents.insert(at.parent);
-                }
-            }
-        }
-
-        let mut dirty_parents = BTreeSet::new();
-        inner(self, id, ts, &mut dirty_parents);
-        for parent in dirty_parents {
-            self.feature_order_subs
-                .call(&parent, self.feature_children(parent));
-        }
-
-        Ok(())
-    }
-
-    pub fn move_layer(
-        &mut self,
-        id: layer::Id,
-        before: Option<layer::Id>,
-        after: Option<layer::Id>,
-    ) -> Result<Op> {
-        let before = if let Some(id) = before {
-            let at = self
-                .layers
-                .get(&id)
-                .ok_or("missing layer")?
-                .at
-                .as_value()
-                .as_ref()
-                .ok_or("before not active")?;
-            Some(at)
-        } else {
-            None
-        };
-        let after = if let Some(id) = after {
-            let at = self
-                .layers
-                .get(&id)
-                .ok_or("missing layer")?
-                .at
-                .as_value()
-                .as_ref()
-                .ok_or("after not active")?;
-            Some(at)
+                .at(before)
+                .wrap_err("move_feature: get before")?
         } else {
             None
         };
 
-        if let Some(before) = before && let Some(after) = after && before == after {
-            return Err("before and after are the same");
+        let after_at = if let Some(after) = after {
+            self.features
+                .at(after)
+                .wrap_err("move_feature: get after")?
+        } else {
+            None
+        };
+
+        if let Some(before_at) = before_at {
+            if before_at.parent != parent {
+                return Err("move_feature: before parent mismatch".into());
+            }
         }
-
-        let at = FracIdx::between(before, after, &mut self.rng);
-
-        let ts = self.clock.tick(self.id);
-        self._move_layer(id, Some(at.clone()), ts)?;
-        Ok(Op::new(ts, op::Action::MoveLayer { id, at: Some(at) }))
-    }
-
-    pub fn remove_layer(&mut self, id: layer::Id) -> Result<Op> {
-        let ts = self.clock.tick(self.id);
-        self._move_layer(id, None, ts)?;
-        Ok(Op::new(ts, op::Action::MoveLayer { id, at: None }))
-    }
-
-    fn _move_layer(&mut self, id: layer::Id, at: Option<FracIdx>, ts: LInstant) -> Result<()> {
-        self.layers
-            .merge_value(
-                id,
-                Layer {
-                    id,
-                    at: LwwReg::new(at.clone(), ts),
-                    ..Default::default()
-                },
-            )
-            .map_err(|_| "can't move nonexistant layer")?;
-
-        self.layer_order.retain(|(_, l)| l != &id);
-
-        if let Some(at) = at {
-            let elem = (at, id);
-            match self.layer_order.binary_search(&elem) {
-                Ok(_) => {}
-                Err(idx) => {
-                    self.layer_order.insert(idx, elem);
-                }
+        if let Some(after_at) = after_at {
+            if after_at.parent != parent {
+                return Err("move_feature: after parent mismatch".into());
             }
         }
 
-        Ok(())
+        let idx = FracIdx::between(
+            before_at.map(|at| &at.idx),
+            after_at.map(|at| &at.idx),
+            &mut self.rng,
+        );
+
+        // Serialize
+
+        let mut b = out.reborrow().init_features().init_live(1).get(0);
+        write_l_instant(b.reborrow().init_id(), id.into());
+        b.set_type(ty.into());
+
+        write_frac_idx(b.reborrow().init_at_idx(), &idx.into());
+        write_l_instant(b.reborrow().init_at_parent(), parent.into());
+        write_l_instant(b.reborrow().init_at_ts(), self.clock.now());
+
+        self.merge(out.reborrow_as_reader())
     }
 
-    pub fn set_layer_attr(&mut self, id: layer::Id, key: SmolStr, value: AttrValue) -> Result<Op> {
-        let ts = self.clock.tick(self.id);
-        self._set_layer_attr(id, key.clone(), value.clone(), ts)?;
-        Ok(Op::new(ts, op::Action::SetLayerAttr { id, key, value }))
-    }
-
-    fn _set_layer_attr(
+    /// Irreversible
+    #[tracing::instrument(skip(self, out))]
+    pub fn delete_feature(
         &mut self,
-        id: layer::Id,
-        key: SmolStr,
-        value: AttrValue,
-        ts: LInstant,
+        mut out: delta_capnp::delta::Builder,
+        id: feature::Id,
     ) -> Result<()> {
-        self.layers
-            .merge_value(
-                id,
-                Layer {
-                    id,
-                    attrs: GMap::from_entries([(key, LwwReg::new(value, ts))]),
-                    ..Default::default()
-                },
-            )
-            .map_err(|_| "can't set attr on nonexistant layer")
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct FeatureOrderIter<'a>(Option<slice::Iter<'a, (FracIdx, feature::Id)>>);
-
-impl<'a> Iterator for FeatureOrderIter<'a> {
-    type Item = feature::Id;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match &mut self.0 {
-            None => None,
-            Some(iter) => iter.next().map(|(_, id)| *id),
+        if !self.features.contains(id) {
+            return Err("feature to delete not found".into());
         }
-    }
-}
 
-impl<'a> Serialize for FeatureOrderIter<'a> {
-    fn serialize<S>(&self, ser: S) -> core::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        ser.collect_seq(self.clone())
-    }
-}
+        // Serialize
+        let mut b = out.reborrow().init_features().init_dead(1).get(0);
+        write_l_instant(b.reborrow().init_id(), id.into());
 
-#[derive(Debug, Clone)]
-pub struct LayerOrderIter<'a>(slice::Iter<'a, (FracIdx, layer::Id)>);
-
-impl<'a> Iterator for LayerOrderIter<'a> {
-    type Item = layer::Id;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(|(_, id)| *id)
-    }
-}
-
-impl<'a> Serialize for LayerOrderIter<'a> {
-    fn serialize<S>(&self, ser: S) -> core::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        ser.collect_seq(self.clone())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct AttrIter<'a>(g_map::Iter<'a, SmolStr, LwwReg<AttrValue>>);
-
-impl<'a> Iterator for AttrIter<'a> {
-    type Item = (&'a SmolStr, &'a AttrValue);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(|(k, v)| (k, v.as_value()))
-    }
-}
-
-impl<'a> Serialize for AttrIter<'a> {
-    fn serialize<S>(&self, ser: S) -> core::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        ser.collect_seq(self.clone())
+        self.merge(out.reborrow_as_reader())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use capnp::message::TypedBuilder;
+    use eyre::Result;
     #[allow(unused)]
     use pretty_assertions::{assert_eq, assert_ne};
     use tracing_subscriber::prelude::*;
 
-    type LayerOrderSub = Box<dyn Fn(LayerOrderIter<'_>) + Send + Sync>;
-    type FeatureOrderSub = Box<dyn Fn(FeatureOrderIter<'_>) + Send + Sync>;
-    type AttrSub = Box<dyn Fn(AttrIter<'_>) + Send + Sync>;
-    type BoxedSubClient = Client<LayerOrderSub, FeatureOrderSub, AttrSub, AttrSub>;
+    type DeltaBuilder = TypedBuilder<delta_capnp::delta::Owned>;
 
-    fn setup() -> BoxedSubClient {
+    fn setup() -> Client {
         static ONCE: std::sync::Once = std::sync::Once::new();
         ONCE.call_once(|| {
             color_eyre::install().unwrap();
             tracing_subscriber::registry()
                 .with(
-                    tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                        "plantopo_sync_server=info,plantopo_sync_core=info".into()
-                    }),
+                    tracing_subscriber::EnvFilter::try_from_default_env()
+                        .unwrap_or_else(|_| "plantopo_sync_core=info".into()),
                 )
-                .with(tracing_subscriber::fmt::layer())
+                .with(
+                    tracing_subscriber::fmt::layer()
+                        .with_file(true)
+                        .with_line_number(true),
+                )
                 .init()
         });
         let id = ClientId(1);
-        Client::new(id)
+        let map_id = MapId(Uuid::from_str("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d").unwrap());
+        let rng = RngType::from_seed([
+            0x74, 0xe3, 0xb8, 0x20, 0x82, 0x4f, 0xb1, 0x76, 0x87, 0xcd, 0xf, 0xbb, 0x25, 0x61,
+            0xa0, 0x6a, 0xf9, 0x2a, 0x50, 0x98, 0x6c, 0x6e, 0xeb, 0x5d, 0xce, 0xe, 0xa1, 0x36,
+            0x5a, 0x93, 0x22, 0xcc,
+        ]);
+        Client::new(id, map_id, rng)
+    }
+
+    fn setup_peer() -> Client {
+        let id = ClientId(2);
+        let map_id = MapId(Uuid::from_str("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d").unwrap());
+        let rng = RngType::from_seed([
+            0x8e, 0x0c, 0x31, 0x45, 0x5c, 0xa8, 0x80, 0x17, 0xb0, 0xa6, 0x04, 0x49, 0xd0, 0xcc,
+            0x67, 0x22, 0x4c, 0xb6, 0x46, 0x9f, 0xb1, 0x85, 0xda, 0x8b, 0xed, 0xbc, 0x9f, 0xd7,
+            0xf0, 0xf4, 0x75, 0xb6,
+        ]);
+        Client::new(id, map_id, rng)
     }
 
     #[test]
-    fn test_threadsafe_if_subs_are() {
+    fn test_threadsafe() {
         fn is_send<T: Send>() {}
         fn is_sync<T: Sync>() {}
-        is_send::<BoxedSubClient>();
-        is_sync::<BoxedSubClient>();
+        is_send::<Client>();
+        is_sync::<Client>();
     }
 
     #[test]
-    fn test_create_delete() -> Result<()> {
+    fn test_create_delete_feature() -> Result<()> {
         let mut client = setup();
-        let (pt, _) = client.create_feature(feature::Type::POINT)?;
-        client.delete_feature(pt)?;
-        assert!(client.delete_feature(pt).is_err());
+        let mut b = DeltaBuilder::new_default();
+
+        let pt = client.create_feature(b.init_root(), feature::Type::POINT)?;
+        client.delete_feature(b.init_root(), pt)?;
+        assert!(client.delete_feature(b.init_root(), pt).is_err());
         Ok(())
     }
 
     #[test]
-    fn test_move_into_blank() -> Result<()> {
+    fn test_move_remove_layer() -> Result<()> {
         let mut client = setup();
+        let mut b = DeltaBuilder::new_default();
+        let l1 = layer::Id::from_str("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d")?;
+        let l2 = layer::Id::from_str("b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e")?;
 
-        let (group1, _) = client.create_feature(feature::Type::GROUP)?;
-        let (pt, _) = client.create_feature(feature::Type::POINT)?;
+        // Cannot remove layer without at
+        assert!(client.remove_layer(b.init_root(), l1).is_err());
 
-        assert!(client.feature_children(group1).next().is_none());
+        client.move_layer(b.init_root(), l1, None, None)?;
+        assert_eq!(vec![l1], client.layer_order().collect::<Vec<_>>());
 
-        client.move_feature(pt, group1, None, None)?;
+        client.move_layer(b.init_root(), l2, None, Some(l1))?;
+        assert_eq!(vec![l2, l1], client.layer_order().collect::<Vec<_>>());
 
-        let actual = client.feature_children(group1).collect::<Vec<_>>();
+        client.move_layer(b.init_root(), l2, Some(l1), None)?;
+        assert_eq!(vec![l1, l2], client.layer_order().collect::<Vec<_>>());
+
+        client.remove_layer(b.init_root(), l1)?;
+        assert_eq!(vec![l2], client.layer_order().collect::<Vec<_>>());
+
+        client.remove_layer(b.init_root(), l2)?;
+        assert_eq!(0, client.layer_order().len());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_feature_to_middle() -> Result<()> {
+        let mut client = setup();
+        let mut b = DeltaBuilder::new_default();
+
+        let group1 = client.create_feature(b.init_root(), feature::Type::GROUP)?;
+        let pt = client.create_feature(b.init_root(), feature::Type::POINT)?;
+
+        assert!(client.feature_order(group1).unwrap().next().is_none());
+
+        client.move_feature(b.init_root(), pt, group1, None, None)?;
+
+        let actual = client.feature_order(group1).unwrap().collect::<Vec<_>>();
         assert_eq!(vec![pt], actual);
 
-        let (group2, _) = client.create_feature(feature::Type::GROUP)?;
+        let group2 = client.create_feature(b.init_root(), feature::Type::GROUP)?;
 
-        client.move_feature(pt, group2, None, None)?;
+        client.move_feature(b.init_root(), pt, group2, None, None)?;
 
-        assert!(client.feature_children(group1).next().is_none());
+        assert!(client.feature_order(group1).unwrap().next().is_none());
 
-        let actual = client.feature_children(group2).collect::<Vec<_>>();
+        let actual = client.feature_order(group2).unwrap().collect::<Vec<_>>();
         assert_eq!(vec![pt], actual);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_move_layer_to_middle() -> Result<()> {
+        let mut client = setup();
+        let mut b = DeltaBuilder::new_default();
+        let layer = layer::Id::from_str("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d")?;
+
+        assert_eq!(0, client.layer_order().len());
+
+        client.move_layer(b.init_root(), layer, None, None)?;
+
+        let actual = client.layer_order().collect::<Vec<_>>();
+        assert_eq!(vec![layer], actual);
 
         Ok(())
     }
@@ -804,65 +422,19 @@ mod tests {
     #[test]
     fn test_move_between() -> Result<()> {
         let mut client = setup();
+        let mut b = DeltaBuilder::new_default();
 
-        let (group, _) = client.create_feature(feature::Type::GROUP)?;
-        let (pt1, _) = client.create_feature(feature::Type::POINT)?;
-        let (pt2, _) = client.create_feature(feature::Type::POINT)?;
-        let (pt3, _) = client.create_feature(feature::Type::POINT)?;
+        let group = client.create_feature(b.init_root(), feature::Type::GROUP)?;
+        let pt1 = client.create_feature(b.init_root(), feature::Type::POINT)?;
+        let pt2 = client.create_feature(b.init_root(), feature::Type::POINT)?;
+        let pt3 = client.create_feature(b.init_root(), feature::Type::POINT)?;
 
-        client.move_feature(pt1, group, None, None)?;
-        client.move_feature(pt3, group, Some(pt1), None)?;
-        client.move_feature(pt2, group, Some(pt1), Some(pt3))?;
+        client.move_feature(b.init_root(), pt1, group, None, None)?;
+        client.move_feature(b.init_root(), pt3, group, Some(pt1), None)?;
+        client.move_feature(b.init_root(), pt2, group, Some(pt1), Some(pt3))?;
 
-        let actual = client.feature_children(group).collect::<Vec<_>>();
+        let actual = client.feature_order(group).unwrap().collect::<Vec<_>>();
         assert_eq!(vec![pt1, pt2, pt3], actual);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_ser_de() -> Result<()> {
-        let mut client = setup();
-        let peer = ClientId(2);
-
-        let (group, _) = client.create_feature(feature::Type::GROUP)?;
-        let (pt1, _) = client.create_feature(feature::Type::POINT)?;
-        let (pt2, _) = client.create_feature(feature::Type::POINT)?;
-        let (pt3, _) = client.create_feature(feature::Type::POINT)?;
-
-        let pt1_move = client.move_feature(pt1, group, None, None)?;
-        let pt1_idx = match pt1_move.action {
-            op::Action::MoveFeature { at: Some(at), .. } => at.idx,
-            _ => unreachable!(),
-        };
-
-        let pt3_move = Op::new(
-            LInstant::new(peer, pt1_move.ts.counter() + 1),
-            op::Action::MoveFeature {
-                id: pt3,
-                at: Some(feature::At {
-                    parent: group,
-                    idx: FracIdx::between(Some(&pt1_idx), None, &mut client.rng),
-                }),
-            },
-        );
-        client.apply(pt3_move);
-
-        client.move_feature(pt2, group, Some(pt1), Some(pt3))?;
-
-        let (group2, _) = client.create_feature(feature::Type::GROUP)?;
-        client.delete_feature(group2)?;
-
-        let bytes = client.save().unwrap();
-        let client2 = BoxedSubClient::restore(&bytes).unwrap();
-
-        assert_eq!(client.clock, client2.clock);
-        assert_eq!(client.rng, client2.rng);
-        assert_eq!(client.features, client2.features);
-        assert_eq!(client.feature_order, client2.feature_order);
-
-        // Round-trips
-        assert_eq!(&bytes, &client2.save().unwrap());
 
         Ok(())
     }
@@ -870,25 +442,29 @@ mod tests {
     #[test]
     fn test_apply_merges_clock() -> Result<()> {
         let mut client = setup();
-        let peer = ClientId(2);
+        let mut peer = setup_peer();
+        let mut b = DeltaBuilder::new_default();
 
-        assert_eq!(client.clock.get(client.id).counter(), 0);
-        assert_eq!(client.clock.get(peer).counter(), 0);
+        assert_eq!(0x1, client.now().counter);
 
-        let ts = LInstant::new(peer, 42);
-        let pt = feature::Id(ts);
-        client.apply(Op::new(ts, op::Action::CreateFeature(feature::Type::GROUP)));
+        peer.clock.observe(LInstant::new(peer.id, 0x10));
+        assert_eq!(0x10, peer.now().counter);
 
-        assert_eq!(client.clock.get(client.id).counter(), 43);
-        assert_eq!(client.clock.get(peer).counter(), 42);
+        let mut delta1 = b.init_root();
+        let create_ts = peer.now();
+        let feat = peer.create_feature(delta1.reborrow(), feature::Type::GROUP)?;
+        assert_eq!(0x10, create_ts.counter);
 
-        client.apply(Op::new(
-            LInstant::new(peer, 1),
-            op::Action::DeleteFeature(pt),
-        ));
+        client.merge(delta1.reborrow_as_reader())?;
+        assert_eq!((create_ts + 1).counter, client.now().counter);
 
-        assert_eq!(client.clock.get(client.id).counter(), 44);
-        assert_eq!(client.clock.get(peer).counter(), 42);
+        let mut delta2 = b.init_root();
+        let delete_ts = peer.now();
+        peer.delete_feature(delta2.reborrow(), feat)?;
+        assert_eq!(create_ts + 1, delete_ts);
+
+        client.merge(delta2.reborrow_as_reader())?;
+        assert_eq!((delete_ts + 1).counter, client.now().counter);
 
         Ok(())
     }
@@ -896,75 +472,22 @@ mod tests {
     #[test]
     fn test_merge_attr() -> Result<()> {
         let mut client = setup();
+        let mut b = DeltaBuilder::new_default();
 
-        let (pt, _) = client.create_feature(feature::Type::POINT)?;
-        client.set_feature_attr(pt, "foo", AttrValue::None)?;
-        client.set_feature_attr(pt, "foo", AttrValue::number(42.0))?;
-        client.set_feature_attr(pt, "foo", AttrValue::string("bar"))?;
+        let pt = client.create_feature(b.init_root(), feature::Type::POINT)?;
+        let key = attr::Key(0x1);
+
+        client.set_feature_attr(b.init_root(), pt, key, attr::Value::None)?;
+        client.set_feature_attr(b.init_root(), pt, key, attr::Value::number(42.0))?;
+        client.set_feature_attr(b.init_root(), pt, key, attr::Value::string("bar"))?;
 
         let actual = client
             .feature_attrs(pt)
             .unwrap()
-            .map(|(k, v)| (k.to_string(), v.clone()))
+            .map(|(k, v)| (k, v.clone()))
             .collect::<Vec<_>>();
 
-        assert_eq!(actual, vec![("foo".to_string(), AttrValue::string("bar"))]);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_unseen_all() -> Result<()> {
-        let mut client = setup();
-        let peer = ClientId(2);
-
-        let (group, create_group) = client.create_feature(feature::Type::GROUP)?;
-        let (pt1, create_pt1) = client.create_feature(feature::Type::POINT)?;
-        let (pt2, create_pt2) = client.create_feature(feature::Type::POINT)?;
-        let (pt3, create_pt3) = client.create_feature(feature::Type::POINT)?;
-        dbg!(group);
-        dbg!(pt1);
-        dbg!(pt2);
-        dbg!(pt3);
-
-        // An outdated op that will be ignored
-        client.move_feature(pt1, feature::Id::ROOT, None, None)?;
-
-        let pt1_move = client.move_feature(pt1, group, None, None)?;
-        let pt1_idx = match &pt1_move.action {
-            op::Action::MoveFeature { at: Some(at), .. } => at.idx.clone(),
-            _ => unreachable!(),
-        };
-
-        let pt3_move = Op::new(
-            LInstant::new(peer, pt1_move.ts.counter() + 1),
-            op::Action::MoveFeature {
-                id: pt3,
-                at: Some(group / FracIdx::between(Some(&pt1_idx), None, &mut client.rng)),
-            },
-        );
-        client.apply(pt3_move.clone());
-
-        let pt2_move = client.move_feature(pt2, group, Some(pt1), Some(pt3))?;
-
-        let (group2, _) = client.create_feature(feature::Type::GROUP)?;
-        let group2_delete = client.delete_feature(group2)?;
-
-        let actual = client.unseen_by(&VClock::new());
-
-        assert_eq!(
-            actual,
-            vec![
-                create_group,
-                create_pt1,
-                create_pt2,
-                create_pt3,
-                pt1_move,
-                pt3_move,
-                pt2_move,
-                group2_delete
-            ]
-        );
+        assert_eq!(actual, vec![(key, attr::Value::string("bar"))]);
 
         Ok(())
     }

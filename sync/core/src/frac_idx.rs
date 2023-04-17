@@ -4,8 +4,8 @@ use crate::prelude::*;
 
 const MAX_JITTER: u16 = 4096;
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Serialize, Deserialize)]
-pub struct FracIdx(SmallVec<[u8; 32]>);
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Default)]
+pub struct FracIdx(SmallVec<[u8; 8]>);
 
 impl FracIdx {
     pub fn between(
@@ -49,6 +49,14 @@ impl FracIdx {
             }
             return Self(result);
         }
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        &self.0
+    }
+
+    pub fn from_slice(slice: &[u8]) -> Self {
+        Self(slice.into())
     }
 }
 

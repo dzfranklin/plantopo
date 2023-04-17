@@ -2,7 +2,7 @@ use core::ops::Div;
 
 use crate::prelude::*;
 
-#[derive(Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct At {
     pub parent: feature::Id,
     pub idx: FracIdx,

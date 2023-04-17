@@ -7,16 +7,8 @@
 </head>
 
 <body>
-  <script type="importmap">
-    {
-      "imports": {
-        "core.js": "./core.js"
-      }
-    }
-  </script>
-
   <script type="module">
-    import init, * as sync from './web.js';
+    import init, * as sync from './plantopo_sync_web.js';
     init().then(() => {
       console.info('Initialized');
       window.sync = sync;

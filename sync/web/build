@@ -5,9 +5,14 @@
 BUILD_CMD="wasm-pack build --reference-types --target web $*"
 echo "$BUILD_CMD"
 
-mkdir -p pkg
-echo "*" >pkg/.gitignore
+mkdir -p ./pkg
+echo "*" >./pkg/.gitignore
 cp ./dev.html ./pkg/index.html
 $BUILD_CMD
-sed -i "s/new URL('web_bg.wasm', import.meta.url)/new URL('\/assets\/web_bg.wasm', location.href)/g" pkg/web.js
-cp ./pkg/web_bg.wasm ../../web/priv/static/assets/
+
+# So that we match the real path
+mkdir -p ./pkg/assets
+cp ./pkg/plantopo_sync_web_bg.wasm ./pkg/assets/
+
+sed -i "s/new URL('plantopo_sync_web_bg.wasm', import.meta.url)/new URL('\/assets\/plantopo_sync_web_bg.wasm', location.href)/g" pkg/plantopo_sync_web.js
+cp ./pkg/plantopo_sync_web_bg.wasm ../../web/priv/static/assets/

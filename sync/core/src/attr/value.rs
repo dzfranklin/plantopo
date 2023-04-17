@@ -1,11 +1,8 @@
 use crate::prelude::*;
 
-#[derive(PartialEq, Clone, Debug)]
-pub struct AttrPairRef<'a>(pub &'a SmolStr, pub &'a AttrValue);
-
-#[derive(PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Clone)]
 #[non_exhaustive]
-pub enum AttrValue {
+pub enum Value {
     None,
     Bool(bool),
     String(SmolStr),
@@ -14,27 +11,7 @@ pub enum AttrValue {
     StringArray(SmallVec<[SmolStr; 4]>),
 }
 
-impl<'a> Serialize for AttrPairRef<'a> {
-    fn serialize<S>(&self, ser: S) -> core::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let AttrPairRef(k, v) = &self;
-        let mut ser = ser.serialize_tuple(2)?;
-        ser.serialize_element(k)?;
-        match v {
-            AttrValue::None => ser.serialize_element(&None::<()>)?,
-            AttrValue::Bool(v) => ser.serialize_element(v)?,
-            AttrValue::String(v) => ser.serialize_element(v)?,
-            AttrValue::Number(v) => ser.serialize_element(v)?,
-            AttrValue::NumberArray(v) => ser.serialize_element(v)?,
-            AttrValue::StringArray(v) => ser.serialize_element(v)?,
-        }
-        ser.end()
-    }
-}
-
-impl AttrValue {
+impl Value {
     pub fn string(v: impl Into<SmolStr>) -> Self {
         Self::String(v.into())
     }
@@ -52,13 +29,13 @@ impl AttrValue {
     }
 }
 
-impl Default for AttrValue {
+impl Default for Value {
     fn default() -> Self {
         Self::None
     }
 }
 
-impl fmt::Debug for AttrValue {
+impl fmt::Debug for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::None => write!(f, "None"),

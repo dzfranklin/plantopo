@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 /// Last-writer-wins register
 pub struct LwwReg<T> {
     value: T,
@@ -19,13 +19,13 @@ impl<T> LwwReg<T> {
     pub fn ts(&self) -> LInstant {
         self.ts
     }
-}
 
-impl<T: Default> Merge for LwwReg<T> {
-    fn merge(&mut self, other: Self) {
+    pub fn merge(&mut self, other: Self) -> Option<T> {
         if other.ts > self.ts {
-            self.ts = other.ts;
-            self.value = other.value;
+            let prev = mem::replace(self, other);
+            Some(prev.value)
+        } else {
+            None
         }
     }
 }

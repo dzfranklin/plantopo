@@ -1,11 +1,13 @@
-use std::{env, net::SocketAddr, str::FromStr};
+use std::{env, net::SocketAddr, process::Stdio, str::FromStr};
 
 use eyre::{eyre, Result, WrapErr};
 use futures_util::{stream::StreamExt, SinkExt};
 use plantopo_sync_core as sync_core;
 use serde::{Deserialize, Serialize};
-use sync_core::SyncProto;
-use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::{
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
+    process::Command,
+};
 use tokio_tungstenite::tungstenite::Message;
 use tracing_subscriber::prelude::*;
 
@@ -15,10 +17,7 @@ const DEFAULT_ADDR: &str = "127.0.0.1:4004";
 async fn main() -> Result<()> {
     color_eyre::install()?;
     tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "plantopo_sync_server=info".into()),
-        )
+        .with(tracing_subscriber::EnvFilter::try_from_default_env()?)
         .with(tracing_subscriber::fmt::layer())
         .init();
 
@@ -78,37 +77,16 @@ async fn main() -> Result<()> {
                 break;
             };
 
-            let msg = match serde_json::from_str::<SyncProto>(&line) {
+            let msg = match message_from_json(&line).await {
                 Ok(msg) => msg,
                 Err(err) => {
-                    let col = err.column() as isize;
-
-                    let before_lower = (col - 30).max(0) as usize;
-                    let after_upper = (col + 30).min(line.len() as isize) as usize;
-
-                    let before = &line[before_lower..col as usize];
-                    let after = &line[col as usize..after_upper];
-
-                    let snippet = format!(
-                        "{}{}{}{}",
-                        if before_lower > 0 { ".." } else { "" },
-                        before,
-                        after,
-                        if after_upper < line.len() { ".." } else { "" },
-                    );
-
-                    let marker = format!("  {}^", " ".repeat(before.len()));
-
-                    tracing::warn!("{err}\n\t{snippet}\n\t{marker}");
-
+                    tracing::warn!("{err}");
                     continue;
                 }
             };
 
-            tracing::info!("Sending {msg:?}");
-            let bytes = msg.to_bytes()?;
-
-            tx.send(Message::Binary(bytes)).await?;
+            tracing::info!("Sent {} bytes", msg.len());
+            tx.send(Message::Binary(msg)).await?;
         }
         Ok::<_, eyre::Report>(())
     });
@@ -117,8 +95,8 @@ async fn main() -> Result<()> {
         while let Some(msg) = rx.next().await {
             match msg? {
                 Message::Binary(msg) => {
-                    let msg = SyncProto::from_bytes(&msg)?;
-                    println!("< {:#?}", msg);
+                    let msg = message_to_json(&msg).await?;
+                    println!("< {}", msg);
                 }
                 Message::Close(_) => {
                     tracing::info!("Server closed connection");
@@ -145,6 +123,58 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+async fn message_to_json(msg: &[u8]) -> Result<String> {
+    let mut cmd = Command::new("pt-sync-inspector")
+        .args(&["--type", "sync"])
+        .arg("--decode")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+
+    {
+        let mut stdin = cmd.stdin.take().unwrap();
+        stdin.write_all(msg).await?;
+        stdin.shutdown().await?;
+    }
+
+    let out = cmd.wait_with_output().await?;
+
+    if !out.status.success() {
+        tracing::warn!("pt-sync-inspector failed: {out:?}");
+        return Err(eyre!("pt-sync-inspector failed"));
+    }
+
+    let json = String::from_utf8(out.stdout)?;
+    Ok(json)
+}
+
+async fn message_from_json(msg: &str) -> Result<Vec<u8>> {
+    let mut cmd = Command::new("pt-sync-inspector")
+        .args(&["--type", "sync"])
+        .arg("--encode")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+
+    {
+        let mut stdin = cmd.stdin.take().unwrap();
+        stdin.write_all(msg.as_bytes()).await?;
+        stdin.shutdown().await?;
+    }
+
+    let out = cmd.wait_with_output().await?;
+
+    if !out.status.success() {
+        tracing::warn!("pt-sync-inspector failed: {out:?}");
+        return Err(eyre!("pt-sync-inspector failed"));
+    }
+
+    let bytes = out.stdout;
+    Ok(bytes)
 }
 
 #[derive(Debug, Serialize)]
