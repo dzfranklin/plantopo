@@ -1,5 +1,5 @@
-project("plantopo-sync-inspector" CXX)
 cmake_minimum_required(VERSION 3.1)
+project("plantopo-sync-inspector" CXX)
 
 set(CAPNPC_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/schema)
 set(CAPNPC_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})

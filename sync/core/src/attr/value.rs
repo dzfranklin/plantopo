@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone, PartialOrd, Hash)]
 #[non_exhaustive]
 pub enum Value {
     None,

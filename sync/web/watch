@@ -2,17 +2,4 @@
 
 # Usage: ./watch or ./watch --debug
 
-cargo watch --shell "./build $*" &
-WATCH_CHILD=$!
-python3 -m http.server -d ./pkg/ &
-SERVER_CHILD=$!
-
-_exit() {
-  echo "Exiting"
-  kill -TERM "$WATCH_CHILD" 2>/dev/null
-  kill -TERM "$SERVER_CHILD" 2>/dev/null
-}
-trap _exit SIGTERM
-trap _exit SIGINT
-
-wait
+exec cargo watch --shell "./build $*"

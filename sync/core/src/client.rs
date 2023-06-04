@@ -1,4 +1,7 @@
-use crate::{capnp_support::*, delta_capnp, prelude::*, save_capnp};
+use crate::{
+    aware_capnp, capnp_support::*, delta::LayerDelta, delta_capnp, prelude::*, save_capnp,
+    sync_capnp,
+};
 
 #[derive(Debug)]
 pub struct Client {
@@ -8,6 +11,8 @@ pub struct Client {
     clock: LClock,
     features: feature::Store,
     layers: layer::Store,
+    aware: aware::Store,
+    attrs: attr::Store,
 }
 
 impl Client {
@@ -19,6 +24,8 @@ impl Client {
             clock: LClock::new(id, 1),
             features: Default::default(),
             layers: Default::default(),
+            aware: aware::Store::new(id),
+            attrs: Default::default(),
         }
     }
 
@@ -39,15 +46,33 @@ impl Client {
         self.layers.merge(&mut self.clock, &delta.get_layers()?)?;
         self.features
             .merge(&mut self.clock, &delta.get_features()?)?;
+        self.attrs.merge(&mut self.clock, &delta.get_attrs()?)?;
         self.clock.tick();
         Ok(())
+    }
+
+    #[tracing::instrument(skip_all)]
+    pub fn merge_aware(&mut self, aware: &[(ClientId, Option<Aware>)]) {
+        self.aware.merge(aware);
+        self.clock.tick();
     }
 
     #[tracing::instrument(skip_all)]
     pub fn save(&self, mut b: save_capnp::save::Builder) {
         b.set_client_id(self.id.into());
         write_uuid(b.reborrow().init_map_id(), self.map_id.into());
-        self.write_state(b.reborrow().init_state());
+
+        let delta = self.write_state();
+        delta.write(b.init_state());
+    }
+
+    pub fn write_my_aware(&self, out: &mut Vec<(ClientId, Option<Aware>)>) {
+        let entry = self.aware.get_my().clone();
+        out.push((self.id(), Some(entry)));
+    }
+
+    pub fn write_aware(&self, out: &mut Delta) {
+        self.aware.save(out);
     }
 
     #[tracing::instrument(skip_all)]
@@ -59,49 +84,74 @@ impl Client {
         Ok(client)
     }
 
-    pub fn write_state(&self, mut b: delta_capnp::delta::Builder) {
-        self.layers.save(b.reborrow().init_layers());
-        self.features.save(b.init_features());
+    pub fn write_state(&self) -> Delta {
+        let mut delta = Delta::new(Some(self.now()));
+        self.layers.save(&mut delta);
+        self.features.save(&mut delta);
+        self.attrs.save(&mut delta.attrs);
+        delta
     }
 
-    pub fn layer_order(&self) -> layer::OrderIter {
-        self.layers.order()
+    pub fn aware(&self) -> &aware::Store {
+        &self.aware
     }
 
-    pub fn layer_attrs(&self, id: &layer::Id) -> Option<attr::Iter> {
-        self.layers.attrs(id)
+    pub fn aware_mut(&mut self) -> &mut aware::Store {
+        &mut self.aware
     }
 
-    #[tracing::instrument(skip(self, out))]
+    pub fn set_aware(
+        &mut self,
+        out: &mut Vec<(ClientId, Option<Aware>)>,
+        client: ClientId,
+        value: Option<Aware>,
+    ) {
+        out.push((client, value));
+        self.aware.merge(&out);
+    }
+
+    pub fn attrs(&self) -> &attr::Store {
+        &self.attrs
+    }
+
+    pub fn attrs_mut(&mut self) -> &mut attr::Store {
+        &mut self.attrs
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub fn set_attr(&mut self, out: &mut Delta, key: attr::Key, value: attr::Value) {
+        out.attrs.push((key, LwwReg::new(value, self.clock.now())));
+        self.clock.tick();
+    }
+
+    pub fn layers(&self) -> &layer::Store {
+        &self.layers
+    }
+
+    pub fn layers_mut(&mut self) -> &mut layer::Store {
+        &mut self.layers
+    }
+
+    #[tracing::instrument(skip(self))]
     pub fn set_layer_attr(
         &mut self,
-        mut out: delta_capnp::delta::Builder,
+        out: &mut Delta,
         id: layer::Id,
         key: attr::Key,
         value: attr::Value,
-    ) -> Result<()> {
-        if !self.layers.contains(&id) {
-            return Err("layer to set attr on not found".into());
-        }
-
-        // Serialize
-        let mut b = out.reborrow().init_layers().init_value(1).get(0);
-        write_uuid(b.reborrow().init_id(), id.into());
-        write_attr(
-            b.init_attrs().init_value(1).get(0),
-            key,
-            &value,
-            self.clock.now(),
-        );
-
-        self.merge(out.reborrow_as_reader())
+    ) {
+        out.layers.push(LayerDelta {
+            attrs: vec![(key, LwwReg::new(value, self.clock.now()))],
+            ..LayerDelta::new(id)
+        });
+        self.clock.tick();
     }
 
     /// Note that all layers implicitly exist for all time.
-    #[tracing::instrument(skip(self, out))]
+    #[tracing::instrument(skip(self))]
     pub fn move_layer(
         &mut self,
-        mut out: delta_capnp::delta::Builder,
+        out: &mut Delta,
         id: layer::Id,
         before: Option<layer::Id>,
         after: Option<layer::Id>,
@@ -120,43 +170,100 @@ impl Client {
         let idx = FracIdx::between(before_idx, after_idx, &mut self.rng);
         tracing::trace!(?idx, ?before_idx, ?after_idx);
 
-        // Serialize
-        let mut b = out.reborrow().init_layers().init_value(1).get(0);
-        write_uuid(b.reborrow().init_id(), id.into());
-        write_frac_idx(b.reborrow().init_at(), &idx);
-        write_l_instant(b.init_at_ts(), self.clock.now());
-
-        self.merge(out.reborrow_as_reader())
+        out.layers.push(LayerDelta {
+            at: LwwReg::new(Some(idx), self.clock.now()),
+            ..LayerDelta::new(id)
+        });
+        self.clock.tick();
+        Ok(())
     }
 
-    #[tracing::instrument(skip(self, out))]
-    pub fn remove_layer(
-        &mut self,
-        mut out: delta_capnp::delta::Builder,
-        id: layer::Id,
-    ) -> Result<()> {
+    #[tracing::instrument(skip(self))]
+    pub fn remove_layer(&mut self, out: &mut Delta, id: layer::Id) -> Result<()> {
         if !self.layers.contains(&id) {
             return Err("layer to remove not found".into());
         }
 
-        // Serialize
-        let mut b = out.reborrow().init_layers().init_value(1).get(0);
-        write_uuid(b.reborrow().init_id(), id.into());
-        write_l_instant(b.init_at_ts(), self.clock.now());
-
-        self.merge(out.reborrow_as_reader())
+        out.layers.push(LayerDelta {
+            at: LwwReg::new(None, self.clock.now()),
+            ..LayerDelta::new(id)
+        });
+        self.clock.tick();
+        Ok(())
     }
 
-    pub fn feature_order(&self, parent: feature::Id) -> Option<feature::OrderIter> {
-        self.features.order(parent)
+    pub fn features(&self) -> &feature::Store {
+        &self.features
     }
 
-    pub fn feature_ty(&self, feature: feature::Id) -> Option<feature::Type> {
-        self.features.ty(feature)
+    pub fn features_mut(&mut self) -> &mut feature::Store {
+        &mut self.features
     }
 
-    pub fn feature_attrs(&self, feature: feature::Id) -> Option<attr::Iter> {
-        self.features.attrs(feature)
+    #[tracing::instrument(skip(self))]
+    pub fn create_group(&mut self, out: &mut Delta) -> Result<feature::Id> {
+        let id = feature::Id(self.clock.now());
+        let at = self.insert_point();
+
+        // TODO: Repeated pushes to aware won't be combined properly
+        out.aware.push()
+
+        // let mut parts = out.init_parts(3);
+
+        // {
+        //     let mut b = parts.reborrow().get(0).init_aware();
+        //     self.set_aware(
+        //         b.reborrow(),
+        //         self.id,
+        //         Some(&Aware {
+        //             active_features: smallvec![id],
+        //             ..self.aware.get_my().clone()
+        //         }),
+        //     )?;
+        //     self.merge_aware(b.reborrow_as_reader())?;
+        // }
+
+        // {
+        //     let mut b = parts.reborrow().get(1).init_delta();
+        //     self.create_feature(b.reborrow(), feature::Type::GROUP)?;
+        //     self.merge(b.reborrow_as_reader())?;
+        // }
+
+        // {
+        //     let mut b = parts.get(1).init_delta();
+        //     self.move_feature_to(b.reborrow(), id, at)?;
+        //     self.merge(b.reborrow_as_reader())?;
+        // }
+        todo!();
+
+        Ok(id)
+    }
+
+    fn insert_point(&mut self) -> feature::At {
+        let mut parent = feature::Id::ROOT;
+        let mut before = None;
+        let mut after = None;
+        if let Some(active) = self.aware.get_my().active_features.first().cloned() {
+            if self.features.ty(active).ok() == Some(feature::Type::GROUP) {
+                parent = active;
+                before = None;
+                after = self.features.first_child(active);
+            } else {
+                parent = self.features.parent(active).unwrap_or(feature::Id::ROOT);
+                before = Some(active);
+                after = self.features.next_sibling(active);
+            }
+        }
+
+        let before = before
+            .and_then(|id| self.features.at(id).ok().flatten())
+            .map(|at| &at.idx);
+        let after = after
+            .and_then(|id| self.features.at(id).ok().flatten())
+            .map(|at| &at.idx);
+
+        let idx = FracIdx::between(before, after, &mut self.rng);
+        feature::At { parent, idx }
     }
 
     #[tracing::instrument(skip(self, out))]
@@ -168,6 +275,7 @@ impl Client {
         let id = feature::Id(self.clock.now());
 
         // Serialize
+        write_l_instant(out.reborrow().init_ts(), self.clock.now());
         let mut b = out.reborrow().init_features().init_live(1).get(0);
         write_l_instant(b.reborrow().init_id(), id.into());
         b.set_type(ty.into());
@@ -181,21 +289,20 @@ impl Client {
         &mut self,
         mut out: delta_capnp::delta::Builder,
         id: feature::Id,
-        key: attr::Key,
-        value: attr::Value,
+        key: &attr::Key,
+        value: &attr::Value,
     ) -> Result<()> {
-        let ty = self
-            .feature_ty(id)
-            .ok_or("feature to set attr on not found")?;
+        let ty = self.features.ty(id)?;
 
         // Serialize
+        write_l_instant(out.reborrow().init_ts(), self.clock.now());
         let mut b = out.reborrow().init_features().init_live(1).get(0);
         write_l_instant(b.reborrow().init_id(), id.into());
         b.set_type(ty.into());
         write_attr(
             b.init_attrs().init_value(1).get(0),
             key,
-            &value,
+            value,
             self.clock.now(),
         );
 
@@ -204,62 +311,89 @@ impl Client {
 
     /// Write a delta corresponding to the  move.
     #[tracing::instrument(skip(self, out))]
-    pub fn move_feature(
+    pub fn move_features(
         &mut self,
         mut out: delta_capnp::delta::Builder,
-        id: feature::Id,
+        ids: &[feature::Id],
         parent: feature::Id,
         before: Option<feature::Id>,
         after: Option<feature::Id>,
     ) -> Result<()> {
-        // Compute
-
-        let ty = self.features.ty(id).ok_or("feature to move not found")?;
-
-        let before_at = if let Some(before) = before {
+        let before = if let Some(before) = before {
             self.features
                 .at(before)
                 .wrap_err("move_feature: get before")?
         } else {
             None
         };
-
-        let after_at = if let Some(after) = after {
+        let after = if let Some(after) = after {
             self.features
                 .at(after)
                 .wrap_err("move_feature: get after")?
         } else {
             None
         };
-
-        if let Some(before_at) = before_at {
-            if before_at.parent != parent {
+        let before = if let Some(at) = before {
+            if at.parent == parent {
+                Some(at.idx.clone())
+            } else {
                 return Err("move_feature: before parent mismatch".into());
             }
-        }
-        if let Some(after_at) = after_at {
-            if after_at.parent != parent {
+        } else {
+            None
+        };
+        let after = if let Some(at) = after {
+            if at.parent == parent {
+                Some(&at.idx)
+            } else {
                 return Err("move_feature: after parent mismatch".into());
             }
+        } else {
+            None
+        };
+
+        write_l_instant(out.reborrow().init_ts(), self.clock.now());
+        let mut live = out.reborrow().init_features().init_live(ids.len() as u32);
+
+        let mut before = before;
+        for (i, &id) in ids.into_iter().enumerate() {
+            let ty = self.features.ty(id)?;
+
+            let idx = FracIdx::between(before.as_ref(), after, &mut self.rng);
+
+            let mut b = live.reborrow().get(i as u32);
+            write_l_instant(b.reborrow().init_id(), id.into());
+            b.set_type(ty.into());
+
+            write_frac_idx(b.reborrow().init_at_idx(), &idx);
+            write_l_instant(b.reborrow().init_at_parent(), parent.into());
+            write_l_instant(b.reborrow().init_at_ts(), self.clock.now());
+
+            before = Some(idx);
         }
 
-        let idx = FracIdx::between(
-            before_at.map(|at| &at.idx),
-            after_at.map(|at| &at.idx),
-            &mut self.rng,
-        );
+        self.merge(out.reborrow_as_reader())
+    }
 
-        // Serialize
+    fn move_feature_to(
+        &mut self,
+        mut out: delta_capnp::delta::Builder,
+        id: feature::Id,
+        at: feature::At,
+    ) -> Result<()> {
+        let ty = self.features.ty(id)?;
+
+        write_l_instant(out.reborrow().init_ts(), self.clock.now());
 
         let mut b = out.reborrow().init_features().init_live(1).get(0);
         write_l_instant(b.reborrow().init_id(), id.into());
         b.set_type(ty.into());
 
-        write_frac_idx(b.reborrow().init_at_idx(), &idx.into());
-        write_l_instant(b.reborrow().init_at_parent(), parent.into());
+        write_frac_idx(b.reborrow().init_at_idx(), &at.idx);
+        write_l_instant(b.reborrow().init_at_parent(), at.parent.into());
         write_l_instant(b.reborrow().init_at_ts(), self.clock.now());
 
-        self.merge(out.reborrow_as_reader())
+        Ok(())
     }
 
     /// Irreversible
@@ -274,6 +408,7 @@ impl Client {
         }
 
         // Serialize
+        write_l_instant(out.reborrow().init_ts(), self.clock.now());
         let mut b = out.reborrow().init_features().init_dead(1).get(0);
         write_l_instant(b.reborrow().init_id(), id.into());
 
@@ -359,19 +494,19 @@ mod tests {
         assert!(client.remove_layer(b.init_root(), l1).is_err());
 
         client.move_layer(b.init_root(), l1, None, None)?;
-        assert_eq!(vec![l1], client.layer_order().collect::<Vec<_>>());
+        assert_eq!(vec![l1], client.layers.order().collect::<Vec<_>>());
 
         client.move_layer(b.init_root(), l2, None, Some(l1))?;
-        assert_eq!(vec![l2, l1], client.layer_order().collect::<Vec<_>>());
+        assert_eq!(vec![l2, l1], client.layers.order().collect::<Vec<_>>());
 
         client.move_layer(b.init_root(), l2, Some(l1), None)?;
-        assert_eq!(vec![l1, l2], client.layer_order().collect::<Vec<_>>());
+        assert_eq!(vec![l1, l2], client.layers.order().collect::<Vec<_>>());
 
         client.remove_layer(b.init_root(), l1)?;
-        assert_eq!(vec![l2], client.layer_order().collect::<Vec<_>>());
+        assert_eq!(vec![l2], client.layers.order().collect::<Vec<_>>());
 
         client.remove_layer(b.init_root(), l2)?;
-        assert_eq!(0, client.layer_order().len());
+        assert_eq!(0, client.layers.order().len());
 
         Ok(())
     }
@@ -384,20 +519,32 @@ mod tests {
         let group1 = client.create_feature(b.init_root(), feature::Type::GROUP)?;
         let pt = client.create_feature(b.init_root(), feature::Type::POINT)?;
 
-        assert!(client.feature_order(group1).unwrap().next().is_none());
+        let expected = client.features.child_order(group1).unwrap().next();
+        assert!(expected.is_none());
 
-        client.move_feature(b.init_root(), pt, group1, None, None)?;
+        client.move_features(b.init_root(), &[pt], group1, None, None)?;
 
-        let actual = client.feature_order(group1).unwrap().collect::<Vec<_>>();
+        let actual = client
+            .features
+            .child_order(group1)
+            .unwrap()
+            .map(|(id, _ty)| id)
+            .collect::<Vec<_>>();
         assert_eq!(vec![pt], actual);
 
         let group2 = client.create_feature(b.init_root(), feature::Type::GROUP)?;
 
-        client.move_feature(b.init_root(), pt, group2, None, None)?;
+        client.move_features(b.init_root(), &[pt], group2, None, None)?;
 
-        assert!(client.feature_order(group1).unwrap().next().is_none());
+        let expected = client.features.child_order(group1).unwrap().next();
+        assert!(expected.is_none());
 
-        let actual = client.feature_order(group2).unwrap().collect::<Vec<_>>();
+        let actual = client
+            .features
+            .child_order(group2)
+            .unwrap()
+            .map(|(id, _ty)| id)
+            .collect::<Vec<_>>();
         assert_eq!(vec![pt], actual);
 
         Ok(())
@@ -409,11 +556,11 @@ mod tests {
         let mut b = DeltaBuilder::new_default();
         let layer = layer::Id::from_str("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d")?;
 
-        assert_eq!(0, client.layer_order().len());
+        assert_eq!(0, client.layers.order().len());
 
         client.move_layer(b.init_root(), layer, None, None)?;
 
-        let actual = client.layer_order().collect::<Vec<_>>();
+        let actual = client.layers.order().collect::<Vec<_>>();
         assert_eq!(vec![layer], actual);
 
         Ok(())
@@ -429,11 +576,16 @@ mod tests {
         let pt2 = client.create_feature(b.init_root(), feature::Type::POINT)?;
         let pt3 = client.create_feature(b.init_root(), feature::Type::POINT)?;
 
-        client.move_feature(b.init_root(), pt1, group, None, None)?;
-        client.move_feature(b.init_root(), pt3, group, Some(pt1), None)?;
-        client.move_feature(b.init_root(), pt2, group, Some(pt1), Some(pt3))?;
+        client.move_features(b.init_root(), &[pt1], group, None, None)?;
+        client.move_features(b.init_root(), &[pt3], group, Some(pt1), None)?;
+        client.move_features(b.init_root(), &[pt2], group, Some(pt1), Some(pt3))?;
 
-        let actual = client.feature_order(group).unwrap().collect::<Vec<_>>();
+        let actual = client
+            .features
+            .child_order(group)
+            .unwrap()
+            .map(|(id, _ty)| id)
+            .collect::<Vec<_>>();
         assert_eq!(vec![pt1, pt2, pt3], actual);
 
         Ok(())
@@ -475,19 +627,21 @@ mod tests {
         let mut b = DeltaBuilder::new_default();
 
         let pt = client.create_feature(b.init_root(), feature::Type::POINT)?;
-        let key = attr::Key(0x1);
+        let key = attr::Key("foo".into());
 
-        client.set_feature_attr(b.init_root(), pt, key, attr::Value::None)?;
-        client.set_feature_attr(b.init_root(), pt, key, attr::Value::number(42.0))?;
-        client.set_feature_attr(b.init_root(), pt, key, attr::Value::string("bar"))?;
+        client.set_feature_attr(b.init_root(), pt, &key, &attr::Value::None)?;
+        client.set_feature_attr(b.init_root(), pt, &key, &attr::Value::number(42.0))?;
+        client.set_feature_attr(b.init_root(), pt, &key, &attr::Value::string("bar"))?;
 
         let actual = client
-            .feature_attrs(pt)
+            .features
+            .attrs(pt)
             .unwrap()
+            .iter()
             .map(|(k, v)| (k, v.clone()))
             .collect::<Vec<_>>();
 
-        assert_eq!(actual, vec![(key, attr::Value::string("bar"))]);
+        assert_eq!(actual, vec![(&key, attr::Value::string("bar"))]);
 
         Ok(())
     }

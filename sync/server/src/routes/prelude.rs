@@ -2,7 +2,7 @@ pub(crate) use crate::prelude::*;
 
 pub(crate) use axum::{
     extract::{
-        ws::{self, WebSocket, WebSocketUpgrade},
+        ws::{WebSocket, WebSocketUpgrade},
         ConnectInfo, Path, State,
     },
     headers::{authorization::Bearer, Authorization},
@@ -11,5 +11,3 @@ pub(crate) use axum::{
     routing::{get, post},
     Json, Router, TypedHeader,
 };
-
-pub use crate::check_token;

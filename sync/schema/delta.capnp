@@ -5,8 +5,13 @@ using import "types.capnp".Uuid;
 using import "types.capnp".FracIdx;
 
 struct Delta {
-  layers @0 :LayerStore;
-  features @1 :FeatureStore;
+  confirmKey @0 :LInstant;
+
+  aware @4 :import "aware.capnp".Store;
+
+  layers @1 :LayerStore;
+  features @2 :FeatureStore;
+  attrs @3 :Attrs;
 
   struct LayerStore {
     value @0 :List(Layer);
@@ -46,7 +51,7 @@ struct Delta {
 
     struct Attr {
       ts @0 :LInstant;
-      key @1 :UInt16;
+      key @1 :Text;
       value :union {
         none @2 :Void;
         bool @3 :Bool;
@@ -56,5 +61,5 @@ struct Delta {
         stringArray @7 :List(Text);
       }
     }
-  } 
+  }
 }

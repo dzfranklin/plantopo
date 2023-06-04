@@ -10,7 +10,47 @@ defmodule PlanTopo.Maps do
   alias __MODULE__.{ViewAt, Meta, AutoSave, HistorySave, LayerData, LayerSource, Role}
   require Logger
 
-  @hx_interval_secs 60 * 60
+  @type token :: %{token: String.t(), clientId: number(), exp: String.t(), write: boolean()}
+
+  @spec mint_sync_token!(String.t(), %User{} | nil) :: {:allow, token()} | :deny
+  def mint_sync_token!(map_id, maybe_user) do
+    case role(maybe_user, map_id) do
+      nil ->
+        :deny
+
+      :viewer ->
+        {:allow, authorize_sync_token!(map_id, maybe_user, false)}
+
+      role when role in [:editor, :owner] ->
+        {:allow, authorize_sync_token!(map_id, maybe_user, true)}
+
+      _ ->
+        :deny
+    end
+  end
+
+  defp authorize_sync_token!(map_id, maybe_user, permit_write) do
+    secret = Application.fetch_env!(:plantopo, __MODULE__) |> Keyword.fetch!(:sync_server_secret)
+
+    %Finch.Response{status: 200, body: resp} =
+      Finch.build(
+        :post,
+        # TODO: Discover server somehow
+        "http://localhost:4004/authorize",
+        [
+          {"Content-Type", "application/json"},
+          {"Authorization", "Bearer " <> secret}
+        ],
+        Jason.encode!(%{
+          user_id: if(!is_nil(maybe_user), do: maybe_user.id),
+          map_id: map_id,
+          write: permit_write
+        })
+      )
+      |> Finch.request!(PlanTopo.Finch)
+
+    Jason.decode!(resp) |> IO.inspect()
+  end
 
   def create!(%User{id: user_id}, attrs) do
     Repo.transaction!(fn ->
@@ -56,6 +96,8 @@ defmodule PlanTopo.Maps do
     |> Repo.all()
   end
 
+  @spec role(%User{} | nil, String.t()) :: Role.value() | nil
+
   def role(nil, map_id) do
     where(Role, map_id: ^map_id)
     |> where([p], is_nil(p.user_id))
@@ -69,6 +111,7 @@ defmodule PlanTopo.Maps do
     |> role_to_value()
   end
 
+  @spec role_to_value(%Role{} | nil) :: Role.value() | nil
   defp role_to_value(perm) do
     case perm do
       nil -> :none
@@ -90,54 +133,6 @@ defmodule PlanTopo.Maps do
     else
       raise "Cannot give everyone owner role"
     end
-  end
-
-  def get_autosave_snapshot(map_id) do
-    AutoSave
-    |> select([s], s.snapshot)
-    |> where(map_id: ^map_id)
-    |> Repo.one()
-  end
-
-  def get_autosave_as_update(map_id) do
-    AutoSave
-    |> select([s], s.as_update)
-    |> where(map_id: ^map_id)
-    |> Repo.one()
-  end
-
-  def autosave(attrs) do
-    value = AutoSave.changeset(attrs)
-    map_id = Changeset.get_field(value, :map_id)
-
-    Repo.transaction(fn ->
-      prev_auto = Repo.get(AutoSave, map_id)
-
-      prev_hx_at =
-        HistorySave
-        |> where(map_id: ^map_id)
-        |> order_by(desc: :saved_at)
-        |> select([s], s.saved_at)
-        |> limit(1)
-        |> Repo.one()
-
-      if not is_nil(prev_auto) do
-        if is_nil(prev_hx_at) or DateTime.diff(prev_auto.saved_at, prev_hx_at) > @hx_interval_secs do
-          prev_auto
-          |> Map.from_struct()
-          |> HistorySave.changeset()
-          |> Repo.insert!()
-        end
-      end
-
-      Repo.insert!(value, conflict_target: :map_id, on_conflict: :replace_all)
-    end)
-  end
-
-  def list_all_history_saves(map_id) do
-    HistorySave
-    |> where(map_id: ^map_id)
-    |> Repo.all()
   end
 
   def get_view_at(user_id, map_id) do

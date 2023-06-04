@@ -1,12 +1,15 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Cross2Icon } from '@radix-ui/react-icons';
 import './stylePopover.css';
-import { Feature, PointFeature } from '../features/types';
+import { OutdatedFeature, PointFeature } from '../features/types';
 import { useAppDispatch } from '../hooks';
-import { updateFeature } from '../features/slice';
 import SpritePicker from '../sprite/SpritePicker';
 
-export default function StylePopover({ feature }: { feature: Feature }) {
+export default function StylePopover({
+  feature,
+}: {
+  feature: OutdatedFeature;
+}) {
   return (
     <Popover.Content
       className="StylePopoverContent"
@@ -27,11 +30,11 @@ const PointEditor = ({ feature }: { feature: PointFeature }) => {
     <div>
       <SpritePicker
         value={feature.style?.['icon-image']}
-        onChange={(value) =>
-          dispatch(
-            updateFeature(feature.id, { style: { 'icon-image': value } }),
-          )
-        }
+        // TODO: onChange={(value) =>
+        //   dispatch(
+        //     updateFeature(feature.id, { style: { 'icon-image': value } }),
+        //   )
+        // }
       />
 
       <Popover.Arrow className="StylePopoverArrow" />

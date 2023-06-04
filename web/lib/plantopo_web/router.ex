@@ -20,6 +20,7 @@ defmodule PlanTopoWeb.Router do
   end
 
   ## Auth optional
+
   scope "/", PlanTopoWeb do
     pipe_through [:browser]
 
@@ -32,6 +33,14 @@ defmodule PlanTopoWeb.Router do
       live "/users/confirm/:token", UserConfirmationLive, :edit
       live "/users/confirm", UserConfirmationInstructionsLive, :new
     end
+  end
+
+  scope "/api", PlanTopoWeb do
+    pipe_through :api
+
+    get "/tokens.json", TokensController, :index
+    get "/resources.json", ResourcesController, :index
+    post "/report_tile_loads", ReportTileLoadsController, :post
   end
 
   ## Auth forbidden
@@ -62,14 +71,6 @@ defmodule PlanTopoWeb.Router do
     end
   end
 
-  # scope "/api/", PlanTopoWeb do
-  #   pipe_through [:api, :api_require_authenticated_user]
-  # end
-
-  scope "/api", PlanTopoWeb do
-    post "/report_tile_loads", ReportTileLoadsController, :post
-  end
-
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:plantopo, :dev_routes) do
     # If you want to use the LiveDashboard in production, you should put
@@ -84,6 +85,10 @@ defmodule PlanTopoWeb.Router do
 
       live_dashboard "/dashboard", metrics: PlanTopoWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
+    end
+
+    scope "/dev", PlanTopoWeb do
+      post "/sync-inspector", DevSyncInspectorController, :post
     end
   end
 end

@@ -1,19 +1,54 @@
 use super::*;
-use crate::{capnp_support::*, delta_capnp::delta::layer_store, prelude::*};
+use crate::{capnp_support::*, delta::LayerDelta, delta_capnp::delta::layer_store, prelude::*};
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Store {
+    dirty: bool,
     value: HashMap<Id, Layer>,
     order: SmallVec<[(FracIdx, Id); 8]>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Layer {
-    at: LwwReg<Option<FracIdx>>,
-    attrs: attr::Store,
+    pub(crate) at: LwwReg<Option<FracIdx>>,
+    pub(crate) attrs: attr::Store,
+}
+
+impl Default for Store {
+    fn default() -> Self {
+        Self {
+            dirty: true,
+            value: HashMap::default(),
+            order: SmallVec::default(),
+        }
+    }
 }
 
 impl Store {
+    /// Dirty is initially true and is set to true whenever the value held may
+    /// have changed.
+    pub fn is_dirty(&self) -> bool {
+        self.dirty
+    }
+
+    pub fn clear_dirty(&mut self) {
+        self.dirty = false;
+    }
+
+    pub fn order(&self) -> OrderIter {
+        OrderIter(self.order.iter())
+    }
+
+    pub fn attrs(&self, id: Id) -> Option<&attr::Store> {
+        let layer = self.value.get(&id)?;
+        Some(&layer.attrs)
+    }
+
+    pub fn attrs_mut(&mut self, id: Id) -> Option<&mut attr::Store> {
+        let layer = self.value.get_mut(&id)?;
+        Some(&mut layer.attrs)
+    }
+
     pub(crate) fn get_at(&self, id: &Id) -> Result<Option<&FracIdx>> {
         let layer = self.value.get(id).ok_or("missing layer")?;
         Ok(layer.at.as_value().as_ref())
@@ -23,70 +58,65 @@ impl Store {
         self.value.contains_key(id)
     }
 
-    pub(crate) fn order(&self) -> OrderIter {
-        OrderIter(self.order.iter())
-    }
-
-    pub(crate) fn attrs(&self, id: &Id) -> Option<attr::Iter> {
-        let layer = self.value.get(id)?;
-        Some(layer.attrs.iter())
-    }
-
     #[tracing::instrument(skip_all)]
     pub(crate) fn merge(&mut self, clock: &mut LClock, delta: &layer_store::Reader) -> Result<()> {
-        for r in delta.get_value()?.iter() {
+        let value = delta.get_value()?;
+
+        if value.len() > 0 {
+            self.dirty = true;
+        }
+
+        for r in value.iter() {
             let id = read_id(&r)?;
 
-            tracing::trace!(?id, layer = ?self.value.get(&id), "(before)");
+            tracing::trace!(?id, layer = ?self.value.get(&id), order = ?self.order, "(before)");
 
             let layer = self.value.entry(id).or_default();
 
             if r.has_at_ts() {
                 let at = read_at(&r)?;
                 clock.observe(at.ts());
-                let prev = layer.at.merge(at);
 
-                if let Some(Some(prev)) = prev {
-                    if let Ok(i) = self.order.binary_search(&(prev, id)) {
-                        self.order.remove(i);
+                if let Some(prev_at) = layer.at.merge(at) {
+                    if let Some(prev_at) = prev_at {
+                        if let Ok(i) = self.order.binary_search(&(prev_at, id)) {
+                            self.order.remove(i);
+                        }
                     }
-                }
 
-                if let Some(at) = layer.at.as_value() {
-                    let key = (at.clone(), id);
-                    if let Err(i) = self.order.binary_search(&key) {
-                        self.order.insert(i, key);
-                    } else {
-                        unreachable!("We just removed it from the layer order list");
+                    if let Some(at) = layer.at.as_value() {
+                        let key = (at.clone(), id);
+                        if let Err(i) = self.order.binary_search(&key) {
+                            self.order.insert(i, key);
+                        }
                     }
                 }
             }
 
             layer.attrs.merge(clock, &r.get_attrs()?)?;
 
-            tracing::trace!(?id, ?layer, "(after)");
+            tracing::trace!(?id, ?layer, order = ?self.order, "(after)");
         }
         Ok(())
     }
 
-    #[tracing::instrument(skip(b))]
-    pub(crate) fn save(&self, mut b: layer_store::Builder) {
-        let mut b = b.reborrow().init_value(self.value.len() as u32);
-        for (i, (id, v)) in self.value.iter().enumerate() {
-            let mut b = b.reborrow().get(i as u32);
+    #[tracing::instrument]
+    pub(crate) fn save(&self, out: &mut Delta) {
+        out.layers.reserve(self.value.len());
+        for (id, layer) in self.value.iter() {
+            let mut attrs = Vec::new();
+            layer.attrs.save(&mut attrs);
 
-            write_uuid(b.reborrow().init_id(), id.clone().into());
-
-            if let Some(at) = v.at.as_value() {
-                write_frac_idx(b.reborrow().init_at(), at);
-            }
-            write_l_instant(b.reborrow().init_at_ts(), v.at.ts());
-
-            v.attrs.save(b.init_attrs());
+            out.layers.push(LayerDelta {
+                id: *id,
+                at: layer.at,
+                attrs,
+            });
         }
     }
 }
 
+#[derive(Debug, Clone, Default)]
 pub struct OrderIter<'a>(slice::Iter<'a, (FracIdx, Id)>);
 
 impl<'a> Iterator for OrderIter<'a> {

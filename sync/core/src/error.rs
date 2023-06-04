@@ -1,32 +1,25 @@
 use crate::prelude::*;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug)]
 pub struct Error {
     description: Cow<'static, str>,
-    source: Option<Box<Error>>,
+    source: Option<Source>,
 }
 
-impl Error {
-    pub fn new(s: impl Into<Cow<'static, str>>) -> Self {
-        let description = s.into();
-        tracing::trace!("Error::new({description})");
-        Self {
-            description,
-            source: None,
-        }
-    }
-
-    pub fn with_source(mut self, cause: Error) -> Self {
-        tracing::trace!("Error::with_source({self}, {cause})");
-        self.source = Some(Box::new(cause));
-        self
-    }
+#[derive(Debug)]
+enum Source {
+    Crate(Box<Error>),
+    Capnp(Box<capnp::Error>),
 }
 
-impl core::error::Error for Error {
-    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+#[cfg(feature = "std")]
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self.source {
-            Some(ref e) => Some(e),
+            Some(ref e) => match e {
+                Source::Crate(ref e) => Some(e.as_ref()),
+                Source::Capnp(ref e) => Some(e.as_ref()),
+            },
             None => None,
         }
     }
@@ -34,14 +27,30 @@ impl core::error::Error for Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "core error: {}", self.description)
+        if let Some(source) = &self.source {
+            write!(f, "core error: {}: {}", self.description, source)
+        } else {
+            write!(f, "core error: {}", self.description)
+        }
+    }
+}
+
+impl fmt::Display for Source {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Source::Crate(v) => fmt::Display::fmt(v, f),
+            Source::Capnp(v) => fmt::Display::fmt(v, f),
+        }
     }
 }
 
 impl From<capnp::Error> for Error {
     fn from(e: capnp::Error) -> Self {
         tracing::trace!("Error::from({e})");
-        Self::new("capnp").with_source(Error::new(e.to_string()))
+        Self {
+            description: "capnp".into(),
+            source: Some(Source::Capnp(Box::new(e))),
+        }
     }
 }
 
@@ -55,14 +64,14 @@ impl From<&'static str> for Error {
     }
 }
 
-pub trait WrapErr {
-    fn wrap_err(self, s: impl Into<Cow<'static, str>>) -> Self
+pub(crate) trait WrapErr<T> {
+    fn wrap_err(self, s: impl Into<Cow<'static, str>>) -> Result<T>
     where
         Self: Sized;
 }
 
-impl<T> WrapErr for Result<T> {
-    fn wrap_err(self, s: impl Into<Cow<'static, str>>) -> Self
+impl<T> WrapErr<T> for Result<T> {
+    fn wrap_err(self, s: impl Into<Cow<'static, str>>) -> Result<T>
     where
         Self: Sized,
     {
@@ -71,7 +80,7 @@ impl<T> WrapErr for Result<T> {
             tracing::trace!(?e, ?description, "WrapErr::wrap_err");
             Error {
                 description,
-                source: Some(Box::new(e)),
+                source: Some(Source::Crate(Box::new(e))),
             }
         })
     }

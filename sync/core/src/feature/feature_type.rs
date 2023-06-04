@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(Clone, Copy, Eq, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Eq, PartialEq, PartialOrd, Hash, Ord)]
 pub struct Type(pub u8);
 
 impl Type {
@@ -10,6 +10,10 @@ impl Type {
 
     pub fn into_inner(self) -> u8 {
         self.0
+    }
+
+    pub fn is_group(&self) -> bool {
+        *self == Self::GROUP
     }
 }
 
@@ -21,14 +25,12 @@ impl Default for Type {
 
 impl fmt::Debug for Type {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "feature::Type(")?;
         match *self {
-            Self::GROUP => write!(f, "GROUP")?,
-            Self::POINT => write!(f, "POINT")?,
-            Self::ROUTE => write!(f, "ROUTE")?,
+            Self::GROUP => write!(f, "G")?,
+            Self::POINT => write!(f, "P")?,
+            Self::ROUTE => write!(f, "R")?,
             Self(other) => write!(f, "{}", other)?,
         };
-        write!(f, ")")?;
         Ok(())
     }
 }

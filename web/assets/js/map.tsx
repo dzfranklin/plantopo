@@ -6,7 +6,12 @@ import * as React from 'react';
 import { initStore } from './map/store/store';
 import * as ReactRedux from 'react-redux';
 import { MotionConfig } from 'framer-motion';
-import { MapSyncProvider } from './map/sync/context';
+import { QueryClientProvider, QueryClient } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import {
+  Provider as SpectrumProvider,
+  defaultTheme as spectrumDefaultTheme,
+} from '@adobe/react-spectrum';
 
 declare global {
   interface Window {
@@ -15,32 +20,17 @@ declare global {
 }
 
 window._dbg = {
-  loadTime: performance.now(),
   computeStyleStats: {
     paintOnlyUpdates: 0,
     fullUpdates: 0,
   },
-  sync: {
-    verboseLogs: false,
-  },
-};
-
-const _debug = window.console.debug;
-window.console.debug = (...args: any[]) => {
-  if (typeof args[0] === 'string' && args[0].startsWith('[SyncY')) {
-    // Suppress noisy logs from y-redux
-    if (!window._dbg.sync.verboseLogs) return;
-  }
-  _debug(...args);
 };
 
 const rootNode = document.getElementById('map-app-root')!;
 window.appNode = rootNode;
 
-const searchParams = new URLSearchParams(location.search);
 const path = location.pathname.split('/');
 const { disableAnimation } = window.appSettings;
-const enableLocalSave = !searchParams.has('noLocal');
 const mapId = path.at(-1)!;
 
 const getInit = (prop) => rootNode.dataset[prop]!;
@@ -48,15 +38,17 @@ const parseInit = (prop) => JSON.parse(getInit(prop));
 const store = initStore({
   id: mapId,
   tokens: parseInit('tokens'),
-  layerDatas: parseInit('layerDatas'),
-  layerSources: parseInit('layerSources'),
 });
 window._dbg.store = store;
 
+const syncToken = parseInit('syncToken');
+
+const queryClient = new QueryClient({});
+
 createRoot(rootNode).render(
   <React.StrictMode>
-    <ReactRedux.Provider store={store}>
-      <MapSyncProvider id={mapId} enableLocalSave={enableLocalSave}>
+    <QueryClientProvider client={queryClient}>
+      <ReactRedux.Provider store={store}>
         <MotionConfig
           reducedMotion={disableAnimation ? 'always' : 'user'}
           transition={{
@@ -64,27 +56,21 @@ createRoot(rootNode).render(
             duration: disableAnimation ? 0 : 0.2,
           }}
         >
-          <MapApp />
+          <SpectrumProvider theme={spectrumDefaultTheme} height={'100%'}>
+            <MapApp syncToken={syncToken} />
+          </SpectrumProvider>
         </MotionConfig>
-      </MapSyncProvider>
-    </ReactRedux.Provider>
+      </ReactRedux.Provider>
+
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   </React.StrictMode>,
 );
 
+console.log('Created root');
+
 declare global {
   interface Window {
-    _dbg: {
-      loadTime: number;
-      store?: any;
-      mapGL?: any;
-      computeStyleStats: {
-        paintOnlyUpdates: number;
-        fullUpdates: number;
-      };
-      sync: {
-        verboseLogs: boolean;
-        core?: any;
-      };
-    };
+    _dbg: any;
   }
 }

@@ -14,7 +14,7 @@
         "web/assets"
     ],
     "cmake.buildDirectory": "${workspaceFolder}/sync/inspector/build",
-    "cmake.sourceDirectory": "${workspaceFolder}/sync/inspector",
+    "cmake.sourceDirectory": "/home/daniel/projects/plantopo/sync",
     "files.associations": {
         "*.leex": "html-eex",
         "*.eex": "html-eex",

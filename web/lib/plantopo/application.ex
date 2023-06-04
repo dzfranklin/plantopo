@@ -25,7 +25,6 @@ defmodule PlanTopo.Application do
         {Phoenix.PubSub, name: PlanTopo.PubSub},
         # Start Finch
         {Finch, name: PlanTopo.Finch},
-        PlanTopo.Sync.Manager,
         # Start the Endpoint (http/https)
         PlanTopoWeb.Endpoint,
         if(Application.get_env(:plantopo, :start_minio),

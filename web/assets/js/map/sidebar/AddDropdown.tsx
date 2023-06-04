@@ -14,11 +14,12 @@ import {
 } from '@radix-ui/react-dropdown-menu';
 import { DotFilledIcon } from '@radix-ui/react-icons';
 import { useAppDispatch } from '../hooks';
-import { createGroup, enterLatlngPicker } from '../features/slice';
 import './dropdown.css';
+import useSyncDispatch from '../sync/useSyncDispatch';
+import { GROUP_FEATURE } from '../features/types';
 
 export default function AddDropdown() {
-  const dispatch = useAppDispatch();
+  const dispatch = useSyncDispatch();
 
   return (
     <DropdownMenu>
@@ -36,17 +37,26 @@ export default function AddDropdown() {
           <Item
             label="New point"
             cmd="Ctrl+Alt+P"
-            onClick={() => dispatch(enterLatlngPicker({ type: 'point' }))}
+            onClick={() => {}}
+            // TODO: onClick={() => dispatch(enterLatlngPicker({ type: 'point' }))}
           />
           <Item
             label="New route"
             cmd="Ctrl+Alt+R"
-            onClick={() => dispatch(enterLatlngPicker({ type: 'point' }))}
+            onClick={() => {}}
+            // TODO: onClick={() => dispatch(enterLatlngPicker({ type: 'point' }))}
           />
           <Item
             label="New folder"
             cmd="Ctrl+Alt+F"
-            onClick={() => dispatch(createGroup())}
+            onClick={() =>
+              dispatch({
+                type: 'feature/createGroup',
+                payload: {
+                  type: GROUP_FEATURE,
+                },
+              })
+            }
           />
 
           <DropdownMenuSeparator className="DropdownMenuSeparator" />

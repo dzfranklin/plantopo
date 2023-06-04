@@ -1,13 +1,33 @@
 use super::*;
 use crate::{capnp_support::*, delta_capnp::delta::attrs, prelude::*};
 
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Store {
+    dirty: bool,
     value: HashMap<Key, LwwReg<Value>>,
 }
 
+impl Default for Store {
+    fn default() -> Self {
+        Self {
+            dirty: true,
+            value: Default::default(),
+        }
+    }
+}
+
 impl Store {
-    pub(crate) fn iter(&self) -> Iter {
+    /// Dirty is initially true and is set to true whenever the value held may
+    /// have changed.
+    pub fn is_dirty(&self) -> bool {
+        self.dirty
+    }
+
+    pub fn clear_dirty(&mut self) {
+        self.dirty = false;
+    }
+
+    pub fn iter(&self) -> Iter {
         Iter(self.value.iter())
     }
 
@@ -15,8 +35,14 @@ impl Store {
     pub(crate) fn merge(&mut self, clock: &mut LClock, delta: &attrs::Reader) -> Result<()> {
         use attrs::attr::value::Which;
 
-        for r in delta.get_value()?.iter() {
-            let key = r.get_key().into();
+        let value = delta.get_value()?;
+
+        if value.len() > 0 {
+            self.dirty = true;
+        }
+
+        for r in value.iter() {
+            let key = attr::Key(r.get_key()?.to_owned());
             let ts = read_l_instant(r.get_ts()?);
             let value = match r.get_value().which() {
                 Err(capnp::NotInSchema(n)) => {
@@ -55,23 +81,23 @@ impl Store {
         Ok(())
     }
 
-    #[tracing::instrument(skip(b))]
-    pub(crate) fn save(&self, b: attrs::Builder) {
-        let mut b = b.init_value(self.value.len() as u32);
-        for (i, (&key, value)) in self.value.iter().enumerate() {
-            let b = b.reborrow().get(i as u32);
-            write_attr(b, key, value.as_value(), value.ts())
+    #[tracing::instrument]
+    pub(crate) fn save(&self, out: &mut Vec<(Key, LwwReg<Value>)>) {
+        out.reserve(self.value.len());
+        for (k, v) in self.value.iter() {
+            out.push((k.clone(), v.clone()));
         }
     }
 }
 
-pub struct Iter<'a>(hashbrown::hash_map::Iter<'a, Key, LwwReg<Value>>);
+#[derive(Debug, Clone)]
+pub struct Iter<'a>(hash_map::Iter<'a, Key, LwwReg<Value>>);
 
 impl<'a> Iterator for Iter<'a> {
-    type Item = (Key, &'a Value);
+    type Item = (&'a Key, &'a Value);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(|(k, v)| (*k, v.as_value()))
+        self.0.next().map(|(k, v)| (k, v.as_value()))
     }
 }
 

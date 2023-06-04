@@ -2,7 +2,6 @@ import { ChevronDownIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useMemo, useState } from 'react';
 import classNames from '../../classNames';
 import Tooltip from '../components/Tooltip';
-import { selectCommonSprites } from '../features/slice';
 import { useAppStore } from '../hooks';
 import data from './preview.json';
 import SpritePreview from './SpritePreview';
@@ -13,7 +12,7 @@ const sortedSpriteNames = Array.from(Object.keys(data)).sort();
 
 interface Props {
   value?: string;
-  onChange: OnChange;
+  onChange?: OnChange;
 }
 
 type OnChange = (value: string | undefined) => void;
@@ -22,7 +21,8 @@ const SpritePicker = ({ value, onChange }: Props) => {
   const store = useAppStore();
   const [isExpanded, setIsExpanded] = useState(false);
   // Never changes for an open popup
-  const common = useMemo(() => selectCommonSprites(store.getState()), [store]);
+  // TODO: const common = useMemo(() => selectCommonSprites(store.getState()), [store]);
+  const common: string[] = [];
   const valueNotInCommon =
     value === undefined ? false : !common.includes(value);
 
@@ -61,7 +61,7 @@ const SpritePicker = ({ value, onChange }: Props) => {
         <div className="flex ml-1">
           <Tooltip title="No icon" key="no-icon">
             <button
-              onClick={() => onChange(undefined)}
+              onClick={() => onChange?.(undefined)}
               className={classNames(
                 'rounded-full p-[3px]',
                 value === undefined && 'bg-blue-100',
@@ -89,7 +89,7 @@ const SpritePicker = ({ value, onChange }: Props) => {
         value={value}
         onChange={(value) => {
           setIsExpanded(false);
-          onChange(value);
+          onChange?.(value);
         }}
       />
     </Popover.Root>
@@ -122,11 +122,11 @@ const ExpandedContent = ({
 
 const Button = (props: {
   isSelected: boolean;
-  onChange: OnChange;
+  onChange?: OnChange;
   sprite: string;
 }) => (
   <button
-    onClick={() => props.onChange(props.sprite)}
+    onClick={() => props.onChange?.(props.sprite)}
     className={classNames(
       'rounded-full p-[1px]',
       props.isSelected && 'bg-blue-100',

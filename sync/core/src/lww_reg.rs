@@ -29,3 +29,12 @@ impl<T> LwwReg<T> {
         }
     }
 }
+
+impl<T> LwwReg<Option<T>> {
+    pub fn unset() -> Self {
+        Self {
+            value: None,
+            ts: LInstant::zero(),
+        }
+    }
+}

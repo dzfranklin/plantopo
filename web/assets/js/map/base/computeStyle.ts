@@ -41,7 +41,7 @@ export const computeLayers = (
   layers: Layer[],
 ): mlStyle.LayerSpecification[] => {
   const out = layers.flatMap((layer, idx) => {
-    const source = layerSources[layer.sourceId];
+    const source = layerSources[layer.id];
     if (!source) {
       console.error('Skipping layer as no source', layer);
       return [];
@@ -50,11 +50,12 @@ export const computeLayers = (
     return source.layerSpecs.map((spec) => {
       const out: mlStyle.LayerSpecification = {
         ...spec,
-        id: glLayerId(layer.sourceId, spec.id),
+        id: glLayerId(layer.id, spec.id),
       };
 
-      // This can't be opacity = layer.opacity || ... because 0 is falsy
-      let opacity = layer.opacity ?? source.defaultOpacity ?? 1;
+      let opacity = layer.attrs.opacity;
+      if (opacity === undefined) opacity = source.defaultOpacity;
+      if (opacity === undefined) opacity = 1;
       if (idx === 0) opacity = 1;
 
       const paint = spec.paint ? { ...spec.paint } : {};
@@ -88,11 +89,7 @@ export const computeSources = (layerDatas: {
   [id: string]: LayerData;
 }): mlStyle.StyleSpecification['sources'] => {
   const out = Object.fromEntries(
-    Object.values(layerDatas).map((s) => {
-      const spec = { ...s.spec };
-      if (s.attribution) spec['attribution'] = ATTRIBUTION[s.attribution];
-      return [s.id, spec];
-    }),
+    Object.values(layerDatas).map((s) => [s.id, s.spec]),
   );
 
   out[USER_FEATURES_DATA_ID] = {

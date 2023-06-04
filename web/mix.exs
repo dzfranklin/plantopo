@@ -51,7 +51,7 @@ defmodule PlanTopo.MixProject do
       {:esbuild, "~> 0.6", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.1.8", runtime: Mix.env() == :dev},
       {:swoosh, "~> 1.3"},
-      {:finch, "~> 0.13"},
+      {:finch, "~> 0.16"},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.20"},
@@ -77,7 +77,8 @@ defmodule PlanTopo.MixProject do
       {:opentelemetry_ecto, "~> 1.1"},
       {:opentelemetry_exporter, "~> 1.4"},
       {:dialyxir, "~> 1.2", only: [:dev], runtime: false},
-      {:bimap, "~> 1.3"}
+      {:bimap, "~> 1.3"},
+      {:porcelain, "~> 2.0"}
     ]
   end
 

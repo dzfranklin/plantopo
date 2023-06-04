@@ -12,7 +12,6 @@ struct Uuid {
   d4 @3 :UInt64;
 }
 
-
 struct FracIdx {
   value @0 :List(UInt8);
 }

@@ -40,12 +40,12 @@ pub(crate) fn write_frac_idx(b: types_capnp::frac_idx::Builder, idx: &FracIdx) {
 
 pub(crate) fn write_attr(
     mut b: delta_capnp::delta::attrs::attr::Builder,
-    key: attr::Key,
+    key: &attr::Key,
     value: &attr::Value,
     ts: LInstant,
 ) {
     use attr::Value;
-    b.set_key(key.into());
+    b.set_key(key.as_ref());
     write_l_instant(b.reborrow().init_ts(), ts);
 
     let mut b = b.init_value();

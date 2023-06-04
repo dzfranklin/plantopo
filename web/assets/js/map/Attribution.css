@@ -1,0 +1,16 @@
+.attribution--inline a {
+  text-decoration: underline;
+}
+
+.attribution--dialog a {
+  text-decoration: underline;
+  color: blue;
+}
+
+.attribution--dialog a:active {
+  color: red;
+}
+
+.attribution--dialog a:visited {
+  color: purple;
+}

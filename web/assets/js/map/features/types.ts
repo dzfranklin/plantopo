@@ -1,8 +1,25 @@
-export type Feature = GroupFeature | PointFeature | RouteFeature;
+export const ROOT_FEATURE = 'F0@0';
+export const GROUP_FEATURE = 1;
+export const POINT_FEATURE = 2;
+export const ROUTE_FEATURE = 3;
 
-export type Features = { [id: string]: Feature };
+export interface Feature {
+  id: string;
+  parent: string;
+  type: number;
+  attrs: {
+    name?: string;
+    [key: string]: unknown;
+  };
+  linearIdx: number;
+}
 
-export const ROOT_FEATURE = 'db0d225b-6fb4-444e-a18e-13f637036bff';
+// TODO: All this is outdated
+
+export type OutdatedFeature = GroupFeature | PointFeature | RouteFeature;
+
+export type OutdatedFeatures = { [id: string]: OutdatedFeature };
+
 export const DEFAULT_POINT_SPRITE = 'maki-circle-stroked';
 
 export const FEATURE_TYPES = new Set(['group', 'point', 'route']);

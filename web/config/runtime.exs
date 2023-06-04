@@ -2,6 +2,9 @@ import Config
 
 Dotenv.load!()
 
+config :plantopo, PlanTopo.Maps,
+  sync_server_secret: System.fetch_env!("PLANTOPO_SYNC_SERVER_SECRET")
+
 config :plantopo, :frontend_tokens,
   mapbox: System.fetch_env!("MAPBOX_ACCESS_TOKEN"),
   os: System.fetch_env!("OS_API_KEY"),

@@ -2,6 +2,7 @@ use std::{env, net::SocketAddr, process::Stdio, str::FromStr};
 
 use eyre::{eyre, Result, WrapErr};
 use futures_util::{stream::StreamExt, SinkExt};
+use plantopo_sync_core::ClientId;
 use serde::{Deserialize, Serialize};
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -34,7 +35,7 @@ async fn main() -> Result<()> {
 
     // Get a token
     let client = reqwest::Client::new();
-    let AuthorizeResp { token } = client
+    let AuthorizeResp { token, client_id } = client
         .post(format!("http://{addr}/authorize"))
         .header("Authorization", format!("Bearer {}", authorizer_secret))
         .json(&AuthorizeReq {
@@ -48,6 +49,8 @@ async fn main() -> Result<()> {
         .json()
         .await
         .wrap_err("decode /authorize")?;
+    let client_id = ClientId(client_id);
+    tracing::info!("You are: {client_id:?} ({})", client_id.into_inner());
 
     let ws_url = format!("ws://{addr}/ws/{map_id}");
     let req = http::Request::builder()
@@ -142,7 +145,8 @@ async fn message_to_json(msg: &[u8]) -> Result<String> {
     let out = cmd.wait_with_output().await?;
 
     if !out.status.success() {
-        tracing::warn!("pt-sync-inspector failed: {out:?}");
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        eprintln!("{}", stderr);
         return Err(eyre!("pt-sync-inspector failed"));
     }
 
@@ -168,7 +172,8 @@ async fn message_from_json(msg: &str) -> Result<Vec<u8>> {
     let out = cmd.wait_with_output().await?;
 
     if !out.status.success() {
-        tracing::warn!("pt-sync-inspector failed: {out:?}");
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        eprintln!("{}", stderr);
         return Err(eyre!("pt-sync-inspector failed"));
     }
 
@@ -186,4 +191,5 @@ struct AuthorizeReq {
 #[derive(Debug, Deserialize)]
 struct AuthorizeResp {
     token: String,
+    client_id: u64,
 }

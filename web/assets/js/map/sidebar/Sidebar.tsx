@@ -1,10 +1,12 @@
 import { ChevronLeftIcon } from '@heroicons/react/24/solid';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks';
 import AddDropdown from './AddDropdown';
 import FeatureTree from './FeatureTree';
 import { selectSidebarOpen, toggleOpen } from './slice';
+import useSyncStatus from '../sync/useSyncStatus';
+import useSyncSelector from '../sync/useSyncSelector';
 
 export default function Sidebar() {
   const dispatch = useAppDispatch();
@@ -41,6 +43,7 @@ export default function Sidebar() {
             >
               <div>TODO title</div>
               <div>TODO search</div>
+              <SyncStatus />
               <div className="flex flex-row justify-end mx-[14px] mb-[8px]">
                 <AddDropdown />
               </div>
@@ -69,3 +72,47 @@ export default function Sidebar() {
     </motion.div>
   );
 }
+
+const SyncStatus = () => {
+  const status = useSyncStatus();
+  const debug = useSyncSelector((s) => s);
+  return (
+    <div>
+      {status.type === 'connecting' &&
+        (status.willRetryAt ? (
+          <RetryStatusMessage retryAt={status.willRetryAt} />
+        ) : (
+          'Connecting...'
+        ))}
+
+      {status.type === 'connected' && 'Connected'}
+      {status.type === 'disconnected' && 'Disconnected'}
+
+      <pre>
+        <code>{JSON.stringify(debug, null, 2)}</code>
+      </pre>
+    </div>
+  );
+};
+
+const RetryStatusMessage = ({ retryAt }: { retryAt: number }) => {
+  const [seconds, setSeconds] = useState(() => secondsUntil(retryAt));
+  useEffect(() => {
+    const interval = setInterval(() => setSeconds(secondsUntil(retryAt)), 500);
+    return () => clearInterval(interval);
+  }, [retryAt]);
+
+  return (
+    <span>
+      Failed to connect
+      <span className="ml-1 text-gray-700">
+        (retrying in {seconds} {seconds === 1 ? 'second' : 'seconds'})
+      </span>
+    </span>
+  );
+};
+
+const secondsUntil = (retryAt: number) => {
+  const millis = retryAt - new Date().getTime();
+  return Math.round(millis / 1_000);
+};

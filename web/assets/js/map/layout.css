@@ -54,5 +54,5 @@
 
 .sidebar-is-open .attribution {
   grid-column: 2 / -1;
-  margin-left: calc(-1 * var(--sidebar-control-width));
+  margin-left: calc(8px -1 * var(--sidebar-control-width));
 }

@@ -2,6 +2,7 @@
 
 use std::{env, net::SocketAddr, str::FromStr, sync::Arc};
 
+use axum::http::{HeaderMap, Request, Response};
 use eyre::{Result, WrapErr};
 use parking_lot::Mutex;
 use pasetors::{
@@ -9,7 +10,11 @@ use pasetors::{
     version4::V4,
 };
 use tokio::signal;
-use tracing_subscriber::prelude::*;
+use tower_http::{
+    catch_panic::CatchPanicLayer, classify::ServerErrorsFailureClass, trace::TraceLayer,
+};
+use tracing::Span;
+use tracing_subscriber::{prelude::*, EnvFilter};
 
 use plantopo_sync_core as sync_core;
 use sync_core::ClientId;
@@ -24,11 +29,10 @@ async fn main() -> Result<()> {
     dotenvy::dotenv()?;
     color_eyre::install()?;
     tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "plantopo_sync_server=info,plantopo_sync_core=info".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
+        .with(tracing_error::ErrorLayer::default())
+        .with(console_subscriber::spawn())
+        .with(tracing_subscriber::fmt::layer().pretty())
+        .with(EnvFilter::from_default_env())
         .init();
 
     let addr = env::var("PLANTOPO_SYNC_SERVER_ADDR").unwrap_or_else(|_| DEFAULT_ADDR.to_string());
@@ -43,7 +47,7 @@ async fn main() -> Result<()> {
 
     let app_state = Arc::new(AppState {
         id: ClientId(0x01),
-        maps: Mutex::default(),
+        map_workers: Mutex::default(),
         token_secret,
         server_secret,
         shutdown: shutdown_observer,
@@ -52,14 +56,42 @@ async fn main() -> Result<()> {
     assert!(app_state.id.0 > 0, "reserved");
     assert!(app_state.id.0 <= u8::MAX as u64);
 
-    tracing::info!("Listening on {}", addr);
+    let service = router(app_state)
+        .layer(CatchPanicLayer::new())
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(|_: &Request<_>| tracing::debug_span!("http"))
+                .on_request(|request: &Request<_>, _span: &Span| {
+                    tracing::info!(
+                        method=%request.method(),
+                        path=%request.uri().path(),
+                        "request"
+                    )
+                })
+                .on_response(|_: &Response<_>, latency, _span: &Span| {
+                    tracing::info!(?latency, "response")
+                })
+                .on_body_chunk(|chunk: &axum::body::Bytes, latency, _span: &Span| {
+                    tracing::debug!(bytes = chunk.len(), ?latency, "body_chunk")
+                })
+                .on_eos(
+                    |_: Option<&HeaderMap>, stream_duration, _span: &Span| {
+                        tracing::debug!(?stream_duration, "eos")
+                    },
+                )
+                .on_failure(|error: ServerErrorsFailureClass, latency, _span: &Span| {
+                    tracing::warn!(%error, ?latency, "failure")
+                }),
+        )
+        .into_make_service_with_connect_info::<SocketAddr>();
+
+    tracing::info!(%addr, "Listening");
 
     axum::Server::bind(&addr)
-        .serve(router(app_state.clone()).into_make_service_with_connect_info::<SocketAddr>())
+        .serve(service)
         .with_graceful_shutdown(async move {
             let _ = signal::ctrl_c().await;
-            tracing::info!("Received SIGINT, starting shutdown");
-            app_state.maps.lock().clear();
+            tracing::info!("Starting shutdown");
         })
         .await?;
 

@@ -1,5 +1,4 @@
 import * as ContextMenu from '@radix-ui/react-context-menu';
-import { deleteFeature } from '../features/slice';
 import { useAppDispatch } from '../hooks';
 
 const FeatureContextMenu = ({ feature, setIsRename, setStyleOpen }) => {
@@ -19,7 +18,7 @@ const FeatureContextMenu = ({ feature, setIsRename, setStyleOpen }) => {
           Rename <div className="RightSlot">Alt+R</div>
         </ContextMenu.Item>
         <ContextMenu.Item
-          onClick={() => dispatch(deleteFeature(feature))}
+          // TODO: onClick={() => dispatch(deleteFeature(feature))}
           className="ContextMenuItem"
         >
           Delete <div className="RightSlot">Del</div>

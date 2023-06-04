@@ -16,6 +16,13 @@ impl LInstant {
         }
     }
 
+    pub const fn zero() -> Self {
+        Self {
+            counter: 0,
+            client: ClientId(0),
+        }
+    }
+
     pub fn with_counter(self, counter: u64) -> Self {
         Self { counter, ..self }
     }

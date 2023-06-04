@@ -10,25 +10,22 @@ export type LayerSources = {
 
 export interface LayerData {
   id: number;
-  attribution?: string;
   spec: mlStyle.SourceSpecification;
 }
 
 export interface LayerSource {
   id: string;
   name: string;
-  defaultOpacity: number | null;
-  dependencies: string[];
-  icon: string | null;
-  glyphs: string | null;
-  sprite: string | null;
+  defaultOpacity?: number;
+  icon?: string;
+  sprite?: string;
   layerSpecs: mlStyle.LayerSpecification[];
 }
 
-export type Layers = Record<string, Layer>;
-
 export interface Layer {
-  sourceId: string;
-  idx: string;
-  opacity?: number;
+  id: string;
+  attrs: {
+    opacity?: number;
+    [key: string]: unknown;
+  };
 }
