@@ -1,6 +1,33 @@
 {
   "extends": [
-    "next/babel",
-    "next/core-web-vitals"
-  ]
+    "next",
+    "prettier",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "rules": {
+    "quotes": [
+      "warn",
+      "single"
+    ],
+    "semi": [
+      "warn",
+      "always"
+    ],
+    "comma-dangle": [
+      "warn",
+      "always-multiline"
+    ],
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "@typescript-eslint/no-empty-function": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "prefer-const": "warn",
+    "no-empty": "warn"
+  }
 }

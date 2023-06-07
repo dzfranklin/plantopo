@@ -28,7 +28,7 @@ module.exports = {
     '@typescript-eslint/no-empty-function': 'off',
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-unnecessary-condition': 'warn',
-    "@typescript-eslint/switch-exhaustiveness-check": "error"
+    "@typescript-eslint/switch-exhaustiveness-check": "error",
     'prefer-const': 'warn',
     'no-empty': 'warn',
   }

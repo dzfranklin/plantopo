@@ -1,4 +1,25 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {}
+const config = {
+  reactStrictMode: true,
+  output: 'export',
+};
 
-module.exports = nextConfig
+const devConfig = {
+  ...config,
+  async rewrites() {
+    return [
+      {
+        source: '/:any*',
+        destination: '/',
+      },
+    ];
+  },
+};
+
+module.exports = (phase) => {
+  if (phase === 'phase-development-server') {
+    return devConfig;
+  } else {
+    return config;
+  }
+};
