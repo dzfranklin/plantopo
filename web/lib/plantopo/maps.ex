@@ -30,7 +30,7 @@ defmodule PlanTopo.Maps do
   end
 
   defp authorize_sync_token!(map_id, maybe_user, permit_write) do
-    secret = Application.fetch_env!(:plantopo, __MODULE__) |> Keyword.fetch!(:sync_server_secret)
+    secret = Application.fetch_env!(:plantopo, __MODULE__) |> Keyword.fetch!(:server_secret)
 
     %Finch.Response{status: 200, body: resp} =
       Finch.build(
