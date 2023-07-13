@@ -1,0 +1,28 @@
+[workspace]
+members = ["sync_server", "schema"]
+exclude = ["reproj_os_leisure", "core"]
+
+[profile.release]
+lto = true
+
+[workspace.dependencies]
+color-eyre = "0.6.2"
+console-subscriber = "0.1.9"
+eyre = "0.6.8"
+tracing = "0.1.37"
+tracing-error = "0.2.0"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+uuid = "1.3.3"
+smallvec = { version = "1.10.0", features = ["const_new"] }
+rand = "0.8.5"
+compact_str = "0.7.0"
+bytes = "1.4.0"
+
+[workspace.dependencies.capnp]
+path = "../capnproto-rust/capnp"
+
+[workspace.dependencies.capnpc]
+path = "../capnproto-rust/capnpc"
+
+[workspace.dependencies.plantopo-schema]
+path = "./schema"

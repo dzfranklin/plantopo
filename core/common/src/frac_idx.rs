@@ -29,7 +29,10 @@ impl FracIdx {
                 u8::MAX
             };
             let pick = ((digit_before as u16 + digit_after as u16) >> 1_u16) as u8;
-            result.push(pick);
+                result.push(pick);
+            } else {
+                result.push(pick + 1);
+            }
 
             if pick <= digit_before {
                 if digit_before < digit_after {
