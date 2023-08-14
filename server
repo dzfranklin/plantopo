@@ -1,4 +1,3 @@
 #!/usr/bin/env bash
 set -o allexport
-source ./export_secrets.sh
-cd web && exec iex -S mix server
+source ./export_secrets.sh && cd web && exec iex -S mix server

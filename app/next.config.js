@@ -4,21 +4,9 @@ const config = {
   output: 'export',
 };
 
-const devConfig = {
-  ...config,
-  async rewrites() {
-    return [
-      {
-        source: '/:any*',
-        destination: '/',
-      },
-    ];
-  },
-};
-
 module.exports = (phase) => {
   if (phase === 'phase-development-server') {
-    return devConfig;
+    return config;
   } else {
     return config;
   }

@@ -1,7 +1,8 @@
 import Config
 
-config :opentelemetry_exporter,
-  otlp_endpoint: "http://localhost:4318"
+config :plantopo, :sync_engine, "./run_sync_engine.sh"
+
+config :opentelemetry, traces_exporter: :none
 
 s3_config = [
   access_key_id: "admin",

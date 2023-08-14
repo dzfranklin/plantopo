@@ -5,11 +5,11 @@ import {
 } from './featuresLayer';
 import { Layer, LayerData, LayerSource } from '../layers/types';
 
-const ATTRIBUTION = {
-  os: `Contains OS data &copy; Crown copyright and database rights ${new Date().getFullYear()}`,
-  mapbox:
-    '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>',
-};
+// const ATTRIBUTION = {
+//   os: `Contains OS data &copy; Crown copyright and database rights ${new Date().getFullYear()}`,
+//   mapbox:
+//     '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>',
+// };
 
 const glLayerId = (sourceLayerId: string, specId: string) =>
   `${sourceLayerId}-${specId}`;

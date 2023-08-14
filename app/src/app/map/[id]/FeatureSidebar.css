@@ -1,0 +1,20 @@
+.dragging .directly-selected {
+  opacity: 0.3;
+}
+
+.drag-at-marker {
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  pointer-events: none;
+  display: none;
+}
+
+.dragging .drag-at-marker {
+  display: block;
+}
+
+.drag-at-marker.animate {
+  transition: width 0.1s ease-in, transform 0.1s ease-in;
+}

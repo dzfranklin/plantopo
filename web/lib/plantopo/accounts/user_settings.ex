@@ -1,10 +1,12 @@
 defmodule PlanTopo.Accounts.UserSettings do
   use PlanTopo.Schema
 
+  @type t :: %__MODULE__{}
+
   schema "user_settings" do
-    has_one :user, PlanTopo.Accounts.User, foreign_key: :settings_id
-    field :disable_animation, :boolean, default: false
-    field :advanced, :boolean, default: false
+    has_one(:user, PlanTopo.Accounts.User, foreign_key: :settings_id)
+    field(:disable_animation, :boolean, default: false)
+    field(:advanced, :boolean, default: false)
 
     timestamps()
   end

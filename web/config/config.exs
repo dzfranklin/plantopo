@@ -34,7 +34,7 @@ config :plantopo, PlanTopoWeb.Endpoint,
     dispatch: [
       {:_,
        [
-         {"/sync_socket", PlanTopoWeb.Sync.Socket, []},
+         {"/api/map_sync", PlanTopoWeb.SyncSocket, []},
          {:_, Plug.Cowboy.Handler, {PlanTopoWeb.Endpoint, []}}
        ]}
     ]

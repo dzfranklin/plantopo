@@ -2,6 +2,8 @@ defmodule PlanTopo.Accounts.User do
   alias PlanTopo.Accounts.UserSettings
   use PlanTopo.Schema
 
+  @type t :: %__MODULE__{}
+
   schema "users" do
     field :username, :string
     field :email, :string

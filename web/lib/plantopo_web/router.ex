@@ -86,9 +86,5 @@ defmodule PlanTopoWeb.Router do
       live_dashboard "/dashboard", metrics: PlanTopoWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
-
-    scope "/dev", PlanTopoWeb do
-      post "/sync-inspector", DevSyncInspectorController, :post
-    end
   end
 end

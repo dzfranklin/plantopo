@@ -5,6 +5,7 @@
         "/web/.elixir_ls/**": true,
         "/maplibre-gl-js/**": true,
     },
+    "editor.tabSize": 2,
     "eslint.workingDirectories": [
         "web/assets"
     ],

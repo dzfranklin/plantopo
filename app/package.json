@@ -8,6 +8,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@spectrum-icons/workflow": "^4.2.3",
+    "@types/geojson": "^7946.0.10",
     "@types/node": "20.2.5",
     "@types/react": "18.2.8",
     "@types/react-dom": "18.2.4",
@@ -15,14 +17,14 @@
     "autoprefixer": "10.4.14",
     "eslint": "8.42.0",
     "eslint-config-next": "13.4.4",
+    "eslint-config-prettier": "^8.8.0",
+    "maplibre-gl": "^3.2.1",
     "next": "13.4.4",
     "postcss": "8.4.24",
     "prettier": "^2.8.8",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "react-router-dom": "^6.12.0",
     "tailwindcss": "3.3.2",
-    "typescript": "^4.7.4",
-    "eslint-config-prettier": "^8.8.0"
+    "typescript": "^4.7.4"
   }
 }
