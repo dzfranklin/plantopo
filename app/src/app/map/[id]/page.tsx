@@ -1,6 +1,6 @@
 'use client';
 
-import { SyncDriver } from '@/sync/SyncDriver';
+import { SyncSocket } from '@/sync/SyncSocket';
 import { useEffect, useMemo, useState } from 'react';
 import FeatureSidebar from './FeatureSidebar';
 
@@ -10,7 +10,7 @@ export default function MapPage({ params }: { params: { id: string } }) {
     throw new Error('Invalid map id');
   }
 
-  const driver = useMemo(() => new SyncDriver(id), [id]);
+  const driver = useMemo(() => new SyncSocket(id), [id]);
   useEffect(() => {
     driver.connect();
   }, [driver]);

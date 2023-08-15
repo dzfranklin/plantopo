@@ -1,5 +1,5 @@
 import cls from '@/app/cls';
-import { SyncDriver } from '@/sync/SyncDriver';
+import { SyncSocket } from '@/sync/SyncSocket';
 import {
   Dispatch,
   DragEventHandler,
@@ -24,7 +24,7 @@ interface DragTarget {
   place: TargetPlace;
 }
 
-export default function FeatureSidebar({ driver }: { driver: SyncDriver }) {
+export default function FeatureSidebar({ driver }: { driver: SyncSocket }) {
   // TODO:
   const [tree] = useState(() => ({
     id: 0,
@@ -388,7 +388,7 @@ function Entry({
   setSelected,
 }: {
   entry: Entry;
-  driver: SyncDriver;
+  driver: SyncSocket;
   selected: number[];
   setSelected: Dispatch<SetStateAction<number[]>>;
 }) {
