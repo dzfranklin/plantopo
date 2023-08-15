@@ -32,19 +32,19 @@ pub struct Pos {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "camelCase")]
 pub enum Op {
-    CreateFeature {
+    FCreate {
         fid: Fid,
         pos: Pos,
     },
-    DeleteFeature {
+    FDelete {
         fid: Fid,
     },
-    FeatureSet {
+    FSet {
         fid: Fid,
         key: Key,
         value: Option<Value>,
     },
-    LayerSet {
+    LSet {
         lid: Lid,
         key: Key,
         value: Option<Value>,
@@ -147,99 +147,101 @@ where
         &mut self.store
     }
 
-    pub fn apply(&mut self, validate_by: u16, op: Op) -> eyre::Result<Changeset> {
+    pub fn apply(&mut self, validate_by: u16, ops: Vec<Op>) -> eyre::Result<Changeset> {
         let mut cset = Changeset::default();
 
-        match op {
-            Op::CreateFeature { fid, mut pos } => {
-                if self.feature_tree.contains_node(fid) {
-                    return Err(eyre!("oid already exists: {}", fid));
-                }
-                if self.deleted_features.contains(&fid) {
-                    return Err(eyre!("oid deleted: {}", fid));
-                }
-                if !self.feature_tree.contains_node(pos.parent) {
-                    return Err(eyre!("parent oid not found: {}", pos.parent));
-                }
-                if fid.client() != validate_by {
-                    return Err(eyre!("tried to create feature with different oid client: got {fid:x?}, expected client={validate_by}"));
-                }
-
-                self.validate_and_fix_feature_pos(fid, &mut pos, &mut cset)?;
-
-                let pos = serde_json::to_value(pos)?;
-                cset.change.set_fprop(fid, "pos", Some(pos));
-            }
-            Op::DeleteFeature { fid } => {
-                if !self.feature_tree.contains_node(fid) {
-                    return Err(eyre!("oid not found in tree: {}", fid));
-                }
-
-                self.build_recursive_deletion(fid, &mut cset);
-            }
-            Op::FeatureSet {
-                fid,
-                key,
-                mut value,
-            } => {
-                if !self.feature_tree.contains_node(fid) {
-                    return Err(eyre!("oid not found in tree: {}", fid));
-                }
-
-                if key == "pos" {
-                    // This ensures "pos" is always set to something valid
-                    let value_inner = value.ok_or_else(|| eyre!("missing pos value"))?;
-                    let mut pos: Pos = serde_json::from_value(value_inner)
-                        .wrap_err("invalid pos value for feature")?;
+        for op in ops {
+            match op {
+                Op::FCreate { fid, mut pos } => {
+                    if self.feature_tree.contains_node(fid) {
+                        return Err(eyre!("oid already exists: {}", fid));
+                    }
+                    if self.deleted_features.contains(&fid) {
+                        return Err(eyre!("oid deleted: {}", fid));
+                    }
+                    if !self.feature_tree.contains_node(pos.parent) {
+                        return Err(eyre!("parent oid not found: {}", pos.parent));
+                    }
+                    if fid.client() != validate_by {
+                        return Err(eyre!("tried to create feature with different oid client: got {fid:x?}, expected client={validate_by}"));
+                    }
 
                     self.validate_and_fix_feature_pos(fid, &mut pos, &mut cset)?;
-                    value = Some(serde_json::to_value(&pos)?);
 
-                    if let Some(old_parent) = self.parent(fid) {
-                        self.feature_tree.remove_edge(old_parent, fid);
-                    } else {
-                        tracing::warn!(?fid, "feature missing old parent");
+                    let pos = serde_json::to_value(pos)?;
+                    cset.change.set_fprop(fid, "pos", Some(pos));
+                }
+                Op::FDelete { fid } => {
+                    if !self.feature_tree.contains_node(fid) {
+                        return Err(eyre!("oid not found in tree: {}", fid));
                     }
 
-                    self.feature_tree.add_edge(pos.parent, fid, pos.idx);
+                    self.build_recursive_deletion(fid, &mut cset);
                 }
+                Op::FSet {
+                    fid,
+                    key,
+                    mut value,
+                } => {
+                    if !self.feature_tree.contains_node(fid) {
+                        return Err(eyre!("oid not found in tree: {}", fid));
+                    }
 
-                cset.change.set_fprop(fid, key.clone(), value.clone());
-                self.feature_props
-                    .entry(fid)
-                    .or_default()
-                    .insert(key.clone(), value.clone());
-            }
-            Op::LayerSet {
-                lid,
-                key,
-                mut value,
-            } => {
-                if key == "idx" {
-                    let idx = if let Some(value) = value.clone() {
-                        Some(serde_json::from_value(value)?)
-                    } else {
-                        None
-                    };
+                    if key == "pos" {
+                        // This ensures "pos" is always set to something valid
+                        let value_inner = value.ok_or_else(|| eyre!("missing pos value"))?;
+                        let mut pos: Pos = serde_json::from_value(value_inner)
+                            .wrap_err("invalid pos value for feature")?;
 
-                    self.layer_order.retain(|(_, other_id)| other_id != &lid);
+                        self.validate_and_fix_feature_pos(fid, &mut pos, &mut cset)?;
+                        value = Some(serde_json::to_value(&pos)?);
 
-                    if let Some(mut idx) = idx {
-                        if let Some(fixed_idx) = self.layer_idx_collision_fix(&idx) {
-                            value = Some(serde_json::to_value(&fixed_idx)?);
-                            idx = fixed_idx;
-
-                            cset.reply_only.set_lprop(lid, key.clone(), value.clone());
+                        if let Some(old_parent) = self.parent(fid) {
+                            self.feature_tree.remove_edge(old_parent, fid);
+                        } else {
+                            tracing::warn!(?fid, "feature missing old parent");
                         }
-                        self.layer_order.insert((idx, lid));
-                    }
-                }
 
-                cset.change.set_lprop(lid, key.clone(), value.clone());
-                self.layer_props
-                    .entry(lid)
-                    .or_default()
-                    .insert(key.clone(), value.clone());
+                        self.feature_tree.add_edge(pos.parent, fid, pos.idx);
+                    }
+
+                    cset.change.set_fprop(fid, key.clone(), value.clone());
+                    self.feature_props
+                        .entry(fid)
+                        .or_default()
+                        .insert(key.clone(), value.clone());
+                }
+                Op::LSet {
+                    lid,
+                    key,
+                    mut value,
+                } => {
+                    if key == "idx" {
+                        let idx = if let Some(value) = value.clone() {
+                            Some(serde_json::from_value(value)?)
+                        } else {
+                            None
+                        };
+
+                        self.layer_order.retain(|(_, other_id)| other_id != &lid);
+
+                        if let Some(mut idx) = idx {
+                            if let Some(fixed_idx) = self.layer_idx_collision_fix(&idx) {
+                                value = Some(serde_json::to_value(&fixed_idx)?);
+                                idx = fixed_idx;
+
+                                cset.reply_only.set_lprop(lid, key.clone(), value.clone());
+                            }
+                            self.layer_order.insert((idx, lid));
+                        }
+                    }
+
+                    cset.change.set_lprop(lid, key.clone(), value.clone());
+                    self.layer_props
+                        .entry(lid)
+                        .or_default()
+                        .insert(key.clone(), value.clone());
+                }
             }
         }
 

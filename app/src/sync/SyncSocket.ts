@@ -1,5 +1,6 @@
 import { SyncEngine } from './SyncEngine';
 import { SyncOp } from './SyncOp';
+import { RecvMsg } from './socketMessages';
 
 export class SyncSocket extends SyncEngine {
   readonly id: number;
@@ -12,7 +13,7 @@ export class SyncSocket extends SyncEngine {
 
   private _onError: (err: Error) => void;
   private _socket: WebSocket | undefined;
-  private _pending: Map<number, SyncOp> = new Map();
+  private _pending: Map<number, SyncOp[]> = new Map();
   private _seq = 0;
   private _closing = false;
 
@@ -47,13 +48,13 @@ export class SyncSocket extends SyncEngine {
     this._socket.close();
   }
 
-  apply(op: SyncOp): void {
-    super.apply(op);
+  apply(ops: SyncOp[]): void {
+    super.apply(ops);
 
     const seq = ++this._seq;
-    this._pending.set(seq, op);
+    this._pending.set(seq, ops);
     if (this._socket?.readyState === WebSocket.OPEN) {
-      this._socket.send(JSON.stringify({ seq, op }));
+      this._socket.send(JSON.stringify({ seq, ops }));
     }
   }
 
@@ -81,11 +82,20 @@ export class SyncSocket extends SyncEngine {
   }
 
   private onSocketMessage(event: MessageEvent): void {
-    const { reply_to, change } = JSON.parse(event.data);
-    if (reply_to !== undefined) {
-      this._pending.delete(reply_to);
+    const msg: RecvMsg = JSON.parse(event.data);
+
+    if ('error' in msg) {
+      this._onError(new Error(msg.error, { cause: msg.details }));
+      // TODO: reconnect?
+      return;
     }
-    super.change(change);
+
+    if ('replyTo' in msg) {
+      super.change(msg.change);
+      this._pending.delete(msg.replyTo);
+    } else {
+      super.change(msg.change);
+    }
   }
 }
 

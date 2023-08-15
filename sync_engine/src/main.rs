@@ -22,7 +22,7 @@ struct InputContainer {
 
 #[derive(Debug, Deserialize)]
 struct InputMsg {
-    op: Op,
+    ops: Vec<Op>,
     seq: u32,
 }
 
@@ -168,7 +168,7 @@ where
         };
         tracing::trace!(?input_msg);
 
-        let cset = match engine.apply(client, input_msg.op) {
+        let cset = match engine.apply(client, input_msg.ops) {
             Ok(cset) => cset,
             Err(report) => {
                 #[cfg(debug_assertions)]

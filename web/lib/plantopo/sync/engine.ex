@@ -12,7 +12,6 @@ defmodule PlanTopo.Sync.Engine do
     defstruct [:engine, :clients]
   end
 
-  # TODO: Compaction?
   # TODO: Auto-close
 
   @impl true
@@ -79,6 +78,7 @@ defmodule PlanTopo.Sync.Engine do
 
           {:stop, {:general_error, message}, state}
         else
+          # Matches ErrorMsg in socketMessages.ts
           msg =
             %{
               error: "Internal sync engine error",
@@ -105,14 +105,16 @@ defmodule PlanTopo.Sync.Engine do
           "changeset" => %{"reply" => reply, "bcast" => bcast}
         } = ok
 
+        # Matches ReplyMsg in socketMessages.ts
         reply =
           %{
-            reply_to: seq,
+            replyTo: seq,
             change: reply
           }
           |> Jason.encode!()
 
-        bcast = Jason.encode!(%{change: bcast})
+        # Matches BcastMsg in socketMessages.ts
+        bcast = %{change: bcast} |> Jason.encode!()
 
         reply_to = BiMap.get(state.clients, reply_to_id)
 

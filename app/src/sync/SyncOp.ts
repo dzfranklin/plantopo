@@ -1,10 +1,9 @@
 export type SyncOp =
   | {
-      action: 'createFeature';
-      id: number;
+      action: 'fCreate';
+      fid: number;
       pos: { parent: number; idx: string };
-      type: string;
     }
-  | { action: 'deleteFeature'; id: number }
-  | { action: 'featureSet'; id: number; key: string; value: unknown }
-  | { action: 'layerSet'; id: number; key: string; value: unknown };
+  | { action: 'fDelete'; fid: number }
+  | { action: 'fSet'; fid: number; key: string; value: unknown }
+  | { action: 'lSet'; lid: number; key: string; value: unknown };

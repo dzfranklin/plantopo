@@ -7,6 +7,7 @@ import {
   UIEventHandler,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -25,127 +26,11 @@ interface DragTarget {
 }
 
 export default function FeatureSidebar({ driver }: { driver: SyncSocket }) {
-  // TODO:
-  const [tree] = useState(() => ({
-    id: 0,
-    ancestors: [],
-    linearIndex: 0,
-    children: [
-      {
-        id: 1,
-        linearIndex: 1,
-        ancestors: [0],
-        children: [],
-      },
-      {
-        id: 2,
-        linearIndex: 2,
-        ancestors: [0],
-        children: [],
-      },
-      {
-        id: 3,
-        ancestors: [0],
-        linearIndex: 3,
-        children: [
-          {
-            id: 4,
-            ancestors: [3, 0],
-            linearIndex: 4,
-            children: [],
-          },
-          {
-            id: 5,
-            ancestors: [3, 0],
-            linearIndex: 5,
-            children: [],
-          },
-        ],
-      },
-      {
-        id: 6,
-        ancestors: [0],
-        linearIndex: 6,
-        children: [],
-      },
-      {
-        id: 7,
-        ancestors: [0],
-        linearIndex: 7,
-        children: [],
-      },
-      {
-        id: 8,
-        ancestors: [0],
-        linearIndex: 8,
-        children: [],
-      },
-      {
-        id: 9,
-        ancestors: [0],
-        linearIndex: 9,
-        children: [],
-      },
-      {
-        id: 10,
-        ancestors: [0],
-        linearIndex: 10,
-        children: [],
-      },
-      {
-        id: 11,
-        ancestors: [0],
-        linearIndex: 11,
-        children: [],
-      },
-      {
-        id: 12,
-        ancestors: [0],
-        linearIndex: 12,
-        children: [],
-      },
-      {
-        id: 13,
-        ancestors: [0],
-        linearIndex: 13,
-        children: [],
-      },
-    ],
-  }));
-
-  const [ancestorMap] = useState<Record<number, number[]>>(() => ({
-    0: [],
-    1: [0],
-    2: [0],
-    3: [0],
-    4: [3, 0],
-    5: [3, 0],
-    6: [0],
-    7: [0],
-    8: [0],
-    9: [0],
-    10: [0],
-    11: [0],
-    12: [0],
-    13: [0],
-  }));
-
-  const [linearIndexMap] = useState<Record<number, number>>(() => ({
-    0: 0,
-    1: 1,
-    2: 2,
-    3: 3,
-    4: 4,
-    5: 5,
-    6: 6,
-    7: 7,
-    8: 8,
-    9: 9,
-    10: 10,
-    11: 11,
-    12: 12,
-    13: 13,
-  }));
+  const [children, setChildren] = useState(() => driver.fChildren(0));
+  useEffect(() => {
+    driver.addFChildrenListener(0, setChildren);
+    return () => driver.removeFChildrenListener(0, setChildren);
+  }, [driver]);
 
   const [selected, setSelected] = useState<number[]>([]);
   const dragTargetRef = useRef<DragTarget | null>(null);
@@ -159,18 +44,16 @@ export default function FeatureSidebar({ driver }: { driver: SyncSocket }) {
       if (!rootElem) return;
 
       if (!(evt.target instanceof HTMLElement)) return;
-      if (evt.target.dataset.entryId === undefined) return;
-      const dragTargetId = parseInt(evt.target.dataset.entryId, 10);
+      if (evt.target.dataset.fid === undefined) return;
+      const dragTargetId = parseInt(evt.target.dataset.fid, 10);
 
       // Add the dragged element to targets if necessary
       let dragTargetIncluded = selected.includes(dragTargetId);
       if (!dragTargetIncluded) {
-        for (const ancestor of ancestorMap[dragTargetId]) {
-          if (selected.includes(ancestor)) {
-            dragTargetIncluded = true;
-            break;
-          }
-        }
+        dragTargetIncluded = driver.fHasAncestor(
+          dragTargetId,
+          new Set(selected),
+        );
       }
       if (!dragTargetIncluded) {
         if (evt.shiftKey) {
@@ -187,7 +70,7 @@ export default function FeatureSidebar({ driver }: { driver: SyncSocket }) {
       // Hide ghost as won't reflect what is actually being dragged
       evt.dataTransfer.setDragImage(new Image(), 0, 0);
     },
-    [ancestorMap, selected],
+    [driver, selected],
   );
 
   const onDragEnter = useCallback<DragEventHandler<HTMLUListElement>>((evt) => {
@@ -197,75 +80,66 @@ export default function FeatureSidebar({ driver }: { driver: SyncSocket }) {
     evt.preventDefault();
   }, []);
 
-  const onDragOver = useCallback<DragEventHandler<HTMLUListElement>>(
-    (evt) => {
-      if (evt.dataTransfer.getData('x-pt') === '') {
-        return;
-      }
-
-      const rootElem = rootElemRef.current;
-      const dragAtElem = dragAtElemRef.current;
-      if (!rootElem || !dragAtElem) return;
-
-      const rootRect = rootElem.getBoundingClientRect();
-
-      let targetElem = document.elementFromPoint(
-        rootRect.right - 20, // Subtract out potential scrollbar width
-        evt.clientY,
-      );
-      if (!(targetElem instanceof HTMLElement)) return;
-      while (targetElem.dataset.entryId === undefined) {
-        targetElem = targetElem.parentElement;
-        if (!(targetElem instanceof HTMLElement)) return;
-      }
-
-      const targetId = parseInt(targetElem.dataset.entryId, 10);
-
-      const targetAncestors = ancestorMap[targetId];
-      for (const selectedId of selected) {
-        if (selectedId === targetId) {
-          return;
-        }
-        for (const ancestor of targetAncestors) {
-          if (selectedId === ancestor) {
-            return;
-          }
-        }
-      }
-
-      let targetPlace: TargetPlace;
-      const targetRect = targetElem.getBoundingClientRect();
-      if (evt.clientY > targetRect.bottom - targetRect.height / 3) {
-        targetPlace = 'after';
-      } else if (evt.clientY < targetRect.top + targetRect.height / 3) {
-        targetPlace = 'before';
-      } else {
-        targetPlace = 'firstChild';
-      }
-
-      dragTargetRef.current = {
-        id: targetId,
-        elem: targetElem,
-        place: targetPlace,
-      };
-
-      positionDragAtMarker(dragAtElem, targetRect, targetPlace, true);
-
-      evt.preventDefault();
-    },
-    [ancestorMap, selected],
-  );
-
-  const onDrop = useCallback<DragEventHandler<HTMLUListElement>>((evt) => {
-    if (evt.dataTransfer.getData('x-pt') !== 'selected') {
+  const onDragOver = useCallback<DragEventHandler<HTMLUListElement>>((evt) => {
+    if (evt.dataTransfer.getData('x-pt') === '') {
       return;
     }
 
-    console.info('drop', dragTargetRef.current);
-    dragTargetRef.current = null;
+    const rootElem = rootElemRef.current;
+    const dragAtElem = dragAtElemRef.current;
+    if (!rootElem || !dragAtElem) return;
+
+    const rootRect = rootElem.getBoundingClientRect();
+
+    let targetElem = document.elementFromPoint(
+      rootRect.right - 20, // Subtract out potential scrollbar width
+      evt.clientY,
+    );
+    if (!(targetElem instanceof HTMLElement)) return;
+    while (targetElem.dataset.fid === undefined) {
+      targetElem = targetElem.parentElement;
+      if (!(targetElem instanceof HTMLElement)) return;
+    }
+
+    const targetId = parseInt(targetElem.dataset.fid, 10);
+
+    let targetPlace: TargetPlace;
+    const targetRect = targetElem.getBoundingClientRect();
+    if (evt.clientY > targetRect.bottom - targetRect.height / 3) {
+      targetPlace = 'after';
+    } else if (evt.clientY < targetRect.top + targetRect.height / 3) {
+      targetPlace = 'before';
+    } else {
+      targetPlace = 'firstChild';
+    }
+
+    dragTargetRef.current = {
+      id: targetId,
+      elem: targetElem,
+      place: targetPlace,
+    };
+
+    positionDragAtMarker(dragAtElem, targetRect, targetPlace, true);
 
     evt.preventDefault();
   }, []);
+
+  const onDrop = useCallback<DragEventHandler<HTMLUListElement>>(
+    (evt) => {
+      if (evt.dataTransfer.getData('x-pt') !== 'selected') {
+        return;
+      }
+
+      const ordered = driver.orderFeatures(selected);
+      console.info('drop', dragTargetRef.current, ordered);
+      // TODO:
+
+      dragTargetRef.current = null;
+
+      evt.preventDefault();
+    },
+    [driver, selected],
+  );
 
   const onDragEnd = useCallback<DragEventHandler<HTMLUListElement>>((_evt) => {
     rootElemRef.current?.classList.remove('dragging');
@@ -320,10 +194,10 @@ export default function FeatureSidebar({ driver }: { driver: SyncSocket }) {
         onDragOver={onDragOver}
         className="pt-0.5 pb-10"
       >
-        {tree.children.map((child) => (
+        {children.map((child) => (
           <Entry
-            key={child.id}
-            entry={child}
+            key={child}
+            fid={child}
             driver={driver}
             selected={selected}
             setSelected={setSelected}
@@ -382,46 +256,51 @@ interface Entry {
 }
 
 function Entry({
-  entry,
+  fid,
   driver,
   selected,
   setSelected,
 }: {
-  entry: Entry;
+  fid: number;
   driver: SyncSocket;
   selected: number[];
   setSelected: Dispatch<SetStateAction<number[]>>;
 }) {
-  const ancestorSelected = ancestorIsSelected(selected, entry);
-  const directlySelected = !ancestorSelected && selected.includes(entry.id);
+  const isSelected = useMemo(() => selected.includes(fid), [fid, selected]);
+
+  const [children, setChildren] = useState(() => driver.fChildren(fid));
+  useEffect(() => {
+    driver.addFChildrenListener(fid, setChildren);
+    return () => driver.removeFChildrenListener(fid, setChildren);
+  }, [fid, driver]);
 
   return (
     <li
       draggable="true"
-      data-entry-id={entry.id}
+      data-fid={fid}
       onClick={(evt) => {
         if (evt.shiftKey) {
-          if (directlySelected) {
-            setSelected(selected.filter((id) => id !== entry.id));
-          } else if (!ancestorSelected) {
-            setSelected(selected.concat(entry.id));
+          if (isSelected) {
+            setSelected(selected.filter((id) => id !== fid));
+          } else {
+            setSelected(selected.concat(fid));
           }
         } else {
-          if (directlySelected) {
+          if (isSelected) {
             setSelected([]);
           } else {
-            setSelected([entry.id]);
+            setSelected([fid]);
           }
         }
         evt.stopPropagation();
       }}
-      className={cls(directlySelected && 'directly-selected')}
+      className={cls(isSelected && 'directly-selected')}
     >
       {/* We need this nested div so that we can find its parent by mouse
           position without the padding throwing us off */}
       <div
         className={cls(
-          directlySelected ? 'bg-white border-blue-400' : 'border-transparent',
+          isSelected ? 'bg-white border-blue-400' : 'border-transparent',
         )}
       >
         <div
@@ -433,15 +312,15 @@ function Entry({
             borderLeft: `${INDICATOR_BORDER_PX}px`,
           }}
         >
-          <span className="flex-grow select-none text-start">{entry.id}</span>
+          <span className="flex-grow select-none text-start">{fid}</span>
         </div>
 
-        {entry.children.length > 0 && (
+        {children.length > 0 && (
           <ul style={{ paddingLeft: `${CHILD_INDENT_PX}px` }}>
-            {entry.children.map((child) => (
+            {children.map((child) => (
               <Entry
-                key={child.id}
-                entry={child}
+                key={child}
+                fid={child}
                 driver={driver}
                 selected={selected}
                 setSelected={setSelected}
@@ -452,36 +331,4 @@ function Entry({
       </div>
     </li>
   );
-}
-
-function ancestorIsSelected(selected: number[], entry: Entry): boolean {
-  for (const candidate of selected) {
-    if (entry.ancestors.includes(candidate)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function cleanSelected(
-  selected: number[],
-  ancestorMap: Record<number, number[]>,
-  linearIndexMap: Record<number, number>,
-): number[] {
-  const targetSet = new Set<number>();
-
-  // Prune selected of redundant entries
-  const orderedSelected = selected.slice();
-  orderedSelected.sort((a, b) => ancestorMap[a].length - ancestorMap[b].length);
-  for (const id of orderedSelected) {
-    for (const ancestor of ancestorMap[id]) {
-      if (targetSet.has(ancestor)) continue;
-    }
-    targetSet.add(id);
-  }
-
-  const targets = Array.from(targetSet);
-  targets.sort((a, b) => linearIndexMap[a] - linearIndexMap[b]);
-
-  return targets;
 }
