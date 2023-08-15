@@ -14,6 +14,7 @@ use eyre::{eyre, Context};
 use fid::Fid;
 use lid::Lid;
 use petgraph::prelude::*;
+use rand::{rngs::SmallRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -50,9 +51,10 @@ pub enum Op {
     },
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Engine<S> {
     store: S,
+    rng: SmallRng,
     feature_tree: DiGraphMap<Fid, FracIdx>,
     feature_props: PropMap<Fid>,
     deleted_features: HashSet<Fid>,
@@ -133,6 +135,7 @@ where
             deleted_features,
             layer_order,
             layer_props,
+            rng: SmallRng::from_entropy(),
         })
     }
 
@@ -336,7 +339,7 @@ where
 
     /// If `pos` is changed adds a reply to `cset`. (Does not change bcast)
     fn validate_and_fix_feature_pos(
-        &self,
+        &mut self,
         fid: Fid,
         pos: &mut Pos,
         cset: &mut Changeset,
@@ -375,7 +378,7 @@ where
             .any(|(_, _, peer_idx)| peer_idx == &pos.idx)
     }
 
-    fn feature_idx_collision_fix(&self, pos: &Pos) -> Option<FracIdx> {
+    fn feature_idx_collision_fix(&mut self, pos: &Pos) -> Option<FracIdx> {
         if self.pos_idx_collides(pos) {
             return None;
         }
@@ -387,7 +390,7 @@ where
             .filter(|idx| idx > &&pos.idx)
             .min();
 
-        let fix = frac_idx::between(Some(&pos.idx), after);
+        let fix = frac_idx::between(&mut self.rng, Some(&pos.idx), after);
 
         Some(fix)
     }
@@ -398,7 +401,7 @@ where
             .any(|(other_idx, _)| other_idx == idx)
     }
 
-    fn layer_idx_collision_fix(&self, idx: &FracIdx) -> Option<FracIdx> {
+    fn layer_idx_collision_fix(&mut self, idx: &FracIdx) -> Option<FracIdx> {
         if !self.layer_idx_collides(idx) {
             return None;
         }
@@ -410,7 +413,7 @@ where
             .filter(|other_idx| other_idx > &idx)
             .min();
 
-        let fix = frac_idx::between(Some(idx), after);
+        let fix = frac_idx::between(&mut self.rng, Some(idx), after);
 
         Some(fix)
     }
@@ -437,13 +440,13 @@ where
             .map(|(parent, _, _)| parent)
     }
 
-    fn idx_for_last_in(&self, parent: Fid) -> FracIdx {
+    fn idx_for_last_in(&mut self, parent: Fid) -> FracIdx {
         let last = self
             .feature_tree
             .edges(parent)
             .map(|(_, _child, idx)| idx)
             .max();
-        frac_idx::between(last, None)
+        frac_idx::between(&mut self.rng, last, None)
     }
 
     pub fn dbg_tree(&self) -> String {

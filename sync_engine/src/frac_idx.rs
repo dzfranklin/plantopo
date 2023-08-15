@@ -1,6 +1,7 @@
 use std::fmt;
 
 use ascii::{AsciiChar, AsciiString};
+use rand::Rng;
 use serde::{de::Visitor, Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize)]
@@ -8,8 +9,9 @@ pub struct FracIdx(AsciiString);
 
 const MIN_DIGIT: u8 = b' ';
 const MAX_DIGIT: u8 = b'~';
+const MAX_JITTER: u16 = 0x10;
 
-pub fn between(before: Option<&FracIdx>, after: Option<&FracIdx>) -> FracIdx {
+pub fn between(rng: &mut impl Rng, before: Option<&FracIdx>, after: Option<&FracIdx>) -> FracIdx {
     let empty = FracIdx::default();
     let before = &before.unwrap_or(&empty).0.as_bytes();
     let after = &after.unwrap_or(&empty).0.as_bytes();
@@ -37,13 +39,13 @@ pub fn between(before: Option<&FracIdx>, after: Option<&FracIdx>) -> FracIdx {
             continue;
         }
 
-        // let mut jitter = rng.gen_range(0..MAX_JITTER);
-        // while jitter > 0 {
-        //     let base = u8::MAX as u16;
-        //     let modulo = jitter % base;
-        //     jitter = (jitter - modulo) / base;
-        //     result.push(modulo as u8);
-        // }
+        let mut jitter = rng.gen_range(0..MAX_JITTER);
+        while jitter > 0 {
+            let base = u8::MAX as u16;
+            let modulo = jitter % base;
+            jitter = (jitter - modulo) / base;
+            result.push(modulo as u8);
+        }
 
         let result = AsciiString::from_ascii(result).expect("is ascii");
         return FracIdx(result);
