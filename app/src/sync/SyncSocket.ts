@@ -10,14 +10,16 @@ export class SyncSocket extends SyncEngine {
       throw new Error('Missing NEXT_PUBLIC_MAP_SYNC_SOCKET_URL');
     })();
 
+  private _onError: (err: Error) => void;
   private _socket: WebSocket | undefined;
   private _pending: Map<number, SyncOp> = new Map();
   private _seq = 0;
   private _closing = false;
 
-  constructor(id: number) {
+  constructor(id: number, onError: (error: Error) => void = logOnError) {
     super();
     this.id = id;
+    this._onError = onError;
   }
 
   connect(): void {
@@ -85,4 +87,8 @@ export class SyncSocket extends SyncEngine {
     }
     super.change(change);
   }
+}
+
+function logOnError(error: Error): void {
+  console.error(error);
 }
