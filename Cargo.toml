@@ -1,6 +1,7 @@
 [workspace]
 members = ["sync_engine"]
 exclude = ["reproj_os_leisure", "core", "schema"]
+resolver = "2"
 
 [profile.release]
 lto = true

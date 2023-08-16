@@ -2,18 +2,23 @@
 
 import { SyncSocket } from '@/sync/SyncSocket';
 import { useEffect, useMemo, useState } from 'react';
-import FeatureSidebar from './FeatureSidebar';
+import Sidebar from './Sidebar';
 import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
 import ErrorTechInfo from '@/app/components/ErrorTechInfo';
 
 export default function MapPage({ params }: { params: { id: string } }) {
-  const id = Number.parseInt(params.id, 10);
-  if (params.id.startsWith('0') || /[^\d]/.test(params.id) || isNaN(id)) {
+  const mapId = Number.parseInt(params.id, 10);
+  if (params.id.startsWith('0') || /[^\d]/.test(params.id) || isNaN(mapId)) {
     throw new Error('Invalid map id');
   }
 
+  const clientId = 42; // TODO:
+
   const [syncError, setSyncError] = useState<Error | undefined>(undefined);
-  const driver = useMemo(() => new SyncSocket(id, setSyncError), [id]);
+  const driver = useMemo(
+    () => new SyncSocket({ mapId, clientId, onError: setSyncError }),
+    [mapId, clientId],
+  );
   useEffect(() => {
     driver.connect();
   }, [driver]);
@@ -34,8 +39,8 @@ export default function MapPage({ params }: { params: { id: string } }) {
         )}
       </DialogContainer>
 
-      <FeatureSidebar driver={driver} />
-      <div>Map {id}</div>
+      <Sidebar socket={driver} />
+      <div>Map {mapId}</div>
     </div>
   );
 }

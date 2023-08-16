@@ -3,7 +3,7 @@ import { SyncOp } from './SyncOp';
 import { RecvMsg } from './socketMessages';
 
 export class SyncSocket extends SyncEngine {
-  readonly id: number;
+  readonly mapId: number;
 
   private static readonly _SOCKET_URL =
     process.env.NEXT_PUBLIC_MAP_SYNC_SOCKET_URL ||
@@ -11,16 +11,23 @@ export class SyncSocket extends SyncEngine {
       throw new Error('Missing NEXT_PUBLIC_MAP_SYNC_SOCKET_URL');
     })();
 
-  private _onError: (err: Error) => void;
+  private _onError: (err: Error) => void = logOnError;
   private _socket: WebSocket | undefined;
   private _pending: Map<number, SyncOp[]> = new Map();
   private _seq = 0;
   private _closing = false;
 
-  constructor(id: number, onError: (error: Error) => void = logOnError) {
-    super();
-    this.id = id;
-    this._onError = onError;
+  /** throws if `clientId` is invalid */
+  constructor(props: {
+    clientId: number;
+    mapId: number;
+    onError?: (error: Error) => void;
+  }) {
+    super(props.clientId);
+    this.mapId = props.mapId;
+    if (props.onError) {
+      this._onError = props.onError;
+    }
   }
 
   connect(): void {
@@ -30,7 +37,7 @@ export class SyncSocket extends SyncEngine {
     }
 
     const url = new URL(SyncSocket._SOCKET_URL);
-    url.searchParams.set('id', this.id.toString());
+    url.searchParams.set('id', this.clientId.toString());
 
     this._socket = new WebSocket(url);
 

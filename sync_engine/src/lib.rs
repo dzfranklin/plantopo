@@ -4,73 +4,70 @@ mod change;
 pub mod fid;
 pub mod frac_idx;
 pub mod lid;
+mod op;
 pub mod store;
 
-pub use self::change::Change;
+pub use self::{
+    change::Change,
+    fid::Fid,
+    lid::Lid,
+    op::{FCreateProps, Op},
+};
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 use eyre::{eyre, Context};
-use fid::Fid;
-use lid::Lid;
-use petgraph::prelude::*;
+use petgraph::{
+    prelude::*,
+    visit::{depth_first_search, DfsEvent},
+};
 use rand::{rngs::SmallRng, SeedableRng};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{from_value, to_value, Value};
 
-use crate::{frac_idx::FracIdx, store::Store};
+use crate::{
+    frac_idx::FracIdx,
+    store::{NullStore, Store},
+};
 
 type Key = String;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Pos {
+pub struct FPos {
     pub parent: Fid,
     pub idx: FracIdx,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "action", rename_all = "camelCase")]
-pub enum Op {
-    FCreate {
-        fid: Fid,
-        pos: Pos,
-    },
-    FDelete {
-        fid: Fid,
-    },
-    FSet {
-        fid: Fid,
-        key: Key,
-        value: Option<Value>,
-    },
-    LSet {
-        lid: Lid,
-        key: Key,
-        value: Option<Value>,
-    },
 }
 
 #[derive(Debug)]
 pub struct Engine<S> {
     store: S,
     rng: SmallRng,
-    feature_tree: DiGraphMap<Fid, FracIdx>,
-    feature_props: PropMap<Fid>,
-    deleted_features: HashSet<Fid>,
-    layer_order: BTreeSet<(FracIdx, Lid)>,
-    layer_props: PropMap<Lid>,
+    ftree: DiGraphMap<Fid, FracIdx>,
+    fprops: PropMap<Fid>,
+    fdeletes: HashSet<Fid>,
+    lorder: BTreeSet<(FracIdx, Lid)>,
+    lprops: PropMap<Lid>,
 }
 
-type PropMap<Id> = HashMap<Id, HashMap<String, Option<Value>>>;
+type PropMap<Id> = HashMap<Id, HashMap<String, Value>>;
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Changeset {
+pub struct ChangeReply {
     /// To send to the client who sent us the op.
     pub reply_only: Change,
     /// To send to all other clients.
     pub change: Change,
+}
+
+impl<S> Default for Engine<S>
+where
+    S: Store + Default,
+{
+    fn default() -> Self {
+        Self::new(S::default())
+    }
 }
 
 impl<S> Engine<S>
@@ -78,65 +75,271 @@ where
     S: Store,
 {
     #[tracing::instrument(skip(store))]
-    pub fn new(store: S, snapshot: Change) -> eyre::Result<Self> {
-        // NOTE: We separate building the props dicts and special-casing
-        // specific keys because keys can be duplicated in the Change
+    pub fn new(store: S) -> Self {
+        let mut ftree = DiGraphMap::new();
+        ftree.add_node(Fid::ROOT);
 
-        // Load features
+        let root_pos = to_value(FPos {
+            parent: Fid::ROOT,
+            idx: FracIdx::default(),
+        })
+        .unwrap();
 
-        let mut feature_tree = DiGraphMap::new();
-        feature_tree.add_node(Fid::FEATURE_ROOT);
+        let mut fprops = PropMap::<Fid>::new();
+        fprops.insert(Fid::ROOT, HashMap::from_iter([("pos".into(), root_pos)]));
 
-        let mut feature_props = PropMap::<Fid>::new();
+        Self {
+            store,
+            rng: SmallRng::from_entropy(),
+            ftree,
+            fprops,
+            fdeletes: HashSet::new(),
+            lorder: BTreeSet::new(),
+            lprops: PropMap::new(),
+        }
+    }
 
-        for (fid, k, v) in snapshot.iter_fprops() {
-            feature_props
-                .entry(fid)
-                .or_default()
-                .insert(k.clone(), v.cloned());
+    /// Strictly validates `snapshot` without trying fixes since it should be
+    /// valid by our construction.
+    #[tracing::instrument(skip(store))]
+    pub fn load(store: S, snapshot: Change) -> eyre::Result<Self> {
+        let mut engine = Self::new(store);
+
+        // Assert load's assumptions about how new works
+        {
+            assert!(engine.ftree.contains_node(Fid::ROOT));
+            assert_eq!(engine.ftree.node_count(), 1);
+            assert_eq!(engine.ftree.edge_count(), 0);
+
+            assert_eq!(engine.fprops.len(), 1);
+            let root_props = engine.fprops.get(&Fid::ROOT).unwrap();
+            assert!(root_props.contains_key("pos"));
+            assert_eq!(root_props.len(), 1);
+
+            assert_eq!(engine.fdeletes.len(), 0);
+
+            assert!(engine.lorder.is_empty());
+
+            assert!(engine.lprops.is_empty());
         }
 
-        for (fid, props) in feature_props.iter() {
+        // Construct: fdeletes
+        engine.fdeletes = snapshot.fdeletes;
+
+        for ((fid, k), v) in snapshot.fprops {
+            // Check: Not deleted
+            if engine.fdeletes.contains(&fid) {
+                return Err(eyre!("has prop for deleted fid {fid}"));
+            }
+
+            // Construct: fprops
+            engine.fprops.entry(fid).or_default().insert(k, v);
+        }
+        for ((lid, k), v) in snapshot.lprops {
+            // Construct: lprops
+            engine.lprops.entry(lid).or_default().insert(k, v);
+        }
+
+        // Check: Root present
+        if !engine.fprops.contains_key(&Fid::ROOT) {
+            return Err(eyre!("root not present"));
+        }
+
+        for (&fid, props) in &engine.fprops {
+            // Check: not deleted
+            if engine.fdeletes.contains(&fid) {
+                return Err(eyre!("has prop for deleted feature"));
+            }
+
+            // Check: pos property present and has valid shape
             let pos = props
                 .get("pos")
-                .ok_or_else(|| eyre!("pos cannot be missing"))?
-                .clone()
-                .ok_or_else(|| eyre!("pos cannot be undefined"))?;
-            let pos: Pos = serde_json::from_value(pos.clone()).wrap_err("invalid pos value")?;
-            feature_tree.add_edge(pos.parent, *fid, pos.idx);
-        }
+                .ok_or_else(|| eyre!("pos prop missing for {fid}"))?;
+            let pos: FPos = from_value(pos.clone()).wrap_err("invalid pos")?;
 
-        let deleted_features = snapshot.deleted_features().iter().cloned().collect();
+            if fid == Fid::ROOT {
+                // Check: root has correct pos
+                if pos.parent != Fid::ROOT || pos.idx != FracIdx::default() {
+                    return Err(eyre!("invalid root pos"));
+                }
+            }
 
-        // Load layers
+            // Check: parent fid exists
+            if !engine.fprops.contains_key(&pos.parent) {
+                return Err(eyre!("nonexistent parent for {fid}"));
+            }
 
-        let mut layer_props = PropMap::<Lid>::new();
-        let mut layer_order: BTreeSet<(FracIdx, Lid)> = BTreeSet::new();
-
-        for (lid, k, v) in snapshot.iter_lprops() {
-            layer_props
-                .entry(lid)
-                .or_default()
-                .insert(k.clone(), v.cloned());
-        }
-
-        for (lid, props) in layer_props.iter() {
-            if let Some(Some(idx)) = props.get("idx") {
-                let idx: FracIdx =
-                    serde_json::from_value(idx.clone()).wrap_err("invalid idx value")?;
-                layer_order.insert((idx, *lid));
+            if fid != Fid::ROOT {
+                // Construct ftree
+                engine.ftree.add_edge(pos.parent, fid, pos.idx);
             }
         }
 
-        Ok(Self {
-            store,
-            feature_tree,
-            feature_props,
-            deleted_features,
-            layer_order,
-            layer_props,
-            rng: SmallRng::from_entropy(),
+        // Check: no siblings with the same idx
+        let mut sibs_seen = HashSet::new();
+        for fid in engine.fprops.keys().copied() {
+            sibs_seen.clear();
+            for (_, _child, idx) in engine.ftree.edges(fid) {
+                if sibs_seen.contains(idx) {
+                    return Err(eyre!("{fid} has chilren with duplicate indices"));
+                }
+                sibs_seen.insert(idx);
+            }
+        }
+
+        // Check: ftree is a tree and every fid is reachable from the root
+        let mut unreached = HashSet::<_>::from_iter(engine.ftree.nodes());
+        assert!(&engine.ftree.contains_node(Fid::ROOT)); // Critical because otherwise we'll check nothing
+        depth_first_search(&engine.ftree, [Fid::ROOT], |event| match event {
+            DfsEvent::Discover(n, _) => {
+                unreached.remove(&n);
+                Ok(())
+            }
+            DfsEvent::TreeEdge(_, _) => Ok(()),
+            DfsEvent::BackEdge(a, b) => Err(eyre!("back edge {a} -> {b}")),
+            DfsEvent::CrossForwardEdge(a, b) => Err(eyre!("cross or forward edge {a} -> {b}")),
+            DfsEvent::Finish(_, _) => Ok(()),
         })
+        .wrap_err("would have invalid ftree")?;
+        if !unreached.is_empty() {
+            return Err(eyre!(
+                "would have invalid ftree: unreachable nodes: {:?}",
+                unreached
+            ));
+        }
+
+        for (&lid, props) in &engine.lprops {
+            // Check: idx property has valid shape if present
+            let idx = if let Some(idx) = props.get("idx") {
+                from_value::<Option<FracIdx>>(idx.clone()).wrap_err("invalid idx")?
+            } else {
+                None
+            };
+
+            if let Some(idx) = idx {
+                // Construct: lorder
+                engine.lorder.insert((idx, lid));
+            }
+        }
+
+        // Check: no layers with the same idx
+        let mut prev = None;
+        for (idx, _lid) in &engine.lorder {
+            if let Some(prev) = prev {
+                if idx == prev {
+                    return Err(eyre!("duplicate layer idx"));
+                }
+            }
+            prev = Some(idx);
+        }
+
+        Ok(engine)
+    }
+
+    pub fn to_snapshot(&self) -> Change {
+        let mut snapshot = Change::default();
+        for (&fid, props) in &self.fprops {
+            for (k, v) in props {
+                snapshot.fset(fid, k.clone(), v.clone());
+            }
+        }
+        for (&lid, props) in &self.lprops {
+            for (k, v) in props {
+                snapshot.lset(lid, k.clone(), v.clone());
+            }
+        }
+        for &fid in &self.fdeletes {
+            snapshot.fdelete(fid);
+        }
+        snapshot
+    }
+
+    #[tracing::instrument(skip(self))]
+    pub fn expensive_consistency_check(&self) -> eyre::Result<()> {
+        // Check that if we rebuilt ourselves from a snapshot of just (fprops,
+        // lprops, fdeletes) we'd have identical fields.
+        //
+        // This checks that the materialized fields (ftree, lorder) properly
+        // match the props they're derived from.
+        //
+        // This checks that the incremental validations we've done didn't miss
+        // something the non-incremental validations in Self::load catch.
+
+        let snapshot = self.to_snapshot();
+
+        let rebuilt =
+            Engine::load(NullStore, snapshot).wrap_err("load from to_snapshot would fail")?;
+
+        // This ensures that if we add a field to Engine we get a build error
+        // telling us to account for it here.
+        let Engine {
+            store: _,
+            rng: _,
+            ftree: rebuilt_ftree,
+            fprops: rebuilt_fprops,
+            fdeletes: rebuilt_fdeletes,
+            lorder: rebuilt_lorder,
+            lprops: rebuilt_lprops,
+        } = &rebuilt;
+
+        // I implemented nicer diagnostics ftree errors because it flowed from
+        // the checks I needed anyway and I think that's the more likely bug.
+
+        // Check: ftree
+        for our_fid in self.ftree.nodes() {
+            if !rebuilt_ftree.contains_node(our_fid) {
+                return Err(eyre!(
+                    "ftree would be missing {our_fid} if rebuilt from snapshot"
+                ));
+            }
+        }
+        for rebuilt_fid in rebuilt_ftree.nodes() {
+            if !self.ftree.contains_node(rebuilt_fid) {
+                return Err(eyre!(
+                    "ftree would gain {rebuilt_fid} if rebuilt from snapshot"
+                ));
+            }
+        }
+        for (our_parent, our_child, our_idx) in self.ftree.all_edges() {
+            if let Some(rebuilt_idx) = rebuilt_ftree.edge_weight(our_parent, our_child) {
+                if rebuilt_idx != our_idx {
+                    return Err(eyre!("ftree edge {our_parent} -> {our_child} would have a different idx if rebuilt from snapshot"));
+                }
+            } else {
+                return Err(eyre!(
+                    "ftree would be missing edge {our_parent} -> {our_child} if rebuilt from snapshot"
+                ));
+            }
+        }
+        for (rebuilt_parent, rebuilt_child, _) in rebuilt_ftree.all_edges() {
+            if !self.ftree.contains_edge(rebuilt_parent, rebuilt_child) {
+                return Err(eyre!("ftree would gain edge {rebuilt_parent} -> {rebuilt_child} if rebuilt from snapshot"));
+            }
+            // If the edge is in both we checked the weight in the preceding
+            // loop over our edges
+        }
+
+        // Check: fprops
+        if rebuilt_fprops != &self.fprops {
+            return Err(eyre!("fprops would differ if rebuilt from snapshot"));
+        }
+
+        // Check: fdeletes
+        if rebuilt_fdeletes != &self.fdeletes {
+            return Err(eyre!("fdeletes would differ if rebuilt from snapshot"));
+        }
+
+        // Check: lorder
+        if rebuilt_lorder != &self.lorder {
+            return Err(eyre!("lorder would differ if rebuilt from snapshot"));
+        }
+
+        // Check: lprops
+        if rebuilt_lprops != &self.lprops {
+            return Err(eyre!("lprops would differ if rebuilt from snapshot"));
+        }
+
+        Ok(())
     }
 
     pub fn store(&self) -> &S {
@@ -147,68 +350,74 @@ where
         &mut self.store
     }
 
-    pub fn apply(&mut self, validate_by: u16, ops: Vec<Op>) -> eyre::Result<Changeset> {
-        let mut cset = Changeset::default();
+    pub fn apply(&mut self, validate_by: u16, ops: Vec<Op>) -> eyre::Result<ChangeReply> {
+        let mut creply = ChangeReply::default();
 
         for op in ops {
             match op {
-                Op::FCreate { fid, mut pos } => {
-                    if self.feature_tree.contains_node(fid) {
+                Op::FCreate { fid, props } => {
+                    if self.ftree.contains_node(fid) {
                         return Err(eyre!("oid already exists: {}", fid));
                     }
-                    if self.deleted_features.contains(&fid) {
+                    if self.fdeletes.contains(&fid) {
                         return Err(eyre!("oid deleted: {}", fid));
                     }
-                    if !self.feature_tree.contains_node(pos.parent) {
-                        return Err(eyre!("parent oid not found: {}", pos.parent));
+                    if !self.ftree.contains_node(props.pos.parent) {
+                        return Err(eyre!("parent oid not found: {}", props.pos.parent));
                     }
                     if fid.client() != validate_by {
-                        return Err(eyre!("tried to create feature with different oid client: got {fid:x?}, expected client={validate_by}"));
+                        return Err(eyre!("tried to create feature with different oid client: got {fid}, expected client={validate_by}"));
                     }
 
-                    self.validate_and_fix_feature_pos(fid, &mut pos, &mut cset)?;
+                    let mut all_props = props.rest.clone();
 
-                    let pos = serde_json::to_value(pos)?;
-                    cset.change.set_fprop(fid, "pos", Some(pos));
+                    let mut pos = props.pos;
+                    self.validate_and_fix_feature_pos(fid, &mut pos, &mut creply)?;
+                    self.ftree.add_edge(pos.parent, fid, pos.idx.clone());
+                    all_props.insert("pos".to_string(), to_value(pos)?);
+
+                    for (k, v) in &all_props {
+                        creply.change.fset(fid, k.clone(), v.clone());
+                    }
+                    self.fprops.insert(fid, all_props);
                 }
-                Op::FDelete { fid } => {
-                    if !self.feature_tree.contains_node(fid) {
-                        return Err(eyre!("oid not found in tree: {}", fid));
-                    }
-
-                    self.build_recursive_deletion(fid, &mut cset);
+                Op::FDelete { fids } => {
+                    self.fdelete(fids, &mut creply);
                 }
                 Op::FSet {
                     fid,
                     key,
                     mut value,
                 } => {
-                    if !self.feature_tree.contains_node(fid) {
+                    if !self.ftree.contains_node(fid) {
                         return Err(eyre!("oid not found in tree: {}", fid));
                     }
 
                     if key == "pos" {
                         // This ensures "pos" is always set to something valid
-                        let value_inner = value.ok_or_else(|| eyre!("missing pos value"))?;
-                        let mut pos: Pos = serde_json::from_value(value_inner)
-                            .wrap_err("invalid pos value for feature")?;
+                        let mut pos: FPos =
+                            from_value(value).wrap_err("invalid pos value for feature")?;
 
-                        self.validate_and_fix_feature_pos(fid, &mut pos, &mut cset)?;
-                        value = Some(serde_json::to_value(&pos)?);
+                        self.validate_and_fix_feature_pos(fid, &mut pos, &mut creply)?;
+                        value = to_value(&pos)?;
 
-                        if let Some(old_parent) = self.parent(fid) {
-                            self.feature_tree.remove_edge(old_parent, fid);
+                        let old_parent = self.parent(fid).expect("parent required");
+                        if old_parent == pos.parent {
+                            let place = self
+                                .ftree
+                                .edge_weight_mut(old_parent, fid)
+                                .expect("parent->child required");
+                            *place = pos.idx;
                         } else {
-                            tracing::warn!(?fid, "feature missing old parent");
+                            self.ftree.remove_edge(old_parent, fid);
+                            self.ftree.add_edge(pos.parent, fid, pos.idx);
                         }
-
-                        self.feature_tree.add_edge(pos.parent, fid, pos.idx);
                     }
 
-                    cset.change.set_fprop(fid, key.clone(), value.clone());
-                    self.feature_props
-                        .entry(fid)
-                        .or_default()
+                    creply.change.fset(fid, key.clone(), value.clone());
+                    self.fprops
+                        .get_mut(&fid)
+                        .expect("fid missing from fprops")
                         .insert(key.clone(), value.clone());
                 }
                 Op::LSet {
@@ -217,27 +426,24 @@ where
                     mut value,
                 } => {
                     if key == "idx" {
-                        let idx = if let Some(value) = value.clone() {
-                            Some(serde_json::from_value(value)?)
-                        } else {
-                            None
-                        };
+                        let idx: Option<FracIdx> =
+                            from_value(value.clone()).wrap_err("invalid idx")?;
 
-                        self.layer_order.retain(|(_, other_id)| other_id != &lid);
+                        self.lorder.retain(|(_, other_id)| other_id != &lid);
 
                         if let Some(mut idx) = idx {
                             if let Some(fixed_idx) = self.layer_idx_collision_fix(&idx) {
-                                value = Some(serde_json::to_value(&fixed_idx)?);
+                                value = to_value(&fixed_idx)?;
                                 idx = fixed_idx;
 
-                                cset.reply_only.set_lprop(lid, key.clone(), value.clone());
+                                creply.reply_only.lset(lid, key.clone(), value.clone());
                             }
-                            self.layer_order.insert((idx, lid));
+                            self.lorder.insert((idx, lid));
                         }
                     }
 
-                    cset.change.set_lprop(lid, key.clone(), value.clone());
-                    self.layer_props
+                    creply.change.lset(lid, key.clone(), value.clone());
+                    self.lprops
                         .entry(lid)
                         .or_default()
                         .insert(key.clone(), value.clone());
@@ -245,82 +451,42 @@ where
             }
         }
 
-        self.store.push(cset.change.clone())?;
-        self.change(cset.change.clone())?;
+        self.store.push(creply.change.clone())?;
 
-        Ok(cset)
+        Ok(creply)
     }
 
-    fn change(&mut self, change: Change) -> eyre::Result<()> {
-        for (fid, k, v) in change.iter_fprops() {
-            if k == "pos" {
-                // Validate
-
-                let v = v.cloned().ok_or_else(|| eyre!("pos cannot be undefined"))?;
-                let pos: Pos = serde_json::from_value(v.clone()).wrap_err("invalid pos")?;
-
-                if self.is_feature_parent_invalid(fid, pos.parent) {
-                    return Err(eyre!("invalid feature parent"));
-                }
-
-                if self.pos_idx_collides(&pos) {
-                    return Err(eyre!("pos idx collides"));
-                }
-
-                // Change infallibly after validation
-
-                if let Some(old_parent) = self.parent(fid) {
-                    self.feature_tree.remove_edge(old_parent, fid);
-                }
-                self.feature_tree.add_edge(pos.parent, fid, pos.idx);
-            }
-            self.feature_props
-                .entry(fid)
-                .or_default()
-                .insert(k.clone(), v.cloned());
+    #[tracing::instrument(skip(self))]
+    fn fdelete(&mut self, incoming: HashSet<Fid>, outgoing: &mut ChangeReply) {
+        if incoming.is_empty() {
+            return;
         }
 
-        for (lid, k, v) in change.iter_lprops() {
-            if k == "idx" {
-                // Validate
-
-                let idx = if let Some(v) = v.cloned() {
-                    let idx: FracIdx = serde_json::from_value(v.clone())?;
-                    if self.layer_idx_collides(&idx) {
-                        return Err(eyre!("layer idx collides"));
-                    }
-                    Some(idx)
-                } else {
-                    None
-                };
-
-                // Change infallibly after validation
-
-                self.layer_order.retain(|(_, other_id)| other_id != &lid);
-                if let Some(idx) = idx {
-                    self.layer_order.insert((idx, lid));
+        depth_first_search(&self.ftree, incoming.iter().copied(), |event| {
+            if let DfsEvent::Finish(descendant, _) = event {
+                if !incoming.contains(&descendant) {
+                    outgoing.reply_only.fdelete(descendant);
                 }
             }
-            self.layer_props
-                .entry(lid)
-                .or_default()
-                .insert(k.clone(), v.cloned());
-        }
+        });
 
-        for fid in change.deleted_features() {
-            self.feature_tree.remove_node(*fid);
-            self.feature_props.remove(fid);
-            self.deleted_features.insert(*fid);
+        for &fid in &outgoing.change.fdeletes {
+            self.fdeletes.insert(fid);
+            self.ftree.remove_node(fid);
+            self.fprops.remove(&fid);
         }
-
-        Ok(())
     }
 
     #[tracing::instrument(skip(self))]
     fn is_feature_parent_invalid(&self, fid: Fid, parent: Fid) -> bool {
+        if !self.ftree.contains_node(parent) {
+            tracing::info!("feature parent not in tree");
+            return true;
+        }
+
         let mut ancestor = parent;
         loop {
-            if ancestor == Fid::FEATURE_ROOT {
+            if ancestor == Fid::ROOT {
                 break false;
             }
 
@@ -339,23 +505,22 @@ where
         }
     }
 
-    /// If `pos` is changed adds a reply to `cset`. (Does not change bcast)
+    /// If `pos` is changed adds a reply to `creply`. (Does not change bcast)
     fn validate_and_fix_feature_pos(
         &mut self,
         fid: Fid,
-        pos: &mut Pos,
-        cset: &mut Changeset,
+        pos: &mut FPos,
+        creply: &mut ChangeReply,
     ) -> eyre::Result<()> {
         if self.is_feature_parent_invalid(fid, pos.parent) {
             tracing::info!("feature parent invalid: reparenting at root");
 
-            *pos = Pos {
-                parent: Fid::FEATURE_ROOT,
-                idx: self.idx_for_last_in(Fid::FEATURE_ROOT),
+            *pos = FPos {
+                parent: Fid::ROOT,
+                idx: self.idx_for_last_in(Fid::ROOT),
             };
 
-            cset.reply_only
-                .set_fprop(fid, "pos", Some(serde_json::to_value(&pos)?));
+            creply.reply_only.fset(fid, "pos", to_value(&pos)?);
         }
 
         if let Some(fixed_idx) = self.feature_idx_collision_fix(pos) {
@@ -367,26 +532,25 @@ where
 
             pos.idx = fixed_idx;
 
-            cset.reply_only
-                .set_fprop(fid, "pos", Some(serde_json::to_value(&pos)?));
+            creply.reply_only.fset(fid, "pos", to_value(&pos)?);
         }
 
         Ok(())
     }
 
-    fn pos_idx_collides(&self, pos: &Pos) -> bool {
-        self.feature_tree
+    fn pos_idx_collides(&self, pos: &FPos) -> bool {
+        self.ftree
             .edges(pos.parent)
             .any(|(_, _, peer_idx)| peer_idx == &pos.idx)
     }
 
-    fn feature_idx_collision_fix(&mut self, pos: &Pos) -> Option<FracIdx> {
+    fn feature_idx_collision_fix(&mut self, pos: &FPos) -> Option<FracIdx> {
         if self.pos_idx_collides(pos) {
             return None;
         }
 
         let after = self
-            .feature_tree
+            .ftree
             .edges(pos.parent)
             .map(|(_, _, idx)| idx)
             .filter(|idx| idx > &&pos.idx)
@@ -398,9 +562,7 @@ where
     }
 
     fn layer_idx_collides(&self, idx: &FracIdx) -> bool {
-        self.layer_order
-            .iter()
-            .any(|(other_idx, _)| other_idx == idx)
+        self.lorder.iter().any(|(other_idx, _)| other_idx == idx)
     }
 
     fn layer_idx_collision_fix(&mut self, idx: &FracIdx) -> Option<FracIdx> {
@@ -409,7 +571,7 @@ where
         }
 
         let after = self
-            .layer_order
+            .lorder
             .iter()
             .map(|(idx, _)| idx)
             .filter(|other_idx| other_idx > &idx)
@@ -420,47 +582,32 @@ where
         Some(fix)
     }
 
-    fn build_recursive_deletion(&mut self, id: Fid, changeset: &mut Changeset) {
-        // TODO: How should this work? We need to converge
-        // maybe the server should reparent orphans.
-        // when could orphans exist?
-        let children = self
-            .feature_tree
-            .edges(id)
-            .map(|(_, child, _)| child)
-            .collect::<Vec<_>>();
-        for child in children {
-            self.build_recursive_deletion(child, changeset);
-        }
-        changeset.change.add_fdelete(id);
-    }
-
     fn parent(&self, id: Fid) -> Option<Fid> {
-        self.feature_tree
+        if id == Fid::ROOT {
+            return Some(Fid::ROOT);
+        }
+
+        self.ftree
             .edges_directed(id, Incoming)
             .next()
             .map(|(parent, _, _)| parent)
     }
 
     fn idx_for_last_in(&mut self, parent: Fid) -> FracIdx {
-        let last = self
-            .feature_tree
-            .edges(parent)
-            .map(|(_, _child, idx)| idx)
-            .max();
+        let last = self.ftree.edges(parent).map(|(_, _child, idx)| idx).max();
         frac_idx::between(&mut self.rng, last, None)
     }
 
     pub fn dbg_tree(&self) -> String {
-        petgraph::dot::Dot::new(&self.feature_tree).to_string()
+        petgraph::dot::Dot::new(&self.ftree).to_string()
     }
 
     pub fn dbg_object(&self, obj: Fid) -> String {
-        if !self.feature_tree.contains_node(obj) {
+        if !self.ftree.contains_node(obj) {
             return "not found".to_string();
         }
 
-        if let Some(props) = self.feature_props.get(&obj) {
+        if let Some(props) = self.fprops.get(&obj) {
             match serde_json::to_string_pretty(props) {
                 Ok(s) => s,
                 Err(e) => format!("{:?}", e),

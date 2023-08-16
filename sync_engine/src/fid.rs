@@ -14,7 +14,7 @@ use serde::Serialize;
 pub struct Fid(u64);
 
 impl Fid {
-    pub const FEATURE_ROOT: Fid = Fid(0);
+    pub const ROOT: Fid = Fid(0);
     const MAX: u64 = 0xffff_ffffffff;
 
     pub const fn new(client: u16, counter: u32) -> Fid {
@@ -67,6 +67,7 @@ impl<'de> serde::Deserialize<'de> for Fid {
 impl fmt::Debug for Fid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Oid")
+            .field("value", &self.0)
             .field("client", &self.client())
             .field("counter", &self.counter())
             .finish()
@@ -75,6 +76,12 @@ impl fmt::Debug for Fid {
 
 impl fmt::Display for Fid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:016x}_{:08x}", self.client(), self.counter())
+        write!(
+            f,
+            "{:012x} ({:x}_{:x})",
+            self.0,
+            self.client(),
+            self.counter()
+        )
     }
 }

@@ -9,7 +9,7 @@ use serde_json::Value;
 
 use crate::{fid::Fid, lid::Lid, Key};
 
-type FlatPropsMap<Id> = HashMap<(Id, Key), Option<Value>>;
+type FlatPropsMap<Id> = HashMap<(Id, Key), Value>;
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct Change {
@@ -17,52 +17,38 @@ pub struct Change {
         serialize_with = "serialize_props",
         deserialize_with = "deserialize_props"
     )]
-    feature_props: FlatPropsMap<Fid>,
+    pub fprops: FlatPropsMap<Fid>,
     #[serde(
         serialize_with = "serialize_props",
         deserialize_with = "deserialize_props"
     )]
-    layer_props: FlatPropsMap<Lid>,
-    deleted_features: HashSet<Fid>,
+    pub lprops: FlatPropsMap<Lid>,
+    pub fdeletes: HashSet<Fid>,
 }
 
 impl Change {
-    pub fn set_fprop(&mut self, fid: Fid, key: impl Into<Key>, value: Option<Value>) {
-        self.feature_props.insert((fid, key.into()), value);
+    pub fn fset(&mut self, fid: Fid, key: impl Into<Key>, value: Value) {
+        self.fprops.insert((fid, key.into()), value);
     }
 
-    pub fn set_lprop(&mut self, lid: Lid, key: impl Into<Key>, value: Option<Value>) {
-        self.layer_props.insert((lid, key.into()), value);
+    pub fn lset(&mut self, lid: Lid, key: impl Into<Key>, value: Value) {
+        self.lprops.insert((lid, key.into()), value);
     }
 
-    pub fn add_fdelete(&mut self, fid: Fid) {
-        self.deleted_features.insert(fid);
-    }
-
-    pub fn iter_fprops(&self) -> PropsIter<'_, Fid> {
-        PropsIter(self.feature_props.iter())
-    }
-
-    pub fn iter_lprops(&self) -> PropsIter<'_, Lid> {
-        PropsIter(self.layer_props.iter())
-    }
-
-    pub fn deleted_features(&self) -> &HashSet<Fid> {
-        &self.deleted_features
+    pub fn fdelete(&mut self, fid: Fid) {
+        self.fdeletes.insert(fid);
     }
 
     pub fn is_empty(&self) -> bool {
-        self.feature_props.is_empty()
-            && self.deleted_features.is_empty()
-            && self.layer_props.is_empty()
+        self.fprops.is_empty() && self.fdeletes.is_empty() && self.lprops.is_empty()
     }
 }
 
 impl AddAssign<Change> for Change {
     fn add_assign(&mut self, rhs: Change) {
-        self.feature_props.extend(rhs.feature_props);
-        self.layer_props.extend(rhs.layer_props);
-        self.deleted_features.extend(rhs.deleted_features);
+        self.fprops.extend(rhs.fprops);
+        self.lprops.extend(rhs.lprops);
+        self.fdeletes.extend(rhs.fdeletes);
     }
 }
 
@@ -112,15 +98,15 @@ where
     de.deserialize_seq(PropsVisitor { _id: PhantomData })
 }
 
-pub struct PropsIter<'a, Id>(hash_map::Iter<'a, (Id, Key), Option<Value>>);
+pub struct PropsIter<'a, Id>(hash_map::Iter<'a, (Id, Key), Value>);
 
 impl<'a, Id> Iterator for PropsIter<'a, Id>
 where
     Id: Copy,
 {
-    type Item = (Id, &'a Key, Option<&'a Value>);
+    type Item = (Id, &'a Key, &'a Value);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(|((id, k), v)| (*id, k, v.as_ref()))
+        self.0.next().map(|((id, k), v)| (*id, k, v))
     }
 }

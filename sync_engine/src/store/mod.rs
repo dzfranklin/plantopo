@@ -12,6 +12,19 @@ pub trait Store {
     fn flush(&mut self) -> eyre::Result<()>;
 }
 
+#[derive(Debug, Default)]
+pub struct NullStore;
+
+impl Store for NullStore {
+    fn push(&mut self, _entry: Change) -> eyre::Result<()> {
+        Ok(())
+    }
+
+    fn flush(&mut self) -> eyre::Result<()> {
+        Ok(())
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct InMemoryStore(Vec<Change>);
 

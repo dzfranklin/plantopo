@@ -1,9 +1,16 @@
+import { FPos } from './FPos';
+
+// The cannonical version is in sync_server/src/op.rs
+
 export type SyncOp =
   | {
       action: 'fCreate';
       fid: number;
-      pos: { parent: number; idx: string };
+      props: {
+        pos: FPos;
+        [key: string]: unknown;
+      };
     }
-  | { action: 'fDelete'; fid: number }
+  | { action: 'fDelete'; fids: number[] }
   | { action: 'fSet'; fid: number; key: string; value: unknown }
   | { action: 'lSet'; lid: number; key: string; value: unknown };

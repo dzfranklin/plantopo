@@ -12,7 +12,8 @@ import {
   useState,
 } from 'react';
 import AddAtIcon from '@spectrum-icons/workflow/Add';
-import './FeatureSidebar.css';
+import './Sidebar.css';
+import DebugMenu from './DebugMenu';
 
 const CHILD_INDENT_PX = 16;
 const VERTICAL_GAP_PX = 2;
@@ -25,12 +26,12 @@ interface DragTarget {
   place: TargetPlace;
 }
 
-export default function FeatureSidebar({ driver }: { driver: SyncSocket }) {
-  const [children, setChildren] = useState(() => driver.fChildren(0));
+export default function Sidebar({ socket }: { socket: SyncSocket }) {
+  const [children, setChildren] = useState(() => socket.fChildren(0));
   useEffect(() => {
-    driver.addFChildrenListener(0, setChildren);
-    return () => driver.removeFChildrenListener(0, setChildren);
-  }, [driver]);
+    socket.addFChildrenListener(0, setChildren);
+    return () => socket.removeFChildrenListener(0, setChildren);
+  }, [socket]);
 
   const [selected, setSelected] = useState<number[]>([]);
   const dragTargetRef = useRef<DragTarget | null>(null);
@@ -50,7 +51,7 @@ export default function FeatureSidebar({ driver }: { driver: SyncSocket }) {
       // Add the dragged element to targets if necessary
       let dragTargetIncluded = selected.includes(dragTargetId);
       if (!dragTargetIncluded) {
-        dragTargetIncluded = driver.fHasAncestor(
+        dragTargetIncluded = socket.fHasAncestor(
           dragTargetId,
           new Set(selected),
         );
@@ -70,7 +71,7 @@ export default function FeatureSidebar({ driver }: { driver: SyncSocket }) {
       // Hide ghost as won't reflect what is actually being dragged
       evt.dataTransfer.setDragImage(new Image(), 0, 0);
     },
-    [driver, selected],
+    [socket, selected],
   );
 
   const onDragEnter = useCallback<DragEventHandler<HTMLUListElement>>((evt) => {
@@ -130,7 +131,7 @@ export default function FeatureSidebar({ driver }: { driver: SyncSocket }) {
         return;
       }
 
-      const ordered = driver.orderFeatures(selected);
+      const ordered = socket.orderFeatures(selected);
       console.info('drop', dragTargetRef.current, ordered);
       // TODO:
 
@@ -138,7 +139,7 @@ export default function FeatureSidebar({ driver }: { driver: SyncSocket }) {
 
       evt.preventDefault();
     },
-    [driver, selected],
+    [socket, selected],
   );
 
   const onDragEnd = useCallback<DragEventHandler<HTMLUListElement>>((_evt) => {
@@ -185,7 +186,10 @@ export default function FeatureSidebar({ driver }: { driver: SyncSocket }) {
       onScroll={onScroll}
       ref={rootElemRef}
     >
-      <div className="sticky top-0 z-10 bg-white">Toolbar</div>
+      <div className="sticky top-0 z-10 bg-white">
+        <DebugMenu socket={socket} />
+        Toolbar
+      </div>
       <ul
         onDragStart={onDragStart}
         onDrop={onDrop}
@@ -198,7 +202,7 @@ export default function FeatureSidebar({ driver }: { driver: SyncSocket }) {
           <Entry
             key={child}
             fid={child}
-            driver={driver}
+            driver={socket}
             selected={selected}
             setSelected={setSelected}
           />

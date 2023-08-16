@@ -1,5 +1,7 @@
+// Cannonical version in sync_engine/src/change.rs
+
 export interface SyncChange {
-  featureProps: Array<[number, string, unknown]>;
-  layerProps: Array<[number, string, unknown]>;
-  deletedFeatures: Array<number>;
+  fprops: Array<[number, string, unknown]>;
+  lprops: Array<[number, string, unknown]>;
+  fdeletes: Array<number>;
 }

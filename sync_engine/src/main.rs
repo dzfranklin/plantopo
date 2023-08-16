@@ -11,7 +11,7 @@ use tracing_subscriber::{prelude::*, EnvFilter};
 
 use plantopo_sync_engine::{
     store::{LocalFileStore, Store},
-    Changeset, Engine, Op,
+    ChangeReply, Engine, Op,
 };
 
 #[derive(Debug, Deserialize)]
@@ -29,7 +29,7 @@ struct InputMsg {
 #[derive(Debug, Serialize)]
 enum OpResult {
     Ok {
-        changeset: Box<Changeset>,
+        changeset: Box<ChangeReply>,
         reply_to: u16,
         seq: u32,
     },
@@ -59,7 +59,7 @@ fn main() -> Result<()> {
 
     let store_fname = format!("engine-map-{map_id}");
     let (store, snapshot) = LocalFileStore::open(&store_fname)?;
-    let mut engine = Engine::new(store, snapshot)?;
+    let mut engine = Engine::load(store, snapshot)?;
     tracing::debug!(?store_fname, "Loaded engine");
 
     let mainloop_res = do_mainloop(&mut engine);
@@ -168,8 +168,8 @@ where
         };
         tracing::trace!(?input_msg);
 
-        let cset = match engine.apply(client, input_msg.ops) {
-            Ok(cset) => cset,
+        let creply = match engine.apply(client, input_msg.ops) {
+            Ok(creply) => creply,
             Err(report) => {
                 #[cfg(debug_assertions)]
                 eprintln!("\nError:{:?}\n", report);
@@ -186,12 +186,12 @@ where
                 continue;
             }
         };
-        tracing::trace!(?cset);
+        tracing::trace!(?creply);
 
         serde_json::to_writer(
             &mut stdout,
             &OpResult::Ok {
-                changeset: Box::new(cset),
+                changeset: Box::new(creply),
                 reply_to: client,
                 seq: input_msg.seq,
             },

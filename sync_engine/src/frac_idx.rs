@@ -4,7 +4,7 @@ use ascii::{AsciiChar, AsciiString};
 use rand::Rng;
 use serde::{de::Visitor, Deserialize, Serialize};
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize)]
+#[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize)]
 pub struct FracIdx(AsciiString);
 
 const MIN_DIGIT: u8 = b' ';
