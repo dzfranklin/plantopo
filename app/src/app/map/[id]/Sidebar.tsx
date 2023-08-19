@@ -146,10 +146,10 @@ export default function Sidebar({ socket }: { socket: SyncSocket }) {
     rootElemRef.current?.classList.remove('dragging');
   }, []);
 
-  const requestingDragMarkerReposition = useRef(false);
+  const dragMarkerDirty = useRef(false);
   const maybeDirtyDragMarker = useCallback(() => {
-    if (dragTargetRef.current && !requestingDragMarkerReposition.current) {
-      requestingDragMarkerReposition.current = true;
+    if (dragTargetRef.current && !dragMarkerDirty.current) {
+      dragMarkerDirty.current = true;
 
       requestAnimationFrame(() => {
         const target = dragTargetRef.current;
@@ -163,7 +163,7 @@ export default function Sidebar({ socket }: { socket: SyncSocket }) {
           false,
         );
 
-        requestingDragMarkerReposition.current = false;
+        dragMarkerDirty.current = false;
       });
     }
   }, []);
