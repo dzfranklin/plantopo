@@ -42,7 +42,7 @@ export default function Sidebar({ socket }: { socket: SyncSocket }) {
   const onDragStart = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
       const rootElem = rootElemRef.current;
-      if (!rootElem) return;
+      if (!rootElem || !dragAtElemRef.current) return;
 
       if (!(evt.target instanceof HTMLElement)) return;
       if (evt.target.dataset.fid === undefined) return;
@@ -70,6 +70,9 @@ export default function Sidebar({ socket }: { socket: SyncSocket }) {
       evt.dataTransfer.setData('x-pt', 'selected');
       // Hide ghost as won't reflect what is actually being dragged
       evt.dataTransfer.setDragImage(new Image(), 0, 0);
+
+      const targetRect = evt.target.getBoundingClientRect();
+      positionDragAtMarker(dragAtElemRef.current, targetRect, 'after', false);
     },
     [socket, selected],
   );
