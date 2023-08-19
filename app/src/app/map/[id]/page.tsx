@@ -1,10 +1,11 @@
 'use client';
 
 import { SyncSocket } from '@/sync/SyncSocket';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
 import ErrorTechInfo from '@/app/components/ErrorTechInfo';
+import { SyncEngine } from '@/sync/SyncEngine';
 
 export default function MapPage({ params }: { params: { id: string } }) {
   const mapId = Number.parseInt(params.id, 10);
@@ -12,16 +13,16 @@ export default function MapPage({ params }: { params: { id: string } }) {
     throw new Error('Invalid map id');
   }
 
-  const clientId = 42; // TODO:
-
+  const socketRef = useRef<SyncSocket | null>(null);
+  const [engine, setEngine] = useState<SyncEngine | undefined>(undefined);
   const [syncError, setSyncError] = useState<Error | undefined>(undefined);
-  const driver = useMemo(
-    () => new SyncSocket({ mapId, clientId, onError: setSyncError }),
-    [mapId, clientId],
-  );
   useEffect(() => {
-    driver.connect();
-  }, [driver]);
+    if (socketRef.current && socketRef.current.mapId === mapId) return;
+    const socket = new SyncSocket(mapId, setEngine, setSyncError);
+    socket.connect();
+    socketRef.current = socket;
+    () => socket.close();
+  }, [mapId]);
 
   return (
     <div className="grid h-screen grid-cols-2 grid-rows-1 overflow-hidden">
@@ -39,8 +40,14 @@ export default function MapPage({ params }: { params: { id: string } }) {
         )}
       </DialogContainer>
 
-      <Sidebar socket={driver} />
-      <div>Map {mapId}</div>
+      {engine === undefined ? (
+        <p>Connecting...</p>
+      ) : (
+        <>
+          <Sidebar engine={engine} />
+          <div>Map {mapId}</div>
+        </>
+      )}
     </div>
   );
 }

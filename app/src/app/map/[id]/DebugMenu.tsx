@@ -1,29 +1,44 @@
-import { SyncSocket } from '@/sync/SyncSocket';
+import { SyncEngine } from '@/sync/SyncEngine';
 import { ActionButton, Item, Menu, MenuTrigger } from '@adobe/react-spectrum';
-import OpenDebugMenuIcon from '@spectrum-icons/workflow/MoreVertical';
+import DebugMenuIcon from '@spectrum-icons/workflow/Bug';
 import { useCallback } from 'react';
 
-export default function DebugMenu({ socket }: { socket: SyncSocket }) {
+export default function DebugMenu({ engine }: { engine: SyncEngine }) {
   const onAction = useCallback(
     (key: string | number) => {
       switch (key) {
         case 'logUpdateSummary': {
-          socket.logUpdateSummary();
+          engine.logUpdateSummary();
+          break;
+        }
+        case 'assignEngine': {
+          (window as any)['tempEngine'] = engine;
+          console.info('Assigned to window.tempEngine');
           break;
         }
       }
     },
-    [socket],
+    [engine],
   );
 
   return (
     <MenuTrigger>
-      <ActionButton aria-label="open debug menu">
-        <OpenDebugMenuIcon />
+      <ActionButton
+        aria-label="open debug menu"
+        UNSAFE_style={{ minWidth: 0, border: 'none' }}
+      >
+        <DebugMenuIcon
+          UNSAFE_style={{
+            paddingLeft: '2px',
+            paddingRight: '2px',
+            width: '12px',
+          }}
+        />
       </ActionButton>
 
       <Menu onAction={onAction}>
         <Item key="logUpdateSummary">Log update summary</Item>
+        <Item key="assignEngine">Assign engine to global</Item>
       </Menu>
     </MenuTrigger>
   );

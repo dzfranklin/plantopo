@@ -4,6 +4,7 @@ mod change;
 pub mod fid;
 pub mod frac_idx;
 pub mod lid;
+mod metadata;
 mod op;
 pub mod store;
 
@@ -11,17 +12,21 @@ pub use self::{
     change::Change,
     fid::Fid,
     lid::Lid,
+    metadata::Metadata,
     op::{FCreateProps, Op},
 };
 
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::{
+    collections::{BTreeSet, HashMap, HashSet},
+    ops::Range,
+};
 
 use eyre::{eyre, Context};
 use petgraph::{
     prelude::*,
     visit::{depth_first_search, DfsEvent},
 };
-use rand::{rngs::SmallRng, SeedableRng};
+use rand::rngs::SmallRng;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_value, to_value, Value};
 
@@ -32,12 +37,41 @@ use crate::{
 
 type Key = String;
 
+#[cfg(test)]
+pub fn test_init() {
+    use std::sync::Once;
+    use tracing_subscriber::prelude::*;
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        color_eyre::install().unwrap();
+        tracing_subscriber::registry()
+            .with(tracing_error::ErrorLayer::default())
+            .with(
+                tracing_subscriber::fmt::layer()
+                    .pretty()
+                    .with_writer(std::io::stderr),
+            )
+            .with(tracing_subscriber::EnvFilter::from_default_env())
+            .init();
+    })
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FPos {
     pub parent: Fid,
     pub idx: FracIdx,
 }
+
+impl FPos {
+    pub fn new(parent: Fid, idx: FracIdx) -> Self {
+        Self { parent, idx }
+    }
+}
+
+const FID_BLOCK_SIZE: u64 = 2_u64.pow(16);
+const SPECIAL_FID_UNTIL: u64 = FID_BLOCK_SIZE;
+const MAX_JS_SAFE_INTEGER: u64 = 2_u64.pow(53) - 1;
 
 #[derive(Debug)]
 pub struct Engine<S> {
@@ -61,21 +95,12 @@ pub struct ChangeReply {
     pub change: Change,
 }
 
-impl<S> Default for Engine<S>
-where
-    S: Store + Default,
-{
-    fn default() -> Self {
-        Self::new(S::default())
-    }
-}
-
 impl<S> Engine<S>
 where
     S: Store,
 {
     #[tracing::instrument(skip(store))]
-    pub fn new(store: S) -> Self {
+    pub fn new(store: S, rng: SmallRng) -> Self {
         let mut ftree = DiGraphMap::new();
         ftree.add_node(Fid::ROOT);
 
@@ -90,7 +115,7 @@ where
 
         Self {
             store,
-            rng: SmallRng::from_entropy(),
+            rng,
             ftree,
             fprops,
             fdeletes: HashSet::new(),
@@ -102,8 +127,8 @@ where
     /// Strictly validates `snapshot` without trying fixes since it should be
     /// valid by our construction.
     #[tracing::instrument(skip(store))]
-    pub fn load(store: S, snapshot: Change) -> eyre::Result<Self> {
-        let mut engine = Self::new(store);
+    pub fn load(store: S, rng: SmallRng, snapshot: Change) -> eyre::Result<Self> {
+        let mut engine = Self::new(store, rng);
 
         // Assert load's assumptions about how new works
         {
@@ -267,8 +292,9 @@ where
 
         let snapshot = self.to_snapshot();
 
-        let rebuilt =
-            Engine::load(NullStore, snapshot).wrap_err("load from to_snapshot would fail")?;
+        let null_store = NullStore(self.store.meta().clone());
+        let rebuilt = Engine::load(null_store, self.rng.clone(), snapshot)
+            .wrap_err("load from to_snapshot would fail")?;
 
         // This ensures that if we add a field to Engine we get a build error
         // telling us to account for it here.
@@ -282,8 +308,9 @@ where
             lprops: rebuilt_lprops,
         } = &rebuilt;
 
-        // I implemented nicer diagnostics ftree errors because it flowed from
-        // the checks I needed anyway and I think that's the more likely bug.
+        // I implemented nicer diagnostics for ftree errors because it flowed
+        // from the checks I needed anyway and I think that's the more likely
+        // bug.
 
         // Check: ftree
         for our_fid in self.ftree.nodes() {
@@ -350,7 +377,22 @@ where
         &mut self.store
     }
 
-    pub fn apply(&mut self, validate_by: u16, ops: Vec<Op>) -> eyre::Result<ChangeReply> {
+    pub fn allocate_fid_block(&mut self) -> eyre::Result<Range<u64>> {
+        let meta = self.store.meta();
+        let start = meta.next_fid_block_start;
+        let after = start
+            .checked_add(FID_BLOCK_SIZE)
+            .ok_or_else(|| eyre!("out of fids"))?;
+        if after > MAX_JS_SAFE_INTEGER {
+            return Err(eyre!("out of fids"));
+        }
+        self.store.set_meta(Metadata {
+            next_fid_block_start: after,
+        })?;
+        Ok(start..after)
+    }
+
+    pub fn apply(&mut self, ops: Vec<Op>) -> eyre::Result<ChangeReply> {
         let mut creply = ChangeReply::default();
 
         for op in ops {
@@ -364,9 +406,6 @@ where
                     }
                     if !self.ftree.contains_node(props.pos.parent) {
                         return Err(eyre!("parent oid not found: {}", props.pos.parent));
-                    }
-                    if fid.client() != validate_by {
-                        return Err(eyre!("tried to create feature with different oid client: got {fid}, expected client={validate_by}"));
                     }
 
                     let mut all_props = props.rest.clone();
@@ -458,19 +497,18 @@ where
 
     #[tracing::instrument(skip(self))]
     fn fdelete(&mut self, incoming: HashSet<Fid>, outgoing: &mut ChangeReply) {
-        if incoming.is_empty() {
-            return;
-        }
-
         depth_first_search(&self.ftree, incoming.iter().copied(), |event| {
-            if let DfsEvent::Finish(descendant, _) = event {
-                if !incoming.contains(&descendant) {
-                    outgoing.reply_only.fdelete(descendant);
+            if let DfsEvent::Discover(n, _) = event {
+                if !incoming.contains(&n) {
+                    outgoing.reply_only.fdelete(n);
                 }
             }
         });
 
-        for &fid in &outgoing.change.fdeletes {
+        // Note we remember deletes even if as far as we know the feature never
+        // existed, so we can't do this in the dfs
+        for &fid in incoming.union(&outgoing.reply_only.fdeletes) {
+            outgoing.change.fdelete(fid);
             self.fdeletes.insert(fid);
             self.ftree.remove_node(fid);
             self.fprops.remove(&fid);
@@ -545,7 +583,7 @@ where
     }
 
     fn feature_idx_collision_fix(&mut self, pos: &FPos) -> Option<FracIdx> {
-        if self.pos_idx_collides(pos) {
+        if !self.pos_idx_collides(pos) {
             return None;
         }
 
@@ -622,12 +660,49 @@ where
 mod tests {
     #[allow(unused_imports)]
     use pretty_assertions::{assert_eq, assert_ne};
+    use rand::SeedableRng;
+    use serde_json::json;
 
-    // use super::*;
+    use super::*;
+    use crate::{store::InMemoryStore, test_init, Change, Op};
 
-    // fn dbg_tree<S: Store>(label: impl AsRef<str>, engine: &Engine<S>) {
-    //     let path = std::env::temp_dir().join(format!("dbg_tree_{}.dot", rand::random::<u64>()));
-    //     std::fs::write(&path, engine.dbg_tree()).unwrap();
-    //     eprintln!("Wrote tree {} to {}", label.as_ref(), path.display());
-    // }
+    fn check(input: &[Op], expected: Change) {
+        test_init();
+        let store = InMemoryStore::default();
+        let rng = SmallRng::from_seed([
+            215, 111, 135, 233, 145, 80, 167, 174, 104, 252, 183, 103, 102, 38, 220, 208, 86, 111,
+            111, 152, 150, 10, 0, 233, 160, 87, 250, 16, 164, 119, 208, 161,
+        ]);
+        let mut engine = Engine::new(store, rng);
+        engine.apply(input.to_vec()).unwrap();
+        let actual = engine.store().to_snapshot();
+        assert_eq!(expected, actual);
+    }
+
+    #[allow(unused)]
+    fn dbg_tree<S: Store>(label: impl AsRef<str>, engine: &Engine<S>) {
+        let path = std::env::temp_dir().join(format!("dbg_tree_{}.dot", rand::random::<u64>()));
+        std::fs::write(&path, engine.dbg_tree()).unwrap();
+        eprintln!("Wrote tree {} to {}", label.as_ref(), path.display());
+    }
+
+    #[test]
+    fn doesnt_rewrite_only_child_idx() {
+        check(
+            &[Op::FCreate {
+                fid: Fid(1),
+                props: FCreateProps {
+                    pos: FPos::new(Fid(0), FracIdx::new("O-")),
+                    rest: HashMap::new(),
+                },
+            }],
+            Change {
+                fprops: HashMap::from_iter([(
+                    (Fid(1), "pos".to_string()),
+                    json!({"parent": 0, "idx": "O-"}),
+                )]),
+                ..Default::default()
+            },
+        )
+    }
 }

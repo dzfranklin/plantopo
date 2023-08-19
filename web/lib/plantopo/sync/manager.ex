@@ -19,17 +19,17 @@ defmodule PlanTopo.Sync.Manager do
   end
 
   @impl true
-  def handle_call({:connect, %{map_id: map_id, client_id: client_id}}, {client_pid, _}, state) do
+  def handle_call({:connect, map_id}, {client_pid, _}, state) do
     case BiMap.get(state.engines, map_id) do
       engine when is_pid(engine) ->
-        GenServer.call(engine, {:connect, {client_id, client_pid}})
-        {:reply, {:ok, engine}, state}
+        {:ok, client_id} = GenServer.call(engine, {:connect, client_pid})
+        {:reply, {:ok, client_id, engine}, state}
 
       nil ->
         {:ok, engine} = GenServer.start_link(PlanTopo.Sync.Engine, map_id: map_id)
-        GenServer.call(engine, {:connect, {client_id, client_pid}})
+        {:ok, client_id} = GenServer.call(engine, {:connect, client_pid})
         state = %{state | engines: BiMap.put(state.engines, map_id, engine)}
-        {:reply, {:ok, engine}, state}
+        {:reply, {:ok, client_id, engine}, state}
     end
   end
 

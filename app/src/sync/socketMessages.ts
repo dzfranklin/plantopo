@@ -1,7 +1,37 @@
 import { SyncChange } from './SyncChange';
+import { SyncOp } from './SyncOp';
 
-export type RecvMsg = ReplyMsg | BcastMsg | ErrorMsg;
+export type OutgoingMsg = OpMsg | KeepaliveMsg;
 
-type ReplyMsg = { replyTo: number; change: SyncChange };
-type BcastMsg = { change: SyncChange };
-type ErrorMsg = { error: string; details: string };
+export type IncomingMsg = ConnectAcceptMsg | ReplyMsg | BcastMsg | ErrorMsg;
+
+export interface OpMsg {
+  type: 'op';
+  seq: number;
+  ops: Array<SyncOp>;
+}
+
+export interface KeepaliveMsg {
+  type: 'keepalive';
+}
+
+export interface ConnectAcceptMsg {
+  type: 'connectAccept';
+  fidBlockStart: number;
+  fidBlockUntil: number;
+  state: SyncChange;
+}
+export interface ReplyMsg {
+  type: 'reply';
+  replyTo: number;
+  change: SyncChange;
+}
+export interface BcastMsg {
+  type: 'bcast';
+  change: SyncChange;
+}
+export interface ErrorMsg {
+  type: 'error';
+  error: string;
+  details: string;
+}

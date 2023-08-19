@@ -1,8 +1,8 @@
 import cls from '@/app/cls';
-import { SyncSocket } from '@/sync/SyncSocket';
 import {
   Dispatch,
   DragEventHandler,
+  MutableRefObject,
   SetStateAction,
   UIEventHandler,
   useCallback,
@@ -12,29 +12,50 @@ import {
   useState,
 } from 'react';
 import AddAtIcon from '@spectrum-icons/workflow/Add';
+import AddFeatureIcon from '@spectrum-icons/workflow/Add';
 import './Sidebar.css';
 import DebugMenu from './DebugMenu';
+import { FInsertPlace, SyncEngine } from '@/sync/SyncEngine';
+import { Button, Item, Menu, MenuTrigger } from '@adobe/react-spectrum';
 
 const CHILD_INDENT_PX = 16;
 const VERTICAL_GAP_PX = 2;
 const INDICATOR_BORDER_PX = 2;
 
-type TargetPlace = 'before' | 'after' | 'firstChild';
-interface DragTarget {
-  id: number;
+interface DragTarget extends FInsertPlace {
   elem: HTMLElement;
-  place: TargetPlace;
 }
 
-export default function Sidebar({ socket }: { socket: SyncSocket }) {
-  const [children, setChildren] = useState(() => socket.fChildren(0));
+export default function Sidebar({ engine }: { engine: SyncEngine }) {
+  const [children, setChildren] = useState(() => engine.fChildOrder(0));
   useEffect(() => {
-    socket.addFChildrenListener(0, setChildren);
-    return () => socket.removeFChildrenListener(0, setChildren);
-  }, [socket]);
+    engine.addFChildOrderListener(0, setChildren);
+    return () => engine.removeFChildOrderListener(0, setChildren);
+  }, [engine]);
 
-  const [selected, setSelected] = useState<number[]>([]);
+  const [selected, _setSelected] = useState<number[]>([]);
   const dragTargetRef = useRef<DragTarget | null>(null);
+  const insertAt = useRef<FInsertPlace>({ at: 'firstChild', target: 0 });
+  const setSelected = useCallback((arg: SetStateAction<number[]>) => {
+    if (typeof arg === 'function') {
+      _setSelected((p) => {
+        const v = arg(p);
+        const target = v.at(-1) ?? 0;
+        insertAt.current = {
+          target,
+          at: target === 0 ? 'firstChild' : 'after',
+        };
+        return v;
+      });
+    } else {
+      const target = arg.at(-1) ?? 0;
+      insertAt.current = {
+        target,
+        at: target === 0 ? 'firstChild' : 'after',
+      };
+      _setSelected(arg);
+    }
+  }, []);
 
   const rootElemRef = useRef<HTMLDivElement>(null);
   const dragAtElemRef = useRef<HTMLDivElement>(null);
@@ -51,7 +72,7 @@ export default function Sidebar({ socket }: { socket: SyncSocket }) {
       // Add the dragged element to targets if necessary
       let dragTargetIncluded = selected.includes(dragTargetId);
       if (!dragTargetIncluded) {
-        dragTargetIncluded = socket.fHasAncestor(
+        dragTargetIncluded = engine.fHasAncestor(
           dragTargetId,
           new Set(selected),
         );
@@ -74,7 +95,7 @@ export default function Sidebar({ socket }: { socket: SyncSocket }) {
       const targetRect = evt.target.getBoundingClientRect();
       positionDragAtMarker(dragAtElemRef.current, targetRect, 'after', false);
     },
-    [socket, selected],
+    [engine, selected, setSelected],
   );
 
   const onDragEnter = useCallback<DragEventHandler<HTMLUListElement>>((evt) => {
@@ -107,7 +128,7 @@ export default function Sidebar({ socket }: { socket: SyncSocket }) {
 
     const targetId = parseInt(targetElem.dataset.fid, 10);
 
-    let targetPlace: TargetPlace;
+    let targetPlace: FInsertPlace['at'];
     const targetRect = targetElem.getBoundingClientRect();
     if (evt.clientY > targetRect.bottom - targetRect.height / 3) {
       targetPlace = 'after';
@@ -118,9 +139,9 @@ export default function Sidebar({ socket }: { socket: SyncSocket }) {
     }
 
     dragTargetRef.current = {
-      id: targetId,
+      target: targetId,
       elem: targetElem,
-      place: targetPlace,
+      at: targetPlace,
     };
 
     positionDragAtMarker(dragAtElem, targetRect, targetPlace, true);
@@ -130,19 +151,19 @@ export default function Sidebar({ socket }: { socket: SyncSocket }) {
 
   const onDrop = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
-      if (evt.dataTransfer.getData('x-pt') !== 'selected') {
+      const target = dragTargetRef.current;
+      if (evt.dataTransfer.getData('x-pt') !== 'selected' || target === null) {
         return;
       }
 
-      const ordered = socket.orderFeatures(selected);
-      console.info('drop', dragTargetRef.current, ordered);
-      // TODO:
+      engine.fMove(selected, target);
+      setSelected([]);
 
       dragTargetRef.current = null;
-
+      rootElemRef.current?.classList.remove('dragging');
       evt.preventDefault();
     },
-    [socket, selected],
+    [engine, selected, setSelected],
   );
 
   const onDragEnd = useCallback<DragEventHandler<HTMLUListElement>>((_evt) => {
@@ -162,7 +183,7 @@ export default function Sidebar({ socket }: { socket: SyncSocket }) {
         positionDragAtMarker(
           dragAtElemRef.current,
           targetRect,
-          target.place,
+          target.at,
           false,
         );
 
@@ -189,10 +210,7 @@ export default function Sidebar({ socket }: { socket: SyncSocket }) {
       onScroll={onScroll}
       ref={rootElemRef}
     >
-      <div className="sticky top-0 z-10 bg-white">
-        <DebugMenu socket={socket} />
-        Toolbar
-      </div>
+      <Toolbar engine={engine} insertAt={insertAt} />
       <ul
         onDragStart={onDragStart}
         onDrop={onDrop}
@@ -205,7 +223,7 @@ export default function Sidebar({ socket }: { socket: SyncSocket }) {
           <Entry
             key={child}
             fid={child}
-            driver={socket}
+            engine={engine}
             selected={selected}
             setSelected={setSelected}
           />
@@ -228,7 +246,7 @@ export default function Sidebar({ socket }: { socket: SyncSocket }) {
 function positionDragAtMarker(
   dragAtElem: HTMLDivElement,
   targetRect: DOMRect,
-  targetPlace: TargetPlace,
+  targetPlace: FInsertPlace['at'],
   animate: boolean,
 ) {
   const markerHeight = dragAtElem.getBoundingClientRect().height;
@@ -256,6 +274,42 @@ function positionDragAtMarker(
   dragAtElem.style.transform = `translateX(${toX}px) translateY(${toY}px)`;
 }
 
+function Toolbar({
+  engine,
+  insertAt,
+}: {
+  engine: SyncEngine;
+  insertAt: MutableRefObject<FInsertPlace>;
+}) {
+  const onAdd = useCallback(
+    (action: string | number) => {
+      switch (action) {
+        case 'folder': {
+          engine.fCreate(insertAt.current);
+        }
+      }
+    },
+    [engine, insertAt],
+  );
+  return (
+    <div className="sticky top-0 z-10 flex p-2 bg-white">
+      <div>
+        <DebugMenu engine={engine} />
+      </div>
+      <div className="flex justify-end grow">
+        <MenuTrigger>
+          <Button variant="accent">
+            <AddFeatureIcon />
+          </Button>
+          <Menu onAction={onAdd}>
+            <Item key="folder">New folder</Item>
+          </Menu>
+        </MenuTrigger>
+      </div>
+    </div>
+  );
+}
+
 interface Entry {
   id: number;
   children: Entry[];
@@ -264,22 +318,22 @@ interface Entry {
 
 function Entry({
   fid,
-  driver,
+  engine,
   selected,
   setSelected,
 }: {
   fid: number;
-  driver: SyncSocket;
+  engine: SyncEngine;
   selected: number[];
   setSelected: Dispatch<SetStateAction<number[]>>;
 }) {
   const isSelected = useMemo(() => selected.includes(fid), [fid, selected]);
 
-  const [children, setChildren] = useState(() => driver.fChildren(fid));
+  const [children, setChildren] = useState(() => engine.fChildOrder(fid));
   useEffect(() => {
-    driver.addFChildrenListener(fid, setChildren);
-    return () => driver.removeFChildrenListener(fid, setChildren);
-  }, [fid, driver]);
+    engine.addFChildOrderListener(fid, setChildren);
+    return () => engine.removeFChildOrderListener(fid, setChildren);
+  }, [fid, engine]);
 
   return (
     <li
@@ -305,11 +359,7 @@ function Entry({
     >
       {/* We need this nested div so that we can find its parent by mouse
           position without the padding throwing us off */}
-      <div
-        className={cls(
-          isSelected ? 'bg-white border-blue-400' : 'border-transparent',
-        )}
-      >
+      <div className={cls(isSelected && 'bg-blue-100')}>
         <div
           className={cls(
             'flex flex-row justify-start w-full gap-1 px-1 text-sm',
@@ -328,7 +378,7 @@ function Entry({
               <Entry
                 key={child}
                 fid={child}
-                driver={driver}
+                engine={engine}
                 selected={selected}
                 setSelected={setSelected}
               />

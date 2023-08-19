@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File},
-    io::{BufRead, BufReader, Seek, Write},
+    io::{BufRead, BufReader, Read, Seek, Write},
     path::PathBuf,
     thread,
     time::Duration,
@@ -10,19 +10,21 @@ use crossbeam::channel;
 use eyre::{eyre, Context};
 
 use super::Store;
-use crate::Change;
+use crate::{Change, Metadata};
 
 #[derive(Debug)]
 pub struct LocalFileStore {
     #[allow(unused)] // For Debug
     path: PathBuf,
     queue: channel::Sender<Action>,
+    meta: Metadata,
 }
 
 const SNAPSHOT_INTERVAL: Duration = Duration::from_secs(15);
 
 enum Action {
     Push(Change),
+    SetMeta(Metadata),
     Flush(channel::Sender<eyre::Result<()>>),
 }
 
@@ -33,14 +35,32 @@ impl LocalFileStore {
         let path = path.into();
         let (queue_tx, queue_rx) = channel::unbounded();
 
-        let mut wal_fname = path
+        let base_fname = path
             .file_name()
             .ok_or_else(|| eyre!("Invalid path: {}", path.display()))?
             .to_owned();
-        wal_fname.push("-wal");
+        let base_fname = base_fname
+            .to_str()
+            .ok_or_else(|| eyre!("Invalid path: {}", path.display()))?;
+
+        let wal_fname = format!("{base_fname}-wal.jsonl");
         let wal_path = path.with_file_name(wal_fname);
 
-        let snapshot_f = fs::OpenOptions::new()
+        let meta_fname = format!("{base_fname}-meta.json");
+        let meta_path = path.with_file_name(meta_fname);
+
+        if let Some(parent_dir) = path.parent() {
+            fs::create_dir_all(parent_dir)?;
+        }
+
+        let mut meta_f = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(&meta_path)
+            .wrap_err_with(|| eyre!("open {}", meta_path.display()))?;
+
+        let mut snapshot_f = fs::OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
@@ -54,12 +74,24 @@ impl LocalFileStore {
             .open(&wal_path)
             .wrap_err_with(|| eyre!("open {}", wal_path.display()))?;
 
-        let mut snapshot_r = BufReader::new(&snapshot_f);
-        let mut snapshot = if snapshot_r.has_data_left().wrap_err("read snapshot")? {
-            serde_json::from_reader(snapshot_r).wrap_err("parse snapshot")?
+        let mut meta = String::new();
+        meta_f
+            .read_to_string(&mut meta)
+            .wrap_err("read meta file")?;
+        let meta = if meta.is_empty() {
+            Metadata::default()
         } else {
-            tracing::trace!(?path, "no snapshot");
+            serde_json::from_str(&meta).wrap_err_with(|| eyre!("parse meta file"))?
+        };
+
+        let mut snapshot = String::new();
+        snapshot_f
+            .read_to_string(&mut snapshot)
+            .wrap_err("read snapshot file")?;
+        let mut snapshot = if snapshot.is_empty() {
             Change::default()
+        } else {
+            serde_json::from_str(&snapshot).wrap_err("parse snapshot file")?
         };
 
         for line in BufReader::new(&wal_f).lines() {
@@ -69,12 +101,13 @@ impl LocalFileStore {
         }
 
         let snapshot2 = snapshot.clone();
-        thread::spawn(move || worker_thread(snapshot2, queue_rx, snapshot_f, wal_f));
+        thread::spawn(move || worker_thread(snapshot2, queue_rx, meta_f, snapshot_f, wal_f));
 
         Ok((
             Self {
                 path,
                 queue: queue_tx,
+                meta,
             },
             snapshot,
         ))
@@ -82,6 +115,19 @@ impl LocalFileStore {
 }
 
 impl Store for LocalFileStore {
+    fn meta(&self) -> &Metadata {
+        &self.meta
+    }
+
+    #[tracing::instrument]
+    fn set_meta(&mut self, meta: Metadata) -> eyre::Result<()> {
+        self.queue
+            .send(Action::SetMeta(meta.clone()))
+            .wrap_err("worker died prematurely")?;
+        self.meta = meta;
+        Ok(())
+    }
+
     #[tracing::instrument]
     fn push(&mut self, entry: Change) -> eyre::Result<()> {
         self.queue
@@ -104,6 +150,7 @@ impl Store for LocalFileStore {
 fn worker_thread(
     snapshot: Change,
     queue: channel::Receiver<Action>,
+    mut meta_f: File,
     mut snapshot_f: File,
     mut wal_f: File,
 ) {
@@ -120,6 +167,9 @@ fn worker_thread(
                     Action::Push(entry) => {
                         do_push(entry, &mut wal_f, &mut working_snapshot).unwrap();
                     }
+                    Action::SetMeta(meta) => {
+                        do_set_meta(meta, &mut meta_f).unwrap();
+                    }
                     Action::Flush(res_tx) => {
                         let res = do_flush(&mut snapshot_f, &mut wal_f);
                         let _ = res_tx.send(res);
@@ -133,6 +183,18 @@ fn worker_thread(
     }
 
     tracing::debug!("Worker thread complete");
+}
+
+fn do_set_meta(meta: Metadata, meta_f: &mut File) -> eyre::Result<()> {
+    let value = serde_json::to_vec(&meta)?;
+
+    meta_f.set_len(0)?;
+    meta_f.rewind()?;
+    meta_f.write_all(&value)?;
+    meta_f.flush()?;
+    meta_f.sync_data()?;
+
+    Ok(())
 }
 
 fn do_push(entry: Change, wal_f: &mut File, working_snapshot: &mut Change) -> eyre::Result<()> {

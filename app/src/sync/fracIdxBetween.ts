@@ -1,16 +1,18 @@
-// From <https://madebyevan.com/algos/crdt-fractional-indexing/>
-
+const MIN_DIGIT = ' '.charCodeAt(0);
+const MAX_DIGIT = '~'.charCodeAt(0);
 const MAX_JITTER = 0x10;
 
-export default function fracIdxBetween(before: string, after: string): string {
-  // This demo uses "0" as the first digit and "9" as the last digit for
-  // ease of understanding. However, this algorithm is best done with as
-  // large a base as possible to keep the generated positions shorter. A
-  // production implementation might make each digit a full byte, so the
-  // first digit would be 0x00 and the last digit would be 0xFF.
-  const minDigit = '0'.charCodeAt(0);
-  const maxDigit = '9'.charCodeAt(0);
+export function isFracIdx(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code < MIN_DIGIT || code > MAX_DIGIT) return false;
+  }
+  return true;
+}
 
+// From <https://madebyevan.com/algos/crdt-fractional-indexing/>
+export default function fracIdxBetween(before: string, after: string): string {
   let foundDifference = false;
   let result = '';
   let i = 0;
@@ -22,14 +24,16 @@ export default function fracIdxBetween(before: string, after: string): string {
   while (true) {
     // Pretend all digits past the end of the "before" position are
     // "0" (our minimum digit).
-    const digitBefore = i < before.length ? before.charCodeAt(i) : minDigit;
+    const digitBefore = i < before.length ? before.charCodeAt(i) : MIN_DIGIT;
 
     // Pretend all digits past the end of the "after" position are
     // "10" (one past our maximum digit). We do this because generated
     // digits must be less than this number and we want to be able to
     // generate "maxDigit" at the end of a generated position.
     const digitAfter =
-      !foundDifference && i < after.length ? after.charCodeAt(i) : maxDigit + 1;
+      !foundDifference && i < after.length
+        ? after.charCodeAt(i)
+        : MAX_DIGIT + 1;
 
     // Try to split the difference at the halfway point. This will round down,
     // and only the upper value is ever equal to "maxDigit + 1", so the halfway
@@ -78,10 +82,10 @@ export default function fracIdxBetween(before: string, after: string): string {
     // for smaller bases such as base 2.
     let jitter = Math.floor(Math.random() * MAX_JITTER);
     while (jitter > 0) {
-      const base = maxDigit - minDigit + 1;
+      const base = MAX_DIGIT - MIN_DIGIT + 1;
       const mod = jitter % base;
       jitter = (jitter - mod) / base;
-      result += String.fromCharCode(minDigit + mod);
+      result += String.fromCharCode(MIN_DIGIT + mod);
     }
     return result;
   }

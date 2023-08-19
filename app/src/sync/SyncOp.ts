@@ -12,5 +12,6 @@ export type SyncOp =
       };
     }
   | { action: 'fDelete'; fids: number[] }
+  | { action: 'fDeleteConverge'; fids: number[] }
   | { action: 'fSet'; fid: number; key: string; value: unknown }
   | { action: 'lSet'; lid: number; key: string; value: unknown };

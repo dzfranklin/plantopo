@@ -23,6 +23,7 @@ pub struct Change {
         deserialize_with = "deserialize_props"
     )]
     pub lprops: FlatPropsMap<Lid>,
+    /// Must be applied after `fprops`
     pub fdeletes: HashSet<Fid>,
 }
 

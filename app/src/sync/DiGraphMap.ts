@@ -17,6 +17,11 @@ class Neighbor {
  *
  * - Nodes must be positive integers.
  *
+ * # Tree methods
+ *
+ * Tree methods presume the graph is a valid tree. If the graph isn't they may
+ * throw or they may return wrong data. They will never hang in a loop.
+ *
  * # Implementation
  *
  * This is a based on a subset of `GraphMap` in the rust library `petgraph`.
@@ -41,8 +46,8 @@ export class DiGraphMap<Edge extends string | number | boolean | null> {
     return this._nodes.len();
   }
 
-  *nodes(): IterableIterator<Node> {
-    return this._nodes.keys();
+  *nodes(): Iterable<Node> {
+    yield* this._nodes.keys();
   }
 
   addNode(n: Node): void {
@@ -93,10 +98,20 @@ export class DiGraphMap<Edge extends string | number | boolean | null> {
 
   /** Returns an iterator over all outgoing edges from `a` */
   *neighbors(a: Node): IterableIterator<Node> {
-    const neighbors = this._nodes.get(a);
-    if (neighbors === undefined) return;
-    for (const neigbor of neighbors) {
-      if (neigbor.dir === Outgoing) {
+    yield* this._neighborsDirected(a, Outgoing);
+  }
+
+  /** Returns an iterator over all incoming edges to `a` */
+  *incomingNeighbors(a: Node): IterableIterator<Node> {
+    yield* this._neighborsDirected(a, Incoming);
+  }
+
+  /** Return an iterator over all neighbors from `a` going `dir` */
+  private *_neighborsDirected(a: Node, dir: Direction): IterableIterator<Node> {
+    const neighborhood = this._nodes.get(a);
+    if (neighborhood === undefined) return;
+    for (const neigbor of neighborhood) {
+      if (neigbor.dir === dir) {
         yield neigbor.node;
       }
     }
@@ -104,7 +119,7 @@ export class DiGraphMap<Edge extends string | number | boolean | null> {
 
   /** Returns an iterator over all edges of the graph in arbitrary order */
   *allEdges(): IterableIterator<[Node, Node, Edge]> {
-    return this._edges.iter();
+    yield* this._edges.iter();
   }
 
   /** Returns the weight of the edge `a` -> `b`, or undefined if the edge
@@ -200,7 +215,7 @@ export class DiGraphMap<Edge extends string | number | boolean | null> {
    * If descends past `maxDepth`
    */
   dfs<Return>(
-    starts: IterableIterator<Node>,
+    starts: Iterable<Node>,
     visitor: DfsVisitor<Return>,
     maxDepth = 10_000,
   ): Return | undefined {
@@ -253,7 +268,7 @@ export class DiGraphMap<Edge extends string | number | boolean | null> {
 
           this._visitDfs(v, visitor, c, log, maxDepth - 1);
           if (c.wantsBreak) return;
-          if (c.wantsPrune) throw new Error('Unreachable');
+          c.reset();
         } else if (!log.finished.has(v)) {
           visitor.backEdge?.(u, v, c);
           if (c.wantsBreak) return;
@@ -265,6 +280,7 @@ export class DiGraphMap<Edge extends string | number | boolean | null> {
         }
       }
     }
+    c.reset();
 
     if (log.finished.has(u)) {
       throw new Error('Unreachable');
@@ -273,9 +289,7 @@ export class DiGraphMap<Edge extends string | number | boolean | null> {
 
     visitor.finish?.(u, log.time++, c);
     if (c.wantsBreak) return;
-    if (c.wantsPrune) {
-      throw new Error('Pruning forbidden in DfsVisitor.finish');
-    }
+    if (c.wantsPrune) throw new Error('Cannot prune in finish');
   }
 }
 
@@ -312,22 +326,32 @@ class DfsControlFlowImpl<Return> implements DfsControlFlow<Return> {
   prune(): void {
     this.wantsPrune = true;
   }
+
+  reset(): void {
+    this.wantsPrune = false;
+    this.wantsBreak = false;
+    this.breakValue = undefined;
+  }
 }
 
 export interface DfsVisitor<Return> {
-  discover?(n: Node, time: DfsTime, c: DfsControlFlow<Return>): void;
+  discover?(n: Node, time: DfsTime, ctrl: DfsControlFlow<Return>): void;
   /** An edge of the tree formed by the traversal. */
-  treeEdge?(a: Node, b: Node, c: DfsControlFlow<Return>): void;
+  treeEdge?(a: Node, b: Node, ctrl: DfsControlFlow<Return>): void;
   /** An edge to an already visited node. */
-  backEdge?(a: Node, b: Node, c: DfsControlFlow<Return>): void;
+  backEdge?(a: Node, b: Node, ctrl: DfsControlFlow<Return>): void;
   /** A cross or forward edge.
    *
    * For an edge *(u, v)*, if the discover time of *v* is greater than *u*, then
    * it is a forward edge, else a cross edge.
    */
-  crossOrForwardEdge?(a: Node, b: Node, c: DfsControlFlow<Return>): void;
+  crossOrForwardEdge?(a: Node, b: Node, ctrl: DfsControlFlow<Return>): void;
   /** All edges from a node have been reported. */
-  finish(n: Node, time: DfsTime, c: DfsControlFlow<Return>): Return | undefined;
+  finish?(
+    n: Node,
+    time: DfsTime,
+    ctrl: DfsControlFlow<Return>,
+  ): Return | undefined;
 }
 
 // This internal API is close to the corresponding Rust APIs, making the
@@ -341,7 +365,7 @@ class NodeMap {
     return this._data.size;
   }
 
-  *keys(): IterableIterator<Node> {
+  *keys(): Iterable<Node> {
     return this._data.keys();
   }
 
@@ -388,7 +412,7 @@ class EdgeMap<E> {
     return this._len;
   }
 
-  *iter(): IterableIterator<[Node, Node, E]> {
+  *iter(): Iterable<[Node, Node, E]> {
     for (const [a, sub] of this._data.entries()) {
       for (const [b, edge] of sub.entries()) {
         yield [a, b, edge];
@@ -460,7 +484,7 @@ function position<T>(
   pred: (item: T) => boolean,
 ): number | undefined {
   for (let i = 0; i < arr.length; i++) {
-    if (pred(arr[i])) {
+    if (pred(arr[i]!)) {
       return i;
     }
   }
@@ -481,8 +505,8 @@ function swapRemove<T>(arr: Array<T>, index: number): T {
   // Note that if the bounds check passed then there must be a last element
   // (which can be arr[index] itself)
 
-  const value = arr[index];
-  arr[index] = arr[len - 1];
+  const value = arr[index]!;
+  arr[index] = arr[len - 1]!;
   arr.length = len - 1;
   return value;
 }

@@ -1,26 +1,36 @@
+import stringOrd from '@/stringOrd';
+import { DiGraphMap } from './DiGraphMap';
 import { FPos } from './FPos';
 import { SyncChange } from './SyncChange';
 import { SyncOp } from './SyncOp';
-import fracIdxBetween from './fracIdxBetween';
+import fracIdxBetween, { isFracIdx } from './fracIdxBetween';
+import iterAll from '@/iterAll';
 
-type FGeo = GeoJSON.Feature<GeoJSON.Geometry | null>;
-type GeoRoot = GeoJSON.FeatureCollection<GeoJSON.Geometry | null>;
+export interface FInsertPlace {
+  at: 'before' | 'after' | 'firstChild';
+  target: number;
+}
+
+/** each `k` such that set(fid, k, v) -> {geoJsonFeature}.properties[k] = v */
+const GEO_JSON_FPROPS: Set<Key> = new Set([]);
+
+type Fid = number;
+type Lid = number;
+type Key = string;
+type Value = unknown;
+type FracIdx = string;
+type FGeoJson = GeoJSON.Feature<GeoJSON.Geometry | null>;
+type RootGeoJson = GeoJSON.FeatureCollection<GeoJSON.Geometry | null>;
 
 type PropListener = (v: unknown) => void;
-/** order: fid[] */
-type FChildrenListener = (order: number[]) => void;
-type FGeoListener = (geo: GeoRoot) => void;
-/** order: lid[] */
-type LOrderListener = (order: number[]) => void;
-type LPaintPropListener = (k: string, v: unknown) => void;
-
-type LRenderOp =
+type FChildOrderListener = (order: Array<Fid>) => void;
+type FGeoListener = (geo: RootGeoJson) => void;
+export type LOrderOp =
   | {
       type: 'add';
       lid: number;
-      /** Inside before `after`. */
+      /** Insert before `after`. */
       after: number | undefined;
-      paintProps: Record<string, unknown>;
     }
   | { type: 'remove'; lid: number }
   | {
@@ -28,78 +38,148 @@ type LRenderOp =
       lid: number;
       /** Move before `after`. */
       after: number | undefined;
-    }
-  | { type: 'setPaintProp'; lid: number; key: string; value: string };
-type LRenderOpListener = (changes: LRenderOp[]) => void;
+    };
+type LOrderListener = (value: Array<Fid>, changes: LOrderOp[]) => void;
+type LPaintPropListener = (lid: Lid, key: string, value: unknown) => void;
 
+type FData = {
+  validProps: Map<Key, Value>;
+  invalidProps?: Map<Key, Value>;
+  propNotifier?: Map<
+    Key,
+    {
+      notify: boolean;
+      listeners: Set<PropListener>;
+    }
+  >;
+  childOrderListeners?: Set<FChildOrderListener>;
+  geoJson?: FGeoJson;
+};
+
+type LData = {
+  validProps: Map<Key, Value>;
+  invalidProps?: Map<Key, Value>;
+  propNotifier?: Map<
+    Key,
+    {
+      notify: boolean;
+      listeners: Set<PropListener>;
+    }
+  >;
+  notifyPaintProps?: Set<Key>;
+};
+
+const ROOT_FPOS: FPos = { parent: 0, idx: '' };
+
+/**
+ * # Immutability of values
+ *
+ * The objects passed into callbacks won't be mutated ever after **unless
+ * otherwise stated in the relevant addListener method.**
+ *
+ * Callbacks must not mutate objects they're passed.
+ *
+ * Remember that mutations will happen when we asyncronously receive updates so
+ * you can't hold a value across a suspend and expect it to be stable.
+ *
+ * # Validity
+ *
+ * If we're told to set a prop to something inconsistent with our view of the
+ * state (e.g. "pos" to something that would cycle) then we don't change the
+ * value in validProps and add the incoming value to invalidProps.
+ *
+ * Eventually we'll converge with the server's consistent state, so we can just
+ * wait.
+ *
+ * We never manufacture a fake valid value.
+ *
+ * We make a best-effort attempt to throw if we're sent something that couldn't
+ * have been valid regardless of what the server thinks our state is. (e.g. a
+ * feature missing a pos or a pos.parent we don't know about even after taking
+ * into account the full change the server sent). This should never happen.  We
+ * make a best-effort attempt not to include such invalid values in validProps.
+ *
+ * # Mutation
+ *
+ * Mutating methods don't make changes directly. Instead they assemble SyncOps
+ * and then call `_apply`. This enforces consistency with what we send to the
+ * server.
+ */
 export class SyncEngine {
-  readonly clientId: number;
+  private _send: (_: SyncOp[]) => void;
 
   private _updateSummary = {
     count: 0,
-    fPropDirty: new RunningSummary(),
-    fChildrenDirty: new RunningSummary(),
-    fGeoDirty: new RunningSummary(),
-    lPropDirty: new RunningSummary(),
-    lOrderDirty: new RunningSummary(),
-    lRenderOpDirty: new RunningSummary(),
+    fPropNotifies: new RunningSummary(),
+    fChildOrderNotifies: new RunningSummary(),
+    fGeoNotifies: new RunningSummary(),
+    lPropNotifies: new RunningSummary(),
+    lPaintPropNotifies: new RunningSummary(),
+    lOrderNotifies: new RunningSummary(),
   };
 
   // Features
 
-  private _fNextCounter = 1;
+  private _fidBlockStart: number;
+  private _fidBlockUntil: number;
+  private _nextFid: number;
 
-  private _fPropsUncorrected: Map<number, Map<string, unknown>> = new Map([
-    [0, new Map()],
+  private _fData: Map<Fid, FData> = new Map([
+    [0, { validProps: new Map([['pos', ROOT_FPOS]]) }],
   ]);
-  // If fPropsUncorrected[fid]['pos'] is invalid this has a transient fix
-  private _fPos: Map<number, FPos> = new Map([[0, { parent: 0, idx: '' }]]);
-  private _fPropDirty: Map<number, Set<string>> = new Map();
-  private _fPropListeners: Map<number, Map<string, Set<PropListener>>> =
-    new Map();
+  private _notifyFChildOrder = new Set<Fid>();
+  // _fData and _notifyFChildOrder notifies are only called if the fid is also
+  // in _notifyFData
+  private _notifyFData = new Set<Fid>();
 
-  /** Skips features with malformed or cylic pos */
-  private _fChildrenUnordered: Map<number, Set<number>> = new Map([
-    [0, new Set()],
-  ]);
-  private _fChildrenDirty: Set<number> = new Set();
-  private _fChildrenListeners: Map<number, Set<FChildrenListener>> = new Map();
+  private _fTree = new DiGraphMap<FracIdx>();
 
-  private _fGeoRoot: GeoRoot = {
+  private _fGeoJson: RootGeoJson = {
     type: 'FeatureCollection',
     features: [],
   };
-  private _fGeo: Map<number, FGeo> = new Map();
-  private _fGeoDirty = false;
+  private _notifyFGeoJson = false;
   private _fGeoListeners: Set<FGeoListener> = new Set();
 
   // Layers
 
-  private _lProps: Map<number, Map<string, unknown>> = new Map();
-  private _lPropDirty: Map<number, Set<string>> = new Map();
-  private _lPropListeners: Map<number, Map<string, Set<PropListener>>> =
-    new Map();
-  private _lPaintPropListeners: Map<number, Set<LPaintPropListener>> =
-    new Map();
+  private _lData: Map<Lid, LData> = new Map();
+  private _lPaintPropListeners = new Set<LPaintPropListener>();
+  private _notifyLData = new Set<Lid>();
 
   private _lOrder: Array<{ lid: number; idx: string }> = [];
-  private _lOrderDirty = false;
+  private _notifyLOrderOps: Array<LOrderOp> = [];
   private _lOrderListeners: Set<LOrderListener> = new Set();
 
-  private _lDirtyRenderOps: Array<LRenderOp> = [];
-  private _lRenderOpListeners: Set<LRenderOpListener> = new Set();
-
-  /** throws if `clientId` is invalid */
-  constructor(clientId: number) {
-    if (
-      clientId < 0 ||
-      clientId > Math.pow(2, 16) - 1 ||
-      !Number.isInteger(clientId)
-    ) {
-      throw new Error('Invalid client ID');
+  constructor(props: {
+    fidBlockStart: number;
+    fidBlockUntil: number;
+    send: (_: SyncOp[]) => void;
+  }) {
+    if (props.fidBlockUntil <= props.fidBlockStart) {
+      throw new Error('Invalid fid block');
     }
+    this._fidBlockStart = props.fidBlockStart;
+    this._fidBlockUntil = props.fidBlockUntil;
+    this._nextFid = props.fidBlockStart;
+    this._send = props.send;
+  }
 
-    this.clientId = clientId;
+  /** Receive a message from the server */
+  receive(change: SyncChange): void {
+    for (const [fid, k, v] of change.fprops) {
+      this._fSet(fid, k, v);
+    }
+    for (const [lid, k, v] of change.lprops) {
+      this._lSet(lid, k, v);
+    }
+    const convergeDeletes = this._fDelete(new Set(change.fdeletes));
+    this._popNotifies();
+    if (convergeDeletes !== undefined) {
+      this._send([
+        { action: 'fDeleteConverge', fids: Array.from(convergeDeletes) },
+      ]);
+    }
   }
 
   // Public API - Debugging
@@ -107,18 +187,13 @@ export class SyncEngine {
   logUpdateSummary(): void {
     console.group('Update summary', new Date());
 
-    console.info('clientId', this.clientId);
     console.info(this._updateSummary.count, 'updates');
 
-    const groups: [string, RunningSummary][] = [
-      ['fPropDirty', this._updateSummary.fPropDirty],
-      ['fChildrenDirty', this._updateSummary.fChildrenDirty],
-      ['geoDirty', this._updateSummary.fGeoDirty],
-      ['lPropDirty', this._updateSummary.lPropDirty],
-      ['lOrderDirty', this._updateSummary.lOrderDirty],
-      ['lRenderOpDirty', this._updateSummary.lRenderOpDirty],
-    ];
-    for (const [label, summary] of groups) {
+    const summaries = Object.entries(this._updateSummary)
+      .filter((v): v is [string, RunningSummary] => v[0] !== 'count')
+      .sort(([a], [b]) => stringOrd(a, b));
+
+    for (const [label, summary] of summaries) {
       console.groupCollapsed(label, summary.nonzeroCount);
       summary.logTable();
       console.groupEnd();
@@ -127,68 +202,75 @@ export class SyncEngine {
     console.groupEnd();
   }
 
+  fResolvePlace(place: FInsertPlace): {
+    parent: number;
+    before: FracIdx;
+    after: FracIdx;
+  } {
+    let parent: number;
+    let before = '';
+    let after = '';
+    if (place.at === 'firstChild') {
+      parent = place.target;
+      const afterFid = this.fChildOrder(parent)[0];
+      if (afterFid !== undefined) {
+        after = this._fTree.edgeWeight(parent, afterFid) ?? '';
+      }
+    } else if (place.at === 'before') {
+      const afterFid = place.target;
+      parent = this.fParent(afterFid) ?? 0;
+      after = this._fTree.edgeWeight(parent, afterFid) ?? '';
+
+      const sibs = this.fChildOrder(parent);
+      const beforeFid = sibs[sibs.indexOf(place.target) - 1];
+      if (beforeFid !== undefined) {
+        before = this._fTree.edgeWeight(parent, beforeFid) ?? '';
+      }
+    } else if (place.at === 'after') {
+      const beforeFid = place.target;
+      parent = this.fParent(beforeFid) ?? 0;
+      before = this._fTree.edgeWeight(parent, beforeFid) ?? '';
+
+      const sibs = this.fChildOrder(parent);
+      const afterFid = sibs[sibs.indexOf(place.target) + 1];
+      if (afterFid !== undefined) {
+        after = this._fTree.edgeWeight(parent, afterFid) ?? '';
+      }
+    } else {
+      throw new Error('Unreachable');
+    }
+    return { parent, before, after };
+  }
+
   // Public API - Mutate
 
   /** Creates a feature, returning its fid */
-  createFeature(
-    parent: number,
-    before: number | undefined,
-    after: number | undefined,
-    props: Record<string, unknown> = {},
-  ): number {
+  fCreate(place: FInsertPlace, props: Record<Key, Value> = {}): number {
+    const resolved = this.fResolvePlace(place);
+    const idx = fracIdxBetween(resolved.before, resolved.after);
     const fid = this._allocateFid();
-
-    let beforeIdx = '';
-    if (before !== undefined) {
-      const pos = this._fPos.get(before);
-      if (pos === undefined) {
-        console.warn('createFeature: unknown before fid', before);
-      } else {
-        beforeIdx = pos.idx;
-      }
-    }
-
-    let afterIdx = '';
-    if (after !== undefined) {
-      const pos = this._fPos.get(after);
-      if (pos === undefined) {
-        console.warn('createFeature: unknown after fid', after);
-      } else {
-        afterIdx = pos.idx;
-      }
-    }
-
-    const idx = fracIdxBetween(beforeIdx, afterIdx);
-    const pos = { parent, idx };
-
-    this.apply([
+    this._apply([
       {
         action: 'fCreate',
         fid,
-        props: { ...props, pos },
+        props: { ...props, pos: { parent: resolved.parent, idx } },
       },
     ]);
-
     return fid;
   }
 
-  /** Set a feature property
+  /** Set a feature property.
    *
-   * Special properties:
-   * - `pos`: Must implement `FPos`. Cannot be undefined. The root feature's pos
-   *   cannot be changed.
+   * # Special properties
+   * - `pos`: Cannot be set
+   *
+   * # Throws
+   * If value is undefined or if a special property rule is violated.
    */
-  fSet(fid: number, key: string, value: unknown): void {
-    if (key === 'pos') {
-      if (fid === 0) {
-        throw new Error('Cannot change pos on root feature');
-      }
-      if (!isPosValue(value)) {
-        throw new Error('Invalid pos value');
-      }
-    }
-
-    this.apply([{ action: 'fSet', fid, key, value }]);
+  fSet(fid: Fid, key: Key, value: Value): void {
+    if (value === undefined) throw new Error('fSet: value cannot be undefined');
+    if (key === 'pos') throw new Error('fSet: Cannot set pos');
+    this._apply([{ action: 'fSet', fid, key, value }]);
   }
 
   /** Moves a list of features
@@ -200,58 +282,75 @@ export class SyncEngine {
    *
    * Features are inserted in topological order.
    */
-  moveFeatures(
-    features: number[],
-    parent: number,
-    before: number | undefined,
-    after: number | undefined,
-  ): void {
-    let beforeIdx = '';
-    if (before !== undefined) {
-      const pos = this._fPos.get(before);
-      if (pos === undefined) {
-        console.warn('moveFeatures: unknown before fid', before);
-      } else {
-        beforeIdx = pos.idx;
-      }
+  fMove(features: Fid[], place: FInsertPlace): void {
+    // Prune and sort
+    if (features.length > 1) {
+      const candidates = new Set(features);
+      const order: Fid[] = [];
+      this._fTree.dfs([0], {
+        discover: (n, _, ctrl) => {
+          if (order.length === candidates.size) {
+            ctrl.breakWith();
+          }
+
+          if (candidates.has(n)) {
+            order.push(n);
+            ctrl.prune();
+          }
+        },
+      });
+      features = order;
     }
 
-    let afterIdx = '';
-    if (after !== undefined) {
-      const pos = this._fPos.get(after);
-      if (pos === undefined) {
-        console.warn('moveFeatures: unknown after fid', after);
-      } else {
-        afterIdx = pos.idx;
-      }
-    }
+    const resolved = this.fResolvePlace(place);
+    const parent = resolved.parent;
+    let before = resolved.before;
+    const after = resolved.after;
 
     const ops: SyncOp[] = [];
-    for (const fid of this.orderFeatures(features)) {
-      const idx = fracIdxBetween(beforeIdx, afterIdx);
+    for (const fid of features) {
+      const idx = fracIdxBetween(before, after);
       ops.push({
         action: 'fSet',
         fid,
         key: 'pos',
         value: { parent, idx },
       });
-      beforeIdx = idx;
+      before = idx;
     }
 
-    this.apply(ops);
+    this._apply(ops);
+  }
+
+  /** Recursively delete each feature and all its descendants */
+  fDelete(fids: Fid[]): void {
+    this._apply([{ action: 'fDelete', fids }]);
   }
 
   /** Set a layer property
    *
-   * Special properties:
-   * - `idx`: Must be a `string` frac idx or undefined
+   * # Special properties:
+   * - `idx`: Cannot be set
+   *
+   * # Throws
+   * If value is undefined or if a special property rule is violated.
    */
   lSet(lid: number, key: string, value: unknown): void {
-    this.apply([{ action: 'lSet', lid, key, value }]);
+    if (value === undefined) throw new Error('lSet: value cannot be undefined');
+    if (key === 'idx') throw new Error('lSet: Cannot set idx');
+    this._apply([{ action: 'lSet', lid, key, value }]);
   }
 
   // Public API - Read
 
+  /** Return value will be mutated. You must not mutate it. */
+  fGeoJson(): RootGeoJson {
+    return this._fGeoJson;
+  }
+
+  /** The value passed to the listener may be mutated after the listener
+   * returns.
+   */
   addFGeoListener(listener: FGeoListener): void {
     this._fGeoListeners.add(listener);
   }
@@ -260,153 +359,84 @@ export class SyncEngine {
     this._fGeoListeners.delete(listener);
   }
 
+  /** Get the value of a feature property
+   *
+   * Properties are never undefined, but (unless special) can be null.
+   */
   fProp(fid: number, k: string): unknown {
-    if (k === 'pos') {
-      return this._fPos.get(fid);
-    } else {
-      return this._fPropsUncorrected.get(fid)?.get(k);
-    }
+    return this._fData.get(fid)?.validProps?.get(k) ?? null;
   }
 
   addFPropListener(fid: number, k: string, cb: PropListener): void {
-    let fListeners = this._fPropListeners.get(fid);
-    if (!fListeners) {
-      this._fPropListeners.set(fid, (fListeners = new Map()));
+    const data = this._fData.get(fid);
+    if (data === undefined) return;
+    if (data.propNotifier === undefined) data.propNotifier = new Map();
+    const entry = data.propNotifier.get(k);
+    if (entry === undefined) {
+      data.propNotifier.set(k, { notify: false, listeners: new Set([cb]) });
+    } else {
+      entry.listeners.add(cb);
     }
-
-    let propListeners = fListeners.get(k);
-    if (!propListeners) {
-      fListeners.set(k, (propListeners = new Set()));
-    }
-
-    propListeners.add(cb);
   }
 
   removeFPropListener(fid: number, k: string, cb: PropListener): void {
-    const fListeners = this._fPropListeners.get(fid);
-    const propListeners = fListeners?.get(k);
-
-    if (!fListeners || !propListeners) return;
-    propListeners.delete(cb);
-
-    if (propListeners.size === 0) {
-      fListeners.delete(k);
-
-      if (fListeners.size === 0) {
-        this._fPropListeners.delete(fid);
-      }
-    }
+    this._fData.get(fid)?.propNotifier?.get(k)?.listeners?.delete(cb);
   }
 
   lProp(lid: number, k: string): unknown {
-    return this._lProps.get(lid)?.get(k);
+    return this._lData.get(lid)?.validProps?.get(k) ?? null;
   }
 
   addLPropListener(lid: number, k: string, cb: PropListener): void {
-    let lListeners = this._lPropListeners.get(lid);
-    if (!lListeners) {
-      this._lPropListeners.set(lid, (lListeners = new Map()));
+    const data = this._lData.get(lid);
+    if (data === undefined) return;
+    if (data.propNotifier === undefined) data.propNotifier = new Map();
+    const entry = data.propNotifier.get(k);
+    if (entry === undefined) {
+      data.propNotifier.set(k, { notify: false, listeners: new Set([cb]) });
+    } else {
+      entry.listeners.add(cb);
     }
-
-    let propListeners = lListeners.get(k);
-    if (!propListeners) {
-      lListeners.set(k, (propListeners = new Set()));
-    }
-
-    propListeners.add(cb);
   }
 
   removeLPropListener(lid: number, k: string, cb: PropListener): void {
-    const lListeners = this._lPropListeners.get(lid);
-    const propListeners = lListeners?.get(k);
+    this._lData.get(lid)?.propNotifier?.get(k)?.listeners?.delete(cb);
+  }
 
-    if (!lListeners || !propListeners) return;
-    propListeners.delete(cb);
+  /** Called on every change to a property with the prefix "paint-" */
+  addLPaintPropListener(cb: LPaintPropListener): void {
+    this._lPaintPropListeners.add(cb);
+  }
 
-    if (propListeners.size === 0) {
-      lListeners.delete(k);
+  removeLPaintPropListener(cb: LPaintPropListener): void {
+    this._lPaintPropListeners.delete(cb);
+  }
 
-      if (lListeners.size === 0) {
-        this._lPropListeners.delete(lid);
-      }
+  fParent(fid: Fid): Fid | undefined {
+    if (fid === 0) return 0;
+    for (const parent of this._fTree.incomingNeighbors(fid)) {
+      return parent;
     }
   }
 
-  *lPaintProps(lid: number): Generator<[string, unknown]> {
-    const props = this._lProps.get(lid);
-    if (!props) return;
+  fChildOrder(parent: number): Array<number> {
+    return Array.from(this._fTree.edges(parent))
+      .sort(([_ap, _a, aIdx], [_bp, _b, bIdx]) => stringOrd(aIdx, bIdx))
+      .map(([_p, n, _i]) => n);
+  }
 
-    for (const [k, v] of props) {
-      if (k.startsWith('paint-')) {
-        const subK = k.slice('paint-'.length);
-        yield [subK, v];
-      }
+  addFChildOrderListener(fid: number, cb: FChildOrderListener): void {
+    const data = this._fData.get(fid);
+    if (data === undefined) return;
+    if (data.childOrderListeners === undefined) {
+      data.childOrderListeners = new Set([cb]);
+    } else {
+      data.childOrderListeners.add(cb);
     }
   }
 
-  addLPaintPropListener(lid: number, cb: LPaintPropListener): void {
-    let listeners = this._lPaintPropListeners.get(lid);
-    if (!listeners) {
-      this._lPaintPropListeners.set(lid, (listeners = new Set()));
-    }
-    listeners.add(cb);
-  }
-
-  removeLPaintPropListener(lid: number, cb: LPaintPropListener): void {
-    const listeners = this._lPaintPropListeners.get(lid);
-    if (!listeners) return;
-    listeners.delete(cb);
-
-    if (listeners.size === 0) {
-      this._lPaintPropListeners.delete(lid);
-    }
-  }
-
-  addLRenderOpListener(cb: LRenderOpListener): void {
-    this._lRenderOpListeners.add(cb);
-  }
-
-  removeLRenderOpListener(cb: LRenderOpListener): void {
-    this._lRenderOpListeners.delete(cb);
-  }
-
-  /** Skips children with malformed or cylic pos */
-  fChildren(fid: number): Array<number> {
-    return Array.from(this._fChildrenUnordered.get(fid) || []).sort(
-      (fidA, fidB) => {
-        const aPos = this._fPos.get(fidA);
-        const bPos = this._fPos.get(fidB);
-
-        if (aPos === undefined) {
-          console.error('Missing _fPos', fidA);
-          return -1;
-        } else if (bPos === undefined) {
-          console.error('Missing _fPos', fidB);
-          return 1;
-        }
-
-        if (aPos.idx < bPos.idx) return -1;
-        if (aPos.idx > bPos.idx) return 1;
-        return fidA - fidB;
-      },
-    );
-  }
-
-  addFChildrenListener(fid: number, cb: FChildrenListener): void {
-    let fListeners = this._fChildrenListeners.get(fid);
-    if (!fListeners) {
-      this._fChildrenListeners.set(fid, (fListeners = new Set()));
-    }
-    fListeners.add(cb);
-  }
-
-  removeFChildrenListener(fid: number, cb: FChildrenListener): void {
-    const fListeners = this._fChildrenListeners.get(fid);
-    if (!fListeners) return;
-    fListeners.delete(cb);
-    if (fListeners.size === 0) {
-      this._fChildrenListeners.delete(fid);
-    }
+  removeFChildOrderListener(fid: number, cb: FChildOrderListener): void {
+    this._fData.get(fid)?.childOrderListeners?.delete(cb);
   }
 
   lOrder(): Array<number> {
@@ -417,92 +447,33 @@ export class SyncEngine {
     this._lOrderListeners.add(cb);
   }
 
+  /** The `changes` passed to the listener may be mutated after the listener
+   * returns.
+   */
   removeLOrderListener(cb: LOrderListener): void {
     this._lOrderListeners.delete(cb);
   }
 
   fHasAncestor(fid: number, preds: Set<number>): boolean {
     if (preds.has(fid)) return true;
+    if (preds.has(0)) return true;
 
-    for (const ancestor of this.fAncestry(fid)) {
-      if (preds.has(ancestor.fid)) return true;
+    let parent = this.fParent(fid);
+    while (parent !== undefined && parent !== 0) {
+      if (preds.has(parent)) return true;
+      parent = this.fParent(parent);
     }
 
     return false;
   }
 
-  *fAncestry(fid: number): Generator<{ fid: number; idx: string }> {
-    const initialPos = this._fPos.get(fid);
-    if (initialPos === undefined) throw new Error('Unreachable: missing _fPos');
+  // Private API
 
-    let cursor = initialPos.parent;
-    do {
-      const pos = this._fPos.get(cursor);
-      if (pos === undefined) throw new Error('Unreachable: Missing _fPos');
-      if (pos.parent === fid) throw new Error('Unreachable: _fPos cycle');
-
-      yield { fid: cursor, idx: pos.idx };
-      cursor = pos.parent;
-    } while (cursor !== 0);
-  }
-
-  orderFeatures(features: Array<number>): Array<number> {
-    const featureSet = new Set(features);
-
-    const weighted = new Map<number, string[]>();
-    outer: for (const fid of features) {
-      if (weighted.has(fid)) continue;
-      const weight: string[] = [];
-      for (const ancestor of this.fAncestry(fid)) {
-        if (featureSet.has(ancestor.fid)) {
-          // Skip features inside features also included
-          break outer;
-        }
-        weight.push(ancestor.idx);
-      }
-      weight.reverse();
-      weighted.set(fid, weight);
-    }
-
-    return Array.from(weighted.entries())
-      .sort(([fidA, weightA], [fidB, weightB]) => {
-        for (let i = 0; i < Math.min(weightA.length, weightB.length); i++) {
-          if (weightA[i] < weightB[i]) {
-            return -1;
-          }
-          if (weightA[i] > weightB[i]) {
-            return 1;
-          }
-        }
-
-        if (weightA.length < weightB.length) {
-          return -1;
-        } else if (weightA.length > weightB.length) {
-          return 1;
-        }
-
-        // Break ties with id
-        if (fidA < fidB) {
-          return -1;
-        } else if (fidA > fidB) {
-          return 1;
-        } else {
-          console.error(
-            'orderFeatures: duplicated fids in sort should be impossible',
-          );
-          return 0;
-        }
-      })
-      .map(([fid, _weight]) => fid);
-  }
-
-  // Public API - low level
-
-  /**
-   * All mutations in SyncEngine go through apply, allowing SyncSocket to
-   * override and send to the server.
+  /** All mutations go through
+   *
+   * Mutates its arguments
    */
-  apply(ops: SyncOp[]): void {
+  private _apply(ops: SyncOp[]) {
     for (const op of ops) {
       switch (op.action) {
         case 'fCreate': {
@@ -512,7 +483,10 @@ export class SyncEngine {
           break;
         }
         case 'fDelete': {
-          this._fDelete(op.fids);
+          const missing = this._fDelete(new Set(op.fids));
+          if (missing !== undefined) {
+            for (const fid of missing) op.fids.push(fid);
+          }
           break;
         }
         case 'fSet': {
@@ -525,268 +499,206 @@ export class SyncEngine {
         }
       }
     }
-    this._didUpdate();
+    this._popNotifies();
+    this._send(ops);
   }
 
-  /** Never called by SyncEngine. SyncSocket calls for server changes. */
-  change(change: SyncChange): void {
-    for (const [fid, k, v] of change.fprops) {
-      this._fSet(fid, k, v);
-    }
-    for (const [lid, k, v] of change.lprops) {
-      this._lSet(lid, k, v);
-    }
-    this._fDelete(change.fdeletes);
-    this._didUpdate();
-  }
+  private _popNotifies(): void {
+    this._updateSummary.count++;
 
-  // Private API
+    let fPropNotifyCount = 0;
+    for (const fid of this._notifyFData) {
+      const data = this._fData.get(fid);
+      if (data === undefined) continue;
 
-  private _allocateFid(): number {
-    const counter = this._fNextCounter++;
-    return this.clientId * Math.pow(2, 32) + counter;
-  }
-
-  private _didUpdate(): void {
-    for (const [fid, propSet] of this._fPropDirty) {
-      const lMap = this._fPropListeners.get(fid);
-      if (lMap === undefined || lMap.size === 0) continue;
-
-      for (const k of propSet) {
-        const ls = lMap.get(k);
-        if (ls === undefined || ls.size === 0) continue;
-
-        const value = this.fProp(fid, k);
-        for (const l of ls) {
-          l(value);
+      if (data.propNotifier !== undefined) {
+        for (const [k, entry] of data.propNotifier) {
+          if (!entry.notify) continue;
+          const v = data.validProps.get(k);
+          for (const l of entry.listeners) l(v);
+          entry.notify = false;
+          fPropNotifyCount++;
         }
       }
     }
-    this._updateSummary.fPropDirty.add(this._fPropDirty.size);
-    this._fPropDirty.clear();
+    this._notifyFData.clear();
+    this._updateSummary.fPropNotifies.add(fPropNotifyCount);
 
-    for (const fid of this._fChildrenDirty) {
-      const ls = this._fChildrenListeners.get(fid);
-      if (ls === undefined || ls.size === 0) continue;
-
-      const value = this.fChildren(fid);
-      for (const l of ls) {
-        l(value);
+    let fChildOrderNotifyCount = 0;
+    for (const fid of this._notifyFChildOrder) {
+      const data = this._fData.get(fid);
+      if (data === undefined) continue;
+      if (data.childOrderListeners !== undefined) {
+        const value = this.fChildOrder(fid);
+        for (const l of data.childOrderListeners) l(value);
+        fChildOrderNotifyCount++;
       }
     }
-    this._updateSummary.fChildrenDirty.add(this._fChildrenDirty.size);
-    this._fChildrenDirty.clear();
+    this._notifyFChildOrder.clear();
+    this._updateSummary.fChildOrderNotifies.add(fChildOrderNotifyCount);
 
-    if (this._fGeoDirty) {
-      for (const l of this._fGeoListeners) {
-        l(this._fGeoRoot);
-      }
+    if (this._notifyFGeoJson) {
+      const value = this._fGeoJson; // note not immutable
+      for (const l of this._fGeoListeners) l(value);
+      this._updateSummary.fGeoNotifies.add(1);
+    } else {
+      this._updateSummary.fGeoNotifies.add(0);
     }
-    this._updateSummary.fGeoDirty.add(1);
-    this._fGeoDirty = false;
 
-    for (const [lid, propSet] of this._lPropDirty) {
-      const propLMap = this._lPropListeners.get(lid);
-      const paintLs = this._lPaintPropListeners.get(lid);
-      if (
-        (propLMap === undefined || propLMap.size === 0) &&
-        (paintLs === undefined || paintLs.size === 0)
-      ) {
-        continue;
-      }
+    let lPropNotifyCount = 0;
+    let lPaintPropNotifyCount = 0;
+    for (const lid of this._notifyLData) {
+      const data = this._lData.get(lid);
+      if (data === undefined) continue;
 
-      for (const k of propSet) {
-        const propLs = propLMap?.get(k);
-        const value = this._lProps.get(lid)?.get(k);
-
-        if (propLs !== undefined) {
-          for (const l of propLs) {
-            l(value);
-          }
+      if (data.notifyPaintProps !== undefined) {
+        for (const k of data.notifyPaintProps) {
+          const v = data.validProps.get(k);
+          for (const l of this._lPaintPropListeners) l(lid, k, v);
+          lPaintPropNotifyCount++;
         }
+        data.notifyPaintProps.clear();
+      }
 
-        if (k.startsWith('paint-') && paintLs !== undefined) {
-          const subK = k.slice('paint-'.length);
-          for (const l of paintLs) {
-            l(subK, value);
-          }
+      if (data.propNotifier !== undefined) {
+        for (const [k, entry] of data.propNotifier) {
+          if (!entry.notify) continue;
+          const v = data.validProps.get(k);
+          for (const l of entry.listeners) l(v);
+          entry.notify = false;
+          lPropNotifyCount++;
         }
       }
     }
-    this._updateSummary.lPropDirty.add(this._lPropDirty.size);
-    this._lPropDirty.clear();
+    this._notifyLData.clear();
+    this._updateSummary.lPaintPropNotifies.add(lPaintPropNotifyCount);
+    this._updateSummary.lPropNotifies.add(lPropNotifyCount);
 
-    if (this._lOrderDirty) {
+    if (this._notifyLOrderOps.length > 0) {
       const value = this.lOrder();
-      for (const l of this._lOrderListeners) {
-        l(value);
-      }
-    }
-    this._lOrderDirty = false;
-    this._updateSummary.lOrderDirty.add(1);
-
-    if (this._lDirtyRenderOps.length > 0) {
-      for (const l of this._lRenderOpListeners) {
-        l(this._lDirtyRenderOps);
-      }
-    }
-    this._lDirtyRenderOps.length = 0;
-    this._updateSummary.lRenderOpDirty.add(1);
-  }
-
-  private _fSet(fid: number, key: string, value: unknown): void {
-    let oldValue: unknown;
-    const uncorrectedMap = this._fPropsUncorrected.get(fid);
-    if (uncorrectedMap) {
-      oldValue = uncorrectedMap.get(key);
-      uncorrectedMap.set(key, value);
-    } else {
-      this._fPropsUncorrected.set(fid, new Map([[key, value]]));
-    }
-
-    const dirtySet = this._fPropDirty.get(fid);
-    if (dirtySet === undefined) {
-      this._fPropDirty.set(fid, new Set([key]));
-    } else {
-      dirtySet.add(key);
-    }
-
-    if (key === 'pos') {
-      if (oldValue !== undefined) {
-        if (isPosValue(oldValue)) {
-          this._fChildrenDirty.add(oldValue.parent);
-          this._fChildrenUnordered.get(oldValue.parent)?.delete(fid);
-        } else {
-          console.error('_fset: invalid old pos value', fid, oldValue);
-        }
-      }
-
-      if (isPosValue(value)) {
-        if (this._wouldCycle(fid, value.parent)) {
-          console.info('_fset: would cycle', fid, value);
-        } else {
-          this._fChildrenDirty.add(value.parent);
-
-          const set = this._fChildrenUnordered.get(value.parent);
-          if (set === undefined) {
-            this._fChildrenUnordered.set(value.parent, new Set([fid]));
-          } else {
-            set.add(fid);
-          }
-        }
-      } else {
-        console.error('_fset: invalid pos', fid, value);
-      }
-    }
-
-    // Update geo
-
-    let geo = this._fGeo.get(fid);
-    if (!geo) {
-      geo = {
-        id: fid,
-        type: 'Feature',
-        geometry: null,
-        properties: null,
-      };
-      this._fGeoRoot.features.push(geo);
-      this._fGeoDirty = true;
-    }
-
-    if (key === 'geometry') {
-      geo.geometry = value as GeoJSON.Geometry;
-      this._fGeoDirty = true;
-    } else if (key !== 'pos') {
-      if (geo.properties == null) geo.properties = {};
-      geo.properties[key] = value;
-      this._fGeoDirty = true;
+      const changes = this._notifyLOrderOps; // note not immutable
+      for (const l of this._lOrderListeners) l(value, changes);
+      this._updateSummary.lOrderNotifies.add(1);
+      this._notifyLOrderOps.length = 0;
     }
   }
 
-  /**
-   * Calls `this.apply` if necessary to converge
+  /** Set a property on a feature
+   *
+   * Acts locally. Enqueues notifications
    */
-  private _fDelete(fids: number[]): void {
-    const incomingSet = new Set(fids);
-    const outgoingSet = new Set<number>();
+  private _fSet(fid: number, key: string, value: unknown): void {
+    let data = this._fData.get(fid);
+    if (data === undefined) {
+      data = { validProps: new Map() };
+      this._fData.set(fid, data);
+    }
 
-    const deleteLocally = new Set<number>();
-    for (const fid of incomingSet) {
-      if (deleteLocally.has(fid)) continue;
-
-      if (!this._fPos.has(fid)) {
-        // If it doesn't exist locally we don't need to do anything
-        continue;
+    let invalid = false;
+    if (key === 'pos') {
+      if (!isPos(value)) {
+        throw new Error('_fSet: key=pos but !isPosValue(value');
       }
 
-      deleteLocally.add(fid);
+      if (fid === 0) {
+        if (value.parent !== 0 || value.idx !== '') {
+          throw new Error('_fSet: invalid pos for root');
+        }
+        // We already have the right materialized values
+      } else if (this._wouldCycle(fid, value.parent)) {
+        console.log('_fset: invalid as would cycle', fid, '<-', value.parent);
+        invalid = true;
+      } else {
+        this._notifyFChildOrder.add(value.parent);
 
-      for (const descendant of this._fDescendants(fid)) {
-        if (deleteLocally.has(descendant)) break;
-
-        // We won't iterate past `descendant` again for this `fid` so the fact
-        // we add prematurely before we walk the remaining descendents is ok.
-        deleteLocally.add(descendant);
-
-        if (!incomingSet.has(descendant)) {
-          outgoingSet.add(descendant);
+        const oldParent = this.fParent(fid);
+        if (oldParent !== undefined) {
+          if (value.parent === oldParent) {
+            this._fTree.replaceEdgeWeight(value.parent, fid, value.idx);
+          } else {
+            this._fTree.removeEdge(oldParent, fid);
+            this._fTree.addEdge(value.parent, fid, value.idx);
+            this._notifyFChildOrder.add(oldParent);
+          }
+        } else {
+          this._fTree.addEdge(value.parent, fid, value.idx);
         }
       }
+    } else if (key === 'geometry') {
+      if (value === undefined) {
+        if (data.geoJson) data.geoJson.geometry = null;
+      } else if (!isGeoJsonGeometry(value)) {
+        throw new Error('_fSet: key=geometry but !isGeoJsonGeometry(value');
+      } else {
+        if (data.geoJson === undefined) {
+          data.geoJson = geoJsonFeature(fid, { geometry: value });
+          this._fGeoJson.features.push(data.geoJson);
+        } else {
+          data.geoJson.geometry = value;
+        }
+      }
+      this._notifyFGeoJson = true;
     }
 
-    for (const fid of deleteLocally) {
-      const pos = this._fPos.get(fid);
-      if (pos === undefined) {
-        throw new Error('Unreachable: missing fid pos');
+    if (invalid) {
+      if (data.invalidProps === undefined) {
+        data.invalidProps = new Map([[key, value]]);
+      } else {
+        data.invalidProps.set(key, value);
+      }
+    } else {
+      data.validProps.set(key, value);
+
+      if (GEO_JSON_FPROPS.has(key)) {
+        if (data.geoJson === undefined) {
+          data.geoJson = geoJsonFeature(fid, { properties: { [key]: value } });
+        } else if (data.geoJson.properties === null) {
+          data.geoJson.properties = { [key]: value };
+        } else {
+          data.geoJson.properties[key] = value;
+        }
+        this._notifyFGeoJson = true;
       }
 
-      this._fChildrenDirty.add(pos.parent);
-      this._fPos.delete(fid);
-      this._fPropsUncorrected.delete(fid);
-      this._fChildrenUnordered.get(pos.parent)?.delete(fid);
-      this._fGeo.delete(fid);
+      const propNotifier = data.propNotifier?.get(key);
+      if (propNotifier !== undefined && propNotifier.listeners.size > 0) {
+        this._notifyFData.add(fid);
+        propNotifier.notify = true;
+      }
     }
-
-    this._fGeoRoot.features = this._fGeoRoot.features.filter((fGeo) => {
-      if (typeof fGeo.id !== 'number') {
-        throw new Error('Unreachable: fGeo.id not a number');
-      }
-      return !deleteLocally.has(fGeo.id);
-    });
   }
 
-  private *_fDescendants(fid: number): Generator<number> {
-    const initialChildren = this._fChildrenUnordered.get(fid);
-    if (initialChildren === undefined || initialChildren.size === 0) {
-      return;
+  /** Returns the missing recursive deletions, if any.
+   *
+   * Acts locally. Enqueues notifications
+   */
+  private _fDelete(incoming: Set<Fid>): Set<Fid> | undefined {
+    const parents = new Set<Fid>();
+    let convergeDeletes: Set<Fid> | undefined;
+    this._fTree.dfs(incoming, {
+      discover: (n, _t, _ctrl) => {
+        if (!incoming.has(n)) {
+          if (convergeDeletes === undefined) convergeDeletes = new Set();
+          convergeDeletes.add(n);
+        }
+        parents.add(this.fParent(n)!);
+      },
+    });
+
+    for (const fid of iterAll(incoming.values(), convergeDeletes?.values())) {
+      this._fData.delete(fid);
+      this._notifyFData.delete(fid);
+      this._fTree.removeNode(fid);
     }
 
-    const stack = [new Set(initialChildren)];
-
-    while (stack.length > 0) {
-      if (stack.length > 100_000) {
-        throw new Error('Unreachable: Stack overflow computing _fDescendants');
-      }
-
-      const children = stack.at(-1)!;
-
-      let cursor: number;
-      const nextCursor = children.values().next();
-      if (nextCursor.done) {
-        stack.pop();
-        continue;
-      } else {
-        cursor = nextCursor.value;
-        children.delete(cursor);
-      }
-
-      yield cursor;
-
-      const cursorChildren = this._fChildrenUnordered.get(cursor);
-      if (cursorChildren !== undefined && cursorChildren.size > 0) {
-        stack.push(new Set(cursorChildren));
+    for (const parent of parents) {
+      // We'll often have deleted the parent as well
+      if (this._fTree.containsNode(parent)) {
+        this._notifyFChildOrder.add(parent);
       }
     }
+
+    return convergeDeletes;
   }
 
   /**
@@ -796,83 +708,186 @@ export class SyncEngine {
    * cycle.
    */
   private _wouldCycle(fid: number, newParent: number): boolean {
-    if (newParent === fid) {
-      return true;
-    }
-
-    // If newParent is not a descendant of fid there is no cycle
-
-    for (const descendant of this._fDescendants(fid)) {
-      if (descendant === newParent) {
-        return true;
-      }
-    }
-
-    return false;
+    const foundCycle = this._fTree.dfs<boolean>([fid], {
+      discover: (n, _t, ctrl) => {
+        if (n === newParent) ctrl.breakWith(true);
+      },
+    });
+    return foundCycle || false;
   }
 
+  /** Set a property on a layer
+   *
+   * Acts locally. Enqueues notifications.
+   */
   private _lSet(lid: number, key: string, value: unknown): void {
-    const props = this._lProps.get(lid);
-    if (props) {
-      props.set(key, value);
-    } else {
-      this._lProps.set(lid, new Map([[key, value]]));
+    let data = this._lData.get(lid);
+    if (data === undefined) {
+      data = { validProps: new Map() };
+      this._lData.set(lid, data);
     }
 
-    const dirtySet = this._lPropDirty.get(lid);
-    if (dirtySet) {
-      dirtySet.add(key);
-    } else {
-      this._lPropDirty.set(lid, new Set([key]));
-    }
-
+    let invalid = false;
     if (key === 'idx') {
-      const prevI = this._lOrder.findIndex((l) => l.lid === lid);
-      if (prevI !== -1) {
-        this._lOrder.splice(prevI, 1);
-      }
-
-      let after: number | undefined;
-      if (value !== undefined) {
-        this._lOrder.push({ lid, idx: value as string });
-        this._lOrder.sort((a, b) => {
-          if (a.idx < b.idx) return -1;
-          if (a.idx > b.idx) return 1;
-          return 0;
-        });
-
-        const newI = this._lOrder.findIndex((l) => l.lid === lid);
-        after = this._lOrder[newI]?.lid;
-      }
-
-      this._lOrderDirty = true;
-
-      if (value === undefined) {
-        this._lDirtyRenderOps.push({ type: 'remove', lid });
-      } else if (prevI === -1) {
-        const paintProps: Record<string, unknown> = {};
-        for (const [k, v] of this.lPaintProps(lid)) {
-          paintProps[k] = v;
+      if (value !== null && !isFracIdx(value)) {
+        throw new Error('_lSet: key=idx but value!==null && !isFracIdx(value)');
+      } else if (this._lOrder.find((v) => v.idx === value) !== undefined) {
+        console.log('_lset: invalid as idx collides');
+        invalid = true;
+      } else {
+        const prevI = this._lOrder.findIndex((i) => i.lid === lid);
+        if (prevI !== -1) {
+          this._lOrder.splice(prevI, 1);
         }
 
-        this._lDirtyRenderOps.push({
-          type: 'add',
-          lid,
-          after,
-          paintProps,
-        });
-      } else {
-        this._lDirtyRenderOps.push({ type: 'move', lid, after });
+        if (value === null) {
+          this._notifyLOrderOps.push({ type: 'remove', lid });
+        } else {
+          this._lOrder.push({ lid, idx: value });
+          this._lOrder.sort((a, b) => stringOrd(a.idx, b.idx));
+          const newI = this._lOrder.findIndex((i) => i.lid === lid);
+          const after = this._lOrder[newI + 1]?.lid;
+
+          if (prevI === -1) {
+            this._notifyLOrderOps.push({ type: 'add', lid, after });
+          } else {
+            this._notifyLOrderOps.push({ type: 'move', lid, after });
+          }
+        }
       }
+    }
+
+    if (invalid) {
+      if (data.invalidProps === undefined) {
+        data.invalidProps = new Map([[key, value]]);
+      } else {
+        data.invalidProps.set(key, value);
+      }
+    } else {
+      data.validProps.set(key, value);
+
+      let notifyData = false;
+
+      if (key.startsWith('paint-')) {
+        notifyData = true;
+        if (data.notifyPaintProps === undefined) {
+          data.notifyPaintProps = new Set([key]);
+        } else {
+          data.notifyPaintProps.add(key);
+        }
+      }
+
+      const propNotifier = data.propNotifier?.get(key);
+      if (propNotifier !== undefined && propNotifier.listeners.size > 0) {
+        notifyData = true;
+        propNotifier.notify = true;
+      }
+
+      if (notifyData) {
+        this._notifyLData.add(lid);
+      }
+    }
+  }
+
+  private _allocateFid(): number {
+    if (this._nextFid < this._fidBlockUntil) {
+      return this._nextFid++;
+    } else {
+      throw new Error('out of fids');
     }
   }
 }
 
-const isPosValue = (value: unknown): value is FPos =>
-  !!value &&
-  typeof value === 'object' &&
-  typeof (value as Record<string, unknown>)['parent'] === 'number' &&
-  typeof (value as Record<string, unknown>)['idx'] === 'string';
+function geoJsonFeature(fid: Fid, props: Partial<FGeoJson>): FGeoJson {
+  return {
+    id: fid,
+    geometry: null,
+    properties: null,
+    ...props,
+    type: 'Feature',
+  };
+}
+
+function isPos(value: unknown): value is FPos {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record['parent'] === 'number' && typeof record['idx'] === 'string'
+  );
+}
+
+function isGeoJsonGeometry(value: unknown): value is GeoJSON.Geometry {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Record<string, unknown>;
+  if (record['type'] === 'Point') {
+    return isGeoJsonPosition(record['coordinates']);
+  } else if (record['type'] === 'MultiPoint') {
+    const coords = record['coordinates'];
+    if (!Array.isArray(coords)) return false;
+    for (const c of coords) {
+      if (!isGeoJsonPosition(c)) return false;
+    }
+    return true;
+  } else if (record['type'] === 'LineString') {
+    const coords = record['coordinates'];
+    if (!Array.isArray(coords)) return false;
+    for (const c of coords) {
+      if (!isGeoJsonPosition(c)) return false;
+    }
+    return true;
+  } else if (record['type'] === 'MultiLineString') {
+    const coords = record['coordinates'];
+    if (!Array.isArray(coords)) return false;
+    for (const c of coords) {
+      if (!Array.isArray(c)) return false;
+      for (const cc of c) {
+        if (!isGeoJsonPosition(cc)) return false;
+      }
+    }
+    return true;
+  } else if (record['type'] === 'Polygon') {
+    const coords = record['coordinates'];
+    if (!Array.isArray(coords)) return false;
+    for (const c of coords) {
+      if (!Array.isArray(c)) return false;
+      for (const cc of c) {
+        if (!isGeoJsonPosition(cc)) return false;
+      }
+    }
+    return true;
+  } else if (record['type'] === 'MultiPolygon') {
+    const coords = record['coordinates'];
+    if (!Array.isArray(coords)) return false;
+    for (const c of coords) {
+      if (!Array.isArray(c)) return false;
+      for (const cc of c) {
+        if (!Array.isArray(cc)) return false;
+        for (const ccc of cc) {
+          if (!isGeoJsonPosition(ccc)) return false;
+        }
+      }
+    }
+    return true;
+  } else if (record['type'] === 'GeometryCollection') {
+    const geoms = record['geometries'];
+    if (!Array.isArray(geoms)) return false;
+    for (const g of geoms) {
+      if (!isGeoJsonGeometry(g)) return false;
+    }
+    return true;
+  } else {
+    return false;
+  }
+}
+
+function isGeoJsonPosition(value: unknown): value is GeoJSON.Position {
+  if (!Array.isArray(value)) return false;
+  if (value.length !== 2 && value.length !== 3) return false;
+  for (const v of value) {
+    if (typeof v !== 'number') return false;
+  }
+  return true;
+}
 
 class RunningSummary {
   sum = 0;

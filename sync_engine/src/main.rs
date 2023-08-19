@@ -3,39 +3,54 @@
 use std::{
     fs,
     io::{stdin, stdout, BufRead, BufReader, BufWriter, Write},
+    path::PathBuf,
 };
 
+use eyre::eyre;
 use eyre::{Context, Result};
+use rand::{rngs::SmallRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use tracing_subscriber::{prelude::*, EnvFilter};
 
 use plantopo_sync_engine::{
     store::{LocalFileStore, Store},
-    ChangeReply, Engine, Op,
+    Change, Engine, Op,
 };
 
 #[derive(Debug, Deserialize)]
-struct InputContainer {
-    client: u16,
-    msg: String,
+#[serde(tag = "action", rename_all = "snake_case")]
+enum Command {
+    Open { map: u32 },
+    Connect { id: u32 },
+    Recv { id: u32, value: ClientUpdate },
 }
 
 #[derive(Debug, Deserialize)]
-struct InputMsg {
+struct ClientUpdate {
     ops: Vec<Op>,
     seq: u32,
 }
 
 #[derive(Debug, Serialize)]
-enum OpResult {
-    Ok {
-        changeset: Box<ChangeReply>,
-        reply_to: u16,
-        seq: u32,
+#[serde(tag = "action", rename_all = "snake_case")]
+#[allow(clippy::large_enum_variant)] // The big one, Send, is most likely
+enum CommandReply {
+    Connect {
+        id: u32,
+        fid_block_start: u64,
+        fid_block_until: u64,
+        state: Change,
     },
-    Err {
-        message: String,
-        reply_to: Option<u16>,
+    Send {
+        id: u32,
+        recv_seq: Option<u32>,
+        reply: Change,
+        bcast: Option<Change>,
+    },
+    SendError {
+        id: u32,
+        error: String,
+        details: String,
     },
 }
 
@@ -51,16 +66,19 @@ fn main() -> Result<()> {
         .with(EnvFilter::from_default_env())
         .init();
 
-    let mut map_id = String::new();
+    let mut open_cmd = String::new();
     stdin()
-        .read_line(&mut map_id)
+        .read_line(&mut open_cmd)
         .wrap_err("read map_id from stdin")?;
-    let map_id: u32 = map_id.trim().parse().wrap_err("parse map_id")?;
+    let open_cmd = serde_json::from_str::<Command>(&open_cmd).expect("Invalid open cmd");
+    let Command::Open { map: map_id } = open_cmd else {
+        panic!("Invalid open cmd");
+    };
 
-    let store_fname = format!("engine-map-{map_id}");
-    let (store, snapshot) = LocalFileStore::open(&store_fname)?;
-    let mut engine = Engine::load(store, snapshot)?;
-    tracing::debug!(?store_fname, "Loaded engine");
+    let store_path = PathBuf::from(".sync_store").join(map_id.to_string());
+    let (store, snapshot) = LocalFileStore::open(store_path)?;
+    let mut engine = Engine::load(store, SmallRng::from_entropy(), snapshot)?;
+    tracing::debug!("Loaded engine");
 
     let mainloop_res = do_mainloop(&mut engine);
     tracing::trace!(?mainloop_res, "mainloop exited");
@@ -88,7 +106,9 @@ where
 
     loop {
         line.clear();
-        stdin.read_line(&mut line)?;
+        if stdin.read_line(&mut line)? == 0 {
+            break;
+        }
         let line = line.trim();
 
         if line == "exit" {
@@ -120,82 +140,45 @@ where
             }
         }
 
-        let InputContainer {
-            msg: input_msg,
-            client,
-        } = match serde_json::from_str(line).wrap_err("Failed to deserialize input") {
-            Ok(input) => input,
-            Err(report) => {
-                #[cfg(debug_assertions)]
-                {
-                    eprintln!("\nReceived:\n    {line}");
-                    eprintln!("\nError:{:?}\n", report);
+        let cmd: Command = serde_json::from_str(line).wrap_err("Invalid cmd")?;
+        tracing::trace!(?cmd);
+
+        let reply = match cmd {
+            Command::Open { .. } => return Err(eyre!("Already opened")),
+            Command::Connect { id } => {
+                let fid_block = engine.allocate_fid_block()?;
+                let state = engine.to_snapshot();
+                CommandReply::Connect {
+                    id,
+                    fid_block_start: fid_block.start,
+                    fid_block_until: fid_block.end,
+                    state,
                 }
-
-                serde_json::to_writer(
-                    &mut stdout,
-                    &OpResult::Err {
-                        reply_to: None,
-                        message: format!("{report:#}"),
-                    },
-                )?;
-                stdout.write_all(b"\n")?;
-                stdout.flush()?;
-                continue;
             }
-        };
+            Command::Recv { id, value } => match engine.apply(value.ops) {
+                Ok(change_reply) => CommandReply::Send {
+                    id,
+                    recv_seq: Some(value.seq),
+                    reply: change_reply.reply_only,
+                    bcast: Some(change_reply.change),
+                },
+                Err(report) => {
+                    #[cfg(debug_assertions)]
+                    eprintln!("Apply error:{:?}\n", report);
 
-        let input_msg: InputMsg = match serde_json::from_str(&input_msg) {
-            Ok(input_msg) => input_msg,
-            Err(report) => {
-                #[cfg(debug_assertions)]
-                {
-                    eprintln!("\nReceived msg:\n    {input_msg}");
-                    eprintln!("\nError:{:?}\n", report);
+                    tracing::info!(apply_error=%report);
+                    CommandReply::SendError {
+                        id,
+                        error: format!("{report}"),
+                        details: format!("{report:#}"),
+                    }
                 }
-
-                serde_json::to_writer(
-                    &mut stdout,
-                    &OpResult::Err {
-                        reply_to: None,
-                        message: format!("{report:#}"),
-                    },
-                )?;
-                stdout.write_all(b"\n")?;
-                stdout.flush()?;
-                continue;
-            }
-        };
-        tracing::trace!(?input_msg);
-
-        let creply = match engine.apply(client, input_msg.ops) {
-            Ok(creply) => creply,
-            Err(report) => {
-                #[cfg(debug_assertions)]
-                eprintln!("\nError:{:?}\n", report);
-
-                serde_json::to_writer(
-                    &mut stdout,
-                    &OpResult::Err {
-                        reply_to: Some(client),
-                        message: format!("{report:#}"),
-                    },
-                )?;
-                stdout.write_all(b"\n")?;
-                stdout.flush()?;
-                continue;
-            }
-        };
-        tracing::trace!(?creply);
-
-        serde_json::to_writer(
-            &mut stdout,
-            &OpResult::Ok {
-                changeset: Box::new(creply),
-                reply_to: client,
-                seq: input_msg.seq,
             },
-        )?;
+        };
+        tracing::trace!(?reply);
+
+        let reply = serde_json::to_string(&reply)?;
+        stdout.write_all(reply.as_bytes())?;
         stdout.write_all(b"\n")?;
         stdout.flush()?;
     }
