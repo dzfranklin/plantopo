@@ -7,6 +7,7 @@ import stringOrd from '@/stringOrd';
 import { Content, Dialog, DialogContainer } from '@adobe/react-spectrum';
 
 type Attribs = { id: string; html: string }[];
+type Logos = { alt: string; src: string }[];
 
 export function AttributionControl({
   sidebarWidth,
@@ -15,17 +16,17 @@ export function AttributionControl({
   sidebarWidth: number;
   engine: SyncEngine;
 }) {
-  const [showOsLogo, setShowOsLogo] = useState(false);
+  const [logos, setLogos] = useState<Logos>([]);
   const [attribs, setAttribs] = useState<Attribs>([]);
   useEffect(() => {
     const attribs = toAttribHtml(engine.lOrder());
     setAttribs(attribs);
-    setShowOsLogo(shouldShowOsLogo(attribs));
+    setLogos(toLogos(attribs));
 
     const l = engine.addLOrderListener((v) => {
       const attribs = toAttribHtml(v);
       setAttribs(attribs);
-      setShowOsLogo(shouldShowOsLogo(attribs));
+      setLogos(toLogos(attribs));
     });
     return () => engine.removeLOrderListener(l);
   }, [engine]);
@@ -37,10 +38,13 @@ export function AttributionControl({
       className="absolute bottom-0 right-0 z-10 flex items-end min-w-0 gap-5 ml-5 mr-16"
       style={{ left: `${sidebarWidth}px` }}
     >
-      <div className="min-w-fit h-[32px] mb-2 flex gap-3 pointer-events-none">
-        <img src={mapboxLogo.src} alt="mapbox" />
-        {showOsLogo && <img src={osLogo.src} alt="ordnance survey" />}
-      </div>
+      {logos.length > 0 && (
+        <div className="min-w-fit h-[32px] mb-2 flex gap-3 pointer-events-none">
+          {logos.map(({ alt, src }) => (
+            <img src={src} alt={alt} key={src} />
+          ))}
+        </div>
+      )}
 
       <AttribPreview attribs={attribs} setOpenFull={setOpenFull} />
 
@@ -113,12 +117,19 @@ function toAttribHtml(layers: number[]): { id: string; html: string }[] {
   return attribs;
 }
 
-function rewriteHtml(html: string): string {
-  return html.replaceAll('CURRENT_YEAR', new Date().getFullYear().toString());
+function toLogos(attribs: Attribs): Logos {
+  const logos = [];
+  for (const { html } of attribs) {
+    if (html.includes('SHOW_OS_LOGO')) {
+      logos.push({ alt: 'ordnance survey', src: osLogo.src });
+    }
+    if (html.includes('SHOW_MAPBOX_LOGO')) {
+      logos.push({ alt: 'mapbox', src: mapboxLogo.src });
+    }
+  }
+  return logos;
 }
 
-function shouldShowOsLogo(attribs: Attribs) {
-  return (
-    attribs.find(({ html }) => html.includes('SHOW_OS_LOGO')) !== undefined
-  );
+function rewriteHtml(html: string): string {
+  return html.replaceAll('CURRENT_YEAR', new Date().getFullYear().toString());
 }
