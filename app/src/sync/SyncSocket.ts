@@ -130,7 +130,6 @@ export class SyncSocket {
     if (this._socket !== sock) return;
     const msg: IncomingMsg = JSON.parse(evt.data);
     this._resetKeepalive();
-    this._log('recv', msg);
     switch (msg.type) {
       case 'connectAccept':
         this._onRecvConnectAccept(msg);
@@ -160,7 +159,6 @@ export class SyncSocket {
         send: (ops) => {
           const seq = ++this._seq;
           this._pending.set(seq, ops);
-          this._log('sending', seq, ops);
           this._maybeSend({ type: 'op', seq, ops });
         },
       });
