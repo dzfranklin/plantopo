@@ -7,7 +7,7 @@
     },
     "editor.tabSize": 2,
     "eslint.workingDirectories": [
-        "web/assets"
+        "app/"
     ],
     "cmake.buildDirectory": "${workspaceFolder}/sync/inspector/build",
     "cmake.sourceDirectory": "/home/daniel/projects/plantopo/sync",

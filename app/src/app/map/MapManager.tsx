@@ -11,6 +11,7 @@ export class MapManager extends ml.Map {
   private _tokens: Tokens;
   private _engine: SyncEngine;
   private _editStart: EditStartChannel;
+  private _activeLayers: Lid[] = [];
 
   private _boundOnFGeoJson = this._onFGeoJson.bind(this);
   private _boundOnLOrder = this._onLOrder.bind(this);
@@ -68,7 +69,9 @@ export class MapManager extends ml.Map {
     });
     this._fGeoJsonSource = this.getSource('fGeoJson')! as any;
 
-    for (const lid of this._engine.lOrder().reverse()) {
+    this._activeLayers = this._engine.lOrder();
+    for (let i = this._activeLayers.length - 1; i >= 0; i--) {
+      const lid = this._activeLayers[i]!;
       const layer = LAYERS.layers[lid];
       if (!layer) throw new Error(`Missing layer ${lid}`);
       for (const subl of layer.sublayers) {
@@ -98,10 +101,9 @@ export class MapManager extends ml.Map {
     this._engine.removeLOrderListener(this._boundOnLOrder);
     this._engine.removeLPropsListener(this._boundOnLProps);
     this._fGeoJsonSource = undefined;
-
     this._editStart.on = undefined;
-
     super.remove();
+    console.log('MapManager.remove');
   }
 
   private _onEditStart(evt: EditStartEvent) {
@@ -160,9 +162,11 @@ export class MapManager extends ml.Map {
         }
       }
     }
+    this._activeLayers = value;
   }
 
   private _onLProps(lid: Lid, k: string, v: unknown) {
+    if (!this._activeLayers.includes(lid)) return;
     if (k === 'opacity') {
       this._setLayerOpacity(lid, v as number | null);
     }

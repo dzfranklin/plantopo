@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-cd web/assets && tsc --noEmit
+cd app && tsc --noEmit
