@@ -25,6 +25,10 @@ export default function MapPage() {
   // TODO: Request through regular http api
   const mapName = 'My Map';
 
+  useEffect(() => {
+    document.title = `${mapName} - PlanTopo`;
+  }, [mapName]);
+
   const socketRef = useRef<SyncSocket | null>(null);
   const [engine, setEngine] = useState<SyncEngine | undefined>(undefined);
   const [syncError, setSyncError] = useState<Error | undefined>(undefined);
