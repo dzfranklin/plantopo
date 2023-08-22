@@ -14,12 +14,16 @@ www.localhost {
 
 (base) {
 	encode zstd gzip
+	reverse_proxy /assets/* localhost:4000
 	reverse_proxy /api/* localhost:4000
+	reverse_proxy /account/* localhost:4000
+	reverse_proxy /live/* localhost:4000
 }
 
 localhost {
-	reverse_proxy * localhost:3000
 	import base
+	reverse_proxy /phoenix/* localhost:4000 # for live reload
+	reverse_proxy * localhost:3000
 }
 
 prod.localhost {

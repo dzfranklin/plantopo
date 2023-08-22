@@ -11,6 +11,28 @@ config :opentelemetry,
   span_processor: :batch,
   traces_exporter: :otlp
 
+# Configure esbuild (the version is required)
+config :esbuild,
+  version: "0.17.7",
+  default: [
+    args:
+      ~w(js/app.js js/map.tsx --format=esm --bundle --target=es2020 --jsx=automatic --jsx-dev --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ]
+
+# Configure tailwind (the version is required)
+config :tailwind,
+  version: "3.2.4",
+  default: [
+    args: ~w(
+      --config=tailwind.config.js
+      --input=css/app.css
+      --output=../priv/static/assets/app.css
+    ),
+    cd: Path.expand("../assets", __DIR__)
+  ]
+
 # The session will be stored in the cookie and signed,
 # this means its contents can be read but not tampered with.
 # Set :encryption_salt if you would also like to encrypt it.
