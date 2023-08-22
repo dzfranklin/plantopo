@@ -18,6 +18,9 @@ export class SyncSocket {
 
   private static readonly _KEEPALIVE_INTERVAL_MS = 15_000;
 
+  private _connectStart: number | undefined; // unix timestamp, for debugging
+  private _sessionId: number | undefined; // server assigned session id, for debugging
+
   private _engine: SyncEngine | undefined;
   private _socket: WebSocket | undefined;
   private _pending: Map<number, SyncOp[]> = new Map();
@@ -33,14 +36,17 @@ export class SyncSocket {
 
   connect(): void {
     if (this._socket !== undefined) {
-      console.log('Already connected');
+      this._log('Already connected');
       return;
     }
 
     const url = new URL(SyncSocket._SOCKET_URL);
     url.searchParams.set('id', this.mapId.toString());
 
+    this._log('Connecting to', url.toString());
+    this._connectStart = Date.now();
     const sock = new WebSocket(url);
+
     sock.onopen = (evt) => this._onSocketOpen(sock, evt);
     sock.onclose = (evt) => this._onSocketClose(sock, evt);
     sock.onmessage = (evt) => this._onSocketMessage(sock, evt);
@@ -49,10 +55,10 @@ export class SyncSocket {
 
   close(): void {
     if (!this._socket) {
-      console.info('Already closed');
+      this._log('Already closed');
       return;
     }
-    console.info('Closing socket');
+    this._log('Closing socket');
     this._closing = true;
     this._socket.close();
   }
@@ -87,8 +93,10 @@ export class SyncSocket {
   private _onSocketOpen(sock: WebSocket, _evt: Event): void {
     if (this._socket !== sock) return;
 
+    this._log(`socket onopen ${Date.now() - this._connectStart!}ms`);
+
     // Authenticate
-    console.log('Authenticating to socket');
+    this._log('Authenticating to socket');
     this._socket!.send(
       JSON.stringify({
         token: 'TODO: ',
@@ -100,13 +108,12 @@ export class SyncSocket {
 
   private _onSocketClose(sock: WebSocket, _evt: CloseEvent): void {
     if (this._socket !== sock) return;
-    console.info('Socket closed');
+    this._log('Socket closed');
     this._stopKeepalive();
     this._socket = undefined;
     if (this._closing) {
       return;
     }
-    console.info('Reconnecting');
     this.connect();
   }
 
@@ -114,7 +121,7 @@ export class SyncSocket {
     if (this._socket !== sock) return;
     const msg: IncomingMsg = JSON.parse(evt.data);
     this._resetKeepalive();
-    console.log('recv', msg);
+    this._log('recv', msg);
     switch (msg.type) {
       case 'connectAccept':
         this._onRecvConnectAccept(msg);
@@ -129,12 +136,14 @@ export class SyncSocket {
         this._onRecvError(msg);
         break;
       default:
-        console.info('Unknown message type', msg);
+        this._log('Unknown message type', msg);
         break;
     }
   }
 
   private _onRecvConnectAccept(msg: ConnectAcceptMsg): void {
+    this._log('recv connectAccept', this);
+    this._sessionId = msg.sessionId;
     if (this._engine === undefined) {
       this._engine = new SyncEngine({
         fidBlockStart: msg.fidBlockStart,
@@ -142,13 +151,14 @@ export class SyncSocket {
         send: (ops) => {
           const seq = ++this._seq;
           this._pending.set(seq, ops);
+          console.log('sending', seq, ops);
           this._maybeSend({ type: 'op', seq, ops });
         },
       });
       this._engine.receive(msg.state);
       this.onConnect(this._engine);
     } else {
-      console.log('Reconnect accepted');
+      this._log('Reconnect accepted');
       this._engine.receive(msg.state);
     }
     for (const [seq, ops] of this._pending.entries()) {
@@ -157,7 +167,7 @@ export class SyncSocket {
   }
 
   private _onRecvError(msg: ErrorMsg): void {
-    this.onError(new Error(msg.error, { cause: msg.details }));
+    this.onError(new Error(msg.error, { cause: new Error(msg.details) }));
     this.close();
   }
 
@@ -167,8 +177,20 @@ export class SyncSocket {
 
   private _onRecvReply(msg: ReplyMsg): void {
     if (!this._pending.delete(msg.replyTo)) {
-      console.info('recv unexpected reply', msg);
+      this._log('recv unexpected reply', msg);
     }
     this._engine!.receive(msg.change);
+  }
+
+  private _log(...args: unknown[]): void {
+    let ts: string | undefined;
+    if (this._connectStart !== undefined) {
+      const millis = Date.now() - this._connectStart!;
+      ts = `${millis / 1000}s`;
+    }
+    console.log(
+      `[SyncSocket ${this._sessionId || 'preaccept'} at ${ts || 'preconnect'}]`,
+      ...args,
+    );
   }
 }

@@ -17,6 +17,7 @@ export interface KeepaliveMsg {
 
 export interface ConnectAcceptMsg {
   type: 'connectAccept';
+  sessionId: number;
   fidBlockStart: number;
   fidBlockUntil: number;
   state: SyncChange;

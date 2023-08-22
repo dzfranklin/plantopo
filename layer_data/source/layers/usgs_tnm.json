@@ -1,0 +1,11 @@
+{
+  "lid": 4,
+  "name": "USGS Topo",
+  "sublayers": [
+    {
+      "id": "layer",
+      "type": "raster",
+      "source": "usgs_tnm"
+    }
+  ]
+}

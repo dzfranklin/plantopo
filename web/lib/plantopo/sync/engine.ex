@@ -9,18 +9,18 @@ defmodule PlanTopo.Sync.Engine do
   @max_line 8 * 2 ** 20
 
   defmodule State do
-    @type clients :: BiMap.t(integer(), pid())
+    @type sessions :: BiMap.t(integer(), pid())
 
     @type t :: %__MODULE__{
             engine: port(),
-            clients: clients(),
-            next_client: integer()
+            sessions: sessions(),
+            next_session_id: integer()
           }
 
     defstruct [
       :engine,
-      :clients,
-      :next_client
+      :sessions,
+      :next_session_id
     ]
   end
 
@@ -44,16 +44,26 @@ defmodule PlanTopo.Sync.Engine do
 
     send_engine(engine, %{"action" => "open", "map" => id})
 
-    {:ok, %State{engine: engine, clients: BiMap.new(), next_client: 0}}
+    {:ok, %State{engine: engine, sessions: BiMap.new(), next_session_id: 0}}
   end
 
   @impl true
   def handle_call({:connect, client_pid}, _from, state) do
-    cid = state.next_client
+    session_id = state.next_session_id
     Process.monitor(client_pid)
-    state = %{state | clients: BiMap.put(state.clients, cid, client_pid), next_client: cid + 1}
-    send_engine(state.engine, %{"action" => "connect", "id" => cid})
-    {:reply, {:ok, cid}, state}
+
+    state = %{
+      state
+      | sessions: BiMap.put(state.sessions, session_id, client_pid),
+        next_session_id: session_id + 1
+    }
+
+    send_engine(state.engine, %{
+      "action" => "connect",
+      "id" => session_id
+    })
+
+    {:reply, {:ok, session_id}, state}
   end
 
   @impl true
@@ -64,7 +74,7 @@ defmodule PlanTopo.Sync.Engine do
 
   @impl true
   def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
-    {:noreply, %{state | clients: BiMap.delete_value(state.clients, pid)}}
+    {:noreply, %{state | sessions: BiMap.delete_value(state.sessions, pid)}}
   end
 
   @impl true
@@ -78,15 +88,16 @@ defmodule PlanTopo.Sync.Engine do
 
     case Jason.decode!(line) do
       %{
-        "id" => cid,
+        "id" => session_id,
         "action" => "connect",
         "fid_block_start" => fid_block_start,
         "fid_block_until" => fid_block_until,
         "state" => map_state
       } ->
         # Matches ConnectAcceptMsg in app/src/sync/socketMessages.ts
-        send_client(state.clients, cid, %{
+        send_client(state.sessions, session_id, %{
           type: "connectAccept",
+          sessionId: session_id,
           fidBlockStart: fid_block_start,
           fidBlockUntil: fid_block_until,
           state: map_state
@@ -96,29 +107,29 @@ defmodule PlanTopo.Sync.Engine do
 
       %{
         "action" => "send",
-        "id" => cid,
+        "id" => session_id,
         "recv_seq" => seq,
         "reply" => reply,
         "bcast" => bcast
       } ->
         # Matches ReplyMsg in app/src/sync/socketMessages.ts
-        send_client(state.clients, cid, %{type: "reply", replyTo: seq, change: reply})
+        send_client(state.sessions, session_id, %{type: "reply", replyTo: seq, change: reply})
 
         if !is_nil(bcast) do
           # Matches BcastMsg in app/src/sync/socketMessages.ts
-          send_bcast(state.clients, cid, %{type: "bcast", change: bcast})
+          send_bcast(state.sessions, session_id, %{type: "bcast", change: bcast})
         end
 
         {:noreply, state}
 
       %{
         "action" => "send_error",
-        "recv_id" => client_id,
+        "id" => session_id,
         "error" => error,
         "details" => details
       } ->
         # Matches ErrorMsg in app/src/sync/socketMessages.ts
-        send_client(state.clients, client_id, %{type: "error", error: error, details: details})
+        send_client(state.sessions, session_id, %{type: "error", error: error, details: details})
 
         {:noreply, state}
     end
@@ -136,17 +147,17 @@ defmodule PlanTopo.Sync.Engine do
     nil
   end
 
-  defp send_client(clients, client_id, msg) do
+  defp send_client(sessions, client_id, msg) do
     msg = Jason.encode!(msg)
-    pid = BiMap.get(clients, client_id)
+    pid = BiMap.get(sessions, client_id)
     send(pid, {self(), :send, msg})
     nil
   end
 
-  defp send_bcast(clients, except, msg) do
+  defp send_bcast(sessions, except, msg) do
     msg = Jason.encode!(msg)
 
-    for {cid, pid} <- clients do
+    for {cid, pid} <- sessions do
       if cid != except do
         send(pid, {self(), :send, msg})
       end

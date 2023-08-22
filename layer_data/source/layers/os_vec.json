@@ -1,0 +1,9 @@
+{
+  "lid": 3,
+  "name": "Ordinance Survey Vector",
+  "sublayers": "../os_vec_sublayers.json",
+  "sprites": "osv",
+  "rewriteSublayerTilesets": {
+    "esri": "os_vec"
+  }
+}

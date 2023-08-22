@@ -1,5 +1,5 @@
 [workspace]
-members = ["sync_engine"]
+members = ["sync_engine", "layer_data/gen"]
 exclude = ["reproj_os_leisure", "core", "schema"]
 resolver = "2"
 
@@ -9,10 +9,12 @@ lto = true
 [workspace.dependencies]
 petgraph = "0.6.3"
 eyre = "0.6.8"
+color-eyre = "0.6.2"
 tracing = "0.1.37"
 tracing-error = "0.2.0"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 uuid = "1.4.1"
 rand = "0.8.5"
-serde = "1"
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serde_with = "3.3"

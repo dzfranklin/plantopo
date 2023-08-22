@@ -5,42 +5,56 @@ import { SyncChange } from './SyncChange';
 import { SyncOp } from './SyncOp';
 import fracIdxBetween, { isFracIdx } from './fracIdxBetween';
 import iterAll from '@/iterAll';
+import { LAYERS } from '@/layers';
 
 export interface FInsertPlace {
   at: 'before' | 'after' | 'firstChild';
-  target: number;
+  target: Fid;
 }
+
+export type LInsertPlace =
+  | { at: 'first' }
+  | { at: 'last' }
+  | { at: 'before'; target: Lid }
+  | { at: 'after'; target: Lid };
 
 /** each `k` such that set(fid, k, v) -> {geoJsonFeature}.properties[k] = v */
 const GEO_JSON_FPROPS: Set<Key> = new Set([]);
 
-type Fid = number;
-type Lid = number;
-type Key = string;
-type Value = unknown;
-type FracIdx = string;
-type FGeoJson = GeoJSON.Feature<GeoJSON.Geometry | null>;
-type RootGeoJson = GeoJSON.FeatureCollection<GeoJSON.Geometry | null>;
+export type Fid = number;
+export type Lid = number;
+export type Key = string;
+export type Value = unknown;
+export type FracIdx = string;
+export type FGeoJson = GeoJSON.Feature<GeoJSON.Geometry | null>;
+export type RootGeoJson = GeoJSON.FeatureCollection<GeoJSON.Geometry | null>;
 
-type PropListener = (v: unknown) => void;
-type FChildOrderListener = (order: Array<Fid>) => void;
-type FGeoListener = (geo: RootGeoJson) => void;
+export type LPropListener<K extends keyof LPropTypeMap> = (
+  v: LPropTypeMap[K],
+) => void;
+export type FPropListener<K extends keyof FPropTypeMap> = (
+  v: FPropTypeMap[K],
+) => void;
+export type FChildOrderListener = (order: Array<Fid>) => void;
+export type FGeoListener = (geo: RootGeoJson) => void;
+/** `lid` should go visually between `before` and `after` such that after
+ * appears on top of it */
 export type LOrderOp =
   | {
       type: 'add';
       lid: number;
-      /** Insert before `after`. */
+      before: number | undefined;
       after: number | undefined;
     }
   | { type: 'remove'; lid: number }
   | {
       type: 'move';
       lid: number;
-      /** Move before `after`. */
+      before: number | undefined;
       after: number | undefined;
     };
-type LOrderListener = (value: Array<Fid>, changes: LOrderOp[]) => void;
-type LPaintPropListener = (lid: Lid, key: string, value: unknown) => void;
+export type LOrderListener = (value: Array<Fid>, changes: LOrderOp[]) => void;
+export type LPropsListener = (lid: Lid, key: Key, value: Value) => void;
 
 type FData = {
   validProps: Map<Key, Value>;
@@ -49,7 +63,7 @@ type FData = {
     Key,
     {
       notify: boolean;
-      listeners: Set<PropListener>;
+      listeners: Set<FPropListener<string>>;
     }
   >;
   childOrderListeners?: Set<FChildOrderListener>;
@@ -59,19 +73,28 @@ type FData = {
 type LData = {
   validProps: Map<Key, Value>;
   invalidProps?: Map<Key, Value>;
-  propNotifier?: Map<
-    Key,
-    {
-      notify: boolean;
-      listeners: Set<PropListener>;
-    }
-  >;
-  notifyPaintProps?: Set<Key>;
+  notifyProps?: Set<Key>;
+  propListeners?: Map<Key, Set<LPropListener<string>>>;
 };
 
 const ROOT_FPOS: FPos = { parent: 0, idx: '' };
 
+type FPropTypeMap = {
+  pos: FPos;
+  [k: string]: unknown;
+};
+
+type LPropTypeMap = {
+  idx: FracIdx | null;
+  opacity: number | null;
+  [k: string]: unknown;
+};
+
 /**
+ * # Notification order
+ *
+ * You will always be notified about order before props.
+ *
  * # Immutability of values
  *
  * The objects passed into callbacks won't be mutated ever after **unless
@@ -114,9 +137,10 @@ export class SyncEngine {
     fChildOrderNotifies: new RunningSummary(),
     fGeoNotifies: new RunningSummary(),
     lPropNotifies: new RunningSummary(),
-    lPaintPropNotifies: new RunningSummary(),
     lOrderNotifies: new RunningSummary(),
   };
+
+  private _transaction: Array<Array<SyncOp>> | null = null;
 
   // Features
 
@@ -144,7 +168,7 @@ export class SyncEngine {
   // Layers
 
   private _lData: Map<Lid, LData> = new Map();
-  private _lPaintPropListeners = new Set<LPaintPropListener>();
+  private _lPropsListeners = new Set<LPropsListener>();
   private _notifyLData = new Set<Lid>();
 
   private _lOrder: Array<{ lid: number; idx: string }> = [];
@@ -202,51 +226,44 @@ export class SyncEngine {
     console.groupEnd();
   }
 
-  fResolvePlace(place: FInsertPlace): {
-    parent: number;
-    before: FracIdx;
-    after: FracIdx;
-  } {
-    let parent: number;
-    let before = '';
-    let after = '';
-    if (place.at === 'firstChild') {
-      parent = place.target;
-      const afterFid = this.fChildOrder(parent)[0];
-      if (afterFid !== undefined) {
-        after = this._fTree.edgeWeight(parent, afterFid) ?? '';
-      }
-    } else if (place.at === 'before') {
-      const afterFid = place.target;
-      parent = this.fParent(afterFid) ?? 0;
-      after = this._fTree.edgeWeight(parent, afterFid) ?? '';
+  // Public API - Mutate
 
-      const sibs = this.fChildOrder(parent);
-      const beforeFid = sibs[sibs.indexOf(place.target) - 1];
-      if (beforeFid !== undefined) {
-        before = this._fTree.edgeWeight(parent, beforeFid) ?? '';
-      }
-    } else if (place.at === 'after') {
-      const beforeFid = place.target;
-      parent = this.fParent(beforeFid) ?? 0;
-      before = this._fTree.edgeWeight(parent, beforeFid) ?? '';
-
-      const sibs = this.fChildOrder(parent);
-      const afterFid = sibs[sibs.indexOf(place.target) + 1];
-      if (afterFid !== undefined) {
-        after = this._fTree.edgeWeight(parent, afterFid) ?? '';
-      }
+  startTransaction(): void {
+    if (this._transaction) {
+      console.warn('startTransaction: Already in a transaction');
     } else {
-      throw new Error('Unreachable');
+      this._transaction = [];
     }
-    return { parent, before, after };
   }
 
-  // Public API - Mutate
+  commitTransaction(): void {
+    if (!this._transaction) {
+      console.warn('commitTransaction: Not in a transaction');
+    } else {
+      const ops = [];
+      for (const part of this._transaction) {
+        for (const op of part) {
+          ops.push(op);
+        }
+      }
+      this._transaction = null;
+      if (ops.length > 0) {
+        this._apply(ops);
+      }
+    }
+  }
+
+  cancelTransaction(): void {
+    if (!this._transaction) {
+      console.warn('cancelTransaction: Not in a transaction');
+    } else {
+      this._transaction = null;
+    }
+  }
 
   /** Creates a feature, returning its fid */
   fCreate(place: FInsertPlace, props: Record<Key, Value> = {}): number {
-    const resolved = this.fResolvePlace(place);
+    const resolved = this._fResolvePlace(place);
     const idx = fracIdxBetween(resolved.before, resolved.after);
     const fid = this._allocateFid();
     this._apply([
@@ -261,8 +278,7 @@ export class SyncEngine {
 
   /** Set a feature property.
    *
-   * # Special properties
-   * - `pos`: Cannot be set
+   * `pos` cannot be set (use `fMove`)
    *
    * # Throws
    * If value is undefined or if a special property rule is violated.
@@ -302,11 +318,10 @@ export class SyncEngine {
       features = order;
     }
 
-    const resolved = this.fResolvePlace(place);
+    const resolved = this._fResolvePlace(place);
     const parent = resolved.parent;
     let before = resolved.before;
     const after = resolved.after;
-
     const ops: SyncOp[] = [];
     for (const fid of features) {
       const idx = fracIdxBetween(before, after);
@@ -318,7 +333,6 @@ export class SyncEngine {
       });
       before = idx;
     }
-
     this._apply(ops);
   }
 
@@ -329,8 +343,7 @@ export class SyncEngine {
 
   /** Set a layer property
    *
-   * # Special properties:
-   * - `idx`: Cannot be set
+   * `idx` cannot be set, use `lMove` instead.
    *
    * # Throws
    * If value is undefined or if a special property rule is violated.
@@ -338,7 +351,27 @@ export class SyncEngine {
   lSet(lid: number, key: string, value: unknown): void {
     if (value === undefined) throw new Error('lSet: value cannot be undefined');
     if (key === 'idx') throw new Error('lSet: Cannot set idx');
+    if (key === 'opacity' && !isLOpacity(value)) {
+      throw new Error('fSet: opacity must be a number between 0 and 1');
+    }
     this._apply([{ action: 'lSet', lid, key, value }]);
+  }
+
+  lMove(layers: number[], place: LInsertPlace): void {
+    const resolved = this._lResolvePlace(place);
+    let before = resolved.before;
+    const after = resolved.after;
+    const ops: SyncOp[] = [];
+    for (const lid of layers) {
+      const idx = fracIdxBetween(before, after);
+      ops.push({ action: 'lSet', lid, key: 'idx', value: idx });
+      before = idx;
+    }
+    this._apply(ops);
+  }
+
+  lRemove(lid: number): void {
+    this._apply([{ action: 'lSet', lid, key: 'idx', value: null }]);
   }
 
   // Public API - Read
@@ -351,65 +384,107 @@ export class SyncEngine {
   /** The value passed to the listener may be mutated after the listener
    * returns.
    */
-  addFGeoListener(listener: FGeoListener): void {
-    this._fGeoListeners.add(listener);
+  addFGeoJsonListener(cb: FGeoListener): FGeoListener {
+    this._fGeoListeners.add(cb);
+    return cb;
   }
 
-  removeFGeoListener(listener: FGeoListener) {
-    this._fGeoListeners.delete(listener);
+  removeFGeoJsonListener(cb: FGeoListener) {
+    this._fGeoListeners.delete(cb);
   }
 
   /** Get the value of a feature property
    *
    * Properties are never undefined, but (unless special) can be null.
    */
-  fProp(fid: number, k: string): unknown {
-    return this._fData.get(fid)?.validProps?.get(k) ?? null;
+  fGet<K extends keyof FPropTypeMap>(
+    fid: number,
+    key: K,
+  ): FPropTypeMap[K] | undefined {
+    if (typeof key !== 'string') throw new Error('fProp: key must be a string');
+    return this._fData.get(fid)?.validProps?.get(key) ?? null;
   }
 
-  addFPropListener(fid: number, k: string, cb: PropListener): void {
+  addFPropListener<K extends keyof FPropTypeMap>(
+    fid: number,
+    key: K,
+    cb: FPropListener<K>,
+  ): FPropListener<K> {
+    if (typeof key !== 'string') throw new Error('fProp: key must be a string');
     const data = this._fData.get(fid);
-    if (data === undefined) return;
+    if (data === undefined) return cb;
     if (data.propNotifier === undefined) data.propNotifier = new Map();
-    const entry = data.propNotifier.get(k);
+    const entry = data.propNotifier.get(key);
+    const erased = cb as FPropListener<string>;
     if (entry === undefined) {
-      data.propNotifier.set(k, { notify: false, listeners: new Set([cb]) });
+      data.propNotifier.set(key, {
+        notify: false,
+        listeners: new Set([erased]),
+      });
     } else {
-      entry.listeners.add(cb);
+      entry.listeners.add(erased);
     }
+    return cb;
   }
 
-  removeFPropListener(fid: number, k: string, cb: PropListener): void {
-    this._fData.get(fid)?.propNotifier?.get(k)?.listeners?.delete(cb);
+  removeFPropListener<K extends keyof FPropTypeMap>(
+    fid: number,
+    key: K,
+    cb: FPropListener<K>,
+  ): void {
+    if (typeof key !== 'string') throw new Error('key must be a string');
+    this._fData
+      .get(fid)
+      ?.propNotifier?.get(key)
+      ?.listeners?.delete(cb as FPropListener<string>);
   }
 
-  lProp(lid: number, k: string): unknown {
+  lGet<K extends keyof LPropTypeMap>(
+    lid: number,
+    k: K,
+  ): LPropTypeMap[K] | undefined {
+    if (typeof k !== 'string') throw new Error('lProp: key must be a string');
     return this._lData.get(lid)?.validProps?.get(k) ?? null;
   }
 
-  addLPropListener(lid: number, k: string, cb: PropListener): void {
+  addLPropListener<K extends keyof LPropTypeMap>(
+    lid: number,
+    key: K,
+    cb: LPropListener<K>,
+  ): LPropListener<K> {
+    if (typeof key !== 'string') throw new Error('lProp: key must be a string');
     const data = this._lData.get(lid);
-    if (data === undefined) return;
-    if (data.propNotifier === undefined) data.propNotifier = new Map();
-    const entry = data.propNotifier.get(k);
+    if (data === undefined) return cb;
+    if (data.propListeners === undefined) data.propListeners = new Map();
+    const entry = data.propListeners.get(key);
+    const erased = cb as LPropListener<string>;
     if (entry === undefined) {
-      data.propNotifier.set(k, { notify: false, listeners: new Set([cb]) });
+      data.propListeners.set(key, new Set([erased]));
     } else {
-      entry.listeners.add(cb);
+      entry.add(erased);
     }
+    return cb;
   }
 
-  removeLPropListener(lid: number, k: string, cb: PropListener): void {
-    this._lData.get(lid)?.propNotifier?.get(k)?.listeners?.delete(cb);
+  removeLPropListener<K extends keyof LPropTypeMap>(
+    lid: number,
+    k: K,
+    cb: LPropListener<K>,
+  ): void {
+    if (typeof k !== 'string') throw new Error('key must be string');
+    this._lData
+      .get(lid)
+      ?.propListeners?.get(k)
+      ?.delete(cb as LPropListener<string>);
   }
 
-  /** Called on every change to a property with the prefix "paint-" */
-  addLPaintPropListener(cb: LPaintPropListener): void {
-    this._lPaintPropListeners.add(cb);
+  addLPropsListener(cb: LPropsListener): LPropsListener {
+    this._lPropsListeners.add(cb);
+    return cb;
   }
 
-  removeLPaintPropListener(cb: LPaintPropListener): void {
-    this._lPaintPropListeners.delete(cb);
+  removeLPropsListener(cb: LPropsListener): void {
+    this._lPropsListeners.delete(cb);
   }
 
   fParent(fid: Fid): Fid | undefined {
@@ -425,14 +500,18 @@ export class SyncEngine {
       .map(([_p, n, _i]) => n);
   }
 
-  addFChildOrderListener(fid: number, cb: FChildOrderListener): void {
+  addFChildOrderListener(
+    fid: number,
+    cb: FChildOrderListener,
+  ): FChildOrderListener {
     const data = this._fData.get(fid);
-    if (data === undefined) return;
+    if (data === undefined) return cb;
     if (data.childOrderListeners === undefined) {
       data.childOrderListeners = new Set([cb]);
     } else {
       data.childOrderListeners.add(cb);
     }
+    return cb;
   }
 
   removeFChildOrderListener(fid: number, cb: FChildOrderListener): void {
@@ -443,13 +522,11 @@ export class SyncEngine {
     return this._lOrder.map(({ lid }) => lid);
   }
 
-  addLOrderListener(cb: LOrderListener): void {
+  addLOrderListener(cb: LOrderListener): LOrderListener {
     this._lOrderListeners.add(cb);
+    return cb;
   }
 
-  /** The `changes` passed to the listener may be mutated after the listener
-   * returns.
-   */
   removeLOrderListener(cb: LOrderListener): void {
     this._lOrderListeners.delete(cb);
   }
@@ -468,6 +545,79 @@ export class SyncEngine {
   }
 
   // Private API
+
+  private _fResolvePlace(place: FInsertPlace): {
+    parent: number;
+    before: FracIdx;
+    after: FracIdx;
+  } {
+    let parent: number;
+    let before = '';
+    let after = '';
+    if (place.at === 'firstChild') {
+      parent = place.target;
+      const afterFid = this.fChildOrder(parent)[0];
+      if (afterFid !== undefined) {
+        after = this._fTree.edgeWeight(parent, afterFid) ?? '';
+      }
+    } else if (place.at === 'before') {
+      const afterFid = place.target;
+      parent = this.fParent(afterFid) ?? 0;
+      after = this._fTree.edgeWeight(parent, afterFid) ?? '';
+
+      const sibs = this.fChildOrder(parent);
+      const beforeFid = sibs[sibs.indexOf(place.target) - 1];
+      if (beforeFid !== undefined) {
+        before = this._fTree.edgeWeight(parent, beforeFid) ?? '';
+      }
+    } else if (place.at === 'after') {
+      const beforeFid = place.target;
+      parent = this.fParent(beforeFid) ?? 0;
+      before = this._fTree.edgeWeight(parent, beforeFid) ?? '';
+
+      const sibs = this.fChildOrder(parent);
+      const afterFid = sibs[sibs.indexOf(place.target) + 1];
+      if (afterFid !== undefined) {
+        after = this._fTree.edgeWeight(parent, afterFid) ?? '';
+      }
+    } else {
+      throw new Error('Unreachable');
+    }
+    return { parent, before, after };
+  }
+
+  private _lResolvePlace(place: LInsertPlace): {
+    before: FracIdx;
+    after: FracIdx;
+  } {
+    let before = '';
+    let after = '';
+    if (place.at === 'first') {
+      after = this._lOrder[0]?.idx || '';
+    } else if (place.at === 'last') {
+      before = this._lOrder.at(-1)?.idx || '';
+    } else {
+      const targetI = this._lOrder.findIndex((p) => p.lid === place.target);
+      if (targetI < 0) {
+        return this._lResolvePlace({ at: 'first' });
+      }
+
+      if (place.at === 'before') {
+        if (targetI > 0) {
+          before = this._lOrder[targetI - 1]!.idx;
+        }
+        after = this._lOrder[targetI]!.idx;
+      } else if (place.at === 'after') {
+        if (targetI < this._lOrder.length - 1) {
+          after = this._lOrder[targetI + 1]!.idx;
+        }
+        before = this._lOrder[targetI]!.idx;
+      } else {
+        throw new Error('Unreachable');
+      }
+    }
+    return { before, after };
+  }
 
   /** All mutations go through
    *
@@ -499,12 +649,41 @@ export class SyncEngine {
         }
       }
     }
-    this._popNotifies();
-    this._send(ops);
+    if (this._transaction !== null) {
+      this._transaction.push(ops);
+    } else {
+      this._popNotifies();
+      this._send(ops);
+    }
   }
 
   private _popNotifies(): void {
     this._updateSummary.count++;
+
+    // Order - must fire before props
+
+    let fChildOrderNotifyCount = 0;
+    for (const fid of this._notifyFChildOrder) {
+      const data = this._fData.get(fid);
+      if (data === undefined) continue;
+      if (data.childOrderListeners !== undefined) {
+        const value = this.fChildOrder(fid);
+        for (const l of data.childOrderListeners) l(value);
+        fChildOrderNotifyCount++;
+      }
+    }
+    this._notifyFChildOrder.clear();
+    this._updateSummary.fChildOrderNotifies.add(fChildOrderNotifyCount);
+
+    if (this._notifyLOrderOps.length > 0) {
+      const value = this.lOrder();
+      const changes = Array.from(this._notifyLOrderOps);
+      for (const l of this._lOrderListeners) l(value, changes);
+      this._updateSummary.lOrderNotifies.add(1);
+      this._notifyLOrderOps.length = 0;
+    }
+
+    // Props - must fire after order
 
     let fPropNotifyCount = 0;
     for (const fid of this._notifyFData) {
@@ -524,19 +703,6 @@ export class SyncEngine {
     this._notifyFData.clear();
     this._updateSummary.fPropNotifies.add(fPropNotifyCount);
 
-    let fChildOrderNotifyCount = 0;
-    for (const fid of this._notifyFChildOrder) {
-      const data = this._fData.get(fid);
-      if (data === undefined) continue;
-      if (data.childOrderListeners !== undefined) {
-        const value = this.fChildOrder(fid);
-        for (const l of data.childOrderListeners) l(value);
-        fChildOrderNotifyCount++;
-      }
-    }
-    this._notifyFChildOrder.clear();
-    this._updateSummary.fChildOrderNotifies.add(fChildOrderNotifyCount);
-
     if (this._notifyFGeoJson) {
       const value = this._fGeoJson; // note not immutable
       for (const l of this._fGeoListeners) l(value);
@@ -546,41 +712,27 @@ export class SyncEngine {
     }
 
     let lPropNotifyCount = 0;
-    let lPaintPropNotifyCount = 0;
     for (const lid of this._notifyLData) {
       const data = this._lData.get(lid);
       if (data === undefined) continue;
+      if (data.notifyProps === undefined) continue;
 
-      if (data.notifyPaintProps !== undefined) {
-        for (const k of data.notifyPaintProps) {
-          const v = data.validProps.get(k);
-          for (const l of this._lPaintPropListeners) l(lid, k, v);
-          lPaintPropNotifyCount++;
-        }
-        data.notifyPaintProps.clear();
-      }
+      for (const k of data.notifyProps) {
+        const v = data.validProps.get(k);
 
-      if (data.propNotifier !== undefined) {
-        for (const [k, entry] of data.propNotifier) {
-          if (!entry.notify) continue;
-          const v = data.validProps.get(k);
-          for (const l of entry.listeners) l(v);
-          entry.notify = false;
-          lPropNotifyCount++;
+        for (const l of this._lPropsListeners) l(lid, k, v);
+
+        const propListeners = data.propListeners?.get(k);
+        if (propListeners !== undefined) {
+          for (const l of propListeners) l(v);
         }
+
+        lPropNotifyCount++;
       }
+      data.notifyProps.clear();
     }
     this._notifyLData.clear();
-    this._updateSummary.lPaintPropNotifies.add(lPaintPropNotifyCount);
     this._updateSummary.lPropNotifies.add(lPropNotifyCount);
-
-    if (this._notifyLOrderOps.length > 0) {
-      const value = this.lOrder();
-      const changes = this._notifyLOrderOps; // note not immutable
-      for (const l of this._lOrderListeners) l(value, changes);
-      this._updateSummary.lOrderNotifies.add(1);
-      this._notifyLOrderOps.length = 0;
-    }
   }
 
   /** Set a property on a feature
@@ -728,10 +880,15 @@ export class SyncEngine {
     }
 
     let invalid = false;
-    if (key === 'idx') {
+    if (!(lid in LAYERS.layers)) {
+      console.log('_lset: invalid as unknown layer');
+      invalid = true;
+    } else if (key === 'idx') {
       if (value !== null && !isFracIdx(value)) {
         throw new Error('_lSet: key=idx but value!==null && !isFracIdx(value)');
-      } else if (this._lOrder.find((v) => v.idx === value) !== undefined) {
+      } else if (
+        this._lOrder.find((v) => v.idx === value && v.lid !== lid) !== undefined
+      ) {
         console.log('_lset: invalid as idx collides');
         invalid = true;
       } else {
@@ -741,23 +898,32 @@ export class SyncEngine {
         }
 
         if (value === null) {
-          this._notifyLOrderOps.push({ type: 'remove', lid });
+          if (prevI !== -1) {
+            this._notifyLOrderOps.push({ type: 'remove', lid });
+          }
         } else {
           this._lOrder.push({ lid, idx: value });
           this._lOrder.sort((a, b) => stringOrd(a.idx, b.idx));
           const newI = this._lOrder.findIndex((i) => i.lid === lid);
+          const before = this._lOrder[newI - 1]?.lid;
           const after = this._lOrder[newI + 1]?.lid;
 
           if (prevI === -1) {
-            this._notifyLOrderOps.push({ type: 'add', lid, after });
+            this._notifyLOrderOps.push({ type: 'add', lid, before, after });
           } else {
-            this._notifyLOrderOps.push({ type: 'move', lid, after });
+            this._notifyLOrderOps.push({ type: 'move', lid, before, after });
           }
         }
+      }
+    } else if (key === 'opacity') {
+      invalid = !isLOpacity(value);
+      if (invalid) {
+        console.log('_lset: invalid as !isLOpacity(value)', value);
       }
     }
 
     if (invalid) {
+      console.warn('_lset: invalid', JSON.stringify({ lid, key, value }));
       if (data.invalidProps === undefined) {
         data.invalidProps = new Map([[key, value]]);
       } else {
@@ -766,26 +932,12 @@ export class SyncEngine {
     } else {
       data.validProps.set(key, value);
 
-      let notifyData = false;
-
-      if (key.startsWith('paint-')) {
-        notifyData = true;
-        if (data.notifyPaintProps === undefined) {
-          data.notifyPaintProps = new Set([key]);
-        } else {
-          data.notifyPaintProps.add(key);
-        }
+      if (data.notifyProps === undefined) {
+        data.notifyProps = new Set([key]);
+      } else {
+        data.notifyProps.add(key);
       }
-
-      const propNotifier = data.propNotifier?.get(key);
-      if (propNotifier !== undefined && propNotifier.listeners.size > 0) {
-        notifyData = true;
-        propNotifier.notify = true;
-      }
-
-      if (notifyData) {
-        this._notifyLData.add(lid);
-      }
+      this._notifyLData.add(lid);
     }
   }
 
@@ -887,6 +1039,10 @@ function isGeoJsonPosition(value: unknown): value is GeoJSON.Position {
     if (typeof v !== 'number') return false;
   }
   return true;
+}
+
+function isLOpacity(value: unknown): value is number {
+  return typeof value === 'number' && value >= 0 && value <= 1;
 }
 
 class RunningSummary {

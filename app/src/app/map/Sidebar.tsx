@@ -17,6 +17,7 @@ import './Sidebar.css';
 import DebugMenu from './DebugMenu';
 import { FInsertPlace, SyncEngine } from '@/sync/SyncEngine';
 import { Button, Item, Menu, MenuTrigger } from '@adobe/react-spectrum';
+import { EditStartChannel } from './EditStartChannel';
 
 const CHILD_INDENT_PX = 16;
 const VERTICAL_GAP_PX = 2;
@@ -26,7 +27,15 @@ interface DragTarget extends FInsertPlace {
   elem: HTMLElement;
 }
 
-export default function Sidebar({ engine }: { engine: SyncEngine }) {
+export default function Sidebar({
+  engine,
+  mapName,
+  editStart,
+}: {
+  engine: SyncEngine;
+  mapName: string;
+  editStart: EditStartChannel;
+}) {
   const [children, setChildren] = useState(() => engine.fChildOrder(0));
   useEffect(() => {
     engine.addFChildOrderListener(0, setChildren);
@@ -59,6 +68,14 @@ export default function Sidebar({ engine }: { engine: SyncEngine }) {
 
   const rootElemRef = useRef<HTMLDivElement>(null);
   const dragAtElemRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const l = (evt: KeyboardEvent) => {
+      if (evt.key === 'Escape') setSelected([]);
+    };
+    window.addEventListener('keyup', l);
+    return () => window.removeEventListener('keyup', l);
+  });
 
   const onDragStart = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
@@ -206,11 +223,17 @@ export default function Sidebar({ engine }: { engine: SyncEngine }) {
 
   return (
     <div
-      className="w-[250px] h-full overflow-y-scroll bg-slate-100"
+      className="h-full overflow-y-scroll bg-slate-100"
       onScroll={onScroll}
       ref={rootElemRef}
     >
-      <Toolbar engine={engine} insertAt={insertAt} />
+      <Toolbar
+        mapName={mapName}
+        engine={engine}
+        insertAt={insertAt}
+        editStart={editStart}
+      />
+
       <ul
         onDragStart={onDragStart}
         onDrop={onDrop}
@@ -277,31 +300,42 @@ function positionDragAtMarker(
 function Toolbar({
   engine,
   insertAt,
+  editStart,
+  mapName,
 }: {
   engine: SyncEngine;
   insertAt: MutableRefObject<FInsertPlace>;
+  editStart: EditStartChannel;
+  mapName: string;
 }) {
-  const onAdd = useCallback(
-    (action: string | number) => {
-      switch (action) {
-        case 'folder': {
-          engine.fCreate(insertAt.current);
-        }
-      }
-    },
-    [engine, insertAt],
-  );
   return (
     <div className="sticky top-0 z-10 flex p-2 bg-white">
-      <div>
+      <div className="flex items-center">
         <DebugMenu engine={engine} />
+        <span className="ml-4">{mapName}</span>
       </div>
-      <div className="flex justify-end grow">
+      <div className="flex items-center justify-end grow">
         <MenuTrigger>
           <Button variant="accent">
             <AddFeatureIcon />
           </Button>
-          <Menu onAction={onAdd}>
+          <Menu
+            onAction={(key) => {
+              switch (key) {
+                case 'folder':
+                  engine.fCreate(insertAt.current);
+                  break;
+                case 'route':
+                  editStart.emit({
+                    type: 'createRoute',
+                    insertAt: { ...insertAt.current },
+                  });
+                  break;
+                default:
+                  throw new Error('Unreachable');
+              }
+            }}
+          >
             <Item key="folder">New folder</Item>
           </Menu>
         </MenuTrigger>

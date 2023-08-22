@@ -1,0 +1,11 @@
+{
+  "lid": 1,
+  "name": "Satellite",
+  "sublayers": [
+    {
+      "id": "layer",
+      "type": "raster",
+      "source": "mapbox.satellite"
+    }
+  ]
+}

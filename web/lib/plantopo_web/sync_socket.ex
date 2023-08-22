@@ -4,7 +4,7 @@ defmodule PlanTopoWeb.SyncSocket do
   require Logger
 
   defmodule State do
-    defstruct [:map_id, :client_id, :engine]
+    defstruct [:map_id, :session_id, :engine]
   end
 
   @impl true
@@ -13,7 +13,7 @@ defmodule PlanTopoWeb.SyncSocket do
 
     state = %State{
       map_id: map_id,
-      client_id: nil,
+      session_id: nil,
       # Do not connect until authed
       engine: nil
     }
@@ -31,18 +31,18 @@ defmodule PlanTopoWeb.SyncSocket do
   def websocket_init(state), do: {[], state}
 
   @impl true
-  def websocket_handle({:text, input}, state) when is_nil(state.client_id) do
+  def websocket_handle({:text, input}, state) when is_nil(state.session_id) do
     # We haven't authenticated yet
 
     %{"token" => token} = Jason.decode!(input)
 
-    {:ok, client_id, engine} =
+    {:ok, session_id, engine} =
       Sync.connect(%{
         map_id: state.map_id,
         token: token
       })
 
-    state = %{state | client_id: client_id, engine: engine}
+    state = %{state | session_id: session_id, engine: engine}
 
     {[], state}
   end
@@ -56,7 +56,7 @@ defmodule PlanTopoWeb.SyncSocket do
         {[], state}
 
       "op" ->
-        :ok = Sync.recv(state.engine, state.client_id, msg)
+        :ok = Sync.recv(state.engine, state.session_id, msg)
         {[], state}
     end
   end

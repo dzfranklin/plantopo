@@ -8,15 +8,15 @@ defmodule PlanTopo.Accounts do
 
   alias PlanTopo.Accounts.{User, UserToken, UserNotifier}
 
-  @spec frontend_tokens_for(User.t() | nil) :: %{String.t() => String.t()}
+  @spec frontend_tokens_for(User.t() | nil) :: %{String.t() => %{String.t() => String.t()}}
   def frontend_tokens_for(_user) do
     # TODO: Restrict to certain users
     values = Application.fetch_env!(:plantopo, :frontend_tokens)
 
     %{
-      "mapbox" => Keyword.get(values, :mapbox),
-      "os" => Keyword.get(values, :os),
-      "maptiler" => Keyword.get(values, :maptiler)
+      "api.mapbox.com" => %{"access_token" => Keyword.get(values, :mapbox)},
+      "api.os.uk" => %{"key" => Keyword.get(values, :os)},
+      "api.maptiler.com" => %{"key" => Keyword.get(values, :maptiler)}
     }
   end
 
