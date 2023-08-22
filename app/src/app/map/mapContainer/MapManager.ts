@@ -14,6 +14,7 @@ export class MapManager extends ml.Map {
   private _editStart: EditStartChannel;
   private _activeLayers: Lid[] = [];
   private _draw: MapboxDraw;
+  private _topLeftControls: HTMLDivElement;
 
   private _boundOnFGeoJson = this._onFGeoJson.bind(this);
   private _boundOnLOrder = this._onLOrder.bind(this);
@@ -52,6 +53,19 @@ export class MapManager extends ml.Map {
       attributionControl: false, // So that we can implement our own
       transformRequest: (url: string) => this._transformRequest(url),
     });
+
+    this._topLeftControls = this._container.querySelector(
+      '.maplibregl-ctrl-top-left',
+    )!;
+
+    this._draw = new MapboxDraw({
+      controls: {
+        combine_features: false,
+        uncombine_features: false,
+      },
+    });
+    this.addControl(this._draw as unknown as ml.IControl, 'top-left');
+    this._fixMbClasses(['mapboxgl-ctrl-group', 'mapboxgl-ctrl']);
 
     this._tokens = tokens;
     this._engine = engine;
@@ -96,6 +110,25 @@ export class MapManager extends ml.Map {
     this._editStart.on = this._onEditStart.bind(this);
 
     console.log('Setup maplibre Map', this);
+  }
+
+  private _pendingSidebarResize: number | null = null;
+  resizeForSidebar(width: number) {
+    if (this._pendingSidebarResize !== null) {
+      cancelAnimationFrame(this._pendingSidebarResize);
+    }
+    this._pendingSidebarResize = requestAnimationFrame(() => {
+      this._pendingSidebarResize = null;
+      this._topLeftControls.style.left = `${width}px`;
+    });
+  }
+
+  private _fixMbClasses(classes: string[]) {
+    for (const cls of classes) {
+      for (const el of this._container.getElementsByClassName(cls)) {
+        el.classList.add(cls.replace('mapboxgl', 'maplibregl'));
+      }
+    }
   }
 
   remove() {
