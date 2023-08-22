@@ -77,7 +77,8 @@ export function FeatureTree({
   const onDragStart = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
       const rootElem = rootRef.current;
-      if (!rootElem || !dragAtElemRef.current) return;
+      const dragAtElem = dragAtElemRef.current;
+      if (!rootElem || !dragAtElem) return;
 
       if (!(evt.target instanceof HTMLElement)) return;
       if (evt.target.dataset.fid === undefined) return;
@@ -99,28 +100,31 @@ export function FeatureTree({
         }
       }
 
-      rootElem.classList.add('dragging');
-
       evt.dataTransfer.effectAllowed = 'move';
-      evt.dataTransfer.setData('x-pt', 'selected');
+      // evt.dataTransfer.setData('text/plain', selected.join(','));
+      evt.dataTransfer.setData('x-pt/features', 'selected');
       // Hide ghost as won't reflect what is actually being dragged
       evt.dataTransfer.setDragImage(new Image(), 0, 0);
 
-      const targetRect = evt.target.getBoundingClientRect();
-      positionDragAtMarker(dragAtElemRef.current, targetRect, 'after', false);
+      const targetElem = evt.target;
+      requestAnimationFrame(() => {
+        const targetRect = targetElem.getBoundingClientRect();
+        rootElem.classList.add('dragging');
+        positionDragAtMarker(dragAtElem, targetRect, 'after', false);
+      });
     },
     [engine, selected, setSelected],
   );
 
   const onDragEnter = useCallback<DragEventHandler<HTMLUListElement>>((evt) => {
-    if (evt.dataTransfer.getData('x-pt') === '') {
+    if (evt.dataTransfer.types.includes('x/pt')) {
       return;
     }
     evt.preventDefault();
   }, []);
 
   const onDragOver = useCallback<DragEventHandler<HTMLUListElement>>((evt) => {
-    if (evt.dataTransfer.getData('x-pt') === '') {
+    if (evt.dataTransfer.types.includes('x/pt')) {
       return;
     }
 
@@ -166,7 +170,10 @@ export function FeatureTree({
   const onDrop = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
       const target = dragTargetRef.current;
-      if (evt.dataTransfer.getData('x-pt') !== 'selected' || target === null) {
+      if (
+        evt.dataTransfer.getData('x-pt/features') !== 'selected' ||
+        target === null
+      ) {
         return;
       }
 
