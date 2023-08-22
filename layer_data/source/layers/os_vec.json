@@ -1,6 +1,6 @@
 {
   "lid": 3,
-  "name": "Ordinance Survey Vector",
+  "name": "Ordinance Survey Vector (UK)",
   "sublayers": "../os_vec_sublayers.json",
   "sprites": "osv",
   "rewriteSublayerTilesets": {
