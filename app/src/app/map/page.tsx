@@ -42,14 +42,22 @@ export default function MapPage() {
 
   const [sidebarWidth, setSidebarWidth] = useState<number>(200);
   const loadedSidebarWidth = useRef(false);
+  const pendingSidebarSave = useRef<number | null>(null);
   useEffect(() => {
-    if (loadedSidebarWidth.current) {
-      // Only overwrite if we've already loaded
-      localStorage.setItem('sidebarWidth', JSON.stringify(sidebarWidth));
-    } else {
+    if (!loadedSidebarWidth.current) {
+      // The first time we run overwrite
       const value = localStorage.getItem('sidebarWidth');
       if (value) setSidebarWidth(JSON.parse(value));
       loadedSidebarWidth.current = true;
+    } else {
+      // On subsequent runs save
+      if (pendingSidebarSave.current !== null) {
+        cancelIdleCallback(pendingSidebarSave.current);
+      }
+      pendingSidebarSave.current = requestIdleCallback(() => {
+        pendingSidebarSave.current = null;
+        localStorage.setItem('sidebarWidth', JSON.stringify(sidebarWidth));
+      });
     }
   }, [sidebarWidth]);
 
