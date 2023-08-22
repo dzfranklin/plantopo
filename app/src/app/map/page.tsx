@@ -2,11 +2,11 @@
 
 import { SyncSocket } from '@/sync/SyncSocket';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Sidebar from './Sidebar';
+import Sidebar from './sidebar/Sidebar';
 import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
 import ErrorTechInfo from '@/app/components/ErrorTechInfo';
 import { SyncEngine } from '@/sync/SyncEngine';
-import { MapContainer } from './MapContainer';
+import { MapContainer } from './mapContainer/MapContainer';
 import { EditStartChannel } from './EditStartChannel';
 
 export default function MapPage() {

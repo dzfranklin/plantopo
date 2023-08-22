@@ -1,4 +1,4 @@
-import cls from '@/app/cls';
+import { FInsertPlace, SyncEngine } from '@/sync/SyncEngine';
 import {
   Dispatch,
   DragEventHandler,
@@ -12,12 +12,7 @@ import {
   useState,
 } from 'react';
 import AddAtIcon from '@spectrum-icons/workflow/Add';
-import AddFeatureIcon from '@spectrum-icons/workflow/Add';
-import './Sidebar.css';
-import DebugMenu from './DebugMenu';
-import { FInsertPlace, SyncEngine } from '@/sync/SyncEngine';
-import { Button, Item, Menu, MenuTrigger } from '@adobe/react-spectrum';
-import { EditStartChannel } from './EditStartChannel';
+import cls from '@/app/cls';
 
 const CHILD_INDENT_PX = 16;
 const VERTICAL_GAP_PX = 2;
@@ -27,14 +22,13 @@ interface DragTarget extends FInsertPlace {
   elem: HTMLElement;
 }
 
-export default function Sidebar({
+export function FeatureTree({
   engine,
-  mapName,
-  editStart,
+  insertAt,
 }: {
   engine: SyncEngine;
-  mapName: string;
-  editStart: EditStartChannel;
+  /** mutated by FeatureTree as user selects */
+  insertAt: MutableRefObject<FInsertPlace>;
 }) {
   const [children, setChildren] = useState(() => engine.fChildOrder(0));
   useEffect(() => {
@@ -44,7 +38,6 @@ export default function Sidebar({
 
   const [selected, _setSelected] = useState<number[]>([]);
   const dragTargetRef = useRef<DragTarget | null>(null);
-  const insertAt = useRef<FInsertPlace>({ at: 'firstChild', target: 0 });
   const setSelected = useCallback((arg: SetStateAction<number[]>) => {
     if (typeof arg === 'function') {
       _setSelected((p) => {
@@ -66,7 +59,7 @@ export default function Sidebar({
     }
   }, []);
 
-  const rootElemRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLUListElement>(null);
   const dragAtElemRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,7 +72,7 @@ export default function Sidebar({
 
   const onDragStart = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
-      const rootElem = rootElemRef.current;
+      const rootElem = rootRef.current;
       if (!rootElem || !dragAtElemRef.current) return;
 
       if (!(evt.target instanceof HTMLElement)) return;
@@ -127,7 +120,7 @@ export default function Sidebar({
       return;
     }
 
-    const rootElem = rootElemRef.current;
+    const rootElem = rootRef.current;
     const dragAtElem = dragAtElemRef.current;
     if (!rootElem || !dragAtElem) return;
 
@@ -177,14 +170,14 @@ export default function Sidebar({
       setSelected([]);
 
       dragTargetRef.current = null;
-      rootElemRef.current?.classList.remove('dragging');
+      rootRef.current?.classList.remove('dragging');
       evt.preventDefault();
     },
     [engine, selected, setSelected],
   );
 
   const onDragEnd = useCallback<DragEventHandler<HTMLUListElement>>((_evt) => {
-    rootElemRef.current?.classList.remove('dragging');
+    rootRef.current?.classList.remove('dragging');
   }, []);
 
   const dragMarkerDirty = useRef(false);
@@ -209,60 +202,49 @@ export default function Sidebar({
     }
   }, []);
 
-  const onScroll = useCallback<UIEventHandler<HTMLDivElement>>(
+  const onScroll = useCallback<UIEventHandler<HTMLUListElement>>(
     (_evt) => maybeDirtyDragMarker(),
     [maybeDirtyDragMarker],
   );
 
   useEffect(() => {
-    if (!rootElemRef.current) return;
+    if (!rootRef.current) return;
     const observer = new ResizeObserver((_entries) => maybeDirtyDragMarker());
-    observer.observe(rootElemRef.current);
+    observer.observe(rootRef.current);
     () => observer.disconnect();
   }, [maybeDirtyDragMarker]);
 
   return (
-    <div
-      className="h-full overflow-y-scroll bg-slate-100"
+    <ul
+      onDragStart={onDragStart}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      className="grow overflow-y-scroll pt-0.5 pb-10"
       onScroll={onScroll}
-      ref={rootElemRef}
+      ref={rootRef}
     >
-      <Toolbar
-        mapName={mapName}
-        engine={engine}
-        insertAt={insertAt}
-        editStart={editStart}
-      />
+      {children.map((child) => (
+        <Entry
+          key={child}
+          fid={child}
+          engine={engine}
+          selected={selected}
+          setSelected={setSelected}
+        />
+      ))}
 
-      <ul
-        onDragStart={onDragStart}
-        onDrop={onDrop}
-        onDragEnd={onDragEnd}
-        onDragEnter={onDragEnter}
-        onDragOver={onDragOver}
-        className="pt-0.5 pb-10"
-      >
-        {children.map((child) => (
-          <Entry
-            key={child}
-            fid={child}
-            engine={engine}
-            selected={selected}
-            setSelected={setSelected}
+      <div ref={dragAtElemRef} className="z-20 drag-at-marker">
+        <div className="flex items-center h-3 gap-1 mr-2 text-white">
+          <hr className="flex-grow border-0 h-[1.5px] bg-blue-500" />
+          <AddAtIcon
+            height="0.75rem"
+            UNSAFE_className="h-3 rounded-full bg-blue-500"
           />
-        ))}
-
-        <div ref={dragAtElemRef} className="z-20 drag-at-marker">
-          <div className="flex items-center h-3 gap-1 mr-2 text-white">
-            <hr className="flex-grow border-0 h-[1.5px] bg-blue-500" />
-            <AddAtIcon
-              height="0.75rem"
-              UNSAFE_className="h-3 rounded-full bg-blue-500"
-            />
-          </div>
         </div>
-      </ul>
-    </div>
+      </div>
+    </ul>
   );
 }
 
@@ -295,53 +277,6 @@ function positionDragAtMarker(
   }
   dragAtElem.style.width = `${toWidth}px`;
   dragAtElem.style.transform = `translateX(${toX}px) translateY(${toY}px)`;
-}
-
-function Toolbar({
-  engine,
-  insertAt,
-  editStart,
-  mapName,
-}: {
-  engine: SyncEngine;
-  insertAt: MutableRefObject<FInsertPlace>;
-  editStart: EditStartChannel;
-  mapName: string;
-}) {
-  return (
-    <div className="sticky top-0 z-10 flex p-2 bg-white">
-      <div className="flex items-center">
-        <DebugMenu engine={engine} />
-        <span className="ml-4">{mapName}</span>
-      </div>
-      <div className="flex items-center justify-end grow">
-        <MenuTrigger>
-          <Button variant="accent">
-            <AddFeatureIcon />
-          </Button>
-          <Menu
-            onAction={(key) => {
-              switch (key) {
-                case 'folder':
-                  engine.fCreate(insertAt.current);
-                  break;
-                case 'route':
-                  editStart.emit({
-                    type: 'createRoute',
-                    insertAt: { ...insertAt.current },
-                  });
-                  break;
-                default:
-                  throw new Error('Unreachable');
-              }
-            }}
-          >
-            <Item key="folder">New folder</Item>
-          </Menu>
-        </MenuTrigger>
-      </div>
-    </div>
-  );
 }
 
 interface Entry {

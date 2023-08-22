@@ -1,28 +1,20 @@
 import RootOverlay from '@/app/components/RootOverlay';
 import { LAYERS, LayerData } from '@/layers';
-import { LInsertPlace, Lid, SyncEngine } from '@/sync/SyncEngine';
+import { SyncEngine } from '@/sync/SyncEngine';
 import {
   ActionButton,
-  Button,
-  Content,
   Dialog,
   DialogTrigger,
-  Heading,
   Slider,
-  SpectrumActionButtonProps,
-  ToggleButton,
   useDragAndDrop,
 } from '@adobe/react-spectrum';
 import { ListView, Item } from '@react-spectrum/list';
-import { DOMProps, FocusableRef, FocusableRefValue } from '@react-types/shared';
+import { DOMProps } from '@react-types/shared';
 import EditIcon from '@spectrum-icons/workflow/Edit';
 import LayersIcon from '@spectrum-icons/workflow/Layers';
 import {
-  MutableRefObject,
   ReactNode,
-  Ref,
   RefObject,
-  forwardRef,
   useCallback,
   useEffect,
   useMemo,
@@ -31,7 +23,6 @@ import {
 } from 'react';
 import {
   AriaButtonProps,
-  Overlay,
   useButton,
   useDialog,
   useOverlayTrigger,
@@ -90,7 +81,7 @@ function ControlPopover({
   children: ReactNode;
 }) {
   const popoverRef = useRef<HTMLDivElement>(null);
-  const { underlayProps, popoverProps, arrowProps, placement } = usePopover(
+  const { underlayProps, popoverProps, arrowProps } = usePopover(
     {
       popoverRef,
       triggerRef,

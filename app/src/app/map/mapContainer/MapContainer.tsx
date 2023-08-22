@@ -6,7 +6,7 @@ import {
 } from '@/sync/SyncEngine';
 import { useEffect, useRef } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { EditStartChannel } from './EditStartChannel';
+import { EditStartChannel } from '../EditStartChannel';
 import { MapManager } from './MapManager';
 import { LayersControl } from './LayersControl';
 import { useQuery } from 'react-query';
@@ -43,7 +43,7 @@ export function MapContainer({
   }, [engine, tokensLoaded, tokens, editStart]);
 
   return (
-    <div ref={containerRef}>
+    <div ref={containerRef} className="absolute inset-0">
       <LayersControl engine={engine} />
     </div>
   );

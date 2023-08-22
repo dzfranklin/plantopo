@@ -1,6 +1,6 @@
 import { LOrderOp, Lid, RootGeoJson, SyncEngine } from '@/sync/SyncEngine';
 import * as ml from 'maplibre-gl';
-import { EditStartChannel, EditStartEvent } from './EditStartChannel';
+import { EditStartChannel, EditStartEvent } from '../EditStartChannel';
 import { LAYERS } from '@/layers';
 
 const GLYPH_URL = 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf';
