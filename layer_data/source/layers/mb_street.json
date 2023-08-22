@@ -1,0 +1,9 @@
+{
+  "lid": 5,
+  "name": "Streets",
+  "sublayers": "../mb_streets_sublayers.json",
+  "sprites": "mb_streets",
+  "rewriteSublayerTilesets": {
+    "composite": "mb_streets"
+  }
+}

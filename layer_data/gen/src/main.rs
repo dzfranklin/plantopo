@@ -6,6 +6,7 @@ use std::{
 
 use eyre::{bail, eyre, Context};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -62,6 +63,7 @@ struct Sublayer {
     #[serde(rename = "type")]
     _type: SublayerType,
     source: Option<String>,
+    filter: Option<Value>,
     #[serde(default)]
     paint: HashMap<String, serde_json::Value>,
     #[serde(default)]
@@ -171,10 +173,31 @@ fn rewrite_layer(
         subl.id = format!("{lid}:{}", subl.id);
 
         rewrite_sprite_refs(sprites.as_deref(), subl)?;
+        for (key, value) in &mut subl.paint {
+            rewrite_expr(&subl.id, &(format!("paint.{key}")), value)?;
+        }
+        for (key, value) in &mut subl.layout {
+            rewrite_expr(&subl.id, &(format!("layout.{key}")), value)?;
+        }
+        if let Some(value) = &mut subl.filter {
+            rewrite_expr(&subl.id, "filter", value)?;
+        }
 
         let mut opacity = HashMap::new();
         for prop in opacity_props_for(subl._type) {
-            let value = subl.paint.get(&prop).cloned().unwrap_or(1.into());
+            let orig_value = subl.paint.get(&prop).cloned().unwrap_or(1.into());
+            let mut in_context = Value::Array(vec!["*".into(), orig_value, 0.5.into()]);
+            rewrite_expr(
+                &format!("{}-opacity-prop-context", subl.id),
+                &prop,
+                &mut in_context,
+            )?;
+            let value = in_context
+                .get(2)
+                .ok_or(eyre!(
+                    "rewrite_expr unexpectedly changed shape of opacity prop context"
+                ))
+                .cloned()?;
             opacity.insert(prop, value);
         }
         sublayer_opacity.insert(subl.id.clone(), opacity);
@@ -200,6 +223,54 @@ fn rewrite_layer(
         sprites,
         sublayer_opacity,
     })
+}
+
+fn rewrite_expr(layer_id: &str, prop: &str, value: &mut Value) -> eyre::Result<()> {
+    let label = format!("{layer_id}.{prop}");
+    _rewrite_expr(&label, prop, value).wrap_err_with(|| {
+        eyre!(
+            "rewrite_expr {label} ({})",
+            serde_json::to_string(value).unwrap(),
+        )
+    })
+}
+
+fn _rewrite_expr(label: &str, prop: &str, value: &mut Value) -> eyre::Result<()> {
+    match value {
+        Value::Array(expr) => match expr.get(0) {
+            Some(first) => match first.as_str() {
+                Some("step") if prop == "layout.icon-image" => {
+                    eprintln!("{label} step in layout.icon-image unsupported, picking first");
+                    // 1 is the predicate, 2 is the first option
+                    let first_option = expr.get(2).ok_or(eyre!("step missing first option"))?;
+                    *value = first_option.clone();
+                    Ok(())
+                }
+                Some("literal") => Ok(()),
+                Some("pitch") => {
+                    eprintln!("{label} Replacing unsupported pitch expr with default");
+                    *value = Value::Number(0.into());
+                    Ok(())
+                }
+                Some("distance-from-center") => {
+                    eprintln!(
+                        "{label} Replacing unsupported distance-from-center expr with center"
+                    );
+                    *value = Value::Number(0.into());
+                    Ok(())
+                }
+                _ => {
+                    for (i, sub) in expr.iter_mut().enumerate().skip(1) {
+                        let label = format!("{label}.[{i}]");
+                        _rewrite_expr(&label, prop, sub)?;
+                    }
+                    Ok(())
+                }
+            },
+            None => Ok(()),
+        },
+        _ => Ok(()),
+    }
 }
 
 fn opacity_props_for(ty: SublayerType) -> Vec<String> {
