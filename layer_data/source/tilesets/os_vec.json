@@ -3,6 +3,6 @@
   "spec": {
     "type": "vector",
     "url": "https://api.os.uk/maps/vector/v1/vts?key=",
-    "attribution": "<!-- OS_LOGO -->Contains OS data &copy; Crown copyright and database rights {currentYear}"
+    "attribution": "<!-- SHOW_OS_LOGO -->Contains OS data &copy; Crown copyright and database rights CURRENT_YEAR"
   }
 }
