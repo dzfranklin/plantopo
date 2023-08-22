@@ -97,6 +97,7 @@ function AttribFull({ attribs }: { attribs: Attribs }) {
 
 function toAttribHtml(layers: number[]): { id: string; html: string }[] {
   const attribs = [];
+  const tilesets = new Set<string>();
   for (const lid of layers) {
     const ldata = LAYERS.layers[lid];
     if (!ldata) continue;
@@ -105,12 +106,15 @@ function toAttribHtml(layers: number[]): { id: string; html: string }[] {
       attribs.push({ id: `layer-${lid}`, html });
     }
     for (const tid of ldata.sublayerTilesets) {
-      const tdata = LAYERS.tilesets[tid];
-      if (!tdata) continue;
-      if ('attribution' in tdata && tdata.attribution !== undefined) {
-        const html = rewriteHtml(tdata.attribution);
-        attribs.push({ id: `tileset-${tid}`, html });
-      }
+      tilesets.add(tid);
+    }
+  }
+  for (const tid of tilesets) {
+    const tdata = LAYERS.tilesets[tid];
+    if (!tdata) continue;
+    if ('attribution' in tdata && tdata.attribution !== undefined) {
+      const html = rewriteHtml(tdata.attribution);
+      attribs.push({ id: `tileset-${tid}`, html });
     }
   }
   attribs.sort((a, b) => stringOrd(a.id, b.id));
