@@ -181,6 +181,9 @@ export class MapManager extends ml.Map {
             });
           }
         }
+
+        const opacity = this._engine.lGet(op.lid, 'opacity');
+        this._setLayerOpacity(op.lid, opacity ?? layer.defaultOpacity);
       } else if (op.type === 'move') {
         let sublBefore: string | undefined;
         if (op.before !== undefined) {
