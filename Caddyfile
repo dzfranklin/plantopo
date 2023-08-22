@@ -1,0 +1,39 @@
+{
+	email daniel@danielzfranklin.org
+
+	exec npm run dev {
+		directory app/
+		timeout 0
+		startup
+	}
+}
+
+www.localhost {
+	redir https://localhost{uri}
+}
+
+(base) {
+	encode zstd gzip
+	reverse_proxy /api/* localhost:4000
+}
+
+localhost {
+	reverse_proxy * localhost:3000
+	import base
+}
+
+prod.localhost {
+	rewrite /map /map.html
+
+	file_server {
+		root app/out
+		disable_canonical_uris
+	}
+
+	handle_errors {
+		rewrite * /{err.status_code}.html
+		file_server
+	}
+
+	import base
+}

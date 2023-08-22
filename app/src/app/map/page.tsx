@@ -35,7 +35,13 @@ export default function MapPage() {
   useEffect(() => {
     if (mapId === null) return;
     if (socketRef.current && socketRef.current.mapId === mapId) return;
-    const socket = new SyncSocket(mapId, setEngine, setSyncError);
+    const socket = new SyncSocket({
+      mapId,
+      onConnect: setEngine,
+      onError: setSyncError,
+      domain: location.host,
+      secure: location.protocol !== 'http:',
+    });
     console.log('Created socket', socket);
     socket.connect();
     socketRef.current = socket;

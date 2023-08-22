@@ -10,17 +10,17 @@ import {
 } from './socketMessages';
 
 export class SyncSocket {
-  private static readonly _SOCKET_URL =
-    process.env.NEXT_PUBLIC_MAP_SYNC_SOCKET_URL ||
-    (() => {
-      throw new Error('Missing NEXT_PUBLIC_MAP_SYNC_SOCKET_URL');
-    })();
+  public readonly mapId: number;
 
   private static readonly _KEEPALIVE_INTERVAL_MS = 15_000;
 
   private _connectStart: number | undefined; // unix timestamp, for debugging
   private _sessionId: number | undefined; // server assigned session id, for debugging
 
+  private _onConnect: (_: SyncEngine) => void;
+  private _onError: (_: Error) => void;
+  private _domain: string;
+  private _secure: boolean;
   private _engine: SyncEngine | undefined;
   private _socket: WebSocket | undefined;
   private _pending: Map<number, SyncOp[]> = new Map();
@@ -28,11 +28,19 @@ export class SyncSocket {
   private _closing = false;
   private _keepalive: number | undefined;
 
-  constructor(
-    public readonly mapId: number,
-    public onConnect: (_: SyncEngine) => void,
-    public onError: (_: Error) => void,
-  ) {}
+  constructor(props: {
+    mapId: number;
+    domain: string;
+    secure: boolean;
+    onConnect: (_: SyncEngine) => void;
+    onError: (_: Error) => void;
+  }) {
+    this.mapId = props.mapId;
+    this._domain = props.domain;
+    this._secure = props.secure;
+    this._onConnect = props.onConnect;
+    this._onError = props.onError;
+  }
 
   connect(): void {
     if (this._socket !== undefined) {
@@ -40,7 +48,8 @@ export class SyncSocket {
       return;
     }
 
-    const url = new URL(SyncSocket._SOCKET_URL);
+    const base = `${this._secure ? 'wss' : 'ws'}://${this._domain}/`;
+    const url = new URL('/api/map_sync', base);
     url.searchParams.set('id', this.mapId.toString());
 
     this._log('Connecting to', url.toString());
@@ -156,7 +165,7 @@ export class SyncSocket {
         },
       });
       this._engine.receive(msg.state);
-      this.onConnect(this._engine);
+      this._onConnect(this._engine);
     } else {
       this._log('Reconnect accepted');
       this._engine.receive(msg.state);
@@ -167,7 +176,7 @@ export class SyncSocket {
   }
 
   private _onRecvError(msg: ErrorMsg): void {
-    this.onError(new Error(msg.error, { cause: new Error(msg.details) }));
+    this._onError(new Error(msg.error, { cause: new Error(msg.details) }));
     this.close();
   }
 

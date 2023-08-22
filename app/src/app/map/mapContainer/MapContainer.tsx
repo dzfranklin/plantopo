@@ -7,7 +7,6 @@ import { EditStartChannel } from '../EditStartChannel';
 import { MapManager } from './MapManager';
 import { LayersControl } from './LayersControl';
 import { useQuery } from 'react-query';
-import apiBaseUrl from '@/app/apiBaseUrl';
 import { AttributionControl } from './attributionControl/AttributionControl';
 
 export function MapContainer({
@@ -20,7 +19,7 @@ export function MapContainer({
   sidebarWidth: number;
 }) {
   const { isSuccess: tokensLoaded, data: tokens } = useQuery('tokens', () =>
-    fetch(apiBaseUrl + '/tokens.json').then((res) => res.json()),
+    fetch('/api/tokens.json').then((res) => res.json()),
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
