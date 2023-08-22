@@ -11,7 +11,7 @@ defmodule PlanTopoWeb.UserRegistrationLive do
         Register for an account
         <:subtitle>
           Already registered?
-          <.link navigate={~p"/users/log_in"} class="font-semibold text-brand hover:underline">
+          <.link navigate={~p"/account/login"} class="font-semibold text-brand hover:underline">
             Sign in
           </.link>
           to your account now.
@@ -25,7 +25,7 @@ defmodule PlanTopoWeb.UserRegistrationLive do
         phx-submit="save"
         phx-change="validate"
         phx-trigger-action={@trigger_submit}
-        action={~p"/users/log_in?_action=registered"}
+        action={~p"/account/login?_action=registered"}
         method="post"
         as={:user}
       >
@@ -63,7 +63,7 @@ defmodule PlanTopoWeb.UserRegistrationLive do
         {:ok, _} =
           Accounts.deliver_user_confirmation_instructions(
             user,
-            &url(~p"/users/confirm/#{&1}")
+            &url(~p"/account/confirm/#{&1}")
           )
 
         changeset = Accounts.change_user_registration(user)

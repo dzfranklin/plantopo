@@ -4,17 +4,17 @@
       <%= @current_user.username %>
     </li>
     <li>
-      <.link href={~p"/users/settings"}>Settings</.link>
+      <.link href={~p"/account/settings"}>Settings</.link>
     </li>
     <li>
-      <.link href={~p"/users/log_out"} method="delete">Log out</.link>
+      <.link href={~p"/account/log_out"} method="delete">Log out</.link>
     </li>
   <% else %>
     <li>
-      <.link href={~p"/users/register"}>Register</.link>
+      <.link href={~p"/account/register"}>Register</.link>
     </li>
     <li>
-      <.link href={~p"/users/log_in"}>Log in</.link>
+      <.link href={~p"/account/login"}>Log in</.link>
     </li>
   <% end %>
 </ul>

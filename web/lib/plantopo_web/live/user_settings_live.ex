@@ -60,7 +60,7 @@ defmodule PlanTopoWeb.UserSettingsLive do
       :let={f}
       id="password_form"
       for={@password_changeset}
-      action={~p"/users/log_in?_action=password_updated"}
+      action={~p"/account/login?_action=password_updated"}
       method="post"
       phx-change="validate_password"
       phx-submit="update_password"
@@ -141,7 +141,7 @@ defmodule PlanTopoWeb.UserSettingsLive do
           put_flash(socket, :error, "Email change link is invalid or it has expired.")
       end
 
-    {:ok, push_navigate(socket, to: ~p"/users/settings")}
+    {:ok, push_navigate(socket, to: ~p"/account/settings")}
   end
 
   def mount(_params, _session, socket) do
@@ -204,7 +204,7 @@ defmodule PlanTopoWeb.UserSettingsLive do
         Accounts.deliver_user_update_email_instructions(
           applied_user,
           user.email,
-          &url(~p"/users/settings/confirm_email/#{&1}")
+          &url(~p"/account/settings/confirm_email/#{&1}")
         )
         |> case do
           {:ok, _} ->

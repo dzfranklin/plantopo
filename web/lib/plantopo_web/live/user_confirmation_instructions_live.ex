@@ -15,9 +15,9 @@ defmodule PlanTopoWeb.UserConfirmationInstructionsLive do
     </.simple_form>
 
     <p>
-      <.link href={~p"/users/register"}>Register</.link>
+      <.link href={~p"/account/register"}>Register</.link>
       |
-      <.link href={~p"/users/log_in"}>Log in</.link>
+      <.link href={~p"/account/login"}>Log in</.link>
     </p>
     """
   end
@@ -30,7 +30,7 @@ defmodule PlanTopoWeb.UserConfirmationInstructionsLive do
     if user = Accounts.get_user_by_email(email) do
       case Accounts.deliver_user_confirmation_instructions(
              user,
-             &url(~p"/users/confirm/#{&1}")
+             &url(~p"/account/confirm/#{&1}")
            ) do
         {:ok, _} ->
           nil

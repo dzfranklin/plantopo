@@ -27,7 +27,7 @@ defmodule PlanTopoWeb.Router do
 
     get "/", PageController, :home
     get "/map/:id", MapController, :show
-    delete "/account/log_out", UserSessionController, :delete
+    delete "/account/logout", UserSessionController, :delete
 
     live_session :current_user,
       on_mount: [{PlanTopoWeb.UserAuth, :mount_current_user}] do
@@ -51,12 +51,12 @@ defmodule PlanTopoWeb.Router do
     live_session :redirect_if_user_is_authenticated,
       on_mount: [{PlanTopoWeb.UserAuth, :redirect_if_user_is_authenticated}] do
       live "/account/register", UserRegistrationLive, :new
-      live "/account/log_in", UserLoginLive, :new
+      live "/account/login", UserLoginLive, :new
       live "/account/reset_password", UserForgotPasswordLive, :new
       live "/account/reset_password/:token", UserResetPasswordLive, :edit
     end
 
-    post "/account/log_in", UserSessionController, :create
+    post "/account/login", UserSessionController, :create
   end
 
   ## Auth required

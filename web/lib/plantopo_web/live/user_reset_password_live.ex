@@ -32,9 +32,9 @@ defmodule PlanTopoWeb.UserResetPasswordLive do
       </.simple_form>
 
       <p class="text-center mt-4">
-        <.link href={~p"/users/register"}>Register</.link>
+        <.link href={~p"/account/register"}>Register</.link>
         |
-        <.link href={~p"/users/log_in"}>Log in</.link>
+        <.link href={~p"/account/login"}>Log in</.link>
       </p>
     </div>
     """
@@ -63,7 +63,7 @@ defmodule PlanTopoWeb.UserResetPasswordLive do
         {:noreply,
          socket
          |> put_flash(:info, "Password reset successfully.")
-         |> redirect(to: ~p"/users/log_in")}
+         |> redirect(to: ~p"/account/login")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, :changeset, Map.put(changeset, :action, :insert))}
