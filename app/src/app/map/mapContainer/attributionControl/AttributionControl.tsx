@@ -122,16 +122,16 @@ function toAttribHtml(layers: number[]): { id: string; html: string }[] {
 }
 
 function toLogos(attribs: Attribs): Logos {
-  const logos = [];
+  const logos = new Map<string, string>();
   for (const { html } of attribs) {
     if (html.includes('SHOW_OS_LOGO')) {
-      logos.push({ alt: 'ordnance survey', src: osLogo.src });
+      logos.set(osLogo.src, 'ordnance survey');
     }
     if (html.includes('SHOW_MAPBOX_LOGO')) {
-      logos.push({ alt: 'mapbox', src: mapboxLogo.src });
+      logos.set(mapboxLogo.src, 'mapbox');
     }
   }
-  return logos;
+  return [...logos.entries()].map(([src, alt]) => ({ src, alt }));
 }
 
 function rewriteHtml(html: string): string {
