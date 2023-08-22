@@ -59,7 +59,6 @@ export class MapManager extends ml.Map {
 
   private _setup() {
     this.addControl(new ml.NavigationControl());
-    this.addControl(new ml.ScaleControl({}));
     this.addControl(new ml.FullscreenControl());
     this.addControl(new ml.GeolocateControl({}));
 

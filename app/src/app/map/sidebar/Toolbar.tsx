@@ -10,18 +10,22 @@ export function Toolbar({
   insertAt,
   editStart,
   mapName,
+  width,
 }: {
   engine: SyncEngine;
   insertAt: MutableRefObject<FInsertPlace>;
   editStart: EditStartChannel;
   mapName: string;
+  width: number;
 }) {
   return (
-    <div className="flex p-2 bg-white">
-      <div className="flex items-center">
-        <DebugMenu engine={engine} />
-        <span className="ml-4">{mapName}</span>
-      </div>
+    <div className="flex min-w-0 p-2 bg-white">
+      {width > 10 && (
+        <div className="flex items-center min-w-0 truncate">
+          <DebugMenu engine={engine} />
+          <span className="ml-4 truncate ">{mapName}</span>
+        </div>
+      )}
       <div className="flex items-center justify-end grow">
         <MenuTrigger>
           <Button variant="accent">

@@ -28,7 +28,8 @@ export default function RootLayout({
             locale="en-US"
             scale="medium"
           >
-            <div id="root">{children}</div>
+            {children}
+            <div id="portal-container" className="z-[60]"></div>
           </SpectrumProvider>
         </QueryClientProvider>
       </body>

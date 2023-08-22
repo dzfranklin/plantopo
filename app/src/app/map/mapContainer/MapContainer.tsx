@@ -11,13 +11,16 @@ import { MapManager } from './MapManager';
 import { LayersControl } from './LayersControl';
 import { useQuery } from 'react-query';
 import apiBaseUrl from '@/app/apiBaseUrl';
+import { AttributionControl } from './attributionControl/AttributionControl';
 
 export function MapContainer({
   engine,
   editStart,
+  sidebarWidth,
 }: {
   engine: SyncEngine;
   editStart: EditStartChannel;
+  sidebarWidth: number;
 }) {
   const { isSuccess: tokensLoaded, data: tokens } = useQuery('tokens', () =>
     fetch(apiBaseUrl + '/tokens.json').then((res) => res.json()),
@@ -43,8 +46,9 @@ export function MapContainer({
   }, [engine, tokensLoaded, tokens, editStart]);
 
   return (
-    <div ref={containerRef} className="absolute inset-0">
+    <div ref={containerRef} className="w-full h-full">
       <LayersControl engine={engine} />
+      <AttributionControl engine={engine} sidebarWidth={sidebarWidth} />
     </div>
   );
 }

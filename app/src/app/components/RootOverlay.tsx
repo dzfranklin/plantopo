@@ -5,8 +5,8 @@ export default function RootOverlay(
   props: Exclude<OverlayProps, 'portalContainer'>,
 ) {
   const root = useMemo(() => {
-    const root = document.getElementById('root');
-    if (!root) throw new Error('Missing #root');
+    const root = document.getElementById('portal-container');
+    if (!root) throw new Error('Missing #portal-container');
     return root;
   }, []);
   return <Overlay {...props} portalContainer={root} />;

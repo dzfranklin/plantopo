@@ -5,6 +5,7 @@
     "plugin:@typescript-eslint/recommended"
   ],
   "rules": {
+    "@next/next/no-img-element": "off",
     "quotes": [
       "warn",
       "single"

@@ -225,7 +225,7 @@ export function FeatureTree({
       onDragEnd={onDragEnd}
       onDragEnter={onDragEnter}
       onDragOver={onDragOver}
-      className="grow overflow-y-scroll pt-0.5 pb-10"
+      className="grow overflow-y-auto pt-0.5 pb-10"
       onScroll={onScroll}
       ref={rootRef}
     >

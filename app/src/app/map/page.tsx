@@ -37,10 +37,24 @@ export default function MapPage() {
     socketRef.current = socket;
     () => socket.close();
   }, [mapId]);
+
   const editStart = useMemo(() => new EditStartChannel(), []);
 
+  const [sidebarWidth, setSidebarWidth] = useState<number>(200);
+  const loadedSidebarWidth = useRef(false);
+  useEffect(() => {
+    if (loadedSidebarWidth.current) {
+      // Only overwrite if we've already loaded
+      localStorage.setItem('sidebarWidth', JSON.stringify(sidebarWidth));
+    } else {
+      const value = localStorage.getItem('sidebarWidth');
+      if (value) setSidebarWidth(JSON.parse(value));
+      loadedSidebarWidth.current = true;
+    }
+  }, [sidebarWidth]);
+
   return (
-    <div className="grid h-screen grid-cols-[250px_1fr] grid-rows-1 overflow-hidden">
+    <div className="grid w-screen h-screen grid-cols-1 overflow-hidden">
       <DialogContainer isDismissable={false} onDismiss={() => {}}>
         {syncError && (
           <AlertDialog
@@ -59,8 +73,18 @@ export default function MapPage() {
         <p>Connecting...</p>
       ) : (
         <>
-          <Sidebar engine={engine} mapName={mapName} editStart={editStart} />
-          <MapContainer engine={engine} editStart={editStart} />
+          <MapContainer
+            engine={engine}
+            editStart={editStart}
+            sidebarWidth={sidebarWidth}
+          />
+          <Sidebar
+            engine={engine}
+            mapName={mapName}
+            editStart={editStart}
+            width={sidebarWidth}
+            setWidth={setSidebarWidth}
+          />
         </>
       )}
     </div>
