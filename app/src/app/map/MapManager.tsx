@@ -123,51 +123,43 @@ export class MapManager extends ml.Map {
     );
   }
 
-  private _onLOrder(_value: Lid[], changes: LOrderOp[]) {
-    requestIdleCallback(
-      () => {
-        for (const op of changes) {
-          const layer = LAYERS.layers[op.lid];
-          if (!layer) throw new Error(`Missing layer ${op.lid}`);
+  private _onLOrder(value: Lid[], changes: LOrderOp[]) {
+    for (const op of changes) {
+      const layer = LAYERS.layers[op.lid];
+      if (!layer) throw new Error(`Missing layer ${op.lid}`);
 
-          if (op.type === 'add') {
-            let sublBefore: string | undefined;
-            if (op.before !== undefined) {
-              const layerBefore = LAYERS.layers[op.before];
-              if (!layerBefore) throw new Error(`Missing layer ${op.before}`);
-              sublBefore = layerBefore.sublayers.at(-1)?.id;
-            }
-            for (const subl of layer.sublayers) {
-              try {
-                this.addLayer(subl, sublBefore);
-              } catch (err) {
-                throw new Error(
-                  `Failed to add sublayer ${JSON.stringify(subl)}`,
-                  {
-                    cause: err instanceof Error ? err : undefined,
-                  },
-                );
-              }
-            }
-          } else if (op.type === 'move') {
-            let sublBefore: string | undefined;
-            if (op.before !== undefined) {
-              const layerAfter = LAYERS.layers[op.before];
-              if (!layerAfter) throw new Error(`Missing layer ${op.before}`);
-              sublBefore = layerAfter.sublayers[0]?.id;
-            }
-            for (const subl of layer.sublayers) {
-              this.moveLayer(subl.id, sublBefore);
-            }
-          } else if (op.type === 'remove') {
-            for (const subl of layer.sublayers) {
-              this.removeLayer(subl.id);
-            }
+      if (op.type === 'add') {
+        let sublBefore: string | undefined;
+        if (op.before !== undefined) {
+          const layerBefore = LAYERS.layers[op.before];
+          if (!layerBefore) throw new Error(`Missing layer ${op.before}`);
+          sublBefore = layerBefore.sublayers.at(-1)?.id;
+        }
+        for (const subl of layer.sublayers) {
+          try {
+            this.addLayer(subl, sublBefore);
+          } catch (err) {
+            throw new Error(`Failed to add sublayer ${JSON.stringify(subl)}`, {
+              cause: err instanceof Error ? err : undefined,
+            });
           }
         }
-      },
-      { timeout: 100 },
-    );
+      } else if (op.type === 'move') {
+        let sublBefore: string | undefined;
+        if (op.before !== undefined) {
+          const layerAfter = LAYERS.layers[op.before];
+          if (!layerAfter) throw new Error(`Missing layer ${op.before}`);
+          sublBefore = layerAfter.sublayers[0]?.id;
+        }
+        for (const subl of layer.sublayers) {
+          this.moveLayer(subl.id, sublBefore);
+        }
+      } else if (op.type === 'remove') {
+        for (const subl of layer.sublayers) {
+          this.removeLayer(subl.id);
+        }
+      }
+    }
   }
 
   private _onLProps(lid: Lid, k: string, v: unknown) {
@@ -176,33 +168,21 @@ export class MapManager extends ml.Map {
     }
   }
 
-  private _prevSetOpacity = new Map<Lid, number>();
   private _setLayerOpacity(lid: Lid, opacity: number | null) {
-    const prev = this._prevSetOpacity.get(lid);
-    if (prev !== undefined) {
-      cancelIdleCallback(prev);
-    }
-
-    const token = requestIdleCallback(
-      () => {
-        const layer = LAYERS.layers[lid];
-        if (!layer) throw new Error(`Missing layer ${lid}`);
-        const multiplier = opacity ?? layer.defaultOpacity;
-        for (const [id, props] of Object.entries(layer.sublayerOpacity)) {
-          for (const [name, initialValue] of Object.entries(props)) {
-            if (typeof initialValue === 'number') {
-              this.setPaintProperty(id, name, initialValue * multiplier, {
-                validate: false,
-              });
-            } else {
-              this.setPaintProperty(id, name, ['*', initialValue, multiplier]);
-            }
-          }
+    const layer = LAYERS.layers[lid];
+    if (!layer) throw new Error(`Missing layer ${lid}`);
+    const multiplier = opacity ?? layer.defaultOpacity;
+    for (const [id, props] of Object.entries(layer.sublayerOpacity)) {
+      for (const [name, initialValue] of Object.entries(props)) {
+        if (typeof initialValue === 'number') {
+          this.setPaintProperty(id, name, initialValue * multiplier, {
+            validate: false,
+          });
+        } else {
+          this.setPaintProperty(id, name, ['*', initialValue, multiplier]);
         }
-      },
-      { timeout: 100 },
-    );
-    this._prevSetOpacity.set(lid, token);
+      }
+    }
   }
 
   private _transformRequest(from: string): { url: string } {
