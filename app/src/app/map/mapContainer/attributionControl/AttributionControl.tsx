@@ -35,11 +35,11 @@ export function AttributionControl({
 
   return (
     <div
-      className="absolute bottom-0 right-0 z-10 flex items-end min-w-0 gap-5 ml-5 mr-16"
+      className="absolute bottom-0 right-0 z-10 flex items-end min-w-0 gap-3 ml-2 mr-16"
       style={{ left: `${sidebarWidth}px` }}
     >
       {logos.length > 0 && (
-        <div className="min-w-fit h-[32px] mb-2 flex gap-3 pointer-events-none">
+        <div className="min-w-fit h-[20px] mb-1 flex gap-1 pointer-events-none">
           {logos.map(({ alt, src }) => (
             <img src={src} alt={alt} key={src} />
           ))}
