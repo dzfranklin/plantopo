@@ -352,7 +352,7 @@ export class SyncEngine {
     if (value === undefined) throw new Error('lSet: value cannot be undefined');
     if (key === 'idx') throw new Error('lSet: Cannot set idx');
     if (key === 'opacity' && !isLOpacity(value)) {
-      throw new Error('fSet: opacity must be a number between 0 and 1');
+      throw new Error('lSet: invalid opacity');
     }
     this._apply([{ action: 'lSet', lid, key, value }]);
   }
@@ -1042,7 +1042,9 @@ function isGeoJsonPosition(value: unknown): value is GeoJSON.Position {
 }
 
 function isLOpacity(value: unknown): value is number {
-  return typeof value === 'number' && value >= 0 && value <= 1;
+  return (
+    value === null || (typeof value === 'number' && value >= 0 && value <= 1)
+  );
 }
 
 class RunningSummary {
