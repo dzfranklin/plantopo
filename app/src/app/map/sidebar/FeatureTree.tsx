@@ -13,6 +13,7 @@ import {
 } from 'react';
 import AddAtIcon from '@spectrum-icons/workflow/Add';
 import cls from '@/app/cls';
+import './FeatureTree.css';
 
 const CHILD_INDENT_PX = 16;
 const VERTICAL_GAP_PX = 2;
@@ -38,26 +39,29 @@ export function FeatureTree({
 
   const [selected, _setSelected] = useState<number[]>([]);
   const dragTargetRef = useRef<DragTarget | null>(null);
-  const setSelected = useCallback((arg: SetStateAction<number[]>) => {
-    if (typeof arg === 'function') {
-      _setSelected((p) => {
-        const v = arg(p);
-        const target = v.at(-1) ?? 0;
+  const setSelected = useCallback(
+    (arg: SetStateAction<number[]>) => {
+      if (typeof arg === 'function') {
+        _setSelected((p) => {
+          const v = arg(p);
+          const target = v.at(-1) ?? 0;
+          insertAt.current = {
+            target,
+            at: target === 0 ? 'firstChild' : 'after',
+          };
+          return v;
+        });
+      } else {
+        const target = arg.at(-1) ?? 0;
         insertAt.current = {
           target,
           at: target === 0 ? 'firstChild' : 'after',
         };
-        return v;
-      });
-    } else {
-      const target = arg.at(-1) ?? 0;
-      insertAt.current = {
-        target,
-        at: target === 0 ? 'firstChild' : 'after',
-      };
-      _setSelected(arg);
-    }
-  }, []);
+        _setSelected(arg);
+      }
+    },
+    [insertAt],
+  );
 
   const rootRef = useRef<HTMLUListElement>(null);
   const dragAtElemRef = useRef<HTMLDivElement>(null);
