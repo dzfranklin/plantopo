@@ -2,6 +2,7 @@ import { LOrderOp, Lid, RootGeoJson, SyncEngine } from '@/sync/SyncEngine';
 import * as ml from 'maplibre-gl';
 import { EditStartChannel, EditStartEvent } from '../EditStartChannel';
 import { LAYERS } from '@/layers';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
 
 const GLYPH_URL = 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf';
 
@@ -12,6 +13,7 @@ export class MapManager extends ml.Map {
   private _engine: SyncEngine;
   private _editStart: EditStartChannel;
   private _activeLayers: Lid[] = [];
+  private _draw: MapboxDraw;
 
   private _boundOnFGeoJson = this._onFGeoJson.bind(this);
   private _boundOnLOrder = this._onLOrder.bind(this);
@@ -50,6 +52,7 @@ export class MapManager extends ml.Map {
       attributionControl: false, // So that we can implement our own
       transformRequest: (url: string) => this._transformRequest(url),
     });
+
     this._tokens = tokens;
     this._engine = engine;
     this._editStart = editStart;

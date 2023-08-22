@@ -1,4 +1,4 @@
-import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
+import { Dispatch, SetStateAction, useRef } from 'react';
 import { FInsertPlace, SyncEngine } from '@/sync/SyncEngine';
 import { EditStartChannel } from '../EditStartChannel';
 import { FeatureTree } from './FeatureTree';

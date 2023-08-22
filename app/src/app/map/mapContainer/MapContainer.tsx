@@ -1,11 +1,6 @@
-import {
-  LOrderListener,
-  LPropsListener,
-  Lid,
-  SyncEngine,
-} from '@/sync/SyncEngine';
-import { useEffect, useRef } from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { SyncEngine } from '@/sync/SyncEngine';
+import { useEffect, useRef } from 'react';
 import { EditStartChannel } from '../EditStartChannel';
 import { MapManager } from './MapManager';
 import { LayersControl } from './LayersControl';

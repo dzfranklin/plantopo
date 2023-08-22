@@ -2,15 +2,9 @@ import osLogo from './osLogo.svg';
 import mapboxLogo from './mapboxLogo.svg';
 import { SyncEngine } from '@/sync/SyncEngine';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import { LAYERS, LayerData } from '@/layers';
+import { LAYERS } from '@/layers';
 import stringOrd from '@/stringOrd';
-import {
-  Content,
-  Dialog,
-  DialogContainer,
-  DialogTrigger,
-  Header,
-} from '@adobe/react-spectrum';
+import { Content, Dialog, DialogContainer } from '@adobe/react-spectrum';
 
 type Attribs = { id: string; html: string }[];
 
