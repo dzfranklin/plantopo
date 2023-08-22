@@ -25,8 +25,6 @@ defmodule PlanTopoWeb.Router do
   scope "/", PlanTopoWeb do
     pipe_through [:browser]
 
-    get "/", PageController, :home
-    get "/map/:id", MapController, :show
     delete "/account/logout", UserSessionController, :delete
 
     live_session :current_user,
@@ -40,8 +38,6 @@ defmodule PlanTopoWeb.Router do
     pipe_through :api
 
     get "/tokens.json", TokensController, :index
-    get "/resources.json", ResourcesController, :index
-    post "/report_tile_loads", ReportTileLoadsController, :post
   end
 
   ## Auth forbidden
