@@ -113,13 +113,13 @@ export class MapManager extends ml.Map {
   }
 
   private _pendingSidebarResize: number | null = null;
-  resizeForSidebar(width: number) {
+  resizeForSidebar(sidebarWidth: number) {
     if (this._pendingSidebarResize !== null) {
       cancelAnimationFrame(this._pendingSidebarResize);
     }
     this._pendingSidebarResize = requestAnimationFrame(() => {
       this._pendingSidebarResize = null;
-      this._topLeftControls.style.left = `${width}px`;
+      this._topLeftControls.style.left = `${sidebarWidth}px`;
     });
   }
 
