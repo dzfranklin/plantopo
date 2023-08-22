@@ -5,11 +5,6 @@ Dotenv.load!()
 config :plantopo, PlanTopo.Maps,
   server_secret: System.fetch_env!("PLANTOPO_SYNC_SERVER_SECRET")
 
-config :plantopo, :frontend_tokens,
-  mapbox: System.fetch_env!("MAPBOX_ACCESS_TOKEN"),
-  os: System.fetch_env!("OS_API_KEY"),
-  maptiler: System.fetch_env!("MAPTILER_KEY")
-
 config :locus, :license_key, System.fetch_env!("MAXMIND_LICENSE_KEY")
 
 # config/runtime.exs is executed for all environments, including
