@@ -172,15 +172,12 @@ export class MapManager extends ml.Map {
 
   private _onLProps(lid: Lid, k: string, v: unknown) {
     if (k === 'opacity') {
-      if (v === null) {
-        v = LAYERS.layers[lid]!.defaultOpacity;
-      }
-      this._setLayerOpacity(lid, v as number);
+      this._setLayerOpacity(lid, v as number | null);
     }
   }
 
   private _prevSetOpacity = new Map<Lid, number>();
-  private _setLayerOpacity(lid: Lid, opacity: number) {
+  private _setLayerOpacity(lid: Lid, opacity: number | null) {
     const prev = this._prevSetOpacity.get(lid);
     if (prev !== undefined) {
       cancelIdleCallback(prev);
@@ -190,14 +187,15 @@ export class MapManager extends ml.Map {
       () => {
         const layer = LAYERS.layers[lid];
         if (!layer) throw new Error(`Missing layer ${lid}`);
+        const multiplier = opacity ?? layer.defaultOpacity;
         for (const [id, props] of Object.entries(layer.sublayerOpacity)) {
           for (const [name, initialValue] of Object.entries(props)) {
             if (typeof initialValue === 'number') {
-              this.setPaintProperty(id, name, initialValue * opacity, {
+              this.setPaintProperty(id, name, initialValue * multiplier, {
                 validate: false,
               });
             } else {
-              this.setPaintProperty(id, name, ['*', initialValue, opacity]);
+              this.setPaintProperty(id, name, ['*', initialValue, multiplier]);
             }
           }
         }
