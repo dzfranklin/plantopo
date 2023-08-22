@@ -61,11 +61,13 @@ function ControlOpenButton(props: {
 }) {
   const { buttonProps } = useButton(props.buttonProps, props.buttonRef);
   return (
-    <div className="bg-white rounded border-gray-400 p-1.5 border absolute bottom-0 right-0 z-30 m-[10px]">
-      <button {...buttonProps} ref={props.buttonRef}>
-        <LayersIcon />
-      </button>
-    </div>
+    <button
+      className="bg-white rounded border-gray-400 p-1.5 border absolute bottom-0 right-0 z-30 m-[10px]"
+      {...buttonProps}
+      ref={props.buttonRef}
+    >
+      <LayersIcon />
+    </button>
   );
 }
 
@@ -87,7 +89,7 @@ function ControlPopover({
       triggerRef,
       containerPadding: 10,
       placement: 'top',
-      offset: 15,
+      offset: 10,
     },
     popoverState,
   );
