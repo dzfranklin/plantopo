@@ -27,12 +27,12 @@ defmodule PlanTopoWeb.Router do
 
     get "/", PageController, :home
     get "/map/:id", MapController, :show
-    delete "/users/log_out", UserSessionController, :delete
+    delete "/account/log_out", UserSessionController, :delete
 
     live_session :current_user,
       on_mount: [{PlanTopoWeb.UserAuth, :mount_current_user}] do
-      live "/users/confirm/:token", UserConfirmationLive, :edit
-      live "/users/confirm", UserConfirmationInstructionsLive, :new
+      live "/account/confirm/:token", UserConfirmationLive, :edit
+      live "/account/confirm", UserConfirmationInstructionsLive, :new
     end
   end
 
@@ -50,13 +50,13 @@ defmodule PlanTopoWeb.Router do
 
     live_session :redirect_if_user_is_authenticated,
       on_mount: [{PlanTopoWeb.UserAuth, :redirect_if_user_is_authenticated}] do
-      live "/users/register", UserRegistrationLive, :new
-      live "/users/log_in", UserLoginLive, :new
-      live "/users/reset_password", UserForgotPasswordLive, :new
-      live "/users/reset_password/:token", UserResetPasswordLive, :edit
+      live "/account/register", UserRegistrationLive, :new
+      live "/account/log_in", UserLoginLive, :new
+      live "/account/reset_password", UserForgotPasswordLive, :new
+      live "/account/reset_password/:token", UserResetPasswordLive, :edit
     end
 
-    post "/users/log_in", UserSessionController, :create
+    post "/account/log_in", UserSessionController, :create
   end
 
   ## Auth required
@@ -67,8 +67,8 @@ defmodule PlanTopoWeb.Router do
     live_session :require_authenticated_user,
       on_mount: [{PlanTopoWeb.UserAuth, :ensure_authenticated}] do
       live "/maps", MapsLive, :index
-      live "/users/settings", UserSettingsLive, :edit
-      live "/users/settings/confirm_email/:token", UserSettingsLive, :confirm_email
+      live "/account/settings", UserSettingsLive, :edit
+      live "/account/settings/confirm_email/:token", UserSettingsLive, :confirm_email
     end
   end
 
