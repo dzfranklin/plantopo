@@ -3,7 +3,11 @@
 import { SyncSocket } from '@/sync/SyncSocket';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './sidebar/Sidebar';
-import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
+import {
+  AlertDialog,
+  DialogContainer,
+  ProgressCircle,
+} from '@adobe/react-spectrum';
 import ErrorTechInfo from '@/app/components/ErrorTechInfo';
 import { SyncEngine } from '@/sync/SyncEngine';
 import { MapContainer } from './mapContainer/MapContainer';
@@ -72,7 +76,7 @@ export default function MapPage() {
   }, [sidebarWidth]);
 
   return (
-    <div className="grid w-screen h-screen grid-cols-1 overflow-hidden">
+    <div className="grid w-screen h-screen overflow-hidden">
       <DialogContainer isDismissable={false} onDismiss={() => {}}>
         {syncError && (
           <AlertDialog
@@ -88,7 +92,10 @@ export default function MapPage() {
       </DialogContainer>
 
       {engine === undefined ? (
-        <p>Connecting...</p>
+        <div className="grid place-self-center place-items-center">
+          <ProgressCircle isIndeterminate aria-label="loading" size="L" />
+          <h1 className="mt-4 text-center">Opening map</h1>
+        </div>
       ) : (
         <>
           <MapContainer
