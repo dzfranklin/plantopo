@@ -1,4 +1,4 @@
-import { Dispatch, SetStateAction, useRef } from 'react';
+import { useRef } from 'react';
 import { FInsertPlace, SyncEngine } from '@/sync/SyncEngine';
 import { EditStartChannel } from '../EditStartChannel';
 import { FeatureTree } from './FeatureTree';
@@ -16,7 +16,7 @@ export default function Sidebar({
   mapName: string;
   editStart: EditStartChannel;
   width: number;
-  setWidth: Dispatch<SetStateAction<number>>;
+  setWidth: (_: number) => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const insertAt = useRef<FInsertPlace>({ at: 'firstChild', target: 0 });

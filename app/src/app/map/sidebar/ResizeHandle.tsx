@@ -14,11 +14,7 @@ const END_EVENTS: Array<'pointerup' | 'pointercancel' | 'pointerleave'> = [
   'pointerleave',
 ];
 
-export function ResizeHandle({
-  setWidth,
-}: {
-  setWidth: Dispatch<SetStateAction<number>>;
-}) {
+export function ResizeHandle({ setWidth }: { setWidth: (_: number) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const dragAnimPrev = useRef<number | null>(null);
   const dragAnimNext = useRef<number | null>(null);
