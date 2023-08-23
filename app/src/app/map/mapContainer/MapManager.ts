@@ -36,12 +36,14 @@ export class MapManager extends ml.Map {
     editStart,
     onMoveEnd,
     initialCamera,
+    setIsLoading,
   }: {
     container: HTMLElement;
     engine: SyncEngine;
     editStart: EditStartChannel;
     onMoveEnd: (_: CameraPosition) => void;
     initialCamera: CameraPosition | null;
+    setIsLoading: (isLoading: boolean) => void;
   }) {
     super({
       container: container,
@@ -80,6 +82,10 @@ export class MapManager extends ml.Map {
     this._fixMbClasses(['mapboxgl-ctrl-group', 'mapboxgl-ctrl']);
 
     this.once('styledata', () => this._setup());
+
+    this.on('data', () => {
+      setIsLoading(!this.areTilesLoaded());
+    });
 
     // The first move is fired to set it to the value configued in the style
     this.on('moveend', () => {
