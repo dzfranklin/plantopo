@@ -6,7 +6,6 @@ import { useEffect, useRef } from 'react';
 import { EditStartChannel } from '../EditStartChannel';
 import { MapManager } from './MapManager';
 import { LayersControl } from './LayersControl';
-import { useQuery } from 'react-query';
 import { AttributionControl } from './attributionControl/AttributionControl';
 
 export function MapContainer({
