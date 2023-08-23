@@ -157,10 +157,8 @@ defmodule PlanTopo.Sync.Engine do
   defp send_bcast(sessions, except, msg) do
     msg = Jason.encode!(msg)
 
-    for {cid, pid} <- sessions do
-      if cid != except do
-        send(pid, {self(), :send, msg})
-      end
-    end
+    sessions
+    |> Enum.filter(fn {p, _} -> p != except end)
+    |> Enum.each(fn {_, pid} -> send(pid, {self(), :send, msg}) end)
   end
 end
