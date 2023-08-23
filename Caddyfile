@@ -1,15 +1,12 @@
 {
-	email daniel@danielzfranklin.org
-
-	log {
-		level debug
-	}
-
+	debug
 	exec npm run dev {
 		directory app/
 		timeout 0
 		startup
 	}
+
+	email daniel@danielzfranklin.org
 }
 
 (cors_allow_origin) {
