@@ -199,9 +199,6 @@ function OrderControl({ engine }: { engine: SyncEngine }) {
         const value = item.getText('x-pt/lmove-inactive').then(deserializeKey);
         values.push(value);
       }
-      if (values.length > 0) {
-        setSelectedKeys([]);
-      }
       const ids = await Promise.all(values);
       ids.sort(
         (a, b) =>
@@ -217,9 +214,6 @@ function OrderControl({ engine }: { engine: SyncEngine }) {
         if (!item.types.has('x-pt/lmove-inactive')) continue;
         const v = item.getText('x-pt/lmove-inactive').then(deserializeKey);
         values.push(v);
-      }
-      if (values.length > 0) {
-        setSelectedKeys([]);
       }
       const ids = await Promise.all(values);
       ids.sort(
@@ -246,9 +240,6 @@ function OrderControl({ engine }: { engine: SyncEngine }) {
         if (!item.types.has('x-pt/lmove-active')) continue;
         const v = item.getText('x-pt/lmove-active').then(deserializeKey);
         values.push(v);
-      }
-      if (values.length > 0) {
-        setSelectedKeys([]);
       }
       const ids = await Promise.all(values);
 
