@@ -16,7 +16,7 @@ config :esbuild,
   version: "0.17.7",
   default: [
     args:
-      ~w(js/app.js js/map.tsx --format=esm --bundle --target=es2020 --jsx=automatic --jsx-dev --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+      ~w(js/app.js --format=esm --bundle --target=es2020 --jsx=automatic --jsx-dev --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
     cd: Path.expand("../assets", __DIR__),
     env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
   ]
