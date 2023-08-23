@@ -186,14 +186,14 @@ fn rewrite_layer(
         let mut opacity = HashMap::new();
         for prop in opacity_props_for(subl._type) {
             let orig_value = subl.paint.get(&prop).cloned().unwrap_or(1.into());
-            let mut in_context = Value::Array(vec!["*".into(), orig_value, 0.5.into()]);
+            let mut in_context = Value::Array(vec!["*".into(), orig_value, 0.into()]);
             rewrite_expr(
                 &format!("{}-opacity-prop-context", subl.id),
                 &prop,
                 &mut in_context,
             )?;
             let value = in_context
-                .get(2)
+                .get(1)
                 .ok_or(eyre!(
                     "rewrite_expr unexpectedly changed shape of opacity prop context"
                 ))
