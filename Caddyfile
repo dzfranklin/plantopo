@@ -40,6 +40,7 @@ localhost {
 }
 
 prod.localhost {
+	import primary
 	rewrite /map /map.html
 
 	file_server {
@@ -51,8 +52,6 @@ prod.localhost {
 		rewrite * /{err.status_code}.html
 		file_server
 	}
-
-	import primary
 }
 
 (proxy) {
