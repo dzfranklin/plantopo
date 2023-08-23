@@ -27,20 +27,23 @@ www.localhost {
 (primary) {
 	encode zstd gzip
 	import cors_allow_frontend
-	reverse_proxy /assets/* localhost:4000
-	reverse_proxy /api/* localhost:4000
-	reverse_proxy /account/* localhost:4000
-	reverse_proxy /live/* localhost:4000
+
+	reverse_proxy * localhost:4000
 }
 
 localhost {
 	import primary
-	reverse_proxy /phoenix/* localhost:4000 # for live reload
-	reverse_proxy * localhost:3000
+
+	@next {
+		path /_next/*
+		path /map
+	}
+	reverse_proxy @next localhost:3000
 }
 
 prod.localhost {
 	import primary
+
 	rewrite /map /map.html
 
 	file_server {
@@ -80,16 +83,16 @@ prod.localhost {
 }
 
 mapbox-proxy.localhost {
-	rewrite ?{query}&access_token={$PLANTOPO_MAPBOX_ACCESS_TOKEN}
+	rewrite ?{query}&access_token={env.PLANTOPO_MAPBOX_ACCESS_TOKEN}
 	import proxy mapbox https://api.mapbox.com
 }
 
 os-proxy.localhost {
-	rewrite ?{query}&srs=3857&key={$PLANTOPO_OS_API_KEY}
+	rewrite ?{query}&srs=3857&key={env.PLANTOPO_OS_API_KEY}
 	import proxy os https://api.os.uk
 }
 
 maptiler-proxy.localhost {
-	rewrite ?{query}&key={$PLANTOPO_MAPTILER_KEY}
+	rewrite ?{query}&key={env.PLANTOPO_MAPTILER_KEY}
 	import proxy maptiler https://api.maptiler.com
 }
