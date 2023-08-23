@@ -1,6 +1,10 @@
 {
 	email daniel@danielzfranklin.org
 
+	log {
+		level debug
+	}
+
 	exec npm run dev {
 		directory app/
 		timeout 0
@@ -8,12 +12,24 @@
 	}
 }
 
+(cors_allow_origin) {
+	@origin{args[0]} header Origin {args[0]}
+	header @origin{args[0]} Access-Control-Allow-Origin "{args[0]}"
+	header @origin{args[0]} Access-Control-Allow-Methods "OPTIONS,HEAD,GET,POST,PUT,PATCH,DELETE"
+}
+
+(cors_allow_frontend) {
+	import cors_allow_origin https://localhost
+	import cors_allow_origin https://prod.localhost
+}
+
 www.localhost {
 	redir https://localhost{uri}
 }
 
-(base) {
+(primary) {
 	encode zstd gzip
+	import cors_allow_frontend
 	reverse_proxy /assets/* localhost:4000
 	reverse_proxy /api/* localhost:4000
 	reverse_proxy /account/* localhost:4000
@@ -21,7 +37,7 @@ www.localhost {
 }
 
 localhost {
-	import base
+	import primary
 	reverse_proxy /phoenix/* localhost:4000 # for live reload
 	reverse_proxy * localhost:3000
 }
@@ -39,5 +55,50 @@ prod.localhost {
 		file_server
 	}
 
-	import base
+	import primary
+}
+
+(proxy) {
+	log {args[0]}-proxy
+
+	import cors_allow_frontend
+
+	@mutating_method not method OPTIONS HEAD GET
+	respond @mutating_method "proxy forbids mutating methods" 403
+
+	reverse_proxy {
+		to {args[1]}
+
+		header_up Host {upstream_hostport} # for tls to work
+		header_up Origin "https://plantopo.com" # to pass the origin restriction
+
+		# these confuse ordnance survey
+		header_up -X-Forwarded-For
+		header_up -X-Forwarded-Proto
+		header_up -X-Forwarded-Host
+
+		# because we need to replace with those set in cors_allow_frontend
+		header_down -Access-Control-Allow-Methods
+		header_down -Access-Control-Allow-Origin
+
+		@error status 5xx
+		handle_response @error {
+			respond {rp.status_text} {rp.status_code}
+		}
+	}
+}
+
+mapbox-proxy.localhost {
+	rewrite ?{query}&access_token={$PLANTOPO_MAPBOX_ACCESS_TOKEN}
+	import proxy mapbox https://api.mapbox.com
+}
+
+os-proxy.localhost {
+	rewrite ?{query}&srs=3857&key={$PLANTOPO_OS_API_KEY}
+	import proxy os https://api.os.uk
+}
+
+maptiler-proxy.localhost {
+	rewrite ?{query}&key={$PLANTOPO_MAPTILER_KEY}
+	import proxy maptiler https://api.maptiler.com
 }

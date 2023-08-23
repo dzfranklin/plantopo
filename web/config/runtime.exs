@@ -2,10 +2,7 @@ import Config
 
 Dotenv.load!()
 
-config :plantopo, PlanTopo.Maps,
-  server_secret: System.fetch_env!("PLANTOPO_SYNC_SERVER_SECRET")
-
-config :locus, :license_key, System.fetch_env!("MAXMIND_LICENSE_KEY")
+config :locus, :license_key, System.fetch_env!("PLANTOPO_MAXMIND_LICENSE_KEY")
 
 # config/runtime.exs is executed for all environments, including
 # during releases. It is executed after compilation and before the

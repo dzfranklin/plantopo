@@ -18,21 +18,15 @@ export function MapContainer({
   editStart: EditStartChannel;
   sidebarWidth: number;
 }) {
-  const { isSuccess: tokensLoaded, data: tokens } = useQuery('tokens', () =>
-    fetch('/api/tokens.json').then((res) => res.json()),
-  );
-
   const containerRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef<MapManager | null>(null);
   const sidebarWidthRef = useRef<number>(sidebarWidth);
   useEffect(() => {
     if (!containerRef.current) return;
-    if (!tokensLoaded) return;
     if (managerRef.current) return;
     const manager = new MapManager({
       container: containerRef.current,
       engine,
-      tokens,
       editStart,
     });
     managerRef.current = manager;
@@ -42,7 +36,7 @@ export function MapContainer({
       manager.remove();
       managerRef.current = null;
     };
-  }, [engine, tokensLoaded, tokens, editStart]);
+  }, [engine, editStart]);
   useEffect(() => {
     sidebarWidthRef.current = sidebarWidth;
     managerRef.current?.resizeForSidebar(sidebarWidth);

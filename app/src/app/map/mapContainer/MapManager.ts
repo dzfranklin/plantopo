@@ -4,12 +4,10 @@ import { EditStartChannel, EditStartEvent } from '../EditStartChannel';
 import { LAYERS } from '@/layers';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 
-const GLYPH_URL = 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf';
-
-type Tokens = Record<string, Record<string, string>>;
+const GLYPH_URL =
+  'https://maptiler-proxy.localhost/fonts/{fontstack}/{range}.pbf';
 
 export class MapManager extends ml.Map {
-  private _tokens: Tokens;
   private _engine: SyncEngine;
   private _editStart: EditStartChannel;
   private _activeLayers: Lid[] = [];
@@ -24,12 +22,10 @@ export class MapManager extends ml.Map {
 
   constructor({
     container,
-    tokens,
     engine,
     editStart,
   }: {
     container: HTMLElement;
-    tokens: Tokens;
     engine: SyncEngine;
     editStart: EditStartChannel;
   }) {
@@ -51,7 +47,6 @@ export class MapManager extends ml.Map {
       zoom: 0,
       keyboard: true,
       attributionControl: false, // So that we can implement our own
-      transformRequest: (url: string) => this._transformRequest(url),
     });
 
     this._topLeftControls = this._container.querySelector(
@@ -67,7 +62,6 @@ export class MapManager extends ml.Map {
     this.addControl(this._draw as unknown as ml.IControl, 'top-left');
     this._fixMbClasses(['mapboxgl-ctrl-group', 'mapboxgl-ctrl']);
 
-    this._tokens = tokens;
     this._engine = engine;
     this._editStart = editStart;
     this.once('styledata', () => this._setup());
@@ -225,19 +219,5 @@ export class MapManager extends ml.Map {
         }
       }
     }
-  }
-
-  private _transformRequest(from: string): { url: string } {
-    const url = new URL(from);
-    const params = url.searchParams;
-    if (url.host === 'api.os.uk') {
-      params.set('srs', '3857');
-    }
-    if (url.host in this._tokens) {
-      for (const [key, value] of Object.entries(this._tokens[url.host]!)) {
-        params.set(key, value);
-      }
-    }
-    return { url: url.toString() };
   }
 }
