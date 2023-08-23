@@ -37,7 +37,7 @@ defmodule PlanTopo.Sync.Manager do
   def handle_info({:EXIT, pid, reason}, state) do
     case BiMap.get_key(state.engines, pid) do
       map_id when not is_nil(map_id) ->
-        Logger.warn(
+        Logger.info(
           "Manager received sync engine exit: #{inspect(%{map_id: map_id, reason: reason})}"
         )
 

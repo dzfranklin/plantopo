@@ -1,6 +1,8 @@
 import Config
 
-config :plantopo, :sync_engine, "./run_sync_engine.sh"
+config :plantopo, :sync_engine,
+  log_level: "debug",
+  executable: "./run_sync_engine.sh"
 
 config :opentelemetry, traces_exporter: :none
 

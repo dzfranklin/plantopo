@@ -3,7 +3,9 @@ defmodule PlanTopo.Sync.Engine do
 
   require Logger
 
-  @bin Application.compile_env(:plantopo, :sync_engine)
+  @config Application.compile_env(:plantopo, :sync_engine)
+  @bin Keyword.fetch!(@config, :executable)
+  @log_level Keyword.fetch!(@config, :log_level) |> String.to_charlist()
 
   # 8 MiB
   @max_line 8 * 2 ** 20
@@ -37,7 +39,7 @@ defmodule PlanTopo.Sync.Engine do
           :binary,
           {:args, []},
           {:line, @max_line},
-          {:env, [{String.to_charlist("RUST_LOG"), String.to_charlist("trace")}]},
+          {:env, [{String.to_charlist("RUST_LOG"), @log_level}]},
           :exit_status
         ]
       )

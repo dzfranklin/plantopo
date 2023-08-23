@@ -1,5 +1,9 @@
 import Config
 
+config :plantopo, :sync_engine,
+  log_level: "error",
+  executable: "./run_sync_engine.sh"
+
 s3_config = [
   access_key_id: "admin",
   secret_access_key: "adminkey",
