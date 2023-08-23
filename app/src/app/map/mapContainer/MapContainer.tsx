@@ -22,7 +22,6 @@ export function MapContainer({
   const sidebarWidthRef = useRef<number>(sidebarWidth);
   useEffect(() => {
     if (!containerRef.current) return;
-    if (managerRef.current) return;
     const manager = new MapManager({
       container: containerRef.current,
       engine,
