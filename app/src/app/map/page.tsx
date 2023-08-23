@@ -1,7 +1,7 @@
 'use client';
 
 import { SyncSocket } from '@/sync/SyncSocket';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './sidebar/Sidebar';
 import {
   AlertDialog,
@@ -12,6 +12,7 @@ import ErrorTechInfo from '@/app/components/ErrorTechInfo';
 import { SyncEngine } from '@/sync/SyncEngine';
 import { MapContainer } from './mapContainer/MapContainer';
 import { EditStartChannel } from './EditStartChannel';
+import { CameraPosition } from './mapContainer/MapManager';
 
 export default function MapPage() {
   const [mapId, setMapId] = useState<number | null>(null);
@@ -75,6 +76,30 @@ export default function MapPage() {
     }
   }, [sidebarWidth]);
 
+  const [initialCamera, setInitialCamera] = useState<
+    { status: 'loading' } | { status: 'loaded'; value: CameraPosition | null }
+  >({ status: 'loading' });
+  useEffect(() => {
+    const stored = localStorage.getItem(`${mapId}-camera`);
+    let value: CameraPosition | null = null;
+    if (stored) value = JSON.parse(stored);
+    setInitialCamera({ status: 'loaded', value });
+  }, [mapId]);
+  const pendingCameraSave = useRef<number | null>(null);
+  const saveCamera = useCallback(
+    (value: CameraPosition) => {
+      console.log('Saving camera', value);
+      if (pendingCameraSave.current !== null) {
+        cancelIdleCallback(pendingCameraSave.current);
+      }
+      pendingCameraSave.current = requestIdleCallback(
+        () => localStorage.setItem(`${mapId}-camera`, JSON.stringify(value)),
+        { timeout: 10_000 },
+      );
+    },
+    [mapId],
+  );
+
   return (
     <div className="grid w-screen h-screen overflow-hidden">
       <DialogContainer isDismissable={false} onDismiss={() => {}}>
@@ -91,7 +116,7 @@ export default function MapPage() {
         )}
       </DialogContainer>
 
-      {engine === undefined ? (
+      {engine === undefined || initialCamera.status === 'loading' ? (
         <div className="grid place-self-center place-items-center">
           <ProgressCircle isIndeterminate aria-label="loading" size="L" />
           <h1 className="mt-4 text-center">Opening map</h1>
@@ -102,6 +127,8 @@ export default function MapPage() {
             engine={engine}
             editStart={editStart}
             sidebarWidth={sidebarWidth}
+            onMoveEnd={saveCamera}
+            initialCamera={initialCamera.value}
           />
           <Sidebar
             engine={engine}

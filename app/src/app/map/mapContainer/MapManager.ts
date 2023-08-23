@@ -7,12 +7,22 @@ import MapboxDraw from '@mapbox/mapbox-gl-draw';
 const GLYPH_URL =
   'https://maptiler-proxy.localhost/fonts/{fontstack}/{range}.pbf';
 
+export interface CameraPosition {
+  lng: number;
+  lat: number;
+  zoom: number;
+  bearing: number;
+  pitch: number;
+}
+
 export class MapManager extends ml.Map {
   private _engine: SyncEngine;
   private _editStart: EditStartChannel;
   private _activeLayers: Lid[] = [];
   private _draw: MapboxDraw;
   private _topLeftControls: HTMLDivElement;
+  private _hasUserMove = false;
+  private _pendingSetup: Array<(map: this) => void> | null = [];
 
   private _boundOnFGeoJson = this._onFGeoJson.bind(this);
   private _boundOnLOrder = this._onLOrder.bind(this);
@@ -24,10 +34,14 @@ export class MapManager extends ml.Map {
     container,
     engine,
     editStart,
+    onMoveEnd,
+    initialCamera,
   }: {
     container: HTMLElement;
     engine: SyncEngine;
     editStart: EditStartChannel;
+    onMoveEnd: (_: CameraPosition) => void;
+    initialCamera: CameraPosition | null;
   }) {
     super({
       container: container,
@@ -41,13 +55,16 @@ export class MapManager extends ml.Map {
           url,
         })),
       },
-      center: [0, 0],
-      pitch: 0,
-      bearing: 0,
-      zoom: 0,
+      center: [initialCamera?.lng || 0, initialCamera?.lat || 0],
+      pitch: initialCamera?.pitch || 0,
+      bearing: initialCamera?.bearing || 0,
+      zoom: initialCamera?.zoom || 0,
       keyboard: true,
       attributionControl: false, // So that we can implement our own
     });
+
+    this._engine = engine;
+    this._editStart = editStart;
 
     this._topLeftControls = this._container.querySelector(
       '.maplibregl-ctrl-top-left',
@@ -62,10 +79,37 @@ export class MapManager extends ml.Map {
     this.addControl(this._draw as unknown as ml.IControl, 'top-left');
     this._fixMbClasses(['mapboxgl-ctrl-group', 'mapboxgl-ctrl']);
 
-    this._engine = engine;
-    this._editStart = editStart;
     this.once('styledata', () => this._setup());
+
+    // The first move is fired to set it to the value configued in the style
+    this.on('moveend', () => {
+      const center = this.getCenter();
+      const camera: CameraPosition = {
+        lng: center.lng,
+        lat: center.lat,
+        bearing: this.getBearing(),
+        pitch: this.getPitch(),
+        zoom: this.getZoom(),
+      };
+
+      if (!this._hasUserMove) {
+        this._hasUserMove =
+          camera.lng > 0.001 ||
+          camera.lat > 0.001 ||
+          camera.bearing > 0.001 ||
+          camera.pitch > 0.001 ||
+          camera.zoom > 0.001;
+      }
+
+      if (this._hasUserMove) onMoveEnd(camera);
+    });
+
     console.log('MapManager', this);
+  }
+
+  onceSetup(cb: (map: this) => void) {
+    if (this._pendingSetup !== null) this._pendingSetup.push(cb);
+    else cb(this);
   }
 
   private _setup() {
@@ -104,6 +148,9 @@ export class MapManager extends ml.Map {
     this._editStart.on = this._onEditStart.bind(this);
 
     console.log('Setup maplibre Map', this);
+
+    for (const cb of this._pendingSetup!) cb(this);
+    this._pendingSetup = null;
   }
 
   private _pendingSidebarResize: number | null = null;
