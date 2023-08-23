@@ -46,9 +46,7 @@ config :plantopo,
   namespace: PlanTopo,
   ecto_repos: [PlanTopo.Repo]
 
-config :plantopo, PlanTopo.Repo,
-  migration_primary_key: [type: :binary_id],
-  migration_timestamps: [type: :utc_datetime]
+config :plantopo, PlanTopo.Repo, migration_timestamps: [type: :utc_datetime]
 
 # Configures the endpoint
 config :plantopo, PlanTopoWeb.Endpoint,

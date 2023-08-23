@@ -39,7 +39,7 @@ defmodule PlanTopo.AccountsTest do
   describe "get_user!/1" do
     test "raises if id is invalid" do
       assert_raise Ecto.NoResultsError, fn ->
-        Accounts.get_user!("e9b38418-dc32-4a97-8c24-134e1cd46f26")
+        Accounts.get_user!(42)
       end
     end
 
