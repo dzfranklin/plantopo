@@ -9,58 +9,67 @@
 	email daniel@danielzfranklin.org
 }
 
-(cors_allow_origin) {
-	@origin{args[0]} header Origin {args[0]}
-	header @origin{args[0]} Access-Control-Allow-Origin "{args[0]}"
-	header @origin{args[0]} Access-Control-Allow-Methods "OPTIONS,HEAD,GET,POST,PUT,PATCH,DELETE"
-}
-
-(cors_allow_frontend) {
-	import cors_allow_origin https://localhost
-	import cors_allow_origin https://prod.localhost
-}
-
 www.localhost {
+	log www.localhost
 	redir https://localhost{uri}
 }
 
 (primary) {
 	encode zstd gzip
-	import cors_allow_frontend
 
-	reverse_proxy * localhost:4000
+	@cross_origin_websocket {
+		header Connection *Upgrade*
+		header Upgrade websocket
+		not header Origin "{args[0]}"
+	}
+	respond @cross_origin_websocket 403
+
+	header Access-Control-Allow-Origin "{args[0]}"
+	header Access-Control-Allow-Methods "OPTIONS,HEAD,GET,POST,PUT,PATCH,DELETE"
 }
 
 localhost {
-	import primary
+	log localhost
+	import primary https://localhost
 
-	@next {
-		path /_next/*
-		path /map
+	@web {
+		not {
+			path /_next/*
+			path /map
+		}
 	}
-	reverse_proxy @next localhost:3000
+	reverse_proxy @web localhost:4000
+	reverse_proxy * localhost:3000
 }
 
 prod.localhost {
-	import primary
+	log prod.localhost
+	import primary https://prod.localhost
 
-	rewrite /map /map.html
+	route {
+		rewrite /map /map.html
 
-	file_server {
-		root app/out
-		disable_canonical_uris
-	}
+		file_server {
+			root app/out
+			disable_canonical_uris
+			pass_thru
+		}
 
-	handle_errors {
-		rewrite * /{err.status_code}.html
-		file_server
+		reverse_proxy * localhost:4000
 	}
 }
 
 (proxy) {
 	log {args[0]}-proxy
 
-	import cors_allow_frontend
+	@is_localhost header Origin "https://localhost"
+	@is_localhost_prod header Origin "https://prod.localhost"
+	@is_prod header Origin "https://plantopo.com"
+	header @is_localhost Access-Control-Allow-Origin "https://localhost"
+	header @is_localhost_prod Access-Control-Allow-Origin "https://prod.localhost"
+	header @is_prod Access-Control-Allow-Methods "https://plantopo.com"
+
+	header Access-Control-Allow-Methods "OPTIONS,HEAD,GET"
 
 	@mutating_method not method OPTIONS HEAD GET
 	respond @mutating_method "proxy forbids mutating methods" 403
