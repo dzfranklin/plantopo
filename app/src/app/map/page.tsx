@@ -88,7 +88,6 @@ export default function MapPage() {
   const pendingCameraSave = useRef<number | null>(null);
   const saveCamera = useCallback(
     (value: CameraPosition) => {
-      console.log('Saving camera', value);
       if (pendingCameraSave.current !== null) {
         cancelIdleCallback(pendingCameraSave.current);
       }
