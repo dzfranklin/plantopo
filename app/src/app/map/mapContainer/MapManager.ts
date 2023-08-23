@@ -257,12 +257,19 @@ export class MapManager extends ml.Map {
     const multiplier = opacity ?? layer.defaultOpacity;
     for (const [id, props] of Object.entries(layer.sublayerOpacity)) {
       for (const [name, initialValue] of Object.entries(props)) {
-        if (typeof initialValue === 'number') {
-          this.setPaintProperty(id, name, initialValue * multiplier, {
-            validate: false,
-          });
-        } else {
-          this.setPaintProperty(id, name, ['*', initialValue, multiplier]);
+        try {
+          if (typeof initialValue === 'number') {
+            this.setPaintProperty(id, name, initialValue * multiplier, {
+              validate: false,
+            });
+          } else {
+            this.setPaintProperty(id, name, ['*', initialValue, multiplier]);
+          }
+        } catch (err) {
+          console.warn(
+            `_setLayerOpacity failed on ${id}.${name} (opacity is ${opacity}, multiplier is ${multiplier})`,
+            `initialValue is ${JSON.stringify(initialValue)}`,
+          );
         }
       }
     }
