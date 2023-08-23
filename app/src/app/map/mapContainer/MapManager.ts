@@ -211,7 +211,7 @@ export class MapManager extends ml.Map {
         if (op.before !== undefined) {
           const layerBefore = LAYERS.layers[op.before];
           if (!layerBefore) throw new Error(`Missing layer ${op.before}`);
-          sublBefore = layerBefore.sublayers.at(-1)?.id;
+          sublBefore = layerBefore.sublayers[0]?.id;
         }
         for (const subl of layer.sublayers) {
           try {
