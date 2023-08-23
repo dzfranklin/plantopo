@@ -33,7 +33,7 @@ impl LocalFileStore {
     #[tracing::instrument(skip(path))]
     pub fn open(path: impl Into<PathBuf>) -> eyre::Result<(Self, Change)> {
         let path = path.into();
-        let (queue_tx, queue_rx) = channel::unbounded();
+        let (queue_tx, queue_rx) = channel::bounded(20);
 
         let base_fname = path
             .file_name()
