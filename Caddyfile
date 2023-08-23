@@ -80,11 +80,6 @@ prod.localhost {
 		# because we need to replace with those set in cors_allow_frontend
 		header_down -Access-Control-Allow-Methods
 		header_down -Access-Control-Allow-Origin
-
-		@error status 5xx
-		handle_response @error {
-			respond {rp.status_text} {rp.status_code}
-		}
 	}
 }
 
