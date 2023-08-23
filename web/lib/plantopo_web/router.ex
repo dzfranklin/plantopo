@@ -25,6 +25,7 @@ defmodule PlanTopoWeb.Router do
   scope "/", PlanTopoWeb do
     pipe_through([:browser])
 
+    get("/", StubController, :stub)
     delete("/account/logout", UserSessionController, :delete)
 
     live_session :current_user,
