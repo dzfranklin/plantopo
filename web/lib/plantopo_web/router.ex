@@ -17,7 +17,6 @@ defmodule PlanTopoWeb.Router do
     plug(:accepts, ["json"])
     plug(:fetch_session)
     plug(:fetch_current_user)
-    plug(CORSPlug)
   end
 
   ## Auth optional

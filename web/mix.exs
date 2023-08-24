@@ -76,7 +76,6 @@ defmodule PlanTopo.MixProject do
       {:opentelemetry_exporter, "~> 1.4"},
       {:dialyxir, "~> 1.2", only: [:dev], runtime: false},
       {:bimap, "~> 1.3"},
-      {:cors_plug, "~> 3.0"},
       {:esbuild, "~> 0.6", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.1.8", runtime: Mix.env() == :dev}
     ]
