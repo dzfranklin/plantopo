@@ -1,5 +1,0 @@
-#!/bin/bash
-
-# Usage: ./watch or ./watch --debug
-
-exec cargo watch --shell "./build $*"
