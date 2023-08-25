@@ -21,6 +21,7 @@ export function useSidebarWidth(): [number, (_: number) => void] {
       pendingSave.current = null;
       localStorage.setItem('sidebarWidth', JSON.stringify(value));
     });
+    _setValue(value);
   }, []);
 
   return [value, setValue];
