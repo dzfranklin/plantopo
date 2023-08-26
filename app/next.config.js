@@ -3,6 +3,8 @@ const config = {
   reactStrictMode: true,
   output: 'export',
   transpilePackages: [
+    '@tanstack/react-query-devtools',
+    '@tanstack/react-query',
     '@adobe/react-spectrum',
     '@react-spectrum/actionbar',
     '@react-spectrum/actiongroup',

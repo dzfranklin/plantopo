@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CameraPosition } from './mapContainer/MapManager';
+import { CameraPosition } from './MapManager';
 
 export type InitialCameraStatus =
   | { status: 'loading' }

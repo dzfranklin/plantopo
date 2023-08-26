@@ -6,21 +6,29 @@ use std::{
     path::PathBuf,
 };
 
-use eyre::eyre;
+use clap::Parser as _;
+use eyre::bail;
 use eyre::{Context, Result};
 use rand::{rngs::SmallRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use tracing_subscriber::{prelude::*, EnvFilter};
 
 use plantopo_sync_engine::{
-    store::{LocalFileStore, Store},
+    store::{LocalFileStore, RedisStore, Store},
     Change, Engine, Op,
 };
+
+#[derive(Debug, clap::Parser)]
+struct Args {
+    #[arg(long)]
+    map_id: u32,
+    #[arg(long)]
+    store: String,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case")]
 enum Command {
-    Open { map: u32 },
     Connect { id: u32 },
     Recv { id: u32, value: ClientUpdate },
 }
@@ -66,18 +74,25 @@ fn main() -> Result<()> {
         .with(EnvFilter::from_default_env())
         .init();
 
-    let mut open_cmd = String::new();
-    stdin()
-        .read_line(&mut open_cmd)
-        .wrap_err("read map_id from stdin")?;
-    let open_cmd = serde_json::from_str::<Command>(&open_cmd).expect("Invalid open cmd");
-    let Command::Open { map: map_id } = open_cmd else {
-        panic!("Invalid open cmd");
-    };
+    let args = Args::parse();
+    tracing::info!(?args);
 
-    let store_path = PathBuf::from(".sync_store").join(map_id.to_string());
-    let (store, snapshot) = LocalFileStore::open(store_path)?;
+    if args.store == "local_file" {
+        let store_path = PathBuf::from(".sync_store").join(args.map_id.to_string());
+        accept(LocalFileStore::open(store_path)?)
+    } else if args.store.starts_with("redis://") {
+        accept(RedisStore::open(args.map_id, &args.store)?)
+    } else {
+        bail!("Unknown store type: {}", args.store);
+    }
+}
+
+fn accept<S>((store, snapshot): (S, Change)) -> Result<()>
+where
+    S: Store + std::fmt::Debug,
+{
     let mut engine = Engine::load(store, SmallRng::from_entropy(), snapshot)?;
+    tracing::trace!(?engine);
     tracing::debug!("Loaded engine");
 
     let mainloop_res = do_mainloop(&mut engine);
@@ -144,7 +159,6 @@ where
         tracing::trace!(?cmd);
 
         let reply = match cmd {
-            Command::Open { .. } => return Err(eyre!("Already opened")),
             Command::Connect { id } => {
                 let fid_block = engine.allocate_fid_block()?;
                 let state = engine.to_snapshot();

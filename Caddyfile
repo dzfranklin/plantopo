@@ -1,9 +1,6 @@
 {
-	debug
-	exec npm run dev {
-		directory app/
-		timeout 0
-		startup
+	log {
+		level info
 	}
 
 	email daniel@danielzfranklin.org
@@ -26,6 +23,12 @@ www.localhost {
 
 	header Access-Control-Allow-Origin "{args[0]}"
 	header Access-Control-Allow-Methods "OPTIONS,HEAD,GET,POST,PUT,PATCH,DELETE"
+
+	@logged_in_home {
+		header Cookie *unchecked_user*
+		path /
+	}
+	rewrite @logged_in_home /user_home
 }
 
 localhost {
@@ -36,6 +39,8 @@ localhost {
 		not {
 			path /__next*
 			path /_next*
+			path /
+			path /user_home
 			path /map
 		}
 	}
@@ -48,6 +53,7 @@ prod.localhost {
 	import primary https://prod.localhost
 
 	route {
+		rewrite /user_home /user_home.html
 		rewrite /map /map.html
 
 		file_server {

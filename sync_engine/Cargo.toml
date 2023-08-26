@@ -13,13 +13,14 @@ tracing-subscriber.workspace = true
 uuid.workspace = true
 petgraph.workspace = true
 serde_json.workspace = true
-serde = { workspace = true, features = ["derive"] }
-color-eyre = "0.6.2"
-ctrlc = { version = "3.4.0", features = ["termination"] }
-serde_repr = "0.1.15"
-rand = { workspace = true, features = ["small_rng"] }
-crossbeam = { version = "0.8.2", features = ["crossbeam-channel"] }
-parking_lot = "0.12.1"
+serde.workspace = true
+color-eyre.workspace = true
+serde_repr.workspace = true
+rand.workspace = true
+crossbeam.workspace = true
+parking_lot.workspace = true
+redis.workspace = true
+clap.workspace = true
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"

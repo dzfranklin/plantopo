@@ -2,6 +2,7 @@ import Config
 
 config :plantopo, :sync_engine,
   log_level: "debug",
+  store: "redis://localhost:6379/0",
   executable: "./run_sync_engine.sh"
 
 config :opentelemetry, traces_exporter: :none
@@ -41,7 +42,7 @@ config :plantopo, PlanTopoWeb.Endpoint,
   http: [ip: {0, 0, 0, 0}, port: 4000],
   check_origin: false,
   code_reloader: true,
-  debug_errors: true,
+  debug_errors: false,
   secret_key_base: "jdF2PrDJSIR0K1P2BPftQiWCBjwv1QiaLdxjOaRE7YQKv+rOHklskiPtS4feBJdn",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},

@@ -1,2 +1,0 @@
-#!/usr/bin/env bash
-cd sync && cargo clippy --no-deps -- -Dwarnings

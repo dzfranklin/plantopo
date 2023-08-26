@@ -43,6 +43,7 @@ defmodule PlanTopoWeb do
 
       import Plug.Conn
       import PlanTopoWeb.Gettext
+      import PlanTopoWeb, only: [keys_to_snake_case: 1]
 
       unquote(verified_routes())
     end
@@ -108,5 +109,9 @@ defmodule PlanTopoWeb do
   """
   defmacro __using__(which) when is_atom(which) do
     apply(__MODULE__, which, [])
+  end
+
+  def keys_to_snake_case(map) do
+    Recase.Enumerable.convert_keys(map, &Recase.to_snake/1)
   end
 end

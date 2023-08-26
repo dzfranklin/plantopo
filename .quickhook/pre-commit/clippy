@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+cargo clippy --workspace --no-deps -- -Dwarnings

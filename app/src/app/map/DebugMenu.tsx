@@ -1,4 +1,4 @@
-import { SyncEngine } from '@/sync/SyncEngine';
+import { SyncEngine } from '@/api/map/sync/SyncEngine';
 import { ActionButton, Item, Menu, MenuTrigger } from '@adobe/react-spectrum';
 import DebugMenuIcon from '@spectrum-icons/workflow/Bug';
 import { useCallback } from 'react';

@@ -4,8 +4,8 @@ defmodule PlanTopo.Repo do
     adapter: Ecto.Adapters.Postgres
 
   use Paginator,
-    limit: 100,
-    maximum_limit: 100,
+    limit: 200,
+    maximum_limit: 500,
     include_total_count: false,
     total_count_primary_key_field: :id
 

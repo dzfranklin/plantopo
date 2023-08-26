@@ -1,21 +1,19 @@
 import { MutableRefObject } from 'react';
 import AddFeatureIcon from '@spectrum-icons/workflow/Add';
 import DebugMenu from '../DebugMenu';
-import { FInsertPlace, SyncEngine } from '@/sync/SyncEngine';
+import { FInsertPlace, SyncEngine } from '@/api/map/sync/SyncEngine';
 import { Button, Item, Menu, MenuTrigger } from '@adobe/react-spectrum';
-import { EditStartChannel } from '../EditStartChannel';
+import { MapMeta } from '@/api/map/MapMeta';
 
 export function Toolbar({
   engine,
   insertAt,
-  editStart,
-  mapName,
+  meta,
   width,
 }: {
   engine: SyncEngine;
   insertAt: MutableRefObject<FInsertPlace>;
-  editStart: EditStartChannel;
-  mapName: string;
+  meta: MapMeta;
   width: number;
 }) {
   return (
@@ -23,12 +21,12 @@ export function Toolbar({
       {width > 10 && (
         <div className="flex items-center min-w-0 truncate">
           <DebugMenu engine={engine} />
-          <span className="ml-4 truncate ">{mapName}</span>
+          <span className="ml-4 truncate ">{meta.name}</span>
         </div>
       )}
       <div className="flex items-center justify-end grow">
         <MenuTrigger>
-          <Button variant="accent">
+          <Button variant="accent" isDisabled={!engine.canEdit}>
             <AddFeatureIcon />
           </Button>
           <Menu
@@ -38,10 +36,7 @@ export function Toolbar({
                   engine.fCreate(insertAt.current);
                   break;
                 case 'route':
-                  editStart.emit({
-                    type: 'createRoute',
-                    insertAt: { ...insertAt.current },
-                  });
+                  alert('TODO: ');
                   break;
                 default:
                   throw new Error('Unreachable');

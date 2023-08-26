@@ -1,2 +1,0 @@
-#!/usr/bin/env bash
-cd ./web/native/plantopo_sync_engine/ && cargo clippy --no-deps -- -Dwarnings

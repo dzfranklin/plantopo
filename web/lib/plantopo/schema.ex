@@ -3,7 +3,7 @@ defmodule PlanTopo.Schema do
     quote do
       use Ecto.Schema
       import Ecto.Changeset
-      @timestamps_opts [type: :utc_datetime_usec]
+      @timestamps_opts [type: :utc_datetime]
     end
   end
 end

@@ -1,6 +1,6 @@
 import RootOverlay from '@/app/components/RootOverlay';
 import { LAYERS, LayerData } from '@/layers';
-import { SyncEngine } from '@/sync/SyncEngine';
+import { SyncEngine } from '@/api/map/sync/SyncEngine';
 import {
   ActionButton,
   Dialog,
@@ -260,7 +260,7 @@ function OrderControl({ engine }: { engine: SyncEngine }) {
         selectionMode="multiple"
         selectionStyle="highlight"
         density="compact"
-        dragAndDropHooks={activeDndHooks}
+        dragAndDropHooks={engine.canEdit ? activeDndHooks : undefined}
         selectedKeys={selectedKeys}
         onSelectionChange={onSelectionChange}
       >
@@ -282,7 +282,7 @@ function OrderControl({ engine }: { engine: SyncEngine }) {
         selectionStyle="highlight"
         selectionMode="multiple"
         density="compact"
-        dragAndDropHooks={inactiveDndHooks}
+        dragAndDropHooks={engine.canEdit ? inactiveDndHooks : undefined}
         selectedKeys={selectedKeys}
         onSelectionChange={onSelectionChange}
       >
@@ -330,7 +330,11 @@ function ActiveLayerActionMenu({
 
   return (
     <DialogTrigger type="popover">
-      <ActionButton aria-label="edit" marginEnd={'-10px'}>
+      <ActionButton
+        aria-label="edit"
+        marginEnd={'-10px'}
+        isDisabled={!engine.canEdit}
+      >
         <EditIcon />
       </ActionButton>
       <Dialog height="5rem" width="3rem">

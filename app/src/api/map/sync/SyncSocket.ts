@@ -1,3 +1,4 @@
+import { MapSyncAuthorization } from './MapSyncAuthorization';
 import { SyncEngine } from './SyncEngine';
 import { SyncOp } from './SyncOp';
 import {
@@ -10,35 +11,32 @@ import {
 } from './socketMessages';
 
 export class SyncSocket {
-  public readonly mapId: number;
-
   private static readonly _KEEPALIVE_INTERVAL_MS = 15_000;
 
   private _connectStart: number | undefined; // unix timestamp, for debugging
   private _sessionId: number | undefined; // server assigned session id, for debugging
 
+  private _authz: MapSyncAuthorization;
   private _onConnect: (_: SyncEngine) => void;
+  private _onConnectFail: (_: number) => void;
   private _onError: (_: Error) => void;
-  private _domain: string;
-  private _secure: boolean;
   private _engine: SyncEngine | undefined;
   private _socket: WebSocket | undefined;
   private _pending: Map<number, SyncOp[]> = new Map();
   private _seq = 0;
   private _closing = false;
   private _keepalive: number | undefined;
+  private _failedConnects = 0;
 
   constructor(props: {
-    mapId: number;
-    domain: string;
-    secure: boolean;
+    authorization: MapSyncAuthorization;
     onConnect: (_: SyncEngine) => void;
+    onConnectFail: (_: number) => void;
     onError: (_: Error) => void;
   }) {
-    this.mapId = props.mapId;
-    this._domain = props.domain;
-    this._secure = props.secure;
+    this._authz = props.authorization;
     this._onConnect = props.onConnect;
+    this._onConnectFail = props.onConnectFail;
     this._onError = props.onError;
   }
 
@@ -48,13 +46,9 @@ export class SyncSocket {
       return;
     }
 
-    const base = `${this._secure ? 'wss' : 'ws'}://${this._domain}/`;
-    const url = new URL('/api/map_sync', base);
-    url.searchParams.set('id', this.mapId.toString());
-
-    this._log('Connecting to', url.toString());
+    this._log('Connecting to', this._authz.url);
     this._connectStart = Date.now();
-    const sock = new WebSocket(url);
+    const sock = new WebSocket(this._authz.url);
 
     sock.onopen = (evt) => this._onSocketOpen(sock, evt);
     sock.onclose = (evt) => this._onSocketClose(sock, evt);
@@ -99,6 +93,12 @@ export class SyncSocket {
     }
   }
 
+  private _enqueueOps(ops: SyncOp[]): void {
+    const seq = ++this._seq;
+    this._pending.set(seq, ops);
+    this._maybeSend({ type: 'op', seq, ops });
+  }
+
   private _onSocketOpen(sock: WebSocket, _evt: Event): void {
     if (this._socket !== sock) return;
 
@@ -106,11 +106,7 @@ export class SyncSocket {
 
     // Authenticate
     this._log('Authenticating to socket');
-    this._socket!.send(
-      JSON.stringify({
-        token: 'TODO: ',
-      }),
-    );
+    this._socket!.send(JSON.stringify({ token: this._authz.token }));
 
     this._resetKeepalive();
   }
@@ -120,10 +116,13 @@ export class SyncSocket {
     this._log('Socket closed');
     this._stopKeepalive();
     this._socket = undefined;
-    if (this._closing) {
-      return;
+    if (!this._closing) {
+      const wait = Math.min(this._failedConnects * 1000, 15);
+      const retryAt = Date.now() + wait;
+      this._onConnectFail(retryAt);
+      this._failedConnects++;
+      this.connect();
     }
-    this.connect();
   }
 
   private _onSocketMessage(sock: WebSocket, evt: MessageEvent): void {
@@ -153,14 +152,12 @@ export class SyncSocket {
     this._log('recv connectAccept', this);
     this._sessionId = msg.sessionId;
     if (this._engine === undefined) {
+      const { canEdit } = this._authz;
       this._engine = new SyncEngine({
         fidBlockStart: msg.fidBlockStart,
         fidBlockUntil: msg.fidBlockUntil,
-        send: (ops) => {
-          const seq = ++this._seq;
-          this._pending.set(seq, ops);
-          this._maybeSend({ type: 'op', seq, ops });
-        },
+        canEdit,
+        send: canEdit ? this._enqueueOps.bind(this) : null,
       });
       this._engine.receive(msg.state);
       this._onConnect(this._engine);

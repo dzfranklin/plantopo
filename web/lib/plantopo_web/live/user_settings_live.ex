@@ -7,23 +7,6 @@ defmodule PlanTopoWeb.UserSettingsLive do
     ~H"""
     <.header>Settings</.header>
 
-    <.simple_form
-      :let={f}
-      id="settings_form"
-      for={@settings_changeset}
-      phx-submit="update_settings"
-      phx-change="validate_settings"
-    >
-      <.inputs_for :let={s} form={f} field={:settings}>
-        <.input field={{s, :disable_animation}} type="checkbox" label="Disable animation" />
-        <.input field={{s, :advanced}} type="checkbox" label="Enable advanced mode" />
-      </.inputs_for>
-
-      <:actions>
-        <.button phx-disable-with="Saving...">Save settings</.button>
-      </:actions>
-    </.simple_form>
-
     <.header>Change email</.header>
 
     <.simple_form
@@ -100,32 +83,23 @@ defmodule PlanTopoWeb.UserSettingsLive do
       </:actions>
     </.simple_form>
 
-    <.header>Change username</.header>
+    <.header>Change name</.header>
 
     <.simple_form
       :let={f}
-      id="username_form"
-      for={@username_changeset}
-      phx-submit="update_username"
-      phx-change="validate_username"
+      id="name_form"
+      for={@name_changeset}
+      phx-submit="update_name"
+      phx-change="validate_name"
     >
-      <.error :if={@username_changeset.action == :insert}>
+      <.error :if={@name_changeset.action == :insert}>
         Please check the errors below.
       </.error>
 
-      <.input field={{f, :username}} type="text" label="Username" required />
+      <.input field={{f, :name}} type="text" label="Name" required />
 
-      <.input
-        field={{f, :current_password}}
-        name="current_password"
-        id="current_password_for_username"
-        type="password"
-        label="Current password"
-        value={@username_form_current_password}
-        required
-      />
       <:actions>
-        <.button phx-disable-with="Changing...">Change username</.button>
+        <.button phx-disable-with="Changing...">Change name</.button>
       </:actions>
     </.simple_form>
     """
@@ -149,37 +123,15 @@ defmodule PlanTopoWeb.UserSettingsLive do
 
     socket =
       socket
-      |> assign(:settings_changeset, Accounts.change_user_settings(user))
       |> assign(:current_password, nil)
       |> assign(:email_form_current_password, nil)
       |> assign(:current_email, user.email)
       |> assign(:email_changeset, Accounts.change_user_email(user))
       |> assign(:password_changeset, Accounts.change_user_password(user))
-      |> assign(:username_changeset, Accounts.change_username(user))
-      |> assign(:username_form_current_password, nil)
+      |> assign(:name_changeset, Accounts.change_name(user))
       |> assign(:trigger_submit, false)
 
     {:ok, socket}
-  end
-
-  def handle_event("validate_settings", %{"user" => user_params}, socket) do
-    change = Accounts.change_user_settings(socket.assigns.current_user, user_params)
-    {:noreply, assign(socket, settings_changeset: change)}
-  end
-
-  def handle_event("update_settings", %{"user" => user_params}, socket) do
-    case Accounts.update_user_settings(socket.assigns.current_user, user_params) do
-      {:ok, user} ->
-        socket =
-          socket
-          |> assign(:current_user, user)
-          |> put_flash(:info, "Settings saved")
-
-        {:noreply, socket}
-
-      {:error, change} ->
-        {:noreply, assign(socket, :settings_changeset, change)}
-    end
   end
 
   def handle_event("validate_email", params, socket) do
@@ -222,24 +174,23 @@ defmodule PlanTopoWeb.UserSettingsLive do
     end
   end
 
-  def handle_event("validate_username", params, socket) do
-    %{"current_password" => password, "user" => user_params} = params
-    username_changeset = Accounts.change_username(socket.assigns.current_user, user_params)
+  def handle_event("validate_name", params, socket) do
+    %{"user" => user_params} = params
+    name_changeset = Accounts.change_name(socket.assigns.current_user, user_params)
 
     socket =
       assign(socket,
-        username_changeset: Map.put(username_changeset, :action, :validate),
-        username_form_current_password: password
+        name_changeset: Map.put(name_changeset, :action, :validate)
       )
 
     {:noreply, socket}
   end
 
-  def handle_event("update_username", params, socket) do
-    %{"current_password" => password, "user" => user_params} = params
+  def handle_event("update_name", params, socket) do
+    %{"user" => user_params} = params
     user = socket.assigns.current_user
 
-    case Accounts.update_username(user, password, user_params) do
+    case Accounts.update_name(user, user_params) do
       {:ok, user} ->
         socket =
           socket
@@ -249,7 +200,7 @@ defmodule PlanTopoWeb.UserSettingsLive do
         {:noreply, socket}
 
       {:error, change} ->
-        {:noreply, assign(socket, :username_changeset, change)}
+        {:noreply, assign(socket, :name_changeset, change)}
     end
   end
 

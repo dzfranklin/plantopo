@@ -1,20 +1,18 @@
 import { useRef } from 'react';
-import { FInsertPlace, SyncEngine } from '@/sync/SyncEngine';
-import { EditStartChannel } from '../EditStartChannel';
+import { FInsertPlace, SyncEngine } from '@/api/map/sync/SyncEngine';
 import { FeatureTree } from './FeatureTree';
 import { Toolbar } from './Toolbar';
 import { ResizeHandle } from './ResizeHandle';
+import { MapMeta } from '@/api/map/MapMeta';
 
 export default function Sidebar({
   engine,
-  mapName,
-  editStart,
+  meta,
   width,
   setWidth,
 }: {
   engine: SyncEngine;
-  mapName: string;
-  editStart: EditStartChannel;
+  meta: MapMeta;
   width: number;
   setWidth: (_: number) => void;
 }) {
@@ -30,10 +28,9 @@ export default function Sidebar({
       >
         <div className="flex flex-col w-full min-w-0 bg-slate-100">
           <Toolbar
-            mapName={mapName}
+            meta={meta}
             engine={engine}
             insertAt={insertAt}
-            editStart={editStart}
             width={width}
           />
 

@@ -3,12 +3,18 @@ defmodule PlanTopoWeb.UserLoginLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
+    <div class="max-w-sm mx-auto">
       <.header class="text-center">
         Sign in to account
         <:subtitle>
           Don't have an account?
-          <.link navigate={~p"/account/register"} class="font-semibold text-brand hover:underline">
+          <.link
+            navigate={if(is_nil(@return_to),
+              do: ~p"/account/register",
+              else: ~p"/account/register?return=#{@return_to}"
+            )}
+            class="font-semibold text-brand hover:underline"
+          >
             Sign up
           </.link>
           for an account now.
@@ -23,6 +29,8 @@ defmodule PlanTopoWeb.UserLoginLive do
         as={:user}
         phx-update="ignore"
       >
+        <input type="hidden" name="return_to" value={@return_to} />
+
         <.input field={{f, :email}} type="email" label="Email" required />
         <.input
           field={{f, :password}}
@@ -48,8 +56,10 @@ defmodule PlanTopoWeb.UserLoginLive do
     """
   end
 
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     email = live_flash(socket.assigns.flash, :email)
-    {:ok, assign(socket, email: email), temporary_assigns: [email: nil]}
+
+    {:ok, assign(socket, email: email, return_to: params["return"]),
+     temporary_assigns: [email: nil]}
   end
 end

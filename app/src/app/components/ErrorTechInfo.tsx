@@ -31,7 +31,7 @@ export default function ErrorTechInfo({ error }: { error: unknown }) {
         <code>{json}</code>
       </pre>
 
-      <ActionButton onPress={() => console.info(error)}>
+      <ActionButton onPress={() => console.info({ error })}>
         Log to console
       </ActionButton>
     </details>

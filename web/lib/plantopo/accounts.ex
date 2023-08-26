@@ -10,10 +10,6 @@ defmodule PlanTopo.Accounts do
 
   ## Database getters
 
-  def preload_settings(user_or_nil) do
-    Repo.preload(user_or_nil, :settings)
-  end
-
   @doc """
     Gets a user by email.
   """
@@ -57,22 +53,12 @@ defmodule PlanTopo.Accounts do
 
   ## Settings
 
-  def change_user_settings(%User{} = user, attrs \\ %{}) do
-    User.settings_changeset(user, attrs)
+  def change_name(%User{} = user, attrs \\ %{}) do
+    User.name_changeset(user, attrs)
   end
 
-  def update_user_settings(%User{} = user, attrs \\ %{}) do
-    change_user_settings(user, attrs)
-    |> Repo.update()
-  end
-
-  def change_username(%User{} = user, attrs \\ %{}) do
-    User.username_changeset(user, attrs, validate_username: false)
-  end
-
-  def update_username(%User{} = user, password, attrs \\ %{}) do
-    User.username_changeset(user, attrs)
-    |> User.validate_current_password(password)
+  def update_name(%User{} = user, attrs \\ %{}) do
+    User.name_changeset(user, attrs)
     |> Repo.update()
   end
 

@@ -1,6 +1,10 @@
-import { LOrderOp, Lid, RootGeoJson, SyncEngine } from '@/sync/SyncEngine';
+import {
+  LOrderOp,
+  Lid,
+  RootGeoJson,
+  SyncEngine,
+} from '@/api/map/sync/SyncEngine';
 import * as ml from 'maplibre-gl';
-import { EditStartChannel, EditStartEvent } from '../EditStartChannel';
 import { LAYERS } from '@/layers';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 
@@ -17,9 +21,8 @@ export interface CameraPosition {
 
 export class MapManager extends ml.Map {
   private _engine: SyncEngine;
-  private _editStart: EditStartChannel;
   private _activeLayers: Lid[] = [];
-  private _draw: MapboxDraw;
+  private _draw?: MapboxDraw;
   private _topLeftControls: HTMLDivElement;
   private _hasUserMove = false;
   private _pendingSetup: Array<(map: this) => void> | null = [];
@@ -33,14 +36,12 @@ export class MapManager extends ml.Map {
   constructor({
     container,
     engine,
-    editStart,
     onMoveEnd,
     initialCamera,
     setIsLoading,
   }: {
     container: HTMLElement;
     engine: SyncEngine;
-    editStart: EditStartChannel;
     onMoveEnd: (_: CameraPosition) => void;
     initialCamera: CameraPosition | null;
     setIsLoading: (isLoading: boolean) => void;
@@ -66,20 +67,21 @@ export class MapManager extends ml.Map {
     });
 
     this._engine = engine;
-    this._editStart = editStart;
 
     this._topLeftControls = this._container.querySelector(
       '.maplibregl-ctrl-top-left',
     )!;
 
-    this._draw = new MapboxDraw({
-      controls: {
-        combine_features: false,
-        uncombine_features: false,
-      },
-    });
-    this.addControl(this._draw as unknown as ml.IControl, 'top-left');
-    this._fixMbClasses(['mapboxgl-ctrl-group', 'mapboxgl-ctrl']);
+    if (this._engine.canEdit) {
+      this._draw = new MapboxDraw({
+        controls: {
+          combine_features: false,
+          uncombine_features: false,
+        },
+      });
+      this.addControl(this._draw as unknown as ml.IControl, 'top-left');
+      this._fixMbClasses(['mapboxgl-ctrl-group', 'mapboxgl-ctrl']);
+    }
 
     this.once('styledata', () => this._setup());
 
@@ -151,8 +153,6 @@ export class MapManager extends ml.Map {
     this._engine.addLOrderListener(this._boundOnLOrder);
     this._engine.addLPropsListener(this._boundOnLProps);
 
-    this._editStart.on = this._onEditStart.bind(this);
-
     console.log('Setup maplibre Map', this);
 
     for (const cb of this._pendingSetup!) cb(this);
@@ -183,13 +183,8 @@ export class MapManager extends ml.Map {
     this._engine.removeLOrderListener(this._boundOnLOrder);
     this._engine.removeLPropsListener(this._boundOnLProps);
     this._fGeoJsonSource = undefined;
-    this._editStart.on = undefined;
     super.remove();
     console.log('MapManager.remove');
-  }
-
-  private _onEditStart(evt: EditStartEvent) {
-    console.warn('TODO: ', evt);
   }
 
   private _prevSetFGeoJson: number | undefined;

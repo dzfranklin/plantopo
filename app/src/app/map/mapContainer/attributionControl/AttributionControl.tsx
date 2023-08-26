@@ -1,6 +1,6 @@
 import osLogo from './osLogo.svg';
 import mapboxLogo from './mapboxLogo.svg';
-import { SyncEngine } from '@/sync/SyncEngine';
+import { SyncEngine } from '@/api/map/sync/SyncEngine';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { LAYERS } from '@/layers';
 import stringOrd from '@/stringOrd';

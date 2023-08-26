@@ -1,9 +1,8 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import './MapContainer.css';
-import { SyncEngine } from '@/sync/SyncEngine';
+import { SyncEngine } from '@/api/map/sync/SyncEngine';
 import { useEffect, useRef, useState } from 'react';
-import { EditStartChannel } from '../EditStartChannel';
 import { CameraPosition, MapManager } from './MapManager';
 import { LayersControl } from './LayersControl';
 import { AttributionControl } from './attributionControl/AttributionControl';
@@ -11,13 +10,11 @@ import { ProgressBar } from '@adobe/react-spectrum';
 
 export function MapContainer({
   engine,
-  editStart,
   sidebarWidth,
   onMoveEnd,
   initialCamera,
 }: {
   engine: SyncEngine;
-  editStart: EditStartChannel;
   sidebarWidth: number;
   initialCamera: CameraPosition | null;
   onMoveEnd: (_: CameraPosition) => void;
@@ -42,7 +39,6 @@ export function MapContainer({
       container: containerRef.current,
       engine,
       initialCamera: initialCameraRef.current,
-      editStart,
       onMoveEnd,
       setIsLoading,
     });
@@ -52,7 +48,7 @@ export function MapContainer({
       manager.remove();
       managerRef.current = null;
     };
-  }, [engine, editStart, onMoveEnd]);
+  }, [engine, onMoveEnd]);
 
   return (
     <div ref={containerRef} className="w-full h-full">

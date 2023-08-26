@@ -1,4 +1,4 @@
-import { FInsertPlace, SyncEngine } from '@/sync/SyncEngine';
+import { FInsertPlace, SyncEngine } from '@/api/map/sync/SyncEngine';
 import {
   Dispatch,
   DragEventHandler,
@@ -76,6 +76,7 @@ export function FeatureTree({
 
   const onDragStart = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
+      if (!engine.canEdit) return;
       const rootElem = rootRef.current;
       const dragAtElem = dragAtElemRef.current;
       if (!rootElem || !dragAtElem) return;
@@ -116,59 +117,68 @@ export function FeatureTree({
     [engine, selected, setSelected],
   );
 
-  const onDragEnter = useCallback<DragEventHandler<HTMLUListElement>>((evt) => {
-    if (evt.dataTransfer.types.includes('x/pt')) {
-      return;
-    }
-    evt.preventDefault();
-  }, []);
+  const onDragEnter = useCallback<DragEventHandler<HTMLUListElement>>(
+    (evt) => {
+      if (!engine.canEdit) return;
+      if (evt.dataTransfer.types.includes('x/pt')) {
+        return;
+      }
+      evt.preventDefault();
+    },
+    [engine.canEdit],
+  );
 
-  const onDragOver = useCallback<DragEventHandler<HTMLUListElement>>((evt) => {
-    if (evt.dataTransfer.types.includes('x/pt')) {
-      return;
-    }
+  const onDragOver = useCallback<DragEventHandler<HTMLUListElement>>(
+    (evt) => {
+      if (!engine.canEdit) return;
+      if (evt.dataTransfer.types.includes('x/pt')) {
+        return;
+      }
 
-    const rootElem = rootRef.current;
-    const dragAtElem = dragAtElemRef.current;
-    if (!rootElem || !dragAtElem) return;
+      const rootElem = rootRef.current;
+      const dragAtElem = dragAtElemRef.current;
+      if (!rootElem || !dragAtElem) return;
 
-    const rootRect = rootElem.getBoundingClientRect();
+      const rootRect = rootElem.getBoundingClientRect();
 
-    let targetElem = document.elementFromPoint(
-      rootRect.right - 20, // Subtract out potential scrollbar width
-      evt.clientY,
-    );
-    if (!(targetElem instanceof HTMLElement)) return;
-    while (targetElem.dataset.fid === undefined) {
-      targetElem = targetElem.parentElement;
+      let targetElem = document.elementFromPoint(
+        rootRect.right - 20, // Subtract out potential scrollbar width
+        evt.clientY,
+      );
       if (!(targetElem instanceof HTMLElement)) return;
-    }
+      while (targetElem.dataset.fid === undefined) {
+        targetElem = targetElem.parentElement;
+        if (!(targetElem instanceof HTMLElement)) return;
+      }
 
-    const targetId = parseInt(targetElem.dataset.fid, 10);
+      const targetId = parseInt(targetElem.dataset.fid, 10);
 
-    let targetPlace: FInsertPlace['at'];
-    const targetRect = targetElem.getBoundingClientRect();
-    if (evt.clientY > targetRect.bottom - targetRect.height / 3) {
-      targetPlace = 'after';
-    } else if (evt.clientY < targetRect.top + targetRect.height / 3) {
-      targetPlace = 'before';
-    } else {
-      targetPlace = 'firstChild';
-    }
+      let targetPlace: FInsertPlace['at'];
+      const targetRect = targetElem.getBoundingClientRect();
+      if (evt.clientY > targetRect.bottom - targetRect.height / 3) {
+        targetPlace = 'after';
+      } else if (evt.clientY < targetRect.top + targetRect.height / 3) {
+        targetPlace = 'before';
+      } else {
+        targetPlace = 'firstChild';
+      }
 
-    dragTargetRef.current = {
-      target: targetId,
-      elem: targetElem,
-      at: targetPlace,
-    };
+      dragTargetRef.current = {
+        target: targetId,
+        elem: targetElem,
+        at: targetPlace,
+      };
 
-    positionDragAtMarker(dragAtElem, targetRect, targetPlace, true);
+      positionDragAtMarker(dragAtElem, targetRect, targetPlace, true);
 
-    evt.preventDefault();
-  }, []);
+      evt.preventDefault();
+    },
+    [engine.canEdit],
+  );
 
   const onDrop = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
+      if (!engine.canEdit) return;
       const target = dragTargetRef.current;
       if (
         evt.dataTransfer.getData('x-pt/features') !== 'selected' ||

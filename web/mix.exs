@@ -77,7 +77,8 @@ defmodule PlanTopo.MixProject do
       {:dialyxir, "~> 1.2", only: [:dev], runtime: false},
       {:bimap, "~> 1.3"},
       {:esbuild, "~> 0.6", runtime: Mix.env() == :dev},
-      {:tailwind, "~> 0.1.8", runtime: Mix.env() == :dev}
+      {:tailwind, "~> 0.1.8", runtime: Mix.env() == :dev},
+      {:recase, "~> 0.7"}
     ]
   end
 

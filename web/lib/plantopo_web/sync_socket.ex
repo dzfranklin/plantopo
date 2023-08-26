@@ -1,10 +1,11 @@
 defmodule PlanTopoWeb.SyncSocket do
   @behaviour :cowboy_websocket
-  alias PlanTopo.Sync
+  alias PlanTopoWeb.Sync
+  alias PlanTopo.Maps
   require Logger
 
   defmodule State do
-    defstruct [:map_id, :session_id, :engine]
+    defstruct [:map_id, :session_id, :can_edit, :maybe_user_id, :engine]
   end
 
   @impl true
@@ -13,8 +14,10 @@ defmodule PlanTopoWeb.SyncSocket do
 
     state = %State{
       map_id: map_id,
+      can_edit: false,
+      # All nil until authed
       session_id: nil,
-      # Do not connect until authed
+      maybe_user_id: nil,
       engine: nil
     }
 
@@ -32,19 +35,23 @@ defmodule PlanTopoWeb.SyncSocket do
 
   @impl true
   def websocket_handle({:text, input}, state) when is_nil(state.session_id) do
-    # We haven't authenticated yet
+    req = Jason.decode!(input)
+    {:ok, maybe_user_id} = Sync.verify_user_token_if_present(req["token"])
 
-    %{"token" => token} = Jason.decode!(input)
+    meta = Maps.get_meta!(state.map_id)
+    can_edit = Maps.check_authorized(maybe_user_id, meta, :edit) == :ok
+    if not can_edit, do: Maps.check_authorized!(maybe_user_id, meta, :view)
 
-    {:ok, session_id, engine} =
-      Sync.connect(%{
-        map_id: state.map_id,
-        token: token
-      })
+    {:ok, session_id, engine} = Sync.connect(state.map_id)
 
-    state = %{state | session_id: session_id, engine: engine}
-
-    {[], state}
+    {[],
+     %{
+       state
+       | session_id: session_id,
+         maybe_user_id: maybe_user_id,
+         can_edit: can_edit,
+         engine: engine
+     }}
   end
 
   @impl true
@@ -56,8 +63,12 @@ defmodule PlanTopoWeb.SyncSocket do
         {[], state}
 
       "op" ->
-        :ok = Sync.recv(state.engine, state.session_id, msg)
-        {[], state}
+        if state.can_edit do
+          :ok = Sync.recv(state.engine, state.session_id, msg)
+          {[], state}
+        else
+          {[{:close, "received op from read-only session"}], state}
+        end
     end
   end
 

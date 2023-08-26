@@ -35,20 +35,22 @@ defmodule PlanTopo.Sync.Manager do
 
   @impl true
   def handle_info({:EXIT, pid, reason}, state) do
-    case BiMap.get_key(state.engines, pid) do
-      map_id when not is_nil(map_id) ->
-        Logger.info(
-          "Manager received sync engine exit: #{inspect(%{map_id: map_id, reason: reason})}"
+    map_id = BiMap.get_key(state.engines, pid)
+
+    if is_nil(map_id) do
+      Logger.debug(
+        "Ignoring non-engine EXIT received by manager (pid is #{inspect(pid)}, reason is #{inspect(reason)})"
+      )
+
+      {:noreply, state}
+    else
+      if reason != :idle do
+        Logger.warn(
+          "Manager received unexpected sync engine exit (map is #{map_id}, reason is #{inspect(reason)}"
         )
+      end
 
-        {:noreply, %{state | engines: BiMap.delete_value(state.engines, pid)}}
-
-      nil ->
-        Logger.debug(
-          "Ignoring non-engine EXIT received by manager: #{inspect(%{pid: pid, reason: reason})}"
-        )
-
-        {:noreply, state}
+      {:noreply, %{state | engines: BiMap.delete_value(state.engines, pid)}}
     end
   end
 end

@@ -274,7 +274,7 @@ defmodule PlanTopoWeb.UserAuthTest do
     test "returns error message if user isn't authenticated", %{conn: conn} do
       conn = conn |> UserAuth.api_require_authenticated_user([])
       assert conn.halted
-      assert %{"errors" => %{"detail" => "Unauthorized"}} = json_response(conn, 401)
+      assert %{"errors" => %{"message" => "Unauthorized"}} = json_response(conn, 401)
     end
 
     test "doesn't alter conn if user is authenticated", %{conn: conn, user: user} do

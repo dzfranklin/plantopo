@@ -29,11 +29,13 @@ defmodule PlanTopoWeb.UserRegistrationLive do
         method="post"
         as={:user}
       >
+        <input type="hidden" name="return_to" value={@return_to} />
+
         <.error :if={@changeset.action == :insert}>
           Oops, something went wrong! Please check the errors below.
         </.error>
 
-        <.input field={{f, :username}} type="text" label="Username" autocomplete="username" required />
+        <.input field={{f, :name}} type="text" label="Name" autocomplete="name" required />
         <.input field={{f, :email}} type="email" label="Email" required />
         <.input
           field={{f, :password}}
@@ -51,9 +53,12 @@ defmodule PlanTopoWeb.UserRegistrationLive do
     """
   end
 
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     changeset = Accounts.change_user_registration(%User{})
-    socket = assign(socket, changeset: changeset, trigger_submit: false)
+
+    socket =
+      assign(socket, return_to: params["return"], changeset: changeset, trigger_submit: false)
+
     {:ok, socket, temporary_assigns: [changeset: nil]}
   end
 

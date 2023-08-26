@@ -1,10 +1,4 @@
-import {
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useRef,
-  PointerEvent,
-} from 'react';
+import { useCallback, useRef, PointerEvent } from 'react';
 
 const WIDTH_MIN = 60;
 

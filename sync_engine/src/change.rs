@@ -4,6 +4,7 @@ use std::{
     ops::AddAssign,
 };
 
+use redis::{FromRedisValue, RedisError, RedisResult, ToRedisArgs};
 use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 
@@ -50,6 +51,55 @@ impl AddAssign<Change> for Change {
         self.fprops.extend(rhs.fprops);
         self.lprops.extend(rhs.lprops);
         self.fdeletes.extend(rhs.fdeletes);
+    }
+}
+
+impl FromRedisValue for Change {
+    fn from_redis_value(v: &redis::Value) -> RedisResult<Self> {
+        use redis::Value;
+        match v {
+            Value::Nil => Ok(Change::default()),
+            Value::Data(v) => serde_json::from_slice(v).map_err(|err| {
+                RedisError::from((
+                    redis::ErrorKind::Serialize,
+                    "deserialize change: single data",
+                    format!("{err}"),
+                ))
+            }),
+            Value::Bulk(vs) => {
+                let mut change = Change::default();
+                for v in vs {
+                    let Value::Data(v) = v else {
+                        return Err(RedisError::from((
+                            redis::ErrorKind::Serialize,
+                            "deserialize change: bulk: expected data",
+                        )));
+                    };
+                    change += serde_json::from_slice(v).map_err(|err| {
+                        RedisError::from((
+                            redis::ErrorKind::Serialize,
+                            "deserialize change: bulk: deserialize data",
+                            format!("{err}"),
+                        ))
+                    })?;
+                }
+                Ok(change)
+            }
+            _ => Err(RedisError::from((
+                redis::ErrorKind::Serialize,
+                "deserialize change: expected data or bulk or nil",
+            ))),
+        }
+    }
+}
+
+impl ToRedisArgs for Change {
+    fn write_redis_args<W>(&self, out: &mut W)
+    where
+        W: ?Sized + redis::RedisWrite,
+    {
+        let value = serde_json::to_vec(&self).expect("infallible serialize");
+        out.write_arg(&value);
     }
 }
 

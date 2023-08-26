@@ -1,7 +1,6 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
 import Sidebar from './sidebar/Sidebar';
 import {
   AlertDialog,
@@ -10,47 +9,55 @@ import {
 } from '@adobe/react-spectrum';
 import ErrorTechInfo from '@/app/components/ErrorTechInfo';
 import { MapContainer } from './mapContainer/MapContainer';
-import { EditStartChannel } from './EditStartChannel';
-import { useInitialCamera } from './useInitialCamera';
-import { useSidebarWidth } from './useSidebarWidth';
-import { useSyncSocket } from './useSyncSocket';
+import { useInitialCamera } from './mapContainer/useInitialCamera';
+import { useSidebarWidth } from './sidebar/useSidebarWidth';
+import { useMapSync } from '@/api/map/sync/useMapSync';
+import { useMapMeta } from '@/api/map/useMapMeta';
+import { UnauthorizedError } from '@/api/errors';
+import { goToLogin } from '@/api/account/redirectToLogin';
+import { useCurrentUser } from '../useCurrentUser';
+import { PageTitle } from '../PageTitle';
 
 export default function MapPage() {
+  const isLoggedIn = useCurrentUser() !== null;
   const searchParams = useSearchParams();
   const idParam = searchParams.get('id');
   const mapId = Number.parseInt(idParam || '');
   if (isNaN(mapId)) throw new Error(`Invalid id param "${idParam}"`);
 
-  // TODO: Request through regular http api
-  const mapName = 'My Map';
+  const meta = useMapMeta(mapId);
+  const sync = useMapSync(mapId, {
+    onError: (error) => {
+      if (error instanceof UnauthorizedError && !isLoggedIn) {
+        goToLogin();
+      }
+    },
+  });
 
-  useEffect(() => {
-    document.title = `${mapName} - PlanTopo`;
-  }, [mapName]);
-
-  const editStart = useMemo(() => new EditStartChannel(), []);
-
-  const socket = useSyncSocket(mapId);
   const [sidebarWidth, setSidebarWidth] = useSidebarWidth();
   const [initialCamera, saveCamera] = useInitialCamera(mapId);
 
   return (
     <div className="grid w-screen h-screen overflow-hidden">
+      <PageTitle
+        title={meta.data ? `${meta.data.name || 'Untitled map'}` : 'Loading...'}
+      />
+
       <DialogContainer isDismissable={false} onDismiss={() => {}}>
-        {socket.error && (
+        {sync.error && (
           <AlertDialog
-            title="Sync Error"
+            title={sync.engine ? 'Error syncing map' : 'Error opening map'}
             variant="error"
-            primaryActionLabel="Reload"
+            primaryActionLabel={'Reload'}
             onPrimaryAction={() => document.location.reload()}
           >
-            <h1 className="mb-4">{socket.error.message}</h1>
-            <ErrorTechInfo error={socket.error} />
+            <h1 className="mb-4">{sync.error.message}</h1>
+            <ErrorTechInfo error={sync.error} />
           </AlertDialog>
         )}
       </DialogContainer>
 
-      {socket.engine === undefined || initialCamera.status === 'loading' ? (
+      {!meta.data || !sync.engine || initialCamera.status === 'loading' ? (
         <div className="grid place-self-center place-items-center">
           <ProgressCircle isIndeterminate aria-label="loading" size="L" />
           <h1 className="mt-4 text-center">Opening map</h1>
@@ -58,19 +65,19 @@ export default function MapPage() {
       ) : (
         <>
           <MapContainer
-            engine={socket.engine}
-            editStart={editStart}
+            engine={sync.engine}
             sidebarWidth={sidebarWidth}
             onMoveEnd={saveCamera}
             initialCamera={initialCamera.value}
           />
-          <Sidebar
-            engine={socket.engine}
-            mapName={mapName}
-            editStart={editStart}
-            width={sidebarWidth}
-            setWidth={setSidebarWidth}
-          />
+          {
+            <Sidebar
+              engine={sync.engine}
+              meta={meta.data}
+              width={sidebarWidth}
+              setWidth={setSidebarWidth}
+            />
+          }
         </>
       )}
     </div>

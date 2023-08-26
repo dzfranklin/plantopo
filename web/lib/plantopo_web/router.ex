@@ -3,7 +3,7 @@ defmodule PlanTopoWeb.Router do
 
   import PlanTopoWeb.UserAuth
 
-  pipeline :browser do
+  pipeline :browser_no_csrf do
     plug(:accepts, ["html"])
     plug(:fetch_session)
     plug(:fetch_live_flash)
@@ -12,10 +12,37 @@ defmodule PlanTopoWeb.Router do
     plug(:fetch_current_user)
   end
 
+  pipeline :browser do
+    plug(:accepts, ["html"])
+    plug(:fetch_session)
+    plug(:fetch_live_flash)
+    plug(:put_root_layout, {PlanTopoWeb.Layouts, :root})
+    plug(:put_secure_browser_headers)
+    plug(:fetch_current_user)
+    plug(:protect_from_forgery)
+  end
+
   pipeline :api do
     plug(:accepts, ["json"])
     plug(:fetch_session)
     plug(:fetch_current_user)
+  end
+
+  scope "/api", PlanTopoWeb do
+    pipe_through(:api)
+
+    scope "/map" do
+      get("/meta", MapApiController, :meta)
+      post("/create", MapApiController, :create)
+      delete("/", MapApiController, :delete)
+      post("/rename", MapApiController, :rename)
+      get("/access", MapApiController, :access)
+      put("/access", MapApiController, :put_access)
+      post("/invite", MapApiController, :invite)
+      post("/authorize_sync", MapApiController, :authorize_sync)
+      get("/owned_by_me", MapApiController, :owned_by_me)
+      get("/shared_with_me", MapApiController, :shared_with_me)
+    end
   end
 
   ## Auth optional
@@ -24,7 +51,6 @@ defmodule PlanTopoWeb.Router do
     pipe_through([:browser])
 
     get("/", StubController, :stub)
-    delete("/account/logout", UserSessionController, :delete)
 
     live_session :current_user,
       on_mount: [{PlanTopoWeb.UserAuth, :mount_current_user}] do
@@ -33,8 +59,9 @@ defmodule PlanTopoWeb.Router do
     end
   end
 
-  scope "/api", PlanTopoWeb do
-    pipe_through(:api)
+  scope "/", PlanTopoWeb do
+    pipe_through([:browser_no_csrf])
+    delete("/account/logout", UserSessionController, :delete)
   end
 
   ## Auth forbidden

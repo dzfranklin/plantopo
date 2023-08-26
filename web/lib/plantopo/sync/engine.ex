@@ -4,8 +4,10 @@ defmodule PlanTopo.Sync.Engine do
   require Logger
 
   @config Application.compile_env(:plantopo, :sync_engine)
-  @bin Keyword.fetch!(@config, :executable)
+  @executable Keyword.fetch!(@config, :executable) |> String.to_charlist()
+  @store Keyword.fetch!(@config, :store) |> String.to_charlist()
   @log_level Keyword.fetch!(@config, :log_level) |> String.to_charlist()
+  @close_timeout Keyword.get(@config, :close_timeout, 30_000)
 
   # 8 MiB
   @max_line 8 * 2 ** 20
@@ -14,39 +16,47 @@ defmodule PlanTopo.Sync.Engine do
     @type sessions :: BiMap.t(integer(), pid())
 
     @type t :: %__MODULE__{
+      map_id: number(),
             engine: port(),
             sessions: sessions(),
-            next_session_id: integer()
+            next_session_id: integer(),
+            idle_timer: reference()
           }
 
     defstruct [
+      :map_id,
       :engine,
       :sessions,
-      :next_session_id
+      :next_session_id,
+      :idle_timer
     ]
   end
 
-  # TODO: Auto-close
-
   @impl true
   def init(opts) do
-    id = Keyword.fetch!(opts, :map_id)
+    map_id = Keyword.fetch!(opts, :map_id)
+
+    idle_timer = Process.send_after(self(), :close_timeout, @close_timeout)
 
     engine =
       Port.open(
-        {:spawn_executable, @bin},
+        {:spawn_executable, @executable},
         [
           :binary,
-          {:args, []},
+          {:args, ['--store', @store, '--map-id', to_charlist(map_id)]},
           {:line, @max_line},
-          {:env, [{String.to_charlist("RUST_LOG"), @log_level}]},
+          {:env, [{'RUST_LOG', @log_level}]},
           :exit_status
         ]
       )
 
-    send_engine(engine, %{"action" => "open", "map" => id})
+    {:ok, %State{map_id: map_id, engine: engine, sessions: BiMap.new(), next_session_id: 0, idle_timer: idle_timer}}
+  end
 
-    {:ok, %State{engine: engine, sessions: BiMap.new(), next_session_id: 0}}
+  defp reset_idle_timer(state) do
+    _ = Process.cancel_timer(state.idle_timer)
+    timer = Process.send_after(self(), :close_timeout, @close_timeout)
+    %{state | idle_timer: timer}
   end
 
   @impl true
@@ -58,7 +68,7 @@ defmodule PlanTopo.Sync.Engine do
       state
       | sessions: BiMap.put(state.sessions, session_id, client_pid),
         next_session_id: session_id + 1
-    }
+    } |> reset_idle_timer()
 
     send_engine(state.engine, %{
       "action" => "connect",
@@ -71,7 +81,7 @@ defmodule PlanTopo.Sync.Engine do
   @impl true
   def handle_call({:recv, client_id, msg}, _from, state) do
     send_engine(state.engine, %{"action" => "recv", "id" => client_id, "value" => msg})
-    {:reply, :ok, state}
+    {:reply, :ok, state |> reset_idle_timer()}
   end
 
   @impl true
@@ -81,12 +91,13 @@ defmodule PlanTopo.Sync.Engine do
 
   @impl true
   def handle_info({engine, {:exit_status, status}}, state) when engine == state.engine do
-    raise "Engine process exited unexpectedly with status #{status}"
+    raise "Engine (map #{state.map_id}) process exited unexpectedly with status #{status}"
   end
 
   @impl true
   def handle_info({engine, {:data, line}}, state) when engine == state.engine do
     {:eol, line} = line
+    state = state |> reset_idle_timer()
 
     case Jason.decode!(line) do
       %{
@@ -138,8 +149,14 @@ defmodule PlanTopo.Sync.Engine do
   end
 
   @impl true
+  def handle_info(:close_timeout, state) do
+    Logger.info("Engine closing as idle (map #{state.map_id})")
+     {:stop, :idle}
+  end
+
+  @impl true
   def handle_info(msg, state) do
-    Logger.info("Unhandled handle_info in Engine: #{inspect(msg)}")
+    Logger.info("Unhandled handle_info in Engine (map #{state.map_id}): #{inspect(msg)}")
     {:noreply, state}
   end
 
@@ -149,6 +166,7 @@ defmodule PlanTopo.Sync.Engine do
     nil
   end
 
+  @spec send_client(State.sessions(), number(), map()) :: nil
   defp send_client(sessions, client_id, msg) do
     msg = Jason.encode!(msg)
     pid = BiMap.get(sessions, client_id)
@@ -156,11 +174,14 @@ defmodule PlanTopo.Sync.Engine do
     nil
   end
 
+  @spec send_bcast(State.sessions(), number(), map()) :: nil
   defp send_bcast(sessions, except, msg) do
     msg = Jason.encode!(msg)
 
     sessions
     |> Enum.filter(fn {p, _} -> p != except end)
     |> Enum.each(fn {_, pid} -> send(pid, {self(), :send, msg}) end)
+
+    nil
   end
 end

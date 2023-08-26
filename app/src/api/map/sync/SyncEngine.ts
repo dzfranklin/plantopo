@@ -129,7 +129,9 @@ type LPropTypeMap = {
  * server.
  */
 export class SyncEngine {
-  private _send: (_: SyncOp[]) => void;
+  readonly canEdit: boolean;
+
+  private _send: ((_: SyncOp[]) => void) | null;
 
   private _updateSummary = {
     count: 0,
@@ -178,7 +180,8 @@ export class SyncEngine {
   constructor(props: {
     fidBlockStart: number;
     fidBlockUntil: number;
-    send: (_: SyncOp[]) => void;
+    canEdit: boolean;
+    send: ((_: SyncOp[]) => void) | null;
   }) {
     if (props.fidBlockUntil <= props.fidBlockStart) {
       throw new Error('Invalid fid block');
@@ -186,6 +189,7 @@ export class SyncEngine {
     this._fidBlockStart = props.fidBlockStart;
     this._fidBlockUntil = props.fidBlockUntil;
     this._nextFid = props.fidBlockStart;
+    this.canEdit = props.canEdit;
     this._send = props.send;
   }
 
@@ -200,7 +204,7 @@ export class SyncEngine {
     const convergeDeletes = this._fDelete(new Set(change.fdeletes));
     this._popNotifies();
     if (convergeDeletes !== undefined) {
-      this._send([
+      this._send?.([
         { action: 'fDeleteConverge', fids: Array.from(convergeDeletes) },
       ]);
     }
@@ -624,6 +628,10 @@ export class SyncEngine {
    * Mutates its arguments
    */
   private _apply(ops: SyncOp[]) {
+    if (!this.canEdit) {
+      throw new Error('Cannot edit');
+    }
+
     for (const op of ops) {
       switch (op.action) {
         case 'fCreate': {
@@ -653,7 +661,7 @@ export class SyncEngine {
       this._transaction.push(ops);
     } else {
       this._popNotifies();
-      this._send(ops);
+      this._send!(ops);
     }
   }
 

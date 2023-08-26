@@ -4,3 +4,4 @@ defmodule IexHelpers do
 end
 
 import IexHelpers
+import Ecto.Query

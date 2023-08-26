@@ -25,15 +25,18 @@ defmodule PlanTopoWeb.UserAuth do
   disconnected on log out. The line can be safely removed
   if you are not using LiveView.
   """
-  def log_in_user(conn, user, params \\ %{}) do
+  def log_in_user(conn, user, params \\ %{}, opts \\ []) do
     token = Accounts.generate_user_session_token(user)
-    user_return_to = get_session(conn, :user_return_to)
+
+    return_to = Keyword.get(opts, :return_to) || get_session(conn, :user_return_to)
+    return_to = if(return_to == "", do: "/", else: return_to)
 
     conn
     |> renew_session()
     |> put_token_in_session(token)
     |> maybe_write_remember_me_cookie(token, params)
-    |> redirect(to: user_return_to || signed_in_path(conn))
+    |> put_unchecked_user_cookie(user)
+    |> redirect(to: return_to || signed_in_path(conn))
   end
 
   defp maybe_write_remember_me_cookie(conn, token, %{"remember_me" => "true"}) do
@@ -42,6 +45,32 @@ defmodule PlanTopoWeb.UserAuth do
 
   defp maybe_write_remember_me_cookie(conn, _token, _params) do
     conn
+  end
+
+  defp put_unchecked_user_cookie(conn, user) do
+    # Used on the frontend to show logged in state (but doesn't authenticate,
+    # thus "unchecked"). Only base64-encoded for compatibility with browsers
+    # that don't support special characters in cookies.
+
+    value =
+      %{
+        id: user.id,
+        name: user.name,
+        email: user.email
+      }
+      |> Jason.encode!()
+      |> Base.encode64()
+
+    put_resp_cookie(
+      conn,
+      "unchecked_user",
+      value,
+      http_only: false
+    )
+  end
+
+  defp clear_unchecked_user_cookie(conn) do
+    delete_resp_cookie(conn, "unchecked_user")
   end
 
   # This function renews the session ID and erases the whole
@@ -84,6 +113,7 @@ defmodule PlanTopoWeb.UserAuth do
 
     conn
     |> renew_session()
+    |> clear_unchecked_user_cookie()
     |> delete_resp_cookie(@remember_me_cookie)
     |> redirect(to: "/")
   end
@@ -252,6 +282,5 @@ defmodule PlanTopoWeb.UserAuth do
 
   defp get_user(token) do
     Accounts.get_user_by_session_token(token)
-    |> Accounts.preload_settings()
   end
 end

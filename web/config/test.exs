@@ -2,6 +2,7 @@ import Config
 
 config :plantopo, :sync_engine,
   log_level: "error",
+  store: "redis://localhost:6379/1",
   executable: "./run_sync_engine.sh"
 
 s3_config = [
