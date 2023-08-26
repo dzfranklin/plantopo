@@ -34,7 +34,8 @@ localhost {
 
 	@web {
 		not {
-			path /_next/*
+			path /__next*
+			path /_next*
 			path /map
 		}
 	}
