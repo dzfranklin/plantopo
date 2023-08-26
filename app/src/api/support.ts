@@ -1,4 +1,4 @@
-import wrapError from '@/wrapError';
+import wrapError from '@/generic/wrapError';
 import { ForbiddenError, NotFoundError, UnauthorizedError } from './errors';
 
 export async function handleResp<T>(req: Promise<Response>): Promise<T> {

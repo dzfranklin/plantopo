@@ -7,7 +7,7 @@ import {
   Provider as SpectrumProvider,
 } from '@adobe/react-spectrum';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import cls from './cls';
+import cls from '../generic/cls';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 const inter = Inter({ subsets: ['latin'] });

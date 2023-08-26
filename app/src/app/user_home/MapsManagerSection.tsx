@@ -1,4 +1,4 @@
-import { MapMeta } from '@/api/map/MapMeta';
+import { MapMeta } from '@/features/map/api/MapMeta';
 import {
   Cell,
   Column,
@@ -15,15 +15,15 @@ import {
   ProgressCircle,
 } from '@adobe/react-spectrum';
 import { ReactElement, useState } from 'react';
-import { DateTimeText } from '../components/DateTimeText';
+import { DateTimeText } from '../../generic/DateTimeText';
 import EditIcon from '@spectrum-icons/workflow/Edit';
 import ShareIcon from '@spectrum-icons/workflow/UserShare';
 import { useRouter } from 'next/navigation';
 import { UseQueryResult } from '@tanstack/react-query';
-import { InlineErrorComponent } from '../components/InlineErrorComponent';
+import { InlineErrorComponent } from '@/generic/InlineErrorComponent';
 import { RenamePopover } from './RenamePopover';
-import { useMapDeleteMutation } from '@/api/map/useMapDeleteMutation';
-import { MapShareDialog } from '@/app/components/MapShareDialog/MapShareDialog';
+import { useMapDeleteMutation } from '@/features/map/api/useMapDeleteMutation';
+import { MapShareDialog } from '@/features/map/MapShareDialog/MapShareDialog';
 
 export function MapsManagerSection({
   title,

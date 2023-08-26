@@ -7,9 +7,9 @@ import {
   TextField,
 } from '@adobe/react-spectrum';
 import { useState } from 'react';
-import { InlineErrorComponent } from '../components/InlineErrorComponent';
-import { useMapRenameMutation } from '@/api/map/useMapRenameMutation';
-import { MapMeta } from '@/api/map/MapMeta';
+import { InlineErrorComponent } from '@/generic/InlineErrorComponent';
+import { useMapRenameMutation } from '@/features/map/api/useMapRenameMutation';
+import { MapMeta } from '@/features/map/api/MapMeta';
 
 export function RenamePopover({
   item,

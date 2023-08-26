@@ -1,6 +1,6 @@
 'use client';
 
-import Navbar from './components/Navbar';
+import Navbar from '@/generic/Navbar';
 
 export default function PublicHomePage() {
   return (

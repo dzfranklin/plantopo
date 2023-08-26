@@ -8,10 +8,10 @@ import {
 import { MapsManagerSection } from './MapsManagerSection';
 import NewMapIcon from '@spectrum-icons/workflow/Add';
 import NoMapsIllustration from '@spectrum-icons/illustrations/File';
-import { useMapsOwnedByMe } from '@/api/map/useMapsOwnedByMe';
-import { useMapsSharedWithMe } from '@/api/map/useMapsSharedWithMe';
+import { useMapsOwnedByMe } from '@/features/map/api/useMapsOwnedByMe';
+import { useMapsSharedWithMe } from '@/features/map/api/useMapsSharedWithMe';
 import { useCallback } from 'react';
-import { useMapCreateMutation } from '@/api/map/useMapCreateMutation';
+import { useMapCreateMutation } from '@/features/map/api/useMapCreateMutation';
 import { useRouter } from 'next/navigation';
 
 export function UserMapsManagerComponent() {
