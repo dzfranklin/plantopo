@@ -9,7 +9,7 @@ defmodule PlanTopo.Sync do
   @user_token_max_age 86400
 
   @config Application.compile_env!(:plantopo, __MODULE__)
-  @socket_host Keyword.fetch!(@config, :socket_host)
+  @socket_host Keyword.fetch!(@config, :host)
   @secret_key_base Keyword.fetch!(@config, :secret_key_base)
 
   @spec socket_url(map :: number()) :: String.t()

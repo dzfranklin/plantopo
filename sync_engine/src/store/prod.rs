@@ -15,17 +15,17 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 const SNAPSHOT_INTERVAL: Duration = Duration::from_secs(60);
 const SNAPSHOT_INTERVAL_JITTER_PLUSMINUS: Duration = Duration::from_secs(5);
 
-#[derive(Debug, Clone)]
-pub struct Config {
-    pub redis_url: String,
-    pub snapshot_url: String,
-    pub snapshot_token: String,
-}
-
 #[derive(Debug)]
 pub struct ProdStore {
     queue: channel::Sender<Action>,
     meta: Metadata,
+}
+
+#[derive(Debug, serde::Deserialize, Clone)]
+pub struct Config {
+    pub redis_url: String,
+    pub snapshot_url: String,
+    pub snapshot_token: String,
 }
 
 enum Action {
@@ -34,23 +34,11 @@ enum Action {
     Flush(channel::Sender<()>),
 }
 
-#[derive(Debug, serde::Serialize)]
-struct SnapshotPostBody<'a> {
-    map_id: u32,
-    value: SnapshotPostValue<'a>,
-}
-
-#[derive(Debug, serde::Serialize)]
-struct SnapshotPostValue<'a> {
-    meta: &'a Metadata,
-    value: &'a Change,
-}
-
 impl ProdStore {
     #[tracing::instrument]
     pub fn open(config: Config, map_id: u32) -> eyre::Result<(Self, Change)> {
-        let mut conn =
-            redis::Client::open(config.redis_url)?.get_connection_with_timeout(CONNECT_TIMEOUT)?;
+        let mut conn = redis::Client::open(config.redis_url.clone())?
+            .get_connection_with_timeout(CONNECT_TIMEOUT)?;
 
         let meta: Metadata = conn.get(&meta_key_for(map_id))?;
         let snapshot: Change = conn.lrange(&wal_key_for(map_id), 0, -1)?;
@@ -59,17 +47,7 @@ impl ProdStore {
 
         let meta2 = meta.clone();
         let snapshot2 = snapshot.clone();
-        thread::spawn(move || {
-            worker_thread(
-                map_id,
-                meta2,
-                snapshot2,
-                rx,
-                conn,
-                config.snapshot_url,
-                config.snapshot_token,
-            )
-        });
+        thread::spawn(move || worker_thread(config, map_id, meta2, snapshot2, rx, conn));
 
         Ok((Self { queue: tx, meta }, snapshot))
     }
@@ -106,13 +84,12 @@ impl Store for ProdStore {
 }
 
 fn worker_thread(
+    config: Config,
     map_id: u32,
     mut meta: Metadata,
     mut snapshot: Change,
     queue: channel::Receiver<Action>,
     mut conn: redis::Connection,
-    snapshot_url: String,
-    snapshot_token: String,
 ) {
     use channel::RecvTimeoutError::*;
 
@@ -135,17 +112,14 @@ fn worker_thread(
     let req = reqwest::blocking::Client::new();
 
     let mut deadline = next_snapshot_deadline();
+    let mut changes_to_snapshot = false;
     loop {
         if deadline < Instant::now() {
-            save_snapshot(
-                &req,
-                &snapshot_url,
-                &snapshot_token,
-                map_id,
-                &meta,
-                &snapshot,
-            );
             deadline = next_snapshot_deadline();
+            if changes_to_snapshot {
+                save_snapshot(&req, map_id, &config, &meta, &snapshot);
+                changes_to_snapshot = false;
+            }
         }
 
         let action = match queue.recv_deadline(deadline) {
@@ -158,38 +132,47 @@ fn worker_thread(
             Action::SetMeta(value) => {
                 Cmd::set(&meta_key, &value).query::<()>(&mut conn).unwrap();
                 meta = value;
+                changes_to_snapshot = true;
             }
             Action::Push(entry) => {
                 Cmd::rpush(&wal_key, &entry).query::<()>(&mut conn).unwrap();
                 snapshot += entry;
+                changes_to_snapshot = true;
             }
             Action::Flush(tx) => {
-                save_snapshot(
-                    &req,
-                    &snapshot_url,
-                    &snapshot_token,
-                    map_id,
-                    &meta,
-                    &snapshot,
-                );
                 deadline = next_snapshot_deadline();
+                if changes_to_snapshot {
+                    save_snapshot(&req, map_id, &config, &meta, &snapshot);
+                    changes_to_snapshot = false;
+                }
                 let _ = tx.send(());
             }
         }
     }
 }
 
+#[derive(Debug, serde::Serialize)]
+struct SnapshotPostBody<'a> {
+    map_id: u32,
+    value: SnapshotPostValue<'a>,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct SnapshotPostValue<'a> {
+    meta: &'a Metadata,
+    value: &'a Change,
+}
+
 fn save_snapshot(
     req: &reqwest::blocking::Client,
-    snapshot_url: &str,
-    snapshot_token: &str,
     map_id: u32,
+    config: &Config,
     meta: &Metadata,
     snapshot: &Change,
 ) {
     let _ = req
-        .post(snapshot_url)
-        .bearer_auth(snapshot_token)
+        .post(&config.snapshot_url)
+        .bearer_auth(&config.snapshot_token)
         .json(&SnapshotPostBody {
             map_id,
             value: SnapshotPostValue {

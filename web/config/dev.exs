@@ -1,13 +1,13 @@
 import Config
 
+config :plantopo, :redis_url, "redis://localhost:6379/0"
+
 config :plantopo, PlanTopo.Sync,
-  socket_host: "localhost",
+  host: "localhost",
   secret_key_base: "OsCGgV1gKEAFQucqljKYIyXcXcQ8HufXfY8+XDc5mPzEXuXVDdcu+DywKdZUPJX/"
 
 config :plantopo, :sync_engine,
-  log_level: "debug",
-  redis_url: "redis://localhost:6379/0",
-  snapshot_url: "https://localhost/api/sync_server/snapshot",
+  log_level: "info,pt_sync_engine=debug",
   executable: "./run_sync_engine.sh"
 
 config :opentelemetry, traces_exporter: :none

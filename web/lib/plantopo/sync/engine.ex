@@ -1,16 +1,11 @@
 defmodule PlanTopo.Sync.Engine do
   use GenServer
-
   require Logger
 
   @config Application.compile_env(:plantopo, :sync_engine)
   @executable Keyword.fetch!(@config, :executable) |> String.to_charlist()
   @log_level Keyword.fetch!(@config, :log_level) |> String.to_charlist()
-  @redis_url Keyword.fetch!(@config, :redis_url) |> String.to_charlist()
-  @snapshot_url (if(Keyword.has_key?(@config, :snapshot_url)) do
-                   Keyword.fetch!(@config, :snapshot_url) |> String.to_charlist()
-                 end)
-  @close_timeout Keyword.get(@config, :close_timeout, 30_000)
+  @close_timeout Keyword.get(@config, :close_timeout, 15 * 60 * 1000)
 
   # 8 MiB
   @max_line 8 * 2 ** 20
@@ -38,6 +33,7 @@ defmodule PlanTopo.Sync.Engine do
   @impl true
   def init(opts) do
     map_id = Keyword.fetch!(opts, :map_id)
+    {store_name, store_config} = Keyword.fetch!(opts, :store)
 
     idle_timer = Process.send_after(self(), :close_timeout, @close_timeout)
 
@@ -46,7 +42,15 @@ defmodule PlanTopo.Sync.Engine do
         {:spawn_executable, @executable},
         [
           :binary,
-          {:args, spawn_args(map_id)},
+          {:args,
+           [
+             '--map-id',
+             to_charlist(map_id),
+             '--store',
+             to_charlist(store_name),
+             '--store-config',
+             to_charlist(store_config)
+           ]},
           {:line, @max_line},
           {:env, [{'RUST_LOG', @log_level}]},
           :exit_status
@@ -55,29 +59,12 @@ defmodule PlanTopo.Sync.Engine do
 
     {:ok,
      %State{
-       map_id: map_id,
+       map_id: Keyword.fetch!(opts, :map_id),
        engine: engine,
        sessions: BiMap.new(),
        next_session_id: 0,
        idle_timer: idle_timer
      }}
-  end
-
-  # Silence dialyzer correctly identifying the branch is known at compile time
-  @dialyzer {:nowarn_function, spawn_args: 1}
-  defp spawn_args(map_id) do
-    snapshot_args =
-      if !is_nil(@snapshot_url) do
-        ['--snapshot-url', @snapshot_url]
-      else
-        if !Keyword.get(@config, :discard_snapshots?) do
-          raise RuntimeError, "Missing snapshot_url"
-        else
-          []
-        end
-      end
-
-    ['--map-id', to_charlist(map_id), '--redis-url', @redis_url] ++ snapshot_args
   end
 
   defp reset_idle_timer(state) do
@@ -180,7 +167,7 @@ defmodule PlanTopo.Sync.Engine do
   @impl true
   def handle_info(:close_timeout, state) do
     Logger.info("Engine closing as idle (map #{state.map_id})")
-    {:stop, :idle}
+    {:stop, :normal, state}
   end
 
   @impl true

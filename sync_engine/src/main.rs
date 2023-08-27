@@ -7,7 +7,7 @@ use std::{
 };
 
 use clap::Parser as _;
-use eyre::{Context, Result};
+use eyre::{bail, Context, Result};
 use rand::{rngs::SmallRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use tracing_subscriber::{prelude::*, EnvFilter};
@@ -17,18 +17,14 @@ use pt_sync_engine::{
     Change, Engine, Op,
 };
 
-#[derive(Debug, clap::Parser)]
+#[derive(clap::Parser)]
 struct Args {
     #[arg(long)]
     map_id: u32,
     #[arg(long)]
-    dev: bool,
+    store: String,
     #[arg(long)]
-    redis_url: Option<String>,
-    #[arg(long)]
-    snapshot_url: Option<String>,
-    #[arg(long)]
-    snapshot_token: Option<String>,
+    store_config: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -80,22 +76,21 @@ fn main() -> Result<()> {
         .init();
 
     let args = Args::parse();
-    tracing::info!(?args);
+    tracing::info!(map_id = args.map_id, store = args.store);
 
-    if args.dev {
-        let store_path = PathBuf::from(".sync_store").join(args.map_id.to_string());
-        accept(LocalFileStore::open(store_path)?)
-    } else {
-        let config = store::prod::Config {
-            redis_url: args.redis_url.expect("--redis-url required if not --dev"),
-            snapshot_url: args
-                .snapshot_url
-                .expect("--snapshot-url required if not --dev"),
-            snapshot_token: args
-                .snapshot_token
-                .expect("--snapshot-token required if not --dev"),
-        };
-        accept(ProdStore::open(config, args.map_id)?)
+    match args.store.as_str() {
+        "test" => {
+            let store_path = PathBuf::from(".sync_store")
+                .join(args.store_config)
+                .join(args.map_id.to_string());
+            accept(LocalFileStore::open(store_path)?)
+        }
+        "prod" => {
+            let config: store::prod::Config =
+                serde_json::from_str(&args.store_config).wrap_err("parse --store-config")?;
+            accept(ProdStore::open(config, args.map_id)?)
+        }
+        store => bail!("Unrecognized store: {store}"),
     }
 }
 

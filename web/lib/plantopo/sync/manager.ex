@@ -4,18 +4,18 @@ defmodule PlanTopo.Sync.Manager do
   require Logger
 
   defmodule State do
-    defstruct [:engines]
+    defstruct [:engines, :store]
   end
 
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, [], name: opts[:name])
+    GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
   @impl true
-  def init(_opts) do
+  def init(opts) do
+    store = Keyword.fetch!(opts, :store)
     Process.flag(:trap_exit, true)
-
-    {:ok, %State{engines: BiMap.new()}}
+    {:ok, %State{engines: BiMap.new(), store: store}}
   end
 
   @impl true
@@ -26,7 +26,9 @@ defmodule PlanTopo.Sync.Manager do
         {:reply, {:ok, client_id, engine}, state}
 
       nil ->
-        {:ok, engine} = GenServer.start_link(PlanTopo.Sync.Engine, map_id: map_id)
+        {:ok, engine} =
+          GenServer.start_link(PlanTopo.Sync.Engine, map_id: map_id, store: state.store)
+
         {:ok, client_id} = GenServer.call(engine, {:connect, client_pid})
         state = %{state | engines: BiMap.put(state.engines, map_id, engine)}
         {:reply, {:ok, client_id, engine}, state}

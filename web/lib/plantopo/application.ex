@@ -14,6 +14,16 @@ defmodule PlanTopo.Application do
 
     :ok = :locus.start_loader(:city, {:maxmind, "GeoLite2-City"})
 
+    sync_host = Application.fetch_env!(:plantopo, PlanTopo.Sync) |> Keyword.fetch!(:host)
+
+    sync_store_config = %{
+      redis_url: Application.fetch_env!(:plantopo, :redis_url),
+      snapshot_url: "https://#{sync_host}/api/sync_server/snapshot",
+      snapshot_token: PlanTopo.Sync.mint_server_snapshot_token()
+    }
+
+    sync_store = {"prod", Jason.encode!(sync_store_config)}
+
     children =
       [
         # Start the Telemetry supervisor
@@ -25,7 +35,7 @@ defmodule PlanTopo.Application do
         {Phoenix.PubSub, name: PlanTopo.PubSub},
         # Start Finch
         {Finch, name: PlanTopo.Finch},
-        {PlanTopo.Sync.Manager, name: PlanTopo.Sync.Manager},
+        {PlanTopo.Sync.Manager, name: PlanTopo.Sync.Manager, store: sync_store},
         # Start the Endpoint (http/https)
         PlanTopoWeb.Endpoint,
         if(Application.get_env(:plantopo, :start_minio),
