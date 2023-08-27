@@ -1,8 +1,13 @@
 import Config
 
+config :plantopo, PlanTopo.Sync,
+  socket_host: "localhost",
+  secret_key_base: "dwUOdWpKz0AMiveIc/D2MQezf9BNMl8/jVjj853iP8jcUuyUjeU8or937bblshYO"
+
 config :plantopo, :sync_engine,
   log_level: "error",
-  store: "redis://localhost:6379/1",
+  redis_url: "redis://localhost:6379/1",
+  discard_snapshots?: true,
   executable: "./run_sync_engine.sh"
 
 s3_config = [

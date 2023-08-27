@@ -43,6 +43,8 @@ defmodule PlanTopoWeb.Router do
       get("/owned_by_me", MapApiController, :owned_by_me)
       get("/shared_with_me", MapApiController, :shared_with_me)
     end
+
+    post("/sync_server/snapshot", SyncServerController, :snapshot)
   end
 
   ## Auth optional

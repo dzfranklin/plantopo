@@ -48,4 +48,15 @@ defmodule PlanTopo.MapsTest do
       assert :ok = Maps.check_authorized(user.id, map, :edit)
     end
   end
+
+  test "snapshot" do
+    map = map_fixture()
+
+    assert Maps.latest_snapshot(map) == nil
+
+    Maps.save_snapshot(map.id, %{foo: 1})
+
+    actual = Maps.latest_snapshot(map)
+    assert actual.value == %{"foo" => 1}
+  end
 end

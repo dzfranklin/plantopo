@@ -1,8 +1,8 @@
 mod local_file;
-mod redis;
+pub mod prod;
 
 pub use self::local_file::LocalFileStore;
-pub use self::redis::RedisStore;
+pub use self::prod::ProdStore;
 
 use serde::{Deserialize, Serialize};
 

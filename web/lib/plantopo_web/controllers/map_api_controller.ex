@@ -112,10 +112,10 @@ defmodule PlanTopoWeb.MapApiController do
 
       token =
         if not is_nil(user) do
-          PlanTopoWeb.Sync.mint_user_token(user)
+          PlanTopo.Sync.mint_user_token(user)
         end
 
-      url = PlanTopoWeb.Sync.socket_url(map.id)
+      url = PlanTopo.Sync.socket_url(map.id)
 
       render(conn, %{
         token: token,

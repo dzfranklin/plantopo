@@ -2,7 +2,7 @@ defmodule PlanTopo.Maps do
   @moduledoc """
   The Maps context.
   """
-  alias __MODULE__.{Meta, Access, PendingInvite}
+  alias __MODULE__.{Meta, Access, PendingInvite, Snapshot}
   alias PlanTopo.Repo
   alias PlanTopo.Accounts
   alias PlanTopo.Accounts.User
@@ -281,6 +281,25 @@ defmodule PlanTopo.Maps do
 
   defp find_explicit_role(map_id, user_id) do
     from(a in Access, where: a.map_id == ^map_id and a.user_id == ^user_id, select: a.role)
+    |> Repo.one()
+  end
+
+  def save_snapshot(map_id, value) do
+    Snapshot.changeset(%Snapshot{}, %{map_id: map_id, value: value})
+    |> Repo.insert()
+    |> case do
+      {:ok, snapshot} ->
+        Logger.info("Saved snapshot of map #{map_id}")
+        {:ok, snapshot}
+
+      {:error, error} ->
+        Logger.info("Failed to save snapshot of map #{map_id}: #{inspect(error)}")
+        {:error, error}
+    end
+  end
+
+  def latest_snapshot(%Meta{id: map_id}) do
+    from(s in Snapshot, where: s.map_id == ^map_id, order_by: [desc: s.inserted_at], limit: 1)
     |> Repo.one()
   end
 end

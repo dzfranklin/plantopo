@@ -7,14 +7,13 @@ use std::{
 };
 
 use clap::Parser as _;
-use eyre::bail;
 use eyre::{Context, Result};
 use rand::{rngs::SmallRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use tracing_subscriber::{prelude::*, EnvFilter};
 
 use plantopo_sync_engine::{
-    store::{LocalFileStore, RedisStore, Store},
+    store::{self, LocalFileStore, ProdStore, Store},
     Change, Engine, Op,
 };
 
@@ -23,7 +22,13 @@ struct Args {
     #[arg(long)]
     map_id: u32,
     #[arg(long)]
-    store: String,
+    dev: bool,
+    #[arg(long)]
+    redis_url: Option<String>,
+    #[arg(long)]
+    snapshot_url: Option<String>,
+    #[arg(long)]
+    snapshot_token: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -77,13 +82,20 @@ fn main() -> Result<()> {
     let args = Args::parse();
     tracing::info!(?args);
 
-    if args.store == "local_file" {
+    if args.dev {
         let store_path = PathBuf::from(".sync_store").join(args.map_id.to_string());
         accept(LocalFileStore::open(store_path)?)
-    } else if args.store.starts_with("redis://") {
-        accept(RedisStore::open(args.map_id, &args.store)?)
     } else {
-        bail!("Unknown store type: {}", args.store);
+        let config = store::prod::Config {
+            redis_url: args.redis_url.expect("--redis-url required if not --dev"),
+            snapshot_url: args
+                .snapshot_url
+                .expect("--snapshot-url required if not --dev"),
+            snapshot_token: args
+                .snapshot_token
+                .expect("--snapshot-token required if not --dev"),
+        };
+        accept(ProdStore::open(config, args.map_id)?)
     }
 }
 

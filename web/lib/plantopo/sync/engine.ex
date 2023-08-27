@@ -5,8 +5,11 @@ defmodule PlanTopo.Sync.Engine do
 
   @config Application.compile_env(:plantopo, :sync_engine)
   @executable Keyword.fetch!(@config, :executable) |> String.to_charlist()
-  @store Keyword.fetch!(@config, :store) |> String.to_charlist()
   @log_level Keyword.fetch!(@config, :log_level) |> String.to_charlist()
+  @redis_url Keyword.fetch!(@config, :redis_url) |> String.to_charlist()
+  @snapshot_url (if(Keyword.has_key?(@config, :snapshot_url)) do
+                   Keyword.fetch!(@config, :snapshot_url) |> String.to_charlist()
+                 end)
   @close_timeout Keyword.get(@config, :close_timeout, 30_000)
 
   # 8 MiB
@@ -16,7 +19,7 @@ defmodule PlanTopo.Sync.Engine do
     @type sessions :: BiMap.t(integer(), pid())
 
     @type t :: %__MODULE__{
-      map_id: number(),
+            map_id: number(),
             engine: port(),
             sessions: sessions(),
             next_session_id: integer(),
@@ -43,14 +46,38 @@ defmodule PlanTopo.Sync.Engine do
         {:spawn_executable, @executable},
         [
           :binary,
-          {:args, ['--store', @store, '--map-id', to_charlist(map_id)]},
+          {:args, spawn_args(map_id)},
           {:line, @max_line},
           {:env, [{'RUST_LOG', @log_level}]},
           :exit_status
         ]
       )
 
-    {:ok, %State{map_id: map_id, engine: engine, sessions: BiMap.new(), next_session_id: 0, idle_timer: idle_timer}}
+    {:ok,
+     %State{
+       map_id: map_id,
+       engine: engine,
+       sessions: BiMap.new(),
+       next_session_id: 0,
+       idle_timer: idle_timer
+     }}
+  end
+
+  # Silence dialyzer correctly identifying the branch is known at compile time
+  @dialyzer {:nowarn_function, spawn_args: 1}
+  defp spawn_args(map_id) do
+    snapshot_args =
+      if !is_nil(@snapshot_url) do
+        ['--snapshot-url', @snapshot_url]
+      else
+        if !Keyword.get(@config, :discard_snapshots?) do
+          raise RuntimeError, "Missing snapshot_url"
+        else
+          []
+        end
+      end
+
+    ['--map-id', to_charlist(map_id), '--redis-url', @redis_url] ++ snapshot_args
   end
 
   defp reset_idle_timer(state) do
@@ -64,11 +91,13 @@ defmodule PlanTopo.Sync.Engine do
     session_id = state.next_session_id
     Process.monitor(client_pid)
 
-    state = %{
-      state
-      | sessions: BiMap.put(state.sessions, session_id, client_pid),
-        next_session_id: session_id + 1
-    } |> reset_idle_timer()
+    state =
+      %{
+        state
+        | sessions: BiMap.put(state.sessions, session_id, client_pid),
+          next_session_id: session_id + 1
+      }
+      |> reset_idle_timer()
 
     send_engine(state.engine, %{
       "action" => "connect",
@@ -151,7 +180,7 @@ defmodule PlanTopo.Sync.Engine do
   @impl true
   def handle_info(:close_timeout, state) do
     Logger.info("Engine closing as idle (map #{state.map_id})")
-     {:stop, :idle}
+    {:stop, :idle}
   end
 
   @impl true

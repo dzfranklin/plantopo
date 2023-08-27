@@ -374,7 +374,7 @@ defmodule PlanTopoWeb.MapApiControllerTest do
       Maps.share!(map, user, :editor)
       conn = conn |> log_in_user(user) |> post(~p"/api/map/authorize_sync?id=#{map.id}")
       assert %{"token" => token} = json_response(conn, 200)
-      assert PlanTopoWeb.Sync.verify_user_token_if_present(token) == {:ok, user.id}
+      assert PlanTopo.Sync.verify_user_token_if_present(token) == {:ok, user.id}
     end
   end
 

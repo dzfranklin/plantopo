@@ -1,6 +1,6 @@
 defmodule PlanTopoWeb.SyncSocket do
   @behaviour :cowboy_websocket
-  alias PlanTopoWeb.Sync
+  alias PlanTopo.Sync
   alias PlanTopo.Maps
   require Logger
 

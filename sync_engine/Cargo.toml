@@ -21,6 +21,7 @@ crossbeam.workspace = true
 parking_lot.workspace = true
 redis.workspace = true
 clap.workspace = true
+reqwest.workspace = true
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
