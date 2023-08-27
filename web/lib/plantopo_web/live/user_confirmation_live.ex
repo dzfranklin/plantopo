@@ -5,17 +5,17 @@ defmodule PlanTopoWeb.UserConfirmationLive do
 
   def render(%{live_action: :edit} = assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
+    <div class="max-w-sm mx-auto">
       <.header class="text-center">Confirm Account</.header>
 
-      <.simple_form :let={f} for={:user} id="confirmation_form" phx-submit="confirm_account">
+      <.simple_form :let={f} for={%{}} as={:user} id="confirmation_form" phx-submit="confirm_account">
         <.input field={{f, :token}} type="hidden" value={@token} />
         <:actions>
           <.button phx-disable-with="Confirming..." class="w-full">Confirm my account</.button>
         </:actions>
       </.simple_form>
 
-      <p class="text-center mt-4">
+      <p class="mt-4 text-center">
         <.link href={~p"/account/register"}>Register</.link>
         |
         <.link href={~p"/account/login"}>Log in</.link>

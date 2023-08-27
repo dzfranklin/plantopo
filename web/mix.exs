@@ -37,17 +37,17 @@ defmodule PlanTopo.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:bcrypt_elixir, "~> 3.0"},
-      {:phoenix, "~> 1.7.0-rc.2", override: true},
+      {:bcrypt_elixir, "~> 3.1"},
+      {:phoenix, "~> 1.7"},
       {:phoenix_ecto, "~> 4.4"},
-      {:ecto_sql, "~> 3.6"},
+      {:ecto_sql, "~> 3.10"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 3.0"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 0.18.3"},
+      {:phoenix_live_view, "~> 0.19"},
       {:heroicons, "~> 0.5"},
       {:floki, ">= 0.30.0", only: :test},
-      {:phoenix_live_dashboard, "~> 0.7.2"},
+      {:phoenix_live_dashboard, "~> 0.8"},
       {:swoosh, "~> 1.3"},
       {:finch, "~> 0.16"},
       {:telemetry_metrics, "~> 0.6"},
@@ -57,8 +57,8 @@ defmodule PlanTopo.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:cachex, "~> 3.5"},
       {:paginator, "~> 1.2"},
-      {:ex_aws, "~> 2.1.2"},
-      {:ex_aws_s3, "~> 2.0"},
+      {:ex_aws, "~> 2.5"},
+      {:ex_aws_s3, "~> 2.4"},
       {:hackney, "~> 1.18"},
       {:sweet_xml, "~> 0.6"},
       {:minio_server, "~> 0.3"},
@@ -67,7 +67,7 @@ defmodule PlanTopo.MixProject do
       {:rexbug, "~> 1.0"},
       {:dotenv, "~> 3.1"},
       {:remote_ip, "~> 1.1"},
-      {:rustler, "~> 0.27.0"},
+      {:rustler, "~> 0.29"},
       {:opentelemetry, "~> 1.2"},
       {:opentelemetry_phoenix, "~> 1.1"},
       {:opentelemetry_cowboy, "~> 0.2.0"},
@@ -77,7 +77,7 @@ defmodule PlanTopo.MixProject do
       {:dialyxir, "~> 1.2", only: [:dev], runtime: false},
       {:bimap, "~> 1.3"},
       {:esbuild, "~> 0.6", runtime: Mix.env() == :dev},
-      {:tailwind, "~> 0.1.8", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.2", runtime: Mix.env() == :dev},
       {:recase, "~> 0.7"}
     ]
   end

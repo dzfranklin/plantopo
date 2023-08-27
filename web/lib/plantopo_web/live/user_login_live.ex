@@ -9,10 +9,12 @@ defmodule PlanTopoWeb.UserLoginLive do
         <:subtitle>
           Don't have an account?
           <.link
-            navigate={if(is_nil(@return_to),
-              do: ~p"/account/register",
-              else: ~p"/account/register?return=#{@return_to}"
-            )}
+            navigate={
+              if(is_nil(@return_to),
+                do: ~p"/account/register",
+                else: ~p"/account/register?return=#{@return_to}"
+              )
+            }
             class="font-semibold text-brand hover:underline"
           >
             Sign up
@@ -24,7 +26,7 @@ defmodule PlanTopoWeb.UserLoginLive do
       <.simple_form
         :let={f}
         id="login_form"
-        for={:user}
+        for={%{}}
         action={~p"/account/login"}
         as={:user}
         phx-update="ignore"
