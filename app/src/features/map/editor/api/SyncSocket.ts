@@ -117,7 +117,7 @@ export class SyncSocket {
     this._stopKeepalive();
     this._socket = undefined;
     if (!this._closing) {
-      const wait = Math.min(this._failedConnects * 1000, 15);
+      const wait = Math.min(this._failedConnects * 100, 15_000);
       const retryAt = Date.now() + wait;
       this._onConnectFail(retryAt);
       this._failedConnects++;
@@ -195,6 +195,7 @@ export class SyncSocket {
     console.log(
       `[SyncSocket ${this._sessionId || 'preaccept'} at ${ts || 'preconnect'}]`,
       ...args,
+      this,
     );
   }
 }

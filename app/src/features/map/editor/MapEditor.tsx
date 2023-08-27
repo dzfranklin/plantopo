@@ -21,6 +21,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
   const meta = useMapMeta(mapId);
   const sync = useMapSync(mapId, {
     onError: (error) => {
+      console.error(error);
       if (error instanceof UnauthorizedError && !isLoggedIn) {
         goToLogin();
       }
@@ -37,9 +38,9 @@ export function MapEditor({ mapId }: { mapId: number }) {
       />
 
       <DialogContainer isDismissable={false} onDismiss={() => {}}>
-        {sync.error && (
+        {!sync.engine && sync.error && (
           <AlertDialog
-            title={sync.engine ? 'Error syncing map' : 'Error opening map'}
+            title={'Error opening map'}
             variant="error"
             primaryActionLabel={'Reload'}
             onPrimaryAction={() => document.location.reload()}
@@ -63,14 +64,12 @@ export function MapEditor({ mapId }: { mapId: number }) {
             onMoveEnd={saveCamera}
             initialCamera={initialCamera.value}
           />
-          {
-            <Sidebar
-              engine={sync.engine}
-              meta={meta.data}
-              width={sidebarWidth}
-              setWidth={setSidebarWidth}
-            />
-          }
+          <Sidebar
+            engine={sync.engine}
+            meta={meta.data}
+            width={sidebarWidth}
+            setWidth={setSidebarWidth}
+          />
         </>
       )}
     </div>

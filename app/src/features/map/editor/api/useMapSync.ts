@@ -31,6 +31,7 @@ export function useMapSync(
   useQuery({
     queryKey: ['map', mapId, 'syncAuthorization'],
     queryFn: () => fetchSyncAuthorization(mapId),
+    staleTime: Infinity,
     onSuccess: setAuthz,
     onError: (resp) => {
       const error = resp instanceof Error ? resp : new Error(`${resp}`);
