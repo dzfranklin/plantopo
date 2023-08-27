@@ -9,3 +9,12 @@ export class ForbiddenError extends Error {
 export class NotFoundError extends Error {
   readonly name = 'NotFoundError';
 }
+
+export class NetworkError extends Error {
+  readonly name = 'NetworkError';
+
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : `${cause}`);
+    this.stack = cause instanceof Error ? cause.stack : undefined;
+  }
+}

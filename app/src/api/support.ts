@@ -1,12 +1,21 @@
 import wrapError from '@/generic/wrapError';
-import { ForbiddenError, NotFoundError, UnauthorizedError } from './errors';
+import {
+  ForbiddenError,
+  NetworkError,
+  NotFoundError,
+  UnauthorizedError,
+} from './errors';
 
 export async function handleResp<T>(req: Promise<Response>): Promise<T> {
-  const resp = await req;
-  if (resp.ok) {
-    return await resp.json();
-  } else {
-    throw await respToError(resp);
+  try {
+    const resp = await req;
+    if (resp.ok) {
+      return await resp.json();
+    } else {
+      throw await respToError(resp);
+    }
+  } catch (err) {
+    throw new NetworkError(err);
   }
 }
 
