@@ -2,8 +2,15 @@ import { ActionButton, Item, Menu, MenuTrigger } from '@adobe/react-spectrum';
 import DebugMenuIcon from '@spectrum-icons/workflow/Bug';
 import { useCallback } from 'react';
 import { SyncEngine } from './api/SyncEngine';
+import { SyncSocket } from './api/SyncSocket';
 
-export default function DebugMenu({ engine }: { engine: SyncEngine }) {
+export default function DebugMenu({
+  engine,
+  socket,
+}: {
+  engine: SyncEngine;
+  socket: SyncSocket;
+}) {
   const onAction = useCallback(
     (key: string | number) => {
       switch (key) {
@@ -12,13 +19,20 @@ export default function DebugMenu({ engine }: { engine: SyncEngine }) {
           break;
         }
         case 'assignEngine': {
-          (window as any)['tempEngine'] = engine;
-          console.info('Assigned to window.tempEngine');
+          (window as any)['engine'] = engine;
+          console.info('Assigned to window.engine');
           break;
         }
+        case 'logSocketState':
+          socket.logState();
+          break;
+        case 'assignSocket':
+          (window as any)['socket'] = socket;
+          console.info('Assigned to window.socket');
+          break;
       }
     },
-    [engine],
+    [engine, socket],
   );
 
   return (
@@ -39,6 +53,8 @@ export default function DebugMenu({ engine }: { engine: SyncEngine }) {
       <Menu onAction={onAction}>
         <Item key="logUpdateSummary">Log update summary</Item>
         <Item key="assignEngine">Assign engine to global</Item>
+        <Item key="logSocketState">Log socket state</Item>
+        <Item key="assignSocket">Assign socket to global</Item>
       </Menu>
     </MenuTrigger>
   );

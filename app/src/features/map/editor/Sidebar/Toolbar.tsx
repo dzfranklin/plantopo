@@ -4,14 +4,17 @@ import DebugMenu from '../DebugMenu';
 import { FInsertPlace, SyncEngine } from '../api/SyncEngine';
 import { Button, Item, Menu, MenuTrigger } from '@adobe/react-spectrum';
 import { MapMeta } from '../../api/MapMeta';
+import { SyncSocket } from '../api/SyncSocket';
 
 export function Toolbar({
   engine,
+  socket,
   insertAt,
   meta,
   width,
 }: {
   engine: SyncEngine;
+  socket: SyncSocket;
   insertAt: MutableRefObject<FInsertPlace>;
   meta: MapMeta;
   width: number;
@@ -20,7 +23,7 @@ export function Toolbar({
     <div className="flex min-w-0 p-2 bg-white">
       {width > 10 && (
         <div className="flex items-center min-w-0 truncate">
-          <DebugMenu engine={engine} />
+          <DebugMenu engine={engine} socket={socket} />
           <span className="ml-4 truncate ">{meta.name}</span>
         </div>
       )}

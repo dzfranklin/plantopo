@@ -210,6 +210,46 @@ export class SyncEngine {
     }
   }
 
+  /** All mutations go through. **Mutates its arguments** */
+  apply(ops: SyncOp[]) {
+    if (!this.canEdit) {
+      throw new Error('Cannot edit');
+    }
+
+    for (let i = 0; i < ops.length; i++) {
+      const op = ops[i]!;
+      switch (op.action) {
+        case 'fCreate': {
+          for (const [k, v] of Object.entries(op.props)) {
+            this._fSet(op.fid, k, v);
+          }
+          break;
+        }
+        case 'fDelete': {
+          const missing = this._fDelete(new Set(op.fids));
+          if (missing !== undefined) {
+            for (const fid of missing) op.fids.push(fid);
+          }
+          break;
+        }
+        case 'fSet': {
+          this._fSet(op.fid, op.key, op.value);
+          break;
+        }
+        case 'lSet': {
+          this._lSet(op.lid, op.key, op.value);
+          break;
+        }
+      }
+    }
+    if (this._transaction !== null) {
+      this._transaction.push(ops);
+    } else {
+      this._popNotifies();
+      this._send!(ops);
+    }
+  }
+
   // Public API - Debugging
 
   logUpdateSummary(): void {
@@ -252,7 +292,7 @@ export class SyncEngine {
       }
       this._transaction = null;
       if (ops.length > 0) {
-        this._apply(ops);
+        this.apply(ops);
       }
     }
   }
@@ -270,7 +310,7 @@ export class SyncEngine {
     const resolved = this._fResolvePlace(place);
     const idx = fracIdxBetween(resolved.before, resolved.after);
     const fid = this._allocateFid();
-    this._apply([
+    this.apply([
       {
         action: 'fCreate',
         fid,
@@ -290,7 +330,7 @@ export class SyncEngine {
   fSet(fid: Fid, key: Key, value: Value): void {
     if (value === undefined) throw new Error('fSet: value cannot be undefined');
     if (key === 'pos') throw new Error('fSet: Cannot set pos');
-    this._apply([{ action: 'fSet', fid, key, value }]);
+    this.apply([{ action: 'fSet', fid, key, value }]);
   }
 
   /** Moves a list of features
@@ -337,12 +377,12 @@ export class SyncEngine {
       });
       before = idx;
     }
-    this._apply(ops);
+    this.apply(ops);
   }
 
   /** Recursively delete each feature and all its descendants */
   fDelete(fids: Fid[]): void {
-    this._apply([{ action: 'fDelete', fids }]);
+    this.apply([{ action: 'fDelete', fids }]);
   }
 
   /** Set a layer property
@@ -358,7 +398,7 @@ export class SyncEngine {
     if (key === 'opacity' && !isLOpacity(value)) {
       throw new Error('lSet: invalid opacity');
     }
-    this._apply([{ action: 'lSet', lid, key, value }]);
+    this.apply([{ action: 'lSet', lid, key, value }]);
   }
 
   lMove(layers: number[], place: LInsertPlace): void {
@@ -371,11 +411,11 @@ export class SyncEngine {
       ops.push({ action: 'lSet', lid, key: 'idx', value: idx });
       before = idx;
     }
-    this._apply(ops);
+    this.apply(ops);
   }
 
   lRemove(lid: number): void {
-    this._apply([{ action: 'lSet', lid, key: 'idx', value: null }]);
+    this.apply([{ action: 'lSet', lid, key: 'idx', value: null }]);
   }
 
   // Public API - Read
@@ -621,48 +661,6 @@ export class SyncEngine {
       }
     }
     return { before, after };
-  }
-
-  /** All mutations go through
-   *
-   * Mutates its arguments
-   */
-  private _apply(ops: SyncOp[]) {
-    if (!this.canEdit) {
-      throw new Error('Cannot edit');
-    }
-
-    for (const op of ops) {
-      switch (op.action) {
-        case 'fCreate': {
-          for (const [k, v] of Object.entries(op.props)) {
-            this._fSet(op.fid, k, v);
-          }
-          break;
-        }
-        case 'fDelete': {
-          const missing = this._fDelete(new Set(op.fids));
-          if (missing !== undefined) {
-            for (const fid of missing) op.fids.push(fid);
-          }
-          break;
-        }
-        case 'fSet': {
-          this._fSet(op.fid, op.key, op.value);
-          break;
-        }
-        case 'lSet': {
-          this._lSet(op.lid, op.key, op.value);
-          break;
-        }
-      }
-    }
-    if (this._transaction !== null) {
-      this._transaction.push(ops);
-    } else {
-      this._popNotifies();
-      this._send!(ops);
-    }
   }
 
   private _popNotifies(): void {
