@@ -3,8 +3,8 @@ import { useCurrentUser } from '@/features/account/useCurrentUser';
 import { useMapSync } from './api/useMapSync';
 import { goToLogin } from '@/features/account/api/goToLogin';
 import { UnauthorizedError } from '@/api/errors';
-import { useSidebarWidth } from './sidebar/useSidebarWidth';
-import { useInitialCamera } from './mapContainer/useInitialCamera';
+import { useSidebarWidth } from './Sidebar/useSidebarWidth';
+import { useInitialCamera } from './MapContainer/useInitialCamera';
 import { PageTitle } from '@/generic/PageTitle';
 import {
   AlertDialog,
@@ -12,8 +12,8 @@ import {
   ProgressCircle,
 } from '@adobe/react-spectrum';
 import ErrorTechInfo from '@/generic/ErrorTechInfo';
-import { MapContainer } from './mapContainer/MapContainer';
-import Sidebar from './sidebar/Sidebar';
+import { MapContainer } from './MapContainer/MapContainer';
+import Sidebar from './Sidebar/Sidebar';
 
 export function MapEditor({ mapId }: { mapId: number }) {
   const isLoggedIn = useCurrentUser() !== null;
