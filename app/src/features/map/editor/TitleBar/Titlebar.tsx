@@ -8,5 +8,5 @@ export function Titlebar({
   sync: SyncSocketState;
   meta: MapMeta;
 }) {
-  return <div>Titlebar</div>;
+  return <div>Titlebar {JSON.stringify(sync.status)}</div>;
 }
