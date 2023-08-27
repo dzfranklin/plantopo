@@ -280,7 +280,7 @@ export class SyncSocket {
     if (state.status === 'opening') {
       if (state._step === 'authz') {
         throw new Error('Unreachable state');
-      } else {
+      } else if (state._step === 'awaitOpen' || state._step === 'awaitAccept') {
         const remainingAttempts = state._remainingAttempts - 1;
         if (remainingAttempts > 0) {
           const authz = state._authz;
@@ -301,6 +301,8 @@ export class SyncSocket {
             error: error,
           });
         }
+      } else {
+        throw new Error('Unreachable');
       }
     } else if (state.status === 'connected') {
       const authz = state._authz;
