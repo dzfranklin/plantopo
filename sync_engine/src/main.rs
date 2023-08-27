@@ -12,7 +12,7 @@ use rand::{rngs::SmallRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use tracing_subscriber::{prelude::*, EnvFilter};
 
-use plantopo_sync_engine::{
+use pt_sync_engine::{
     store::{self, LocalFileStore, ProdStore, Store},
     Change, Engine, Op,
 };

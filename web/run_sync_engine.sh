@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-exec crlfify-stdio cargo run --package plantopo_sync_engine -- "$@"
+exec crlfify-stdio cargo run --package pt_sync_engine -- "$@"
