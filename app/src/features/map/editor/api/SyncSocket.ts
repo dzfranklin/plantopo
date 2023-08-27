@@ -150,6 +150,7 @@ export class SyncSocket {
   private static readonly _KEEPALIVE_INTERVAL_MS = 15_000;
 
   private _pending: Map<number, SyncOp[]> = new Map();
+  private _pendingListeners = new Set<(_: number) => any>();
   private _seq = 0;
 
   private _state: StateImpl = {
@@ -203,6 +204,7 @@ export class SyncSocket {
       status._ws.close();
     }
     this._stateListeners.clear();
+    this._pendingListeners.clear();
     this._statusLog = [];
     this._setState({ status: 'closed', _at: Date.now(), _step: null });
   }
@@ -227,11 +229,24 @@ export class SyncSocket {
     return () => this._stateListeners.delete(l);
   }
 
+  pendingCount(): number {
+    return this._pending.size;
+  }
+
+  addPendingCountListener(l: (pending: number) => any): () => void {
+    this._pendingListeners.add(l);
+    return () => this._pendingListeners.delete(l);
+  }
+
   private _setState(value: StateImpl) {
     console.log('SyncSocket: state =', value, this);
     this._state = value;
     this._statusLog.push([value.status, value._step, value._at]);
     for (const l of this._stateListeners) l(value);
+  }
+
+  private _didChangePending() {
+    for (const l of this._pendingListeners) l(this._pending.size);
   }
 
   private _setupWs(url: string): WebSocket {
@@ -417,7 +432,9 @@ export class SyncSocket {
       if (msg.type === 'connectAccept') {
         throw new Error('Received connectAccept but already connected');
       } else if (msg.type === 'reply') {
-        if (!this._pending.delete(msg.replyTo)) {
+        if (this._pending.delete(msg.replyTo)) {
+          this._didChangePending();
+        } else {
           console.info('recv unexpected reply', msg);
         }
         state.engine.receive(msg.change);
@@ -455,6 +472,7 @@ export class SyncSocket {
   private _enqueueOps(ops: SyncOp[]): void {
     const seq = ++this._seq;
     this._pending.set(seq, ops);
+    this._didChangePending();
     this._maybeSend({ type: 'op', seq, ops });
   }
 

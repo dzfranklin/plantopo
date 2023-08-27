@@ -58,7 +58,7 @@ export function ResizeHandle({ setWidth }: { setWidth: (_: number) => void }) {
   return (
     <div
       ref={ref}
-      className="shrink-0 border-l w-[5px] border-slate-200 hover:bg-blue-400 cursor-ew-resize"
+      className="shrink-0 border-l w-[5px] border-transparent hover:bg-blue-400 cursor-ew-resize"
       onPointerDownCapture={(evt) => startDrag(evt)}
     />
   );

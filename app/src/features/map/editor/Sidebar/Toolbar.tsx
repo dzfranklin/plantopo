@@ -1,55 +1,27 @@
 import { MutableRefObject } from 'react';
-import AddFeatureIcon from '@spectrum-icons/workflow/Add';
-import DebugMenu from '../DebugMenu';
-import { FInsertPlace, SyncEngine } from '../api/SyncEngine';
-import { Button, Item, Menu, MenuTrigger } from '@adobe/react-spectrum';
-import { MapMeta } from '../../api/MapMeta';
-import { SyncSocket } from '../api/SyncSocket';
+import { FInsertPlace } from '../api/SyncEngine';
+import { ActionButton } from '@adobe/react-spectrum';
+import FolderAddIcon from '@spectrum-icons/workflow/FolderAdd';
+import { useSync } from '../api/useSync';
 
 export function Toolbar({
-  engine,
-  socket,
   insertAt,
-  meta,
-  width,
 }: {
-  engine: SyncEngine;
-  socket: SyncSocket;
   insertAt: MutableRefObject<FInsertPlace>;
-  meta: MapMeta;
-  width: number;
 }) {
+  const { engine } = useSync();
+
   return (
-    <div className="flex min-w-0 p-2 bg-white">
-      {width > 10 && (
-        <div className="flex items-center min-w-0 truncate">
-          <DebugMenu engine={engine} socket={socket} />
-          <span className="ml-4 truncate ">{meta.name}</span>
-        </div>
-      )}
-      <div className="flex items-center justify-end grow">
-        <MenuTrigger>
-          <Button variant="accent" isDisabled={!engine.canEdit}>
-            <AddFeatureIcon />
-          </Button>
-          <Menu
-            onAction={(key) => {
-              switch (key) {
-                case 'folder':
-                  engine.fCreate(insertAt.current);
-                  break;
-                case 'route':
-                  alert('TODO: ');
-                  break;
-                default:
-                  throw new Error('Unreachable');
-              }
-            }}
-          >
-            <Item key="folder">New folder</Item>
-          </Menu>
-        </MenuTrigger>
-      </div>
+    <div className="flex items-center justify-end min-w-0 p-1 m-1 rounded bg-neutral-200">
+      <ActionButton
+        isQuiet
+        isDisabled={!engine}
+        onPress={() => {
+          engine?.fCreate(insertAt.current);
+        }}
+      >
+        <FolderAddIcon />
+      </ActionButton>
     </div>
   );
 }
