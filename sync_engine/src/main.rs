@@ -76,7 +76,9 @@ fn main() -> Result<()> {
         .init();
 
     let args = Args::parse();
-    tracing::info!(map_id = args.map_id, store = args.store);
+
+    let _guard =
+        tracing::info_span!("sync_engine", map_id = args.map_id, store_type = args.store).entered();
 
     match args.store.as_str() {
         "test" => {
@@ -100,7 +102,7 @@ where
 {
     let mut engine = Engine::load(store, SmallRng::from_entropy(), snapshot)?;
     tracing::trace!(?engine);
-    tracing::debug!("Loaded engine");
+    tracing::info!("Loaded engine");
 
     let mainloop_res = do_mainloop(&mut engine);
     tracing::trace!(?mainloop_res, "mainloop exited");
@@ -108,7 +110,10 @@ where
     let flush_res = engine.store_mut().flush();
 
     match (mainloop_res, flush_res) {
-        (Ok(_), Ok(_)) => Ok(()),
+        (Ok(_), Ok(_)) => {
+            tracing::info!("Exiting normally");
+            Ok(())
+        }
         (Err(mainloop_err), Ok(_)) => Err(mainloop_err),
         (Ok(_), Err(flush_err)) => Err(flush_err),
         (Err(mainloop_err), Err(flush_err)) => {
