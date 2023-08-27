@@ -26,6 +26,56 @@ export type SyncSocketState =
     }
   | { status: 'closed' };
 
+/**
+Public state api
+
+Paste into <https://mermaid.live/edit>
+
+stateDiagram-v2
+  [*] --> opening
+  opening --> openError
+  opening --> connected
+  opening --> closed
+
+  openError --> closed
+
+  connected --> reconnecting
+  connected --> closed
+
+  reconnecting --> connected
+  reconnecting --> disconnected
+  reconnecting --> closed
+
+  disconnected --> reconnecting
+  disconnected --> closed
+
+Internal states
+
+stateDiagram-v2
+  authz
+  note right of authz: Retries internally
+  [*] --> authz: constructor
+  authz --> openError: on error
+  authz --> awaitOpen: if ok do open
+
+  awaitOpen --> awaitOpen: if error & remainingRetries do open
+  awaitOpen --> openError: on error
+  awaitOpen --> awaitAccept: on open
+
+  awaitAccept --> awaitOpen: if error & remainingRetries do open
+  awaitAccept --> connected: received accept
+
+  connected --> reconnecting: on socket close do open
+
+  reconnecting --> connected: on open
+  reconnecting --> disconnected: on socket close
+
+  disconnected --> reconnecting: after delay do open
+
+  closed
+  note right of closed : If .close() is called every state\n will transition to (omitted for brevity)
+ */
+
 type StateImpl =
   | {
       status: 'opening';
