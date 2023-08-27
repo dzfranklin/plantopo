@@ -102,13 +102,13 @@ defmodule PlanTopo.Maps do
   """
   @spec user_access(Meta.t()) :: [Access.t()]
   def user_access(map) do
-    from(a in Access, where: a.map_id == ^map.id, preload: :user)
+    from(a in Access, where: a.map_id == ^map.id, order_by: [asc: a.user_id], preload: :user)
     |> Repo.all()
   end
 
   @spec pending_invites(Meta.t()) :: [PendingInvite.t()]
   def pending_invites(map) do
-    from(p in PendingInvite, where: p.map_id == ^map.id)
+    from(p in PendingInvite, where: p.map_id == ^map.id, order_by: [asc: p.email])
     |> Repo.all()
   end
 
