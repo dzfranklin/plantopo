@@ -19,6 +19,12 @@ export default function RootLayout({
 }) {
   const queryClient = new QueryClient();
 
+  if (process.env.JEST_WORKER_ID !== undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { worker } = require('../mocks/browser');
+    worker.start();
+  }
+
   return (
     <html lang="en" className="min-h-full">
       <head>
