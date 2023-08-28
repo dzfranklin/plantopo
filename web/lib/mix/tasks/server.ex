@@ -23,7 +23,6 @@ defmodule Mix.Tasks.Server do
   @impl true
   def run(args) do
     Application.put_env(:phoenix, :serve_endpoints, true, persistent: true)
-    Application.put_env(:plantopo, :start_minio, true, persistent: true)
     Mix.Tasks.Run.run(open_args(args) ++ run_args())
   end
 

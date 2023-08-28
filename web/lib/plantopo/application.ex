@@ -37,10 +37,7 @@ defmodule PlanTopo.Application do
         {Finch, name: PlanTopo.Finch},
         {PlanTopo.Sync.Manager, name: PlanTopo.Sync.Manager, store: sync_store},
         # Start the Endpoint (http/https)
-        PlanTopoWeb.Endpoint,
-        if(Application.get_env(:plantopo, :start_minio),
-          do: {MinioServer, Application.get_env(:plantopo, :minio_server)}
-        )
+        PlanTopoWeb.Endpoint
       ]
       |> Enum.filter(&(!is_nil(&1)))
 
