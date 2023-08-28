@@ -1,8 +1,6 @@
-import _LAYERS from '../../../../../../layer_data/layers.json';
 import type * as ml from 'maplibre-gl';
 
-// typescript otherwise overspecifies to exactly the shape of the file
-export const LAYERS: {
+export interface MapSources {
   layers: {
     [lid: string]: LayerData;
   };
@@ -12,7 +10,7 @@ export const LAYERS: {
   sprites: {
     [id: string]: string; // id -> url
   };
-} = _LAYERS as any;
+}
 
 export interface LayerData {
   lid: number;

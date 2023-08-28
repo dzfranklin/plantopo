@@ -5,7 +5,7 @@ import { SyncChange } from './SyncChange';
 import { SyncOp } from './SyncOp';
 import fracIdxBetween, { isFracIdx } from './fracIdxBetween';
 import iterAll from '@/generic/iterAll';
-import { LAYERS } from './layers';
+import { MapSources } from './mapSources';
 
 export interface FInsertPlace {
   at: 'before' | 'after' | 'firstChild';
@@ -169,6 +169,8 @@ export class SyncEngine {
 
   // Layers
 
+  private _mapSources: MapSources;
+
   private _lData: Map<Lid, LData> = new Map();
   private _lPropsListeners = new Set<LPropsListener>();
   private _notifyLData = new Set<Lid>();
@@ -178,6 +180,7 @@ export class SyncEngine {
   private _lOrderListeners: Set<LOrderListener> = new Set();
 
   constructor(props: {
+    mapSources: MapSources;
     fidBlockStart: number;
     fidBlockUntil: number;
     canEdit: boolean;
@@ -186,6 +189,7 @@ export class SyncEngine {
     if (props.fidBlockUntil <= props.fidBlockStart) {
       throw new Error('Invalid fid block');
     }
+    this._mapSources = props.mapSources;
     this._fidBlockStart = props.fidBlockStart;
     this._fidBlockUntil = props.fidBlockUntil;
     this._nextFid = props.fidBlockStart;
@@ -886,7 +890,7 @@ export class SyncEngine {
     }
 
     let invalid = false;
-    if (!(lid in LAYERS.layers)) {
+    if (!(lid in this._mapSources.layers)) {
       console.log('_lset: invalid as unknown layer');
       invalid = true;
     } else if (key === 'idx') {

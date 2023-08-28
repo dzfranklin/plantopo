@@ -47,7 +47,7 @@ defmodule PlanTopo.Sync.Manager do
       {:noreply, state}
     else
       if reason != :idle do
-        Logger.warn(
+        Logger.warning(
           "Manager received unexpected sync engine exit (map is #{map_id}, reason is #{inspect(reason)}"
         )
       end

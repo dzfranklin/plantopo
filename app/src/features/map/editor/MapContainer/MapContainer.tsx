@@ -7,6 +7,7 @@ import { LayersControl } from './LayersControl';
 import { AttributionControl } from './attributionControl/AttributionControl';
 import { ProgressBar, ProgressCircle } from '@adobe/react-spectrum';
 import { useSync } from '../api/useSync';
+import { useMapSources } from '../../api/useMapSources';
 
 export function MapContainer({
   sidebarWidth,
@@ -17,6 +18,7 @@ export function MapContainer({
   initialCamera: CameraPosition | null;
   onMoveEnd: (_: CameraPosition) => void;
 }) {
+  const { data: sources } = useMapSources();
   const { engine } = useSync();
   const containerRef = useRef<HTMLDivElement>(null);
   const managerRef = useRef<MapManager | null>(null);
@@ -33,8 +35,9 @@ export function MapContainer({
   }, [initialCamera]);
 
   useEffect(() => {
-    if (!containerRef.current || !engine) return;
+    if (!containerRef.current || !engine || !sources) return;
     const manager = new MapManager({
+      sources,
       container: containerRef.current,
       engine,
       initialCamera: initialCameraRef.current,
@@ -47,7 +50,7 @@ export function MapContainer({
       manager.remove();
       managerRef.current = null;
     };
-  }, [engine, onMoveEnd]);
+  }, [sources, engine, onMoveEnd]);
 
   return (
     <div ref={containerRef} className="relative w-full h-full">

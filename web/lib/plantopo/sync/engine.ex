@@ -44,15 +44,15 @@ defmodule PlanTopo.Sync.Engine do
           :binary,
           {:args,
            [
-             '--map-id',
+             ~c"--map-id",
              to_charlist(map_id),
-             '--store',
+             ~c"--store",
              to_charlist(store_name),
-             '--store-config',
+             ~c"--store-config",
              to_charlist(store_config)
            ]},
           {:line, @max_line},
-          {:env, [{'RUST_LOG', @log_level}]},
+          {:env, [{~c"RUST_LOG", @log_level}]},
           :exit_status
         ]
       )

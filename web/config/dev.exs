@@ -26,7 +26,7 @@ config :aws_credentials,
   aws_access_key_id: aws_cred_value.("AccessKeyId"),
   aws_secret_access_key: aws_cred_value.("SecretAccessKey"),
   aws_session_token: aws_cred_value.("SessionToken"),
-  aws_region: 'eu-west-2'
+  aws_region: ~c"eu-west-2"
 
 # Configure your database
 config :plantopo, PlanTopo.Repo,

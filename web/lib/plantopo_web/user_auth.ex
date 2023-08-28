@@ -107,7 +107,7 @@ defmodule PlanTopoWeb.UserAuth do
       PlanTopoWeb.Endpoint.broadcast(live_socket_id, "disconnect", %{})
       |> case do
         :ok -> nil
-        {:error, error} -> Logger.warn("Failed to broadcast disconnect: #{inspect(error)}")
+        {:error, error} -> Logger.warning("Failed to broadcast disconnect: #{inspect(error)}")
       end
     end
 

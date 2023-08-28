@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -7,16 +7,18 @@ use std::{
 use eyre::{bail, eyre, Context};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tracing::info;
+use tracing_subscriber::{prelude::*, EnvFilter};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct LayersFile {
-    layers: HashMap<u32, OutputLayer>,
-    tilesets: HashMap<String, serde_json::Value>,
+    layers: BTreeMap<u32, OutputLayer>,
+    tilesets: BTreeMap<String, serde_json::Value>,
     sprites: Sprites,
 }
 
-type Sprites = HashMap<String, String>; // id -> url
+type Sprites = BTreeMap<String, String>; // id -> url
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -28,7 +30,7 @@ struct InputLayer {
     sublayers: SublayerRef,      // pre id-rewrite
     sprites: Option<String>,     // id in Sprites
     #[serde(default)]
-    rewrite_sublayer_tilesets: HashMap<String, String>,
+    rewrite_sublayer_tilesets: BTreeMap<String, String>,
 }
 
 #[serde_with::skip_serializing_none]
@@ -44,7 +46,7 @@ struct OutputLayer {
     /// `sublayer resolved id -> (property -> initial value)` initial value is the
     /// value to multiply by the chosen opacity. it does not take into account
     /// default_opacity.
-    sublayer_opacity: HashMap<String, HashMap<String, serde_json::Value>>,
+    sublayer_opacity: BTreeMap<String, BTreeMap<String, serde_json::Value>>,
     sprites: Option<String>,
 }
 
@@ -65,11 +67,11 @@ struct Sublayer {
     source: Option<String>,
     filter: Option<Value>,
     #[serde(default)]
-    paint: HashMap<String, serde_json::Value>,
+    paint: BTreeMap<String, serde_json::Value>,
     #[serde(default)]
-    layout: HashMap<String, serde_json::Value>,
+    layout: BTreeMap<String, serde_json::Value>,
     #[serde(flatten)]
-    other: HashMap<String, serde_json::Value>,
+    other: BTreeMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy)]
@@ -94,16 +96,31 @@ struct Tileset {
 }
 
 fn main() -> eyre::Result<()> {
-    color_eyre::install().unwrap();
+    tracing_subscriber::registry()
+        .with(tracing_error::ErrorLayer::default())
+        .with(
+            tracing_subscriber::fmt::layer()
+                .pretty()
+                .with_writer(std::io::stderr),
+        )
+        .with(EnvFilter::from_default_env())
+        .init();
+
     let dir = std::env::args().nth(1).expect("Missing <dir>");
     let dir = PathBuf::from(dir);
 
-    let source_dir = dir.join("source");
+    let source_dir = dir.join("sources");
+    let out_dir = dir.join("out");
+    if let Err(err) = fs::create_dir(&out_dir) {
+        if err.kind() != std::io::ErrorKind::AlreadyExists {
+            bail!(err);
+        }
+    }
 
     let sprites = fs::read_to_string(source_dir.join("sprites.json"))?;
     let sprites: Sprites = serde_json::from_str(&sprites)?;
 
-    let mut tilesets = HashMap::new();
+    let mut tilesets = BTreeMap::new();
     for tileset_f in fs::read_dir(source_dir.join("tilesets"))? {
         let tileset_f = tileset_f?.path();
         let tileset = fs::read_to_string(&tileset_f)?;
@@ -112,7 +129,7 @@ fn main() -> eyre::Result<()> {
         tilesets.insert(tileset.id, tileset.spec);
     }
 
-    let mut layers = HashMap::new();
+    let mut layers = BTreeMap::new();
     let source_layers_dir = source_dir.join("layers");
     for layer_f in fs::read_dir(&source_layers_dir)? {
         let layer_f = layer_f?.path();
@@ -130,14 +147,17 @@ fn main() -> eyre::Result<()> {
         sprites,
     };
 
-    fs::write(dir.join("layers.json"), serde_json::to_string(&output)?)?;
+    fs::write(
+        out_dir.join("mapSources.json"),
+        serde_json::to_string(&output)?,
+    )?;
 
     Ok(())
 }
 
 fn rewrite_layer(
     sprite_map: &Sprites,
-    tilesets: &HashMap<String, serde_json::Value>,
+    tilesets: &BTreeMap<String, serde_json::Value>,
     working_dir: &Path,
     layer: InputLayer,
 ) -> eyre::Result<OutputLayer> {
@@ -167,8 +187,9 @@ fn rewrite_layer(
 
     let default_opacity = default_opacity.unwrap_or(1.0);
 
-    let mut sublayer_opacity: HashMap<String, HashMap<String, serde_json::Value>> = HashMap::new();
-    let mut sublayer_tilesets = HashSet::new();
+    let mut sublayer_opacity: BTreeMap<String, BTreeMap<String, serde_json::Value>> =
+        BTreeMap::new();
+    let mut sublayer_tilesets = BTreeSet::new();
     for subl in &mut sublayers {
         subl.id = format!("{lid}:{}", subl.id);
 
@@ -183,7 +204,7 @@ fn rewrite_layer(
             rewrite_expr(&subl.id, "filter", value)?;
         }
 
-        let mut opacity = HashMap::new();
+        let mut opacity = BTreeMap::new();
         for prop in opacity_props_for(subl._type) {
             let orig_value = subl.paint.get(&prop).cloned().unwrap_or(1.into());
             let mut in_context = Value::Array(vec!["*".into(), orig_value, 0.into()]);
@@ -240,7 +261,7 @@ fn _rewrite_expr(label: &str, prop: &str, value: &mut Value) -> eyre::Result<()>
         Value::Array(expr) => match expr.get(0) {
             Some(first) => match first.as_str() {
                 Some("step") if prop == "layout.icon-image" => {
-                    eprintln!("{label} step in layout.icon-image unsupported, picking first");
+                    info!("{label} step in layout.icon-image unsupported, picking first");
                     // 1 is the predicate, 2 is the first option
                     let first_option = expr.get(2).ok_or(eyre!("step missing first option"))?;
                     *value = first_option.clone();
@@ -248,14 +269,12 @@ fn _rewrite_expr(label: &str, prop: &str, value: &mut Value) -> eyre::Result<()>
                 }
                 Some("literal") => Ok(()),
                 Some("pitch") => {
-                    eprintln!("{label} Replacing unsupported pitch expr with default");
+                    info!("{label} Replacing unsupported pitch expr with default");
                     *value = Value::Number(0.into());
                     Ok(())
                 }
                 Some("distance-from-center") => {
-                    eprintln!(
-                        "{label} Replacing unsupported distance-from-center expr with center"
-                    );
+                    info!("{label} Replacing unsupported distance-from-center expr with center");
                     *value = Value::Number(0.into());
                     Ok(())
                 }

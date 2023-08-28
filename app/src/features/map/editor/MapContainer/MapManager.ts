@@ -1,7 +1,7 @@
 import { LOrderOp, Lid, RootGeoJson, SyncEngine } from '../api/SyncEngine';
 import * as ml from 'maplibre-gl';
-import { LAYERS } from '../api/layers';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import { MapSources } from '../api/mapSources';
 
 const GLYPH_URL =
   'https://maptiler-proxy.localhost/fonts/{fontstack}/{range}.pbf';
@@ -15,6 +15,7 @@ export interface CameraPosition {
 }
 
 export class MapManager extends ml.Map {
+  private _sources: MapSources;
   private _engine: SyncEngine;
   private _activeLayers: Lid[] = [];
   private _draw?: MapboxDraw;
@@ -29,12 +30,14 @@ export class MapManager extends ml.Map {
   private _fGeoJsonSource: ml.GeoJSONSource | undefined;
 
   constructor({
+    sources,
     container,
     engine,
     onMoveEnd,
     initialCamera,
     setIsLoading,
   }: {
+    sources: MapSources;
     container: HTMLElement;
     engine: SyncEngine;
     onMoveEnd: (_: CameraPosition) => void;
@@ -45,10 +48,10 @@ export class MapManager extends ml.Map {
       container: container,
       style: {
         version: 8,
-        sources: LAYERS.tilesets,
+        sources: sources.tilesets,
         layers: [],
         glyphs: GLYPH_URL,
-        sprite: Object.entries(LAYERS.sprites).map(([id, url]) => ({
+        sprite: Object.entries(sources.sprites).map(([id, url]) => ({
           id,
           url,
         })),
@@ -61,6 +64,7 @@ export class MapManager extends ml.Map {
       attributionControl: false, // So that we can implement our own
     });
 
+    this._sources = sources;
     this._engine = engine;
 
     this._topLeftControls = this._container.querySelector(
@@ -129,7 +133,7 @@ export class MapManager extends ml.Map {
     this._activeLayers = this._engine.lOrder();
     for (let i = this._activeLayers.length - 1; i >= 0; i--) {
       const lid = this._activeLayers[i]!;
-      const layer = LAYERS.layers[lid];
+      const layer = this._sources.layers[lid];
       if (!layer) throw new Error(`Missing layer ${lid}`);
       for (const subl of layer.sublayers) {
         try {
@@ -199,13 +203,13 @@ export class MapManager extends ml.Map {
 
   private _onLOrder(value: Lid[], changes: LOrderOp[]) {
     for (const op of changes) {
-      const layer = LAYERS.layers[op.lid];
+      const layer = this._sources.layers[op.lid];
       if (!layer) throw new Error(`Missing layer ${op.lid}`);
 
       if (op.type === 'add') {
         let sublBefore: string | undefined;
         if (op.before !== undefined) {
-          const layerBefore = LAYERS.layers[op.before];
+          const layerBefore = this._sources.layers[op.before];
           if (!layerBefore) throw new Error(`Missing layer ${op.before}`);
           sublBefore = layerBefore.sublayers[0]?.id;
         }
@@ -224,7 +228,7 @@ export class MapManager extends ml.Map {
       } else if (op.type === 'move') {
         let sublBefore: string | undefined;
         if (op.before !== undefined) {
-          const layerAfter = LAYERS.layers[op.before];
+          const layerAfter = this._sources.layers[op.before];
           if (!layerAfter) throw new Error(`Missing layer ${op.before}`);
           sublBefore = layerAfter.sublayers[0]?.id;
         }
@@ -248,7 +252,7 @@ export class MapManager extends ml.Map {
   }
 
   private _setLayerOpacity(lid: Lid, opacity: number | null) {
-    const layer = LAYERS.layers[lid];
+    const layer = this._sources.layers[lid];
     if (!layer) throw new Error(`Missing layer ${lid}`);
     const multiplier = opacity ?? layer.defaultOpacity;
     for (const [id, props] of Object.entries(layer.sublayerOpacity)) {

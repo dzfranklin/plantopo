@@ -3,6 +3,7 @@ import { MapSyncAuthorization } from './MapSyncAuthorization';
 import { SyncEngine } from './SyncEngine';
 import { SyncOp } from './SyncOp';
 import { IncomingMsg, OutgoingMsg } from './socketMessages';
+import { MapSources } from './mapSources';
 
 export type SyncSocketState =
   | { status: 'opening' }
@@ -149,6 +150,7 @@ const MAX_OPEN_STEP_TRIES = 4;
 export class SyncSocket {
   private static readonly _KEEPALIVE_INTERVAL_MS = 15_000;
 
+  private _mapSources: MapSources;
   private _pending: Map<number, SyncOp[]> = new Map();
   private _pendingListeners = new Set<(_: number) => any>();
   private _seq = 0;
@@ -162,7 +164,8 @@ export class SyncSocket {
     [];
   private _stateListeners = new Set<(_: SyncSocketState) => any>();
 
-  constructor(readonly mapId: number) {
+  constructor(readonly mapId: number, props: { mapSources: MapSources }) {
+    this._mapSources = props.mapSources;
     fetchAuthz(mapId)
       .then((authz) => {
         const state = this._state;
@@ -399,6 +402,7 @@ export class SyncSocket {
         const { fidBlockStart, fidBlockUntil } = msg;
         const { canEdit } = state._authz;
         const engine = new SyncEngine({
+          mapSources: this._mapSources,
           fidBlockStart,
           fidBlockUntil,
           canEdit,

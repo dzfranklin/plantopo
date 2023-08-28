@@ -13,17 +13,20 @@ import { useEffect, useState } from 'react';
 import { Titlebar } from './TitleBar/Titlebar';
 import { SyncSocket } from './api/SyncSocket';
 import { SyncSocketProvider } from './api/useSync';
-import { SyncEngine } from './api/SyncEngine';
+import { useMapSources } from '../api/useMapSources';
 
 export function MapEditor({ mapId }: { mapId: number }) {
   const isLoggedIn = useCurrentUser() !== null;
 
   const meta = useMapMeta(mapId);
+  const { data: mapSources } = useMapSources();
 
   const [syncSocket, setSyncSocket] = useState<SyncSocket | null>(null);
   const [openError, setOpenError] = useState<Error>();
   useEffect(() => {
-    const socket = new SyncSocket(mapId);
+    if (!mapSources) return;
+    // NOTE: We could fetch mapSources in parallel with the socket connect
+    const socket = new SyncSocket(mapId, { mapSources });
     socket.addStateListener((state) => {
       if (state.status === 'openError') {
         if (state.error instanceof UnauthorizedError && !isLoggedIn) {
@@ -35,7 +38,7 @@ export function MapEditor({ mapId }: { mapId: number }) {
     });
     setSyncSocket(socket);
     return () => socket.close();
-  }, [isLoggedIn, mapId]);
+  }, [mapSources, isLoggedIn, mapId]);
 
   const [sidebarWidth, setSidebarWidth] = useSidebarWidth();
   const [initialCamera, saveCamera] = useInitialCamera(mapId);

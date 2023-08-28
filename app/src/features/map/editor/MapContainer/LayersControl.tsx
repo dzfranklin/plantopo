@@ -1,5 +1,5 @@
 import RootOverlay from '@/generic/RootOverlay';
-import { LAYERS, LayerData } from '../api/layers';
+import type { LayerData, MapSources } from '../api/mapSources';
 import { SyncEngine } from '../api/SyncEngine';
 import {
   ActionButton,
@@ -29,8 +29,10 @@ import {
   usePopover,
 } from 'react-aria';
 import { OverlayTriggerState, useOverlayTriggerState } from 'react-stately';
+import { useMapSources } from '../../api/useMapSources';
 
 export function LayersControl({ engine }: { engine: SyncEngine }) {
+  const sources = useMapSources();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverState = useOverlayTriggerState({});
   const { triggerProps, overlayProps } = useOverlayTrigger(
@@ -39,7 +41,7 @@ export function LayersControl({ engine }: { engine: SyncEngine }) {
     triggerRef,
   );
 
-  return (
+  return sources.data ? (
     <>
       <ControlOpenButton buttonProps={triggerProps} buttonRef={triggerRef} />
       {popoverState.isOpen && (
@@ -48,10 +50,12 @@ export function LayersControl({ engine }: { engine: SyncEngine }) {
           triggerRef={triggerRef}
           overlayProps={overlayProps}
         >
-          <OrderControl engine={engine} />
+          <OrderControl sources={sources.data} engine={engine} />
         </ControlPopover>
       )}
     </>
+  ) : (
+    <></>
   );
 }
 
@@ -124,23 +128,29 @@ function ControlPopover({
   );
 }
 
-function OrderControl({ engine }: { engine: SyncEngine }) {
+function OrderControl({
+  sources,
+  engine,
+}: {
+  sources: MapSources;
+  engine: SyncEngine;
+}) {
   const [activeOrder, setActiveOrder] = useState(() =>
-    engine.lOrder().map((lid) => LAYERS.layers[lid]!),
+    engine.lOrder().map((lid) => sources.layers[lid]!),
   );
   useEffect(() => {
     const l = engine.addLOrderListener((v) =>
-      setActiveOrder(v.map((lid) => LAYERS.layers[lid]!)),
+      setActiveOrder(v.map((lid) => sources.layers[lid]!)),
     );
     return () => engine.removeLOrderListener(l);
-  }, [engine]);
+  }, [sources, engine]);
 
   const orderIfInactive = useMemo(
     () =>
-      Object.entries(LAYERS.layers)
+      Object.entries(sources.layers)
         .sort(([_a, a], [_b, b]) => a.name.localeCompare(b.name))
         .map(([_, data]) => data),
-    [],
+    [sources],
   );
   const inactiveOrder = useMemo(
     () =>

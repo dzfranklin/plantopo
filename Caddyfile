@@ -18,92 +18,27 @@
 	respond @cross_origin_websocket 403
 }
 
-(rewrite_logged_in_home) {
+localhost {
+	log localhost
+
+	import allow_origin_only "https://localhost"
+
 	@logged_in_home {
 		header Cookie *unchecked_user*
 		path /
 	}
 	rewrite @logged_in_home /user_home
-}
 
-(proxy_server_path) {
 	@server_path {
 		path /api/*
 		path /account/*
 	}
 	reverse_proxy @server_path localhost:4000
-}
 
-localhost {
-	log localhost
-
-	import allow_origin_only "https://localhost"
-	import rewrite_logged_in_home
-	import proxy_server_path
+	file_server /mapSources.json {
+		root layer_data/out/
+	}
 
 	# nextjs dev server
 	reverse_proxy * localhost:3000
-}
-
-prod.localhost {
-	log prod.localhost
-	encode zstd gzip
-
-	import allow_origin_only "https://prod.localhost"
-	import rewrite_logged_in_home
-	import proxy_server_path
-
-	# nextjs build output
-	try_files {path}.html
-	file_server {
-		root app/out
-		disable_canonical_uris
-	}
-}
-
-(proxy) {
-	log {args[0]}-proxy
-
-	@is_localhost header Origin "https://localhost"
-	@is_localhost_prod header Origin "https://prod.localhost"
-	@is_prod header Origin "https://plantopo.com"
-	header @is_localhost Access-Control-Allow-Origin "https://localhost"
-	header @is_localhost_prod Access-Control-Allow-Origin "https://prod.localhost"
-	header @is_prod Access-Control-Allow-Methods "https://plantopo.com"
-
-	header Access-Control-Allow-Methods "OPTIONS,HEAD,GET"
-
-	@mutating_method not method OPTIONS HEAD GET
-	respond @mutating_method "proxy forbids mutating methods" 403
-
-	reverse_proxy {
-		to {args[1]}
-
-		header_up Host {upstream_hostport} # for tls to work
-		header_up Origin "https://plantopo.com" # to pass the origin restriction
-
-		# these confuse ordnance survey
-		header_up -X-Forwarded-For
-		header_up -X-Forwarded-Proto
-		header_up -X-Forwarded-Host
-
-		# because we need to replace with those set in cors_allow_frontend
-		header_down -Access-Control-Allow-Methods
-		header_down -Access-Control-Allow-Origin
-	}
-}
-
-mapbox-proxy.localhost {
-	rewrite ?{query}&access_token={env.PLANTOPO_MAPBOX_ACCESS_TOKEN}
-	import proxy mapbox https://api.mapbox.com
-}
-
-os-proxy.localhost {
-	rewrite ?{query}&srs=3857&key={env.PLANTOPO_OS_API_KEY}
-	import proxy os https://api.os.uk
-}
-
-maptiler-proxy.localhost {
-	rewrite ?{query}&key={env.PLANTOPO_MAPTILER_KEY}
-	import proxy maptiler https://api.maptiler.com
 }

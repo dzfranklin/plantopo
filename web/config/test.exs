@@ -10,21 +10,21 @@ config :plantopo, :sync_engine,
   log_level: "error",
   executable: "./run_sync_engine.sh"
 
-s3_config = [
-  access_key_id: "admin",
-  secret_access_key: "adminkey",
-  scheme: "http://",
-  region: "local",
-  host: "127.0.0.1",
-  port: 9010,
-  # Minio specific
-  minio_path: ".minio/test_e2e",
-  minio_executable: "minio",
-  ui: false
-]
+aws_cred_value = fn key ->
+  {value, 0} =
+    System.cmd("bash", ["-c", "aws --profile test configure export-credentials | jq .#{key}"])
 
-config :ex_aws, :s3, s3_config
-config :plantopo, :minio_server, s3_config
+  value
+  |> String.trim()
+  |> String.trim("\"")
+  |> String.to_charlist()
+end
+
+config :aws_credentials,
+  aws_access_key_id: aws_cred_value.("AccessKeyId"),
+  aws_secret_access_key: aws_cred_value.("SecretAccessKey"),
+  aws_session_token: aws_cred_value.("SessionToken"),
+  aws_region: ~c"eu-west-2"
 
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1

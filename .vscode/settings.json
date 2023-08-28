@@ -9,6 +9,10 @@
     "eslint.workingDirectories": [
         "app/"
     ],
+    "rust-analyzer.linkedProjects": [
+        "map_sources/Cargo.toml",
+        "sync_engine/Cargo.toml"
+    ],
     "cmake.buildDirectory": "${workspaceFolder}/sync/inspector/build",
     "cmake.sourceDirectory": "/home/daniel/projects/plantopo/sync",
     "files.associations": {

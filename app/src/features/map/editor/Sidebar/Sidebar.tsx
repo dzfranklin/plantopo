@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { FInsertPlace, SyncEngine } from '../api/SyncEngine';
+import { FInsertPlace } from '../api/SyncEngine';
 import { FeatureTree } from './FeatureTree';
 import { Toolbar } from './Toolbar';
 import { ResizeHandle } from './ResizeHandle';

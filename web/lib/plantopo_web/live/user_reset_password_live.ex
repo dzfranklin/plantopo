@@ -5,7 +5,7 @@ defmodule PlanTopoWeb.UserResetPasswordLive do
 
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-sm">
+    <div class="max-w-sm mx-auto">
       <.header class="text-center">Reset Password</.header>
 
       <.simple_form
@@ -31,10 +31,9 @@ defmodule PlanTopoWeb.UserResetPasswordLive do
         </:actions>
       </.simple_form>
 
-      <p class="text-center mt-4">
+      <p class="mt-4 text-center">
         <.link href={~p"/account/register"}>Register</.link>
-        |
-        <.link href={~p"/account/login"}>Log in</.link>
+        | <.link href={~p"/account/login"}>Log in</.link>
       </p>
     </div>
     """

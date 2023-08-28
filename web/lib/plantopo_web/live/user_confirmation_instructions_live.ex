@@ -22,8 +22,7 @@ defmodule PlanTopoWeb.UserConfirmationInstructionsLive do
 
     <p>
       <.link href={~p"/account/register"}>Register</.link>
-      |
-      <.link href={~p"/account/login"}>Log in</.link>
+      | <.link href={~p"/account/login"}>Log in</.link>
     </p>
     """
   end

@@ -1,10 +1,11 @@
 import osLogo from './osLogo.svg';
 import mapboxLogo from './mapboxLogo.svg';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import { LAYERS } from '../../api/layers';
 import stringOrd from '@/generic/stringOrd';
 import { Content, Dialog, DialogContainer } from '@adobe/react-spectrum';
 import { SyncEngine } from '../../api/SyncEngine';
+import { MapSources } from '../../api/mapSources';
+import { useMapSources } from '../../../api/useMapSources';
 
 type Attribs = { id: string; html: string }[];
 type Logos = { alt: string; src: string }[];
@@ -16,20 +17,22 @@ export function AttributionControl({
   sidebarWidth: number;
   engine: SyncEngine;
 }) {
+  const sources = useMapSources();
   const [logos, setLogos] = useState<Logos>([]);
   const [attribs, setAttribs] = useState<Attribs>([]);
   useEffect(() => {
-    const attribs = toAttribHtml(engine.lOrder());
+    if (!sources.data) return;
+    const attribs = toAttribHtml(sources.data, engine.lOrder());
     setAttribs(attribs);
     setLogos(toLogos(attribs));
 
     const l = engine.addLOrderListener((v) => {
-      const attribs = toAttribHtml(v);
+      const attribs = toAttribHtml(sources.data, v);
       setAttribs(attribs);
       setLogos(toLogos(attribs));
     });
     return () => engine.removeLOrderListener(l);
-  }, [engine]);
+  }, [sources.data, engine]);
 
   const [openFull, setOpenFull] = useState(false);
 
@@ -95,11 +98,14 @@ function AttribFull({ attribs }: { attribs: Attribs }) {
   );
 }
 
-function toAttribHtml(layers: number[]): { id: string; html: string }[] {
+function toAttribHtml(
+  source: MapSources,
+  layers: number[],
+): { id: string; html: string }[] {
   const attribs = [];
   const tilesets = new Set<string>();
   for (const lid of layers) {
-    const ldata = LAYERS.layers[lid];
+    const ldata = source.layers[lid];
     if (!ldata) continue;
     if (ldata.attribution !== undefined) {
       const html = rewriteHtml(ldata.attribution);
@@ -110,7 +116,7 @@ function toAttribHtml(layers: number[]): { id: string; html: string }[] {
     }
   }
   for (const tid of tilesets) {
-    const tdata = LAYERS.tilesets[tid];
+    const tdata = source.tilesets[tid];
     if (!tdata) continue;
     if ('attribution' in tdata && tdata.attribution !== undefined) {
       const html = rewriteHtml(tdata.attribution);
