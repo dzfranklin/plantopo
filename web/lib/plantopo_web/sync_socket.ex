@@ -4,8 +4,14 @@ defmodule PlanTopoWeb.SyncSocket do
   alias PlanTopo.Maps
   require Logger
 
+  @keepalive_interval 10 * 1000
+  @no_keepalive_timeout 5 * 60 * 1000
+  @close_invalid 1008
+  @close_normal 1000
+  @close_internal_error 1011
+
   defmodule State do
-    defstruct [:map_id, :session_id, :can_edit, :maybe_user_id, :engine]
+    defstruct [:map_id, :no_keepalive_timer, :session_id, :can_edit, :maybe_user_id, :engine]
   end
 
   @impl true
@@ -14,6 +20,7 @@ defmodule PlanTopoWeb.SyncSocket do
 
     state = %State{
       map_id: map_id,
+      no_keepalive_timer: nil,
       can_edit: false,
       # All nil until authed
       session_id: nil,
@@ -25,16 +32,26 @@ defmodule PlanTopoWeb.SyncSocket do
   end
 
   @impl true
+  def websocket_init(state) do
+    Process.send_after(self(), :send_keepalive, @keepalive_interval)
+    {[], reset_no_keepalive_timer(state)}
+  end
+
+  defp reset_no_keepalive_timer(state) do
+    _ = if !is_nil(state.no_keepalive_timer), do: Process.cancel_timer(state.no_keepalive_timer)
+    timer = Process.send_after(self(), :no_keepalive_timeout, @no_keepalive_timeout)
+    %{state | no_keepalive_timer: timer}
+  end
+
+  @impl true
   def terminate(reason, _preq, state) do
     Logger.debug("sync_socket terminated: #{inspect(reason)} #{inspect(state)}")
     :ok
   end
 
   @impl true
-  def websocket_init(state), do: {[], state}
-
-  @impl true
   def websocket_handle({:text, input}, state) when is_nil(state.session_id) do
+    state = reset_no_keepalive_timer(state)
     %{"type" => "auth"} = req = Jason.decode!(input)
     {:ok, maybe_user_id} = Sync.verify_user_token_if_present(req["token"])
 
@@ -56,6 +73,7 @@ defmodule PlanTopoWeb.SyncSocket do
 
   @impl true
   def websocket_handle({:text, msg}, state) do
+    state = reset_no_keepalive_timer(state)
     msg = Jason.decode!(msg)
 
     case Map.fetch!(msg, "type") do
@@ -67,9 +85,25 @@ defmodule PlanTopoWeb.SyncSocket do
           :ok = Sync.recv(state.engine, state.session_id, msg)
           {[], state}
         else
-          {[{:close, "received op from read-only session"}], state}
+          {[{:close, @close_invalid, "received op from read-only session"}], state}
         end
     end
+  end
+
+  @impl true
+  def websocket_info(:no_keepalive_timeout, state) do
+    {[
+       {:close, @close_normal, "Received no messages for #{@no_keepalive_timeout}ms"}
+     ], state}
+  end
+
+  @impl true
+  def websocket_info(:send_keepalive, state) do
+    Process.send_after(self(), :send_keepalive, @keepalive_interval)
+
+    {[
+       {:text, Jason.encode!(%{"type" => "keepalive"})}
+     ], state}
   end
 
   @impl true
@@ -79,16 +113,10 @@ defmodule PlanTopoWeb.SyncSocket do
 
   @impl true
   def websocket_info({:EXIT, engine, reason}, state) when engine == state.engine do
-    # Matches ErrorMsg in app/src/socketMessages.ts
-    msg =
-      %{
-        type: "error",
-        error: "Unexpected engine exit",
-        details: inspect(reason)
-      }
-      |> Jason.encode!()
-
-    {[{:text, msg}, :close], state}
+    {[
+       {:close, @close_internal_error, "Unexpected engine exit"},
+       {:shutdown_reason, reason}
+     ], state}
   end
 
   @impl true

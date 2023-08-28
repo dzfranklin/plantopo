@@ -389,6 +389,8 @@ export class SyncSocket {
     const state = this._state;
     const msg: IncomingMsg = JSON.parse(evt.data);
 
+    if (msg.type === 'keepalive') return;
+
     if (
       (state.status === 'opening' && state._step === 'awaitAccept') ||
       state.status === 'reconnecting'

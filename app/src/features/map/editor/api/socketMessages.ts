@@ -3,7 +3,12 @@ import { SyncOp } from './SyncOp';
 
 export type OutgoingMsg = OpMsg | KeepaliveMsg;
 
-export type IncomingMsg = ConnectAcceptMsg | ReplyMsg | BcastMsg | ErrorMsg;
+export type IncomingMsg =
+  | ConnectAcceptMsg
+  | ReplyMsg
+  | BcastMsg
+  | ErrorMsg
+  | KeepaliveMsg;
 
 export interface OpMsg {
   type: 'op';
