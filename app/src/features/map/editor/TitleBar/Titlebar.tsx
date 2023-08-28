@@ -11,7 +11,7 @@ export function Titlebar() {
   const meta = useMapMeta(sync.mapId);
 
   return (
-    <div className="flex gap-2 px-1.5 items-center overflow-hidden h-[30px] text-sm border-b border-neutral-400 bg-neutral-100">
+    <div className="flex gap-2 px-1.5 items-center overflow-hidden h-[30px] text-sm border-b border-neutral-300 bg-neutral-100">
       <Link href="/" className="text-blue-700">
         <MapIcon />
       </Link>

@@ -31,7 +31,7 @@ export default function Sidebar({
           className={cls(
             'flex flex-col w-full min-w-0 bg-neutral-100',
             // Visually appears to connect to titlebar border
-            'border-r border-neutral-400',
+            'border-r border-neutral-300',
           )}
         >
           <Toolbar insertAt={insertAt} />
