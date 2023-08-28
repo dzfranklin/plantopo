@@ -28,6 +28,11 @@ defmodule PlanTopoWeb.Router do
     plug(:fetch_current_user)
   end
 
+  scope "/", PlanTopoWeb do
+    pipe_through([:browser])
+    get "/", StubController, :stub
+  end
+
   scope "/api", PlanTopoWeb do
     pipe_through(:api)
 
@@ -47,49 +52,49 @@ defmodule PlanTopoWeb.Router do
     post("/sync_server/snapshot", SyncServerController, :snapshot)
   end
 
-  ## Auth optional
+  scope "/account", PlanTopoWeb do
+    # Auth optional
+    scope "/" do
+      pipe_through([:browser])
 
-  scope "/", PlanTopoWeb do
-    pipe_through([:browser])
-
-    get("/", StubController, :stub)
-
-    live_session :current_user,
-      on_mount: [{PlanTopoWeb.UserAuth, :mount_current_user}] do
-      live("/account/confirm/:token", UserConfirmationLive, :edit)
-      live("/account/confirm", UserConfirmationInstructionsLive, :new)
-    end
-  end
-
-  scope "/", PlanTopoWeb do
-    pipe_through([:browser_no_csrf])
-    delete("/account/logout", UserSessionController, :delete)
-  end
-
-  ## Auth forbidden
-  scope "/", PlanTopoWeb do
-    pipe_through([:browser, :redirect_if_user_is_authenticated])
-
-    live_session :redirect_if_user_is_authenticated,
-      on_mount: [{PlanTopoWeb.UserAuth, :redirect_if_user_is_authenticated}] do
-      live("/account/register", UserRegistrationLive, :new)
-      live("/account/login", UserLoginLive, :new)
-      live("/account/reset_password", UserForgotPasswordLive, :new)
-      live("/account/reset_password/:token", UserResetPasswordLive, :edit)
+      live_session :current_user,
+        on_mount: [{PlanTopoWeb.UserAuth, :mount_current_user}] do
+        live("/confirm/:token", UserConfirmationLive, :edit)
+        live("/confirm", UserConfirmationInstructionsLive, :new)
+      end
     end
 
-    post("/account/login", UserSessionController, :create)
-  end
+    # Auth optional, no csrf
+    scope "/" do
+      pipe_through([:browser_no_csrf])
+      delete("/logout", UserSessionController, :delete)
+    end
 
-  ## Auth required
+    ## Auth forbidden
+    scope "/" do
+      pipe_through([:browser, :redirect_if_user_is_authenticated])
 
-  scope "/", PlanTopoWeb do
-    pipe_through([:browser, :require_authenticated_user])
+      live_session :redirect_if_user_is_authenticated,
+        on_mount: [{PlanTopoWeb.UserAuth, :redirect_if_user_is_authenticated}] do
+        live("/register", UserRegistrationLive, :new)
+        live("/login", UserLoginLive, :new)
+        live("/reset_password", UserForgotPasswordLive, :new)
+        live("/reset_password/:token", UserResetPasswordLive, :edit)
+      end
 
-    live_session :require_authenticated_user,
-      on_mount: [{PlanTopoWeb.UserAuth, :ensure_authenticated}] do
-      live("/account/settings", UserSettingsLive, :edit)
-      live("/account/settings/confirm_email/:token", UserSettingsLive, :confirm_email)
+      post("/login", UserSessionController, :create)
+    end
+
+    ## Auth required
+
+    scope "/" do
+      pipe_through([:browser, :require_authenticated_user])
+
+      live_session :require_authenticated_user,
+        on_mount: [{PlanTopoWeb.UserAuth, :ensure_authenticated}] do
+        live("/settings", UserSettingsLive, :edit)
+        live("/settings/confirm_email/:token", UserSettingsLive, :confirm_email)
+      end
     end
   end
 

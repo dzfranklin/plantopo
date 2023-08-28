@@ -6,13 +6,9 @@
 	email daniel@danielzfranklin.org
 }
 
-www.localhost {
-	log www.localhost
-	redir https://localhost{uri}
-}
-
-(primary) {
-	encode zstd gzip
+(allow_origin_only) {
+	header Access-Control-Allow-Origin "{args[0]}"
+	header Access-Control-Allow-Methods "OPTIONS,HEAD,GET,POST,PUT,PATCH,DELETE"
 
 	@cross_origin_websocket {
 		header Connection *Upgrade*
@@ -20,10 +16,9 @@ www.localhost {
 		not header Origin "{args[0]}"
 	}
 	respond @cross_origin_websocket 403
+}
 
-	header Access-Control-Allow-Origin "{args[0]}"
-	header Access-Control-Allow-Methods "OPTIONS,HEAD,GET,POST,PUT,PATCH,DELETE"
-
+(rewrite_logged_in_home) {
 	@logged_in_home {
 		header Cookie *unchecked_user*
 		path /
@@ -31,38 +26,38 @@ www.localhost {
 	rewrite @logged_in_home /user_home
 }
 
+(proxy_server_path) {
+	@server_path {
+		path /api/*
+		path /account/*
+	}
+	reverse_proxy @server_path localhost:4000
+}
+
 localhost {
 	log localhost
-	import primary https://localhost
 
-	@web {
-		not {
-			path /__next*
-			path /_next*
-			path /
-			path /user_home
-			path /map
-		}
-	}
-	reverse_proxy @web localhost:4000
+	import allow_origin_only "https://localhost"
+	import rewrite_logged_in_home
+	import proxy_server_path
+
+	# nextjs dev server
 	reverse_proxy * localhost:3000
 }
 
 prod.localhost {
 	log prod.localhost
-	import primary https://prod.localhost
+	encode zstd gzip
 
-	route {
-		rewrite /user_home /user_home.html
-		rewrite /map /map.html
+	import allow_origin_only "https://prod.localhost"
+	import rewrite_logged_in_home
+	import proxy_server_path
 
-		file_server {
-			root app/out
-			disable_canonical_uris
-			pass_thru
-		}
-
-		reverse_proxy * localhost:4000
+	# nextjs build output
+	try_files {path}.html
+	file_server {
+		root app/out
+		disable_canonical_uris
 	}
 }
 
