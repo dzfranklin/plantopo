@@ -261,7 +261,9 @@ export class SyncSocket {
     const state = this._state;
     if (state.status === 'closed') return;
     if (state.status === 'opening' && state._step === 'awaitOpen') {
-      state._ws.send(JSON.stringify({ token: state._authz.token }));
+      state._ws.send(
+        JSON.stringify({ type: 'auth', token: state._authz.token }),
+      );
       this._setState({
         status: 'opening',
         _step: 'awaitAccept',
@@ -272,7 +274,9 @@ export class SyncSocket {
       });
       this._resetKeepalive();
     } else if (state.status === 'reconnecting' && state._step === 'awaitOpen') {
-      state._ws.send(JSON.stringify({ token: state._authz.token }));
+      state._ws.send(
+        JSON.stringify({ type: 'auth', token: state._authz.token }),
+      );
       this._setState({
         status: 'reconnecting',
         _at: Date.now(),

@@ -35,7 +35,7 @@ defmodule PlanTopoWeb.SyncSocket do
 
   @impl true
   def websocket_handle({:text, input}, state) when is_nil(state.session_id) do
-    req = Jason.decode!(input)
+    %{"type" => "auth"} = req = Jason.decode!(input)
     {:ok, maybe_user_id} = Sync.verify_user_token_if_present(req["token"])
 
     meta = Maps.get_meta!(state.map_id)
