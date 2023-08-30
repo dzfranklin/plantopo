@@ -399,8 +399,16 @@ export class SyncSocket {
       state.status === 'reconnecting'
     ) {
       if (msg.type === 'connectAccept') {
+        /**
+         * We currently just waste the existing fid block. We're very unlikely
+         * to exhaust one so keeping multiple is useless without a way to return
+         * partial blocks to the server, which would increase complexity for minimal
+         * gain (we're not worried about running out)
+         */
         const { fidBlockStart, fidBlockUntil } = msg;
         const { canEdit } = state._authz;
+        // Recreating the engine simplifies its code and might fix buggy states
+        // that caused us to be disconnected
         const engine = new SyncEngine({
           mapSources: this._mapSources,
           fidBlockStart,
