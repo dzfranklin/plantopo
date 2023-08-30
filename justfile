@@ -7,6 +7,9 @@ te: test-engine
 ts: test-server
 ta: test-app
 
+caddy:
+  caddy stop; caddy run
+
 iex:
   cd web && iex -S mix server
 
@@ -16,6 +19,8 @@ app:
 find-unused:
   cd web && mix deps.unlock --check-unused
 
+ci: ci-prepare-map-sources
+
 test-engine:
   cd sync_engine && cargo check
   cd sync_engine && cargo clippy
@@ -24,7 +29,12 @@ test-engine:
 test-map-sources:
   cd map_sources && cargo check
   cd map_sources && cargo clippy
-  cd map_sources && cargo build
+  cd map_sources && cargo test
+  cd map_sources && RUST_LOG=warn cargo run .
+
+ci-prepare-map-sources:
+  cd map_sources && cargo check
+  cd map_sources && cargo clippy
   cd map_sources && cargo test
   cd map_sources && RUST_LOG=warn cargo run .
 
