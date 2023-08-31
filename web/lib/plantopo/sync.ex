@@ -12,6 +12,46 @@ defmodule PlanTopo.Sync do
   @socket_host Keyword.fetch!(@config, :host)
   @secret_key_base Keyword.fetch!(@config, :secret_key_base)
 
+  @colors File.read!("lib/plantopo/sync/colors.json") |> Jason.decode!()
+  @animals File.read!("lib/plantopo/sync/animals.json") |> Jason.decode!()
+  @color_count length(@colors)
+  @animal_count length(@animals)
+
+  def client_id_for(maybe_user_id, session_id) do
+    case maybe_user_id do
+      nil -> "anon-#{session_id}"
+      user_id -> "user-#{user_id}"
+    end
+  end
+
+  @spec client_name(String.t()) :: {:ok, String.t()} | {:error, :bad_request}
+  def client_name(client_id) do
+    case client_id do
+      "anon-" <> session_id ->
+        {:ok, name_for_anon(session_id)}
+
+      "user-" <> user_id ->
+        with {user_id, ""} <- Integer.parse(user_id) do
+          maybe_name = PlanTopo.Accounts.get_user_name(user_id)
+          {:ok, maybe_name || "Ghost"}
+        else
+          :error ->
+            Logger.info("Malformed client id: #{inspect(client_id)}")
+            {:error, :bad_request}
+        end
+
+      _ ->
+        Logger.info("Malformed client id: #{inspect(client_id)}")
+        {:error, :bad_request}
+    end
+  end
+
+  defp name_for_anon(session_id) do
+    color_i = :erlang.phash2(session_id, @color_count)
+    animal_i = :erlang.phash2(session_id, @animal_count)
+    "Anonymous " <> Enum.at(@colors, color_i) <> " " <> Enum.at(@animals, animal_i)
+  end
+
   @spec socket_url(map :: number()) :: String.t()
   def socket_url(map_id) do
     "wss://#{@socket_host}/api/map_sync?id=#{map_id}"

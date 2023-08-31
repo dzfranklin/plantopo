@@ -52,6 +52,11 @@ defmodule PlanTopoWeb.MapApiJSON do
     }
   end
 
+  def sync_client_name(%{name: name}) do
+    %{
+      "name" => name
+    }
+  end
 
   def tokens(%{tokens: tokens}) do
     tokens
