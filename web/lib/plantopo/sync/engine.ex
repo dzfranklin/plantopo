@@ -183,9 +183,9 @@ defmodule PlanTopo.Sync.Engine do
   end
 
   @spec send_client(State.sessions(), number(), map()) :: nil
-  defp send_client(sessions, client_id, msg) do
+  defp send_client(sessions, session_id, msg) do
     msg = Jason.encode!(msg)
-    pid = BiMap.get(sessions, client_id)
+    pid = BiMap.get(sessions, session_id)
     send(pid, {self(), :send, msg})
     nil
   end
