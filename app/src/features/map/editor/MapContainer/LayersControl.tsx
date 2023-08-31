@@ -225,9 +225,9 @@ function OrderControl({ engine }: { engine: SyncEngine }) {
         aria-label="layer order"
         width="100%"
         items={layers.active}
-        selectionMode="multiple"
         selectionStyle="highlight"
         density="compact"
+        selectionMode="single"
         dragAndDropHooks={engine.canEdit ? activeDndHooks : undefined}
         selectedKeys={layers.active
           .filter((l) => l.selectedByMe)
@@ -250,8 +250,8 @@ function OrderControl({ engine }: { engine: SyncEngine }) {
         width="100%"
         items={layers.inactive}
         selectionStyle="highlight"
-        selectionMode="multiple"
         density="compact"
+        selectionMode="single"
         dragAndDropHooks={engine.canEdit ? inactiveDndHooks : undefined}
         selectedKeys={layers.inactive
           .filter((l) => l.selectedByMe)
