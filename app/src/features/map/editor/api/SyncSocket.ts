@@ -405,12 +405,13 @@ export class SyncSocket {
          * partial blocks to the server, which would increase complexity for minimal
          * gain (we're not worried about running out)
          */
-        const { fidBlockStart, fidBlockUntil } = msg;
+        const { fidBlockStart, fidBlockUntil, clientId } = msg;
         const { canEdit } = state._authz;
         // Recreating the engine simplifies its code and might fix buggy states
         // that caused us to be disconnected
         const engine = new SyncEngine({
           mapSources: this._mapSources,
+          clientId,
           fidBlockStart,
           fidBlockUntil,
           canEdit,

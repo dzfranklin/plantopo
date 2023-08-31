@@ -22,6 +22,7 @@ export interface KeepaliveMsg {
 
 export interface ConnectAcceptMsg {
   type: 'connectAccept';
+  clientId: string;
   sessionId: number;
   fidBlockStart: number;
   fidBlockUntil: number;

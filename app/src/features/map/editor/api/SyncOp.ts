@@ -1,4 +1,4 @@
-import { FPos } from './FPos';
+import { FPos } from './propTypes';
 
 // The cannonical version is in sync_server/src/op.rs
 

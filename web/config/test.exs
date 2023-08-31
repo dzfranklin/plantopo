@@ -26,6 +26,13 @@ config :aws_credentials,
   aws_session_token: aws_cred_value.("SessionToken"),
   aws_region: ~c"eu-west-2"
 
+config :plantopo, PlanTopo.Maps,
+  frontend_tokens: [
+    mapbox: "",
+    os: "",
+    maptiler: ""
+  ]
+
 # Only in tests, remove the complexity from the password hashing algorithm
 config :bcrypt_elixir, :log_rounds, 1
 

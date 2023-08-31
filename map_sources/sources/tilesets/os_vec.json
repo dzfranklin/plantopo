@@ -8,7 +8,7 @@
     "type": "vector",
     "defaultStyles": "resources/styles",
     "tiles": [
-      "https://os-proxy.localhost/maps/vector/v1/vts/tile/{z}/{y}/{x}.pbf"
+      "https://api.os.uk/maps/vector/v1/vts/tile/{z}/{y}/{x}.pbf"
     ],
     "exportTilesAllowed": false,
     "initialExtent": {

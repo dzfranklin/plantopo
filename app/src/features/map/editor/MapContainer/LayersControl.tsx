@@ -1,6 +1,5 @@
 import RootOverlay from '@/generic/RootOverlay';
-import type { LayerData, MapSources } from '../api/mapSources';
-import { SyncEngine } from '../api/SyncEngine';
+import { SyncEngine } from '../api/SyncEngine/SyncEngine';
 import {
   ActionButton,
   Dialog,
@@ -12,15 +11,7 @@ import { ListView, Item } from '@react-spectrum/list';
 import { DOMProps } from '@react-types/shared';
 import EditIcon from '@spectrum-icons/workflow/Edit';
 import LayersIcon from '@spectrum-icons/workflow/Layers';
-import {
-  ReactNode,
-  RefObject,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { ReactNode, RefObject, useCallback, useRef, useState } from 'react';
 import {
   AriaButtonProps,
   useButton,
@@ -29,10 +20,10 @@ import {
   usePopover,
 } from 'react-aria';
 import { OverlayTriggerState, useOverlayTriggerState } from 'react-stately';
-import { useMapSources } from '../../api/useMapSources';
+import { useScene } from '../api/useScene';
+import { InactiveSceneLayer, SceneLayer } from '../api/SyncEngine/Scene';
 
 export function LayersControl({ engine }: { engine: SyncEngine }) {
-  const sources = useMapSources();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverState = useOverlayTriggerState({});
   const { triggerProps, overlayProps } = useOverlayTrigger(
@@ -41,7 +32,7 @@ export function LayersControl({ engine }: { engine: SyncEngine }) {
     triggerRef,
   );
 
-  return sources.data ? (
+  return (
     <>
       <ControlOpenButton buttonProps={triggerProps} buttonRef={triggerRef} />
       {popoverState.isOpen && (
@@ -50,12 +41,10 @@ export function LayersControl({ engine }: { engine: SyncEngine }) {
           triggerRef={triggerRef}
           overlayProps={overlayProps}
         >
-          <OrderControl sources={sources.data} engine={engine} />
+          <OrderControl engine={engine} />
         </ControlPopover>
       )}
     </>
-  ) : (
-    <></>
   );
 }
 
@@ -128,47 +117,21 @@ function ControlPopover({
   );
 }
 
-function OrderControl({
-  sources,
-  engine,
-}: {
-  sources: MapSources;
-  engine: SyncEngine;
-}) {
-  const [activeOrder, setActiveOrder] = useState(() =>
-    engine.lOrder().map((lid) => sources.layers[lid]!),
-  );
-  useEffect(() => {
-    const l = engine.addLOrderListener((v) =>
-      setActiveOrder(v.map((lid) => sources.layers[lid]!)),
-    );
-    return () => engine.removeLOrderListener(l);
-  }, [sources, engine]);
+function OrderControl({ engine }: { engine: SyncEngine }) {
+  const { layers } = useScene();
 
-  const orderIfInactive = useMemo(
-    () =>
-      Object.entries(sources.layers)
-        .sort(([_a, a], [_b, b]) => a.name.localeCompare(b.name))
-        .map(([_, data]) => data),
-    [sources],
-  );
-  const inactiveOrder = useMemo(
-    () =>
-      orderIfInactive.filter(
-        (data) => activeOrder.findIndex((p) => p.lid === data.lid) === -1,
-      ),
-    [activeOrder, orderIfInactive],
-  );
-
-  // By using one list of active & inactive we ensure that selecting in one
-  // clears the selection in the other.
-  const [selectedKeys, setSelectedKeys] = useState<
-    'all' | Array<string | number>
-  >([]);
-  const onSelectionChange = useCallback((sel: 'all' | Set<string | number>) => {
-    if (sel === 'all') setSelectedKeys('all');
-    else setSelectedKeys(Array.from(sel));
-  }, []);
+  const onSelectionChange =
+    (which: 'active' | 'inactive') => (sel: 'all' | Set<string | number>) => {
+      engine.startTransaction();
+      for (const layer of layers[which]) {
+        if (sel === 'all' || sel.has(layer.id)) {
+          engine.lAddToMySelection(layer.id);
+        } else {
+          engine.lRemoveFromMySelection(layer.id);
+        }
+      }
+      engine.commitTransaction();
+    };
 
   const serializeKey = (key: string | number) => key.toString();
   const deserializeKey = (key: unknown): number => {
@@ -187,54 +150,48 @@ function OrderControl({
     acceptedDragTypes: ['x-pt/lmove-active', 'x-pt/lmove-inactive'],
     getAllowedDropOperations: () => ['move'],
     onReorder: async ({ keys, target }) => {
-      const ids = [];
-      const prevI = new Map<number, number>();
-      for (let k of keys) {
-        k = deserializeKey(k);
-        const i = activeOrder.findIndex((p) => p.lid === k);
-        ids.push(k);
-        prevI.set(k, i);
+      let key;
+      for (const k of keys) {
+        if (key) throw new Error('Unreachable: expected one key');
+        key = deserializeKey(k);
       }
-      ids.sort((a, b) => prevI.get(a)! - prevI.get(b)!);
+      if (key === undefined) return;
 
       const targetLid = deserializeKey(target.key);
       const at = target.dropPosition === 'on' ? 'after' : target.dropPosition;
-      engine.lMove(ids, { target: targetLid, at });
+      engine.lMove([key], { target: targetLid, at });
     },
     onRootDrop: async (evt) => {
-      const values = [];
+      let key;
       for (const item of evt.items) {
         if (item.kind !== 'text') continue;
         if (!item.types.has('x-pt/lmove-inactive')) continue;
-        const value = item.getText('x-pt/lmove-inactive').then(deserializeKey);
-        values.push(value);
+
+        if (key) throw new Error('Unreachable: expected one key');
+
+        const textValue = await item.getText('x-pt/lmove-inactive');
+        key = deserializeKey(textValue);
       }
-      const ids = await Promise.all(values);
-      ids.sort(
-        (a, b) =>
-          inactiveOrder.findIndex((p) => p.lid === a) -
-          inactiveOrder.findIndex((p) => p.lid === b),
-      );
-      engine.lMove(ids, { at: 'last' });
+      if (key === undefined) return;
+
+      engine.lMove([key], { at: 'last' });
     },
     onInsert: async ({ items, target }) => {
-      const values = [];
+      let key;
       for (const item of items) {
         if (item.kind !== 'text') continue;
         if (!item.types.has('x-pt/lmove-inactive')) continue;
-        const v = item.getText('x-pt/lmove-inactive').then(deserializeKey);
-        values.push(v);
+
+        if (key) throw new Error('Unreachable: expected one key');
+
+        const textValue = await item.getText('x-pt/lmove-inactive');
+        key = deserializeKey(textValue);
       }
-      const ids = await Promise.all(values);
-      ids.sort(
-        (a, b) =>
-          inactiveOrder.findIndex((p) => p.lid === a) -
-          inactiveOrder.findIndex((p) => p.lid === b),
-      );
+      if (key === undefined) return;
 
       const targetLid = deserializeKey(target.key);
       const at = target.dropPosition === 'on' ? 'after' : target.dropPosition;
-      engine.lMove(ids, { target: targetLid, at });
+      engine.lMove([key], { target: targetLid, at });
     },
   });
   const { dragAndDropHooks: inactiveDndHooks } = useDragAndDrop({
@@ -244,18 +201,19 @@ function OrderControl({
     acceptedDragTypes: ['x-pt/lmove-active'],
     getDropOperation: (target) => (target.type === 'root' ? 'move' : 'cancel'),
     onDrop: async (evt) => {
-      const values = [];
+      let key;
       for (const item of evt.items) {
         if (item.kind !== 'text') continue;
         if (!item.types.has('x-pt/lmove-active')) continue;
-        const v = item.getText('x-pt/lmove-active').then(deserializeKey);
-        values.push(v);
-      }
-      const ids = await Promise.all(values);
 
-      engine.startTransaction();
-      for (const lid of ids) engine.lRemove(lid);
-      engine.commitTransaction();
+        if (key) throw new Error('Unreachable: expected one key');
+
+        const textValue = await item.getText('x-pt/lmove-active');
+        key = deserializeKey(textValue);
+      }
+      if (key === undefined) return;
+
+      engine.lRemove(key);
     },
   });
 
@@ -266,18 +224,20 @@ function OrderControl({
       <ListView
         aria-label="layer order"
         width="100%"
-        items={activeOrder}
+        items={layers.active}
         selectionMode="multiple"
         selectionStyle="highlight"
         density="compact"
         dragAndDropHooks={engine.canEdit ? activeDndHooks : undefined}
-        selectedKeys={selectedKeys}
-        onSelectionChange={onSelectionChange}
+        selectedKeys={layers.active
+          .filter((l) => l.selectedByMe)
+          .map((l) => l.id)}
+        onSelectionChange={onSelectionChange('active')}
       >
-        {(data) => (
-          <Item key={data.lid} textValue={data.name}>
-            <LayerItem data={data}>
-              <ActiveLayerActionMenu data={data} engine={engine} />
+        {(layer) => (
+          <Item textValue={layer.source.name}>
+            <LayerItem layer={layer}>
+              <ActiveLayerActionMenu layer={layer} engine={engine} />
             </LayerItem>
           </Item>
         )}
@@ -288,17 +248,19 @@ function OrderControl({
       <ListView
         aria-label="inactive layers"
         width="100%"
-        items={inactiveOrder}
+        items={layers.inactive}
         selectionStyle="highlight"
         selectionMode="multiple"
         density="compact"
         dragAndDropHooks={engine.canEdit ? inactiveDndHooks : undefined}
-        selectedKeys={selectedKeys}
-        onSelectionChange={onSelectionChange}
+        selectedKeys={layers.inactive
+          .filter((l) => l.selectedByMe)
+          .map((l) => l.id)}
+        onSelectionChange={onSelectionChange('inactive')}
       >
-        {(data) => (
-          <Item key={data.lid} textValue={data.name}>
-            <LayerItem data={data} />
+        {(layer) => (
+          <Item textValue={layer.source.name}>
+            <LayerItem layer={layer} />
           </Item>
         )}
       </ListView>
@@ -307,37 +269,27 @@ function OrderControl({
 }
 
 function LayerItem({
-  data,
+  layer,
   children,
 }: {
-  data: LayerData;
+  layer: SceneLayer | InactiveSceneLayer;
   children?: ReactNode;
 }) {
   return (
     <>
-      <span>{data.name}</span>
+      <span>{layer.source.name}</span>
       {children}
     </>
   );
 }
 
 function ActiveLayerActionMenu({
-  data: { defaultOpacity, lid },
+  layer,
   engine,
 }: {
-  data: LayerData;
+  layer: SceneLayer;
   engine: SyncEngine;
 }) {
-  const [opacity, setOpacity] = useState(
-    () => engine.lGet(lid, 'opacity') ?? defaultOpacity,
-  );
-  useEffect(() => {
-    const l = engine.addLPropListener(lid, 'opacity', (v) =>
-      setOpacity(v ?? defaultOpacity),
-    );
-    return () => engine.removeLPropListener(lid, 'opacity', l);
-  }, [defaultOpacity, engine, lid]);
-
   return (
     <DialogTrigger type="popover">
       <ActionButton
@@ -348,19 +300,57 @@ function ActiveLayerActionMenu({
         <EditIcon />
       </ActionButton>
       <Dialog height="5rem" width="3rem">
-        <div className="flex items-center justify-center overflow-auto row-span-full col-span-full">
-          <Slider
-            label="Opacity"
-            minValue={0}
-            maxValue={1}
-            step={0.01}
-            formatOptions={{ style: 'percent' }}
-            value={opacity}
-            onChange={setOpacity}
-            onChangeEnd={(v) => engine.lSet(lid, 'opacity', v)}
-          />
-        </div>
+        <ActiveLayerEditor layer={layer} engine={engine} />
       </Dialog>
     </DialogTrigger>
+  );
+}
+
+const MAX_UPDATE_INTERVAL = 10; // Throttle changes to 100 per second
+
+function ActiveLayerEditor({
+  layer,
+  engine,
+}: {
+  engine: SyncEngine;
+  layer: SceneLayer;
+}) {
+  const [opacity, _setOpacity] = useState(
+    layer.opacity ?? layer.source.defaultOpacity,
+  );
+  const tick = useRef<number | null>(null);
+  const setOpacity = useCallback(
+    (value: number, immediate = false) => {
+      _setOpacity(value);
+
+      if (tick.current) {
+        window.clearTimeout(tick.current);
+        tick.current = null;
+      }
+
+      if (immediate) {
+        engine.lSetOpacity(layer.id, value);
+      } else {
+        tick.current = window.setTimeout(() => {
+          engine.lSetOpacity(layer.id, value);
+          tick.current = null;
+        }, MAX_UPDATE_INTERVAL);
+      }
+    },
+    [engine, layer.id],
+  );
+  return (
+    <div className="flex items-center justify-center overflow-auto row-span-full col-span-full">
+      <Slider
+        label="Opacity"
+        minValue={0}
+        maxValue={1}
+        step={0.01}
+        formatOptions={{ style: 'percent' }}
+        value={opacity}
+        onChange={setOpacity}
+        onChangeEnd={(v) => setOpacity(v, true)}
+      />
+    </div>
   );
 }

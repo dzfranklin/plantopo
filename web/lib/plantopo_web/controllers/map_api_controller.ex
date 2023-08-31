@@ -146,4 +146,8 @@ defmodule PlanTopoWeb.MapApiController do
       render(conn, :list, %{list: list})
     end
   end
+
+  def tokens(conn, _) do
+    render(conn, :tokens, %{tokens: Maps.frontend_tokens()})
+  end
 end

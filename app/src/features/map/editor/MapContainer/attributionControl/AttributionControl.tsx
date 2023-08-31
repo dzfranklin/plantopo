@@ -3,36 +3,25 @@ import mapboxLogo from './mapboxLogo.svg';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import stringOrd from '@/generic/stringOrd';
 import { Content, Dialog, DialogContainer } from '@adobe/react-spectrum';
-import { SyncEngine } from '../../api/SyncEngine';
 import { MapSources } from '../../api/mapSources';
-import { useMapSources } from '../../../api/useMapSources';
+import { useScene } from '../../api/useScene';
+import { SceneLayer } from '../../api/SyncEngine/Scene';
+import { useMapSources } from '@/features/map/api/useMapSources';
 
 type Attribs = { id: string; html: string }[];
 type Logos = { alt: string; src: string }[];
 
-export function AttributionControl({
-  sidebarWidth,
-  engine,
-}: {
-  sidebarWidth: number;
-  engine: SyncEngine;
-}) {
+export function AttributionControl({ sidebarWidth }: { sidebarWidth: number }) {
+  const scene = useScene();
   const sources = useMapSources();
   const [logos, setLogos] = useState<Logos>([]);
   const [attribs, setAttribs] = useState<Attribs>([]);
   useEffect(() => {
     if (!sources.data) return;
-    const attribs = toAttribHtml(sources.data, engine.lOrder());
+    const attribs = toAttribHtml(scene.layers.active, sources.data);
     setAttribs(attribs);
     setLogos(toLogos(attribs));
-
-    const l = engine.addLOrderListener((v) => {
-      const attribs = toAttribHtml(sources.data, v);
-      setAttribs(attribs);
-      setLogos(toLogos(attribs));
-    });
-    return () => engine.removeLOrderListener(l);
-  }, [sources.data, engine]);
+  }, [sources.data, scene.layers]);
 
   const [openFull, setOpenFull] = useState(false);
 
@@ -99,24 +88,22 @@ function AttribFull({ attribs }: { attribs: Attribs }) {
 }
 
 function toAttribHtml(
-  source: MapSources,
-  layers: number[],
+  layers: SceneLayer[],
+  sources: MapSources,
 ): { id: string; html: string }[] {
   const attribs = [];
   const tilesets = new Set<string>();
-  for (const lid of layers) {
-    const ldata = source.layers[lid];
-    if (!ldata) continue;
-    if (ldata.attribution !== undefined) {
-      const html = rewriteHtml(ldata.attribution);
-      attribs.push({ id: `layer-${lid}`, html });
+  for (const layer of layers) {
+    if (layer.source.attribution !== undefined) {
+      const html = rewriteHtml(layer.source.attribution);
+      attribs.push({ id: `layer-${layer.id}`, html });
     }
-    for (const tid of ldata.sublayerTilesets) {
+    for (const tid of layer.source.sublayerTilesets) {
       tilesets.add(tid);
     }
   }
   for (const tid of tilesets) {
-    const tdata = source.tilesets[tid];
+    const tdata = sources.tilesets[tid];
     if (!tdata) continue;
     if ('attribution' in tdata && tdata.attribution !== undefined) {
       const html = rewriteHtml(tdata.attribution);

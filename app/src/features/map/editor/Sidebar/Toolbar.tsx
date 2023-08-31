@@ -1,14 +1,8 @@
-import { MutableRefObject } from 'react';
-import { FInsertPlace } from '../api/SyncEngine';
 import { ActionButton } from '@adobe/react-spectrum';
 import FolderAddIcon from '@spectrum-icons/workflow/FolderAdd';
 import { useSync } from '../api/useSync';
 
-export function Toolbar({
-  insertAt,
-}: {
-  insertAt: MutableRefObject<FInsertPlace>;
-}) {
+export function Toolbar() {
   const { engine } = useSync();
 
   return (
@@ -17,7 +11,7 @@ export function Toolbar({
         isQuiet
         isDisabled={!engine}
         onPress={() => {
-          engine?.fCreate(insertAt.current);
+          engine?.fCreate();
         }}
       >
         <FolderAddIcon />
