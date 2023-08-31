@@ -1,21 +1,28 @@
 import wrapError from '@/generic/wrapError';
 import {
   ForbiddenError,
+  JsonDecodeError,
   NetworkError,
   NotFoundError,
   UnauthorizedError,
 } from './errors';
 
 export async function handleResp<T>(req: Promise<Response>): Promise<T> {
+  let resp: Response;
   try {
-    const resp = await req;
-    if (resp.ok) {
-      return await resp.json();
-    } else {
-      throw await respToError(resp);
-    }
+    resp = await req;
   } catch (err) {
     throw new NetworkError(err);
+  }
+
+  if (resp.ok) {
+    try {
+      return await resp.json();
+    } catch (err) {
+      throw new JsonDecodeError(err);
+    }
+  } else {
+    throw await respToError(resp);
   }
 }
 
