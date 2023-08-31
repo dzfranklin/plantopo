@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const config = {
   reactStrictMode: true,
+  productionBrowserSourceMaps: true,
   output: 'export',
   transpilePackages: [
     '@tanstack/react-query-devtools',
