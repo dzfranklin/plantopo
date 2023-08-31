@@ -87,7 +87,10 @@ export class LayerRenderer {
 
     // Set opacity of loaded
     for (const layer of active) {
-      const opacity = layer.opacity ?? layer.source.defaultOpacity;
+      let opacity = layer.opacity ?? layer.source.defaultOpacity;
+      if (opacity < 0.05) opacity = 0;
+      else if (opacity > 0.95) opacity = 1;
+
       for (const [id, props] of Object.entries(layer.source.sublayerOpacity)) {
         if (!this._currentSublayers.has(id)) {
           continue;
