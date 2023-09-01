@@ -17,8 +17,10 @@ export function AttributionControl() {
     s.layers.active,
   ]);
   const sources = useMapSources();
+
   const [logos, setLogos] = useState<Logos>([]);
   const [attribs, setAttribs] = useState<Attribs>([]);
+
   useEffect(() => {
     if (!sources.data) return;
     const attribs = toAttribHtml(activeLayers, sources.data);
@@ -30,7 +32,7 @@ export function AttributionControl() {
 
   return (
     <div
-      className="absolute z-10 bottom-0 right-0 flex items-end min-w-0 gap-3 ml-2 mr-16"
+      className="absolute bottom-0 right-0 z-10 flex items-end min-w-0 gap-3 ml-2 mr-16"
       style={{ left: `${sidebarWidth}px` }}
     >
       {logos.length > 0 && (
