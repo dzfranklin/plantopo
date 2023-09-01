@@ -6,10 +6,12 @@ const { PI } = Math;
 
 export class FeaturePainter {
   dpi: number;
-  showDebug = true;
-  c: CanvasRenderingContext2D;
+  public showDebug = true;
 
-  constructor(public canvas: HTMLCanvasElement) {
+  constructor(
+    public canvas: HTMLCanvasElement,
+    public c: CanvasRenderingContext2D,
+  ) {
     this.dpi = window.devicePixelRatio || 1;
     this.c = canvas.getContext('2d')!;
   }

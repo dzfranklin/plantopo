@@ -10,11 +10,25 @@ export class LayerRenderer {
   private _map: ml.Map;
   private _sources: MapSources;
   private _scene: Scene | null = null;
+  private _boundOnPotentialLoad = this._onPotentialLoad.bind(this);
 
   constructor(map: ml.Map, sources: MapSources) {
     this._map = map;
     this._sources = sources;
-    map.on('data', () => this._onPotentialLoad());
+    map.on('data', this._boundOnPotentialLoad);
+  }
+
+  remove() {
+    this._map.off('data', this._boundOnPotentialLoad);
+    for (const sublayer of this._currentSublayers) {
+      this._map.removeLayer(sublayer);
+    }
+    for (const tileset of this._loadedTilesets) {
+      this._map.removeSource(tileset);
+    }
+    for (const sprite of this._addedSprites) {
+      this._map.removeSprite(sprite);
+    }
   }
 
   render(scene: Scene): void {

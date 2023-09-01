@@ -1,4 +1,3 @@
-import * as ml from 'maplibre-gl';
 import { RenderFeature } from '../FeatureRenderer';
 import RBush from 'rbush';
 import { FGeometry } from '../../api/propTypes';
@@ -6,6 +5,7 @@ import { BBox, bbox as computeBBox } from '@turf/turf';
 import { SceneFeature } from '../../api/SyncEngine/Scene';
 import { SyncEngine } from '../../api/SyncEngine';
 import { CreateFeatureHandler } from './CreateFeatureHandler';
+import { CurrentCameraPosition } from '../../CurrentCamera';
 
 type ScreenXY = [number, number];
 type LngLat = [number, number];
@@ -23,8 +23,7 @@ export class InteractionEvent {
 
   unproject(): LngLat {
     if (this._cachedLngLat === null) {
-      const value = this._scope.map.unproject(this.screenXY);
-      this._cachedLngLat = [value.lng, value.lat];
+      this._cachedLngLat = this._scope.unproject(this.screenXY);
     }
     return this._cachedLngLat;
   }
@@ -76,9 +75,19 @@ interface PointerState {
   couldBePress: boolean;
 }
 
+const BOUND_POINTER_EVENTS = [
+  'pointerdown',
+  'pointermove',
+  'pointerup',
+  'pointercancel',
+  'pointerout',
+] as const;
+
 export class InteractionManager {
   private _rbush = new RBush<IndexEntry>();
-  private _container: HTMLElement;
+  private _elem: HTMLElement;
+  private _cam: CurrentCameraPosition;
+  private _engine: SyncEngine;
 
   handlers: InteractionHandler[] = [
     // new DeleteFeatureHandler(),
@@ -88,32 +97,58 @@ export class InteractionManager {
     // new FeatureHoverHandler(),
   ];
 
-  constructor(public map: ml.Map, public engine: SyncEngine) {
-    this._container = map.getCanvasContainer();
+  private _boundOnPointer = this._onPointer.bind(this);
+  private _boundOnWheel = this._onWheel.bind(this);
+  private _resizeObserver: ResizeObserver;
 
-    this._container.addEventListener('wheel', (evt) => this._onWheel(evt), {
+  constructor(props: {
+    engine: SyncEngine;
+    initialCamera: CurrentCameraPosition;
+    container: HTMLDivElement;
+  }) {
+    this._cam = props.initialCamera;
+    this._engine = props.engine;
+
+    const elem = document.createElement('div');
+    elem.style.position = 'absolute';
+    elem.style.inset = '0';
+    const mlElem = props.container.querySelector(
+      '.maplibregl-canvas-container.maplibregl-interactive',
+    )!;
+    mlElem.append(elem);
+    this._elem = elem;
+
+    elem.addEventListener('wheel', this._boundOnWheel, {
       capture: true,
     });
 
-    for (const type of [
-      'pointerdown',
-      'pointermove',
-      'pointerup',
-      'pointercancel',
-      'pointerout',
-      // 'keydown', // TODO:
-      // 'keyup',
-    ] as const) {
-      this._container.addEventListener(type, (evt) => this._onPointer(evt), {
+    for (const type of BOUND_POINTER_EVENTS) {
+      elem.addEventListener(type, this._boundOnPointer, {
         capture: true,
       });
     }
 
-    const resizeObserver = new ResizeObserver(() => this._onResize());
-    resizeObserver.observe(this._container);
+    this._resizeObserver = new ResizeObserver(() => this._onResize());
+    this._resizeObserver.observe(elem);
   }
 
-  register(render: RenderFeature[]) {
+  remove() {
+    this._elem.removeEventListener('wheel', this._boundOnWheel, {
+      capture: true,
+    });
+
+    for (const type of BOUND_POINTER_EVENTS) {
+      this._elem.removeEventListener(type, this._boundOnPointer, {
+        capture: true,
+      });
+    }
+
+    this._resizeObserver.disconnect();
+  }
+
+  register(render: RenderFeature[], camera: CurrentCameraPosition) {
+    this._cam = camera;
+
     const entries: IndexEntry[] = [];
     for (let i = 0; i < render.length; i++) {
       const f = render[i]!;
@@ -131,9 +166,9 @@ export class InteractionManager {
 
   queryHits(screen: ScreenXY, lngLat: LngLat): SceneFeature[] {
     const slop = 15;
-    const p = this.map.unproject([screen[0] + slop, screen[1] + slop]);
-    const slopLng = p.lng - lngLat[0];
-    const slopLat = p.lat - lngLat[1];
+    const p = this.unproject([screen[0] + slop, screen[1] + slop]);
+    const slopLng = p[0] - lngLat[0];
+    const slopLat = p[0] - lngLat[1];
 
     const hits = this._rbush.search({
       minX: lngLat[0] - slopLng,
@@ -146,7 +181,7 @@ export class InteractionManager {
 
     const features: SceneFeature[] = [];
     for (const hit of hits) {
-      const value = this.engine.fLookupSceneNode(hit.id);
+      const value = this._engine.fLookupSceneNode(hit.id);
       if (value) {
         features.push(value);
       }
@@ -227,7 +262,7 @@ export class InteractionManager {
             if (this._lastPinchGap !== null) {
               const evt = new InteractionEvent(this, pt);
               for (const handler of this.handlers) {
-                consumed = handler.onPress?.(evt, this.engine) ?? false;
+                consumed = handler.onPress?.(evt, this._engine) ?? false;
                 if (consumed) break;
               }
             }
@@ -238,7 +273,7 @@ export class InteractionManager {
             const evt = new InteractionEvent(this, pt);
             const delta: ScreenXY = [pt[0] - p.last![0], pt[1] - p.last![1]];
             for (const handler of this.handlers) {
-              consumed = handler.onDrag?.(evt, delta, this.engine) ?? false;
+              consumed = handler.onDrag?.(evt, delta, this._engine) ?? false;
               if (consumed) break;
             }
             p.last = pt;
@@ -247,7 +282,7 @@ export class InteractionManager {
           // IS HOVER
           const evt = new InteractionEvent(this, pt);
           for (const handler of this.handlers) {
-            consumed = handler.onHover?.(evt, this.engine) ?? false;
+            consumed = handler.onHover?.(evt, this._engine) ?? false;
             if (consumed) break;
           }
         }
@@ -258,7 +293,7 @@ export class InteractionManager {
         if (!p.outside && p.couldBePress) {
           const evt = new InteractionEvent(this, pt);
           for (const handler of this.handlers) {
-            consumed = handler.onPress?.(evt, this.engine) ?? false;
+            consumed = handler.onPress?.(evt, this._engine) ?? false;
             if (consumed) break;
           }
         }
@@ -307,7 +342,7 @@ export class InteractionManager {
 
     let consumed = false;
     for (const handler of this.handlers) {
-      consumed = handler.onZoom?.(ievt, delta, this.engine) ?? false;
+      consumed = handler.onZoom?.(ievt, delta, this._engine) ?? false;
       if (consumed) break;
     }
 
@@ -327,6 +362,10 @@ export class InteractionManager {
       this._bboxCache.set(geo, value);
       return value;
     }
+  }
+
+  unproject(xy: ScreenXY): LngLat {
+    return this._cam.unproject(xy);
   }
 }
 
