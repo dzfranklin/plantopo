@@ -233,6 +233,13 @@ export class InteractionManager {
         // Fired when a pointer becomes active buttons state.
         p.down = pt;
         p.couldBePress = true;
+        for (const pointer of this._pointers) {
+          if (pointer.id === evt.pointerId) continue;
+          if (pointer.down) {
+            pointer.couldBePress = false;
+            p.couldBePress = false;
+          }
+        }
         break;
       }
       case 'pointermove': {
