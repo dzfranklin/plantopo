@@ -1,6 +1,6 @@
 import osLogo from './osLogo.svg';
 import mapboxLogo from './mapboxLogo.svg';
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useMemo, useState } from 'react';
 import stringOrd from '@/generic/stringOrd';
 import { Content, Dialog, DialogContainer } from '@adobe/react-spectrum';
 import { MapSources } from '../../api/mapSources';
@@ -18,14 +18,13 @@ export function AttributionControl() {
   ]);
   const sources = useMapSources();
 
-  const [logos, setLogos] = useState<Logos>([]);
-  const [attribs, setAttribs] = useState<Attribs>([]);
-
-  useEffect(() => {
-    if (!sources.data) return;
+  const value = useMemo(() => {
+    if (!sources.data) return { logos: [], attribs: [] };
     const attribs = toAttribHtml(activeLayers, sources.data);
-    setAttribs(attribs);
-    setLogos(toLogos(attribs));
+    return {
+      logos: toLogos(attribs),
+      attribs,
+    };
   }, [sources.data, activeLayers]);
 
   const [openFull, setOpenFull] = useState(false);
@@ -35,21 +34,21 @@ export function AttributionControl() {
       className="absolute bottom-0 right-0 z-10 flex items-end min-w-0 gap-3 ml-2 mr-16"
       style={{ left: `${sidebarWidth}px` }}
     >
-      {logos.length > 0 && (
+      {value.logos.length > 0 && (
         <div className="min-w-fit h-[20px] mb-1 flex gap-1 pointer-events-none">
-          {logos.map(({ alt, src }) => (
+          {value.logos.map(({ alt, src }) => (
             <img src={src} alt={alt} key={src} />
           ))}
         </div>
       )}
 
-      <AttribPreview attribs={attribs} setOpenFull={setOpenFull} />
+      <AttribPreview attribs={value.attribs} setOpenFull={setOpenFull} />
 
       <DialogContainer type="modal" onDismiss={() => setOpenFull(false)}>
         {openFull && (
           <Dialog isDismissable>
             <Content>
-              <AttribFull attribs={attribs} />
+              <AttribFull attribs={value.attribs} />
             </Content>
           </Dialog>
         )}
