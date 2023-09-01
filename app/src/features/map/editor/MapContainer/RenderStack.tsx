@@ -137,7 +137,7 @@ export function RenderStack({
       {engine && (
         <>
           <LayersControl engine={engine} />
-          <AttributionControl sidebarWidth={scene.sidebarWidth} />
+          <AttributionControl />
         </>
       )}
     </>

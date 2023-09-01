@@ -11,8 +11,11 @@ import { useMapSources } from '@/features/map/api/useMapSources';
 type Attribs = { id: string; html: string }[];
 type Logos = { alt: string; src: string }[];
 
-export function AttributionControl({ sidebarWidth }: { sidebarWidth: number }) {
-  const activeLayers = useScene((s) => s.layers.active);
+export function AttributionControl() {
+  const [sidebarWidth, activeLayers] = useScene((s) => [
+    s.sidebarWidth,
+    s.layers.active,
+  ]);
   const sources = useMapSources();
   const [logos, setLogos] = useState<Logos>([]);
   const [attribs, setAttribs] = useState<Attribs>([]);
