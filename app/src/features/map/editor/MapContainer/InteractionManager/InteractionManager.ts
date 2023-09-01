@@ -6,6 +6,7 @@ import { SceneFeature } from '../../api/SyncEngine/Scene';
 import { SyncEngine } from '../../api/SyncEngine';
 import { CreateFeatureHandler } from './CreateFeatureHandler';
 import { CurrentCameraPosition } from '../../CurrentCamera';
+import { add2, sub2 } from '@/generic/vector2';
 
 type ScreenXY = [number, number];
 type LngLat = [number, number];
@@ -30,7 +31,7 @@ export class InteractionEvent {
 
   private _cachedHits: SceneFeature[] | null = null;
 
-  /** Returned in depth first search order */
+  /** The first entry in the list is the feature on top */
   queryHits(): SceneFeature[] {
     if (this._cachedHits === null) {
       const value = this._scope.queryHits(this.screenXY, this.unproject());
@@ -88,6 +89,8 @@ export class InteractionManager {
   private _elem: HTMLElement;
   private _cam: CurrentCameraPosition;
   private _engine: SyncEngine;
+
+  querySlop: [number, number] = [10, 10]; // In pixels
 
   handlers: InteractionHandler[] = [
     // new DeleteFeatureHandler(),
@@ -162,22 +165,29 @@ export class InteractionManager {
         maxY,
       });
     }
+
+    this._rbush = new RBush();
+    this._rbush.load(entries);
   }
 
   queryHits(screen: ScreenXY, lngLat: LngLat): SceneFeature[] {
-    const slop = 15;
-    const p = this.unproject([screen[0] + slop, screen[1] + slop]);
-    const slopLng = p[0] - lngLat[0];
-    const slopLat = p[0] - lngLat[1];
+    // Convert from centered around `screen` to crs
+    const p = this.unproject(add2(screen, this.querySlop));
+    const slop = sub2(p, lngLat);
 
-    const hits = this._rbush.search({
-      minX: lngLat[0] - slopLng,
-      minY: lngLat[1] - slopLat,
-      maxX: lngLat[0] + slopLng,
-      maxY: lngLat[1] + slopLat,
-    });
+    const lngA = lngLat[0] - slop[0];
+    const lngB = lngLat[0] + slop[0];
+    const latA = lngLat[1] - slop[1];
+    const latB = lngLat[1] + slop[1];
+    const query = {
+      minX: lngA < lngB ? lngA : lngB,
+      maxX: lngA > lngB ? lngA : lngB,
+      minY: latA < latB ? latA : latB,
+      maxY: latA > latB ? latA : latB,
+    };
 
-    hits.sort((a, b) => a.idx - b.idx);
+    const hits = this._rbush.search(query);
+    hits.sort((a, b) => b.idx - a.idx);
 
     const features: SceneFeature[] = [];
     for (const hit of hits) {

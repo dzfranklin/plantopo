@@ -51,7 +51,7 @@ ci-prepare-map-sources:
 test-app:
   cd app && tsc --noEmit
   cd app && npm run lint
-  cd app && npm run test -- --passWithNoTests # TODO: add tests
+  cd app && npm run test
 
 test-server:
   cd web && mix format --dry-run --check-formatted
