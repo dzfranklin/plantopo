@@ -18,6 +18,7 @@ export function ResizeHandle() {
     if (dragAnimNext.current === null) return;
     if (dragAnimPrev.current !== dragAnimNext.current) {
       engine?.setSidebarWidth(dragAnimNext.current);
+      engine?.render();
       dragAnimPrev.current = dragAnimNext.current;
     }
     requestAnimationFrame(animateStep);
