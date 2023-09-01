@@ -4,7 +4,6 @@ import { MapSources } from '../api/mapSources';
 
 export class LayerRenderer {
   private _pendingTilesets = new Set<string>();
-  private _loadedTilesets = new Set<string>();
   private _addedSprites = new Set<string>();
   private _currentSublayers = new Set<string>();
   private _map: ml.Map;
@@ -22,9 +21,6 @@ export class LayerRenderer {
     this._map.off('data', this._boundOnPotentialLoad);
     for (const sublayer of this._currentSublayers) {
       this._map.removeLayer(sublayer);
-    }
-    for (const tileset of this._loadedTilesets) {
-      this._map.removeSource(tileset);
     }
     for (const sprite of this._addedSprites) {
       this._map.removeSprite(sprite);
@@ -58,11 +54,11 @@ export class LayerRenderer {
     let missingDeps = false;
     for (const { source } of active) {
       for (const ts of source.sublayerTilesets) {
-        if (!this._loadedTilesets.has(ts)) {
-          if (!this._pendingTilesets.has(ts)) {
-            this._pendingTilesets.add(ts);
-            this._map.addSource(ts, this._sources.tilesets[ts]!);
-          }
+        if (this._map.getSource(ts)) {
+          missingDeps = !this._map.isSourceLoaded(ts);
+        } else {
+          this._map.addSource(ts, this._sources.tilesets[ts]!);
+          this._pendingTilesets.add(ts);
           missingDeps = true;
         }
       }
@@ -124,7 +120,6 @@ export class LayerRenderer {
     const newTilesets = new Set<string>();
     for (const tileset of this._pendingTilesets) {
       if (this._map.isSourceLoaded(tileset)) {
-        this._loadedTilesets.add(tileset);
         if (this._pendingTilesets.delete(tileset)) {
           newTilesets.add(tileset);
         }
