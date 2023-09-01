@@ -28,6 +28,7 @@ import {
 } from './Scene';
 import { Presence } from '../Presence';
 import { IEngineLocalPersistence } from './EngineLocalPersistence';
+import { deepEq } from '@/generic/deepEq';
 
 export type LInsertPlace =
   | { at: 'first' }
@@ -508,6 +509,11 @@ export class SyncEngine {
       activeSet.add(source);
     }
     active.sort((a, b) => stringOrd(a.idx, b.idx));
+
+    if (deepEq(this._scene.layers.active, active)) {
+      // Inactive can't have changed if active didn't because source is static
+      return this._scene.layers;
+    }
 
     const inactive: InactiveSceneLayer[] = [];
     for (const source of Object.values(this._mapSources.layers)) {
