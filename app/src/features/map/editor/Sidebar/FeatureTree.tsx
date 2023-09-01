@@ -10,7 +10,7 @@ import AddAtIcon from '@spectrum-icons/workflow/Add';
 import cls from '@/generic/cls';
 import './FeatureTree.css';
 import { useScene } from '../api/useScene';
-import { SceneFeature } from '../api/SyncEngine/Scene';
+import { SceneFeature, nameForUnnamedFeature } from '../api/SyncEngine/Scene';
 
 const CHILD_INDENT_PX = 16;
 const VERTICAL_GAP_PX = 2;
@@ -23,7 +23,6 @@ interface DragTarget {
 }
 
 export function FeatureTree({ engine }: { engine: SyncEngine }) {
-  const scene = useScene();
   const dragTargetRef = useRef<DragTarget | null>(null);
   const rootRef = useRef<HTMLUListElement>(null);
   const dragAtElemRef = useRef<HTMLDivElement>(null);
@@ -34,7 +33,7 @@ export function FeatureTree({ engine }: { engine: SyncEngine }) {
     };
     window.addEventListener('keyup', l);
     return () => window.removeEventListener('keyup', l);
-  });
+  }, [engine]);
 
   const onDragStart = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
@@ -204,6 +203,8 @@ export function FeatureTree({ engine }: { engine: SyncEngine }) {
     () => observer.disconnect();
   }, [maybeDirtyDragMarker]);
 
+  const root = useScene((s) => s.features.root.children);
+
   return (
     <ul
       onDragStart={onDragStart}
@@ -215,7 +216,7 @@ export function FeatureTree({ engine }: { engine: SyncEngine }) {
       onScroll={onScroll}
       ref={rootRef}
     >
-      {scene.features.root.children.map((child) => (
+      {root.map((child) => (
         <Entry key={child.id} feature={child} engine={engine} />
       ))}
 
@@ -310,7 +311,7 @@ function Entry({
           }}
         >
           <span className="flex-grow select-none text-start">
-            {feature.name || 'Unnamed feature'}
+            {feature.name || nameForUnnamedFeature(feature)}
           </span>
         </div>
 

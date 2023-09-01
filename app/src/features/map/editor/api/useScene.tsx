@@ -15,4 +15,6 @@ export function SceneProvider({
   );
 }
 
-export const useScene = () => useContext(SceneContext);
+export function useScene<T>(selector: (scene: Scene) => T) {
+  return selector(useContext(SceneContext));
+}

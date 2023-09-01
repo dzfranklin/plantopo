@@ -24,8 +24,10 @@ import {
   SceneFeature,
   SceneLayer,
   SceneRootFeature,
+  DEFAULT_SIDEBAR_WIDTH,
 } from './Scene';
 import { Presence } from '../Presence';
+import { IEngineLocalPersistence } from './EngineLocalPersistence';
 
 export type LInsertPlace =
   | { at: 'first' }
@@ -70,6 +72,8 @@ export class SyncEngine {
   /** A reliably abstraction over delivering messages */
   private _send: ((_: SyncOp[]) => void) | null;
 
+  private _persistence: IEngineLocalPersistence;
+
   /** if null, no current transaction. Otherwise contains data to commit.
    * Just push another array of SyncOps to add to the current transaction.
    */
@@ -78,6 +82,9 @@ export class SyncEngine {
   private _scene = EMPTY_SCENE;
   private _sceneFNodes = new Map<number, SceneFeature>();
   private _sceneDirty = false;
+
+  private _sidebarWidth = DEFAULT_SIDEBAR_WIDTH;
+  private _hasChangedSidebarWidth = false;
 
   /** The start fid block we're currently allocated by the server */
   private _fidBlockStart: number;
@@ -101,6 +108,7 @@ export class SyncEngine {
   private _renderCount = 0;
 
   constructor(props: {
+    persistence: IEngineLocalPersistence;
     mapSources: MapSources;
     clientId: ClientId;
     fidBlockStart: Fid;
@@ -111,6 +119,7 @@ export class SyncEngine {
     if (props.fidBlockUntil <= props.fidBlockStart) {
       throw new Error('Invalid fid block');
     }
+    this._persistence = props.persistence;
     this._mapSources = props.mapSources;
     this.clientId = props.clientId;
     this._fidBlockStart = props.fidBlockStart;
@@ -118,15 +127,26 @@ export class SyncEngine {
     this._nextFid = props.fidBlockStart;
     this.canEdit = props.canEdit;
     this._send = props.send;
+
+    this._persistence.load('sidebarWidth').then((width) => {
+      if (!this._hasChangedSidebarWidth) {
+        this._sidebarWidth = width as number;
+      }
+    });
   }
 
   logDebug() {
-    console.groupCollapsed('SyncEngine');
+    console.group('SyncEngine');
     console.log('canEdit', this.canEdit);
     console.log('fidBlock', `[${this._fidBlockStart}, ${this._fidBlockUntil})`);
     console.log('nextFid', this._nextFid);
     console.log('render count', this._renderCount);
     console.log('sceneDirty', this._sceneDirty);
+
+    console.groupCollapsed('features (dot)');
+    console.log(this._debugTreeDot());
+    console.groupEnd();
+
     console.groupEnd();
   }
 
@@ -138,13 +158,26 @@ export class SyncEngine {
       return this._scene;
     } else {
       this._scene = {
+        sidebarWidth: this._sidebarWidth,
         layers: this._renderLayers(),
         features: this._renderFeatures(),
       };
       this._sceneDirty = false;
       this._renderCount++;
+
+      for (const cb of this._onRenderListeners) {
+        cb(this._scene);
+      }
+
       return this._scene;
     }
+  }
+
+  private _onRenderListeners = new Set<(_: Scene) => any>();
+
+  onRender(cb: (scene: Scene) => any): () => void {
+    this._onRenderListeners.add(cb);
+    return () => this._onRenderListeners.delete(cb);
   }
 
   /** Receive a message from the server */
@@ -263,6 +296,13 @@ export class SyncEngine {
     } else {
       this._transaction = null;
     }
+  }
+
+  setSidebarWidth(width: number): void {
+    this._sidebarWidth = width;
+    this._hasChangedSidebarWidth = true;
+    this._persistence.saveWhenIdle('sidebarWidth', width);
+    this._sceneDirty = true;
   }
 
   fParent(fid: Fid): Fid | undefined {
@@ -519,18 +559,21 @@ export class SyncEngine {
     const idx = this._fTree.edgeWeight(parent.id, fid)!;
     const props = this._f.props(fid)!;
 
-    const name = props.get('name') as string | null;
-    const geometry = props.get('geometry') as FGeometry | null;
-    const color = props.get('color') as string | null;
-
     const selectedByMe = this._fSelectedByMe.has(fid);
     const selectedByPeers = this._fPeersWhoSelected(fid);
 
+    const geometry = props.get('geometry') as FGeometry | null;
+
+    const hidden = (props.get('hidden') ?? false) as boolean;
+    const name = props.get('name') as string | null;
+    const color = props.get('color') as string | null;
+
     const feature: SceneFeature = {
-      id: 0,
+      id: fid,
       parent,
       idx,
       children: [],
+      hidden,
       geometry,
       name,
       color,
@@ -800,6 +843,21 @@ export class SyncEngine {
     } else {
       throw new Error('out of fids');
     }
+  }
+
+  private _debugTreeDot(): string {
+    const dot = ['digraph T {'];
+    this._fTree.dfs([0], {
+      discover: (n, _t, _ctrl) => {
+        const name = this._f.propsOrInit(n).get('name') || 'Unnamed feature';
+        dot.push(`"${n}" [label="${n} ${name}"]`);
+      },
+      treeEdge: (a, b, _ctrl) => {
+        dot.push(`"${a}" -> "${b}"`);
+      },
+    });
+    dot.push('}');
+    return dot.join('\n');
   }
 }
 

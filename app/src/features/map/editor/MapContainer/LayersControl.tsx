@@ -118,7 +118,7 @@ function ControlPopover({
 }
 
 function OrderControl({ engine }: { engine: SyncEngine }) {
-  const { layers } = useScene();
+  const layers = useScene((s) => s.layers);
 
   const onSelectionChange =
     (which: 'active' | 'inactive') => (sel: 'all' | Set<string | number>) => {

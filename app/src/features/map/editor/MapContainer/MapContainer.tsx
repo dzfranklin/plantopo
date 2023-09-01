@@ -9,45 +9,58 @@ import { useSync } from '../api/useSync';
 import { useMapSources } from '../../api/useMapSources';
 import * as ml from 'maplibre-gl';
 import { useScene } from '../api/useScene';
-import { SceneLayer } from '../api/SyncEngine/Scene';
-import { MapSources } from '../api/mapSources';
-import { CameraPosition } from '../CameraPosition';
 import { LayerRenderer } from './LayerRenderer';
 import { TokenValues, useTokens } from '../../api/useTokens';
+import { InteractionManager } from './InteractionManager/InteractionManager';
+import { CurrentCameraPosition } from '../CurrentCamera';
+import { FeatureRenderer } from './FeatureRenderer';
+import { FeaturePainter } from './FeaturePainter';
 
 const GLYPH_URL = 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf';
 
-export function MapContainer({
-  sidebarWidth,
-  initialCamera,
-  saveCamera,
-}: {
-  sidebarWidth: number;
-  initialCamera: CameraPosition;
-  saveCamera: (_: CameraPosition) => void;
-}) {
+// If you see the stuff we paint flickering this function may be too slow.
+
+export function MapContainer() {
   const { data: sources } = useMapSources();
   const { data: tokens } = useTokens();
   const { engine } = useSync();
   const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<ml.Map | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Synchronize refs so we can access in CREATE
-  const sidebarWidthRef = useRef<number>(sidebarWidth);
-  useEffect(() => {
-    sidebarWidthRef.current = sidebarWidth;
-  }, [sidebarWidth]);
-  const initialCameraRef = useRef(initialCamera);
-  useEffect(() => {
-    initialCameraRef.current = initialCamera;
-  }, [initialCamera]);
+  const updateSize = (contentRect: DOMRectReadOnly) => {
+    const canvas = canvasRef.current;
+    const map = mapRef.current;
+    if (!canvas || !map) return;
 
-  const [lRenderer, setLRenderer] = useState<LayerRenderer | null>(null);
+    const dpi = window.devicePixelRatio || 1;
+
+    canvas.width = contentRect.width * dpi;
+    canvas.height = contentRect.height * dpi;
+    canvas.style.width = contentRect.width + 'px';
+    canvas.style.height = contentRect.height + 'px';
+
+    // Prevent multiple copies of the same position which our painter doesn't
+    // support. From <https://github.com/mapbox/mapbox-gl-js/issues/6529>
+    const MAGIC_MINZOOM_COEFFICIENT = 984.615384615;
+    map.setMinZoom(contentRect.width / MAGIC_MINZOOM_COEFFICIENT);
+
+    map.triggerRepaint();
+  };
 
   // CREATE
   useEffect(() => {
-    if (!containerRef.current || !engine || !sources || !tokens) return;
-    const initialCamera = initialCameraRef.current;
+    if (
+      !containerRef.current ||
+      !canvasRef.current ||
+      !engine ||
+      !sources ||
+      !tokens
+    ) {
+      return;
+    }
+
     const map = new ml.Map({
       container: containerRef.current,
       style: {
@@ -56,61 +69,66 @@ export function MapContainer({
         layers: [],
         glyphs: GLYPH_URL,
       },
-      center: [initialCamera.lng, initialCamera.lat],
-      pitch: initialCamera.pitch,
-      bearing: initialCamera.bearing,
-      zoom: initialCamera.zoom,
       keyboard: true,
       attributionControl: false, // So that we can implement our own
+      interactive: true,
       transformRequest: (url: string) => ({ url: transformUrl(url, tokens) }),
     });
+    map.addControl(new ml.NavigationControl());
+    mapRef.current = map;
+    console.log('Created map', map);
+
+    const featureRenderer = new FeatureRenderer();
+    const featurePainter = new FeaturePainter(canvasRef.current);
+    const interactionManager = new InteractionManager(map, engine);
+    let layerRenderer: LayerRenderer | null = null;
+
+    updateSize(containerRef.current.getBoundingClientRect());
 
     map.once('style.load', () => {
-      const lRenderer = new LayerRenderer(map, sources);
-      setLRenderer(lRenderer);
+      layerRenderer = new LayerRenderer(map, sources);
     });
 
     map.on('data', () => setIsLoading(!map.areTilesLoaded()));
 
-    let hasUserMove = false;
-    map.on('moveend', () => {
-      const center = map.getCenter();
-      const camera: CameraPosition = {
-        lng: center.lng,
-        lat: center.lat,
-        bearing: map.getBearing(),
-        pitch: map.getPitch(),
-        zoom: map.getZoom(),
-      };
-
-      if (hasUserMove) {
-        saveCamera(camera);
-      } else {
-        hasUserMove =
-          camera.lng > 0.001 ||
-          camera.lat > 0.001 ||
-          camera.bearing > 0.001 ||
-          camera.pitch > 0.001 ||
-          camera.zoom > 0.001;
-      }
+    // RENDER ourselves right when maplibre renders
+    map.on('render', () => {
+      const camera = CurrentCameraPosition.fromMap(map);
+      const scene = engine.render();
+      layerRenderer?.render(scene);
+      const renderList = featureRenderer.render(scene, camera);
+      featurePainter.paint(camera, renderList);
+      interactionManager.register(renderList);
     });
+
     return () => {
       map.remove();
-      setLRenderer(null);
     };
-  }, [initialCamera, sources, engine, saveCamera, tokens]);
+  }, [sources, engine, tokens]);
 
-  const scene = useScene();
+  const sidebarWidth = useScene((s) => s.sidebarWidth);
 
-  // SYNC LAYERS
+  // SIZE/RESIZE
   useEffect(() => {
-    if (!lRenderer) return;
-    lRenderer.render(scene);
-  }, [lRenderer, scene]);
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]; // We only observe one element
+      if (!entry) return;
+      updateSize(entry.contentRect);
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // REQUEST RE-RENDER when our scene changes
+  const scene = useScene((s) => s);
+  useEffect(() => {
+    mapRef.current?.triggerRepaint();
+  }, [scene]);
 
   return (
-    <div ref={containerRef} className="relative w-full h-full">
-      <div className="absolute z-10 flex justify-end pointer-events-none bottom-[1px] right-[1px]">
+    <div ref={containerRef} className="relative w-full h-full touch-none">
+      <div className="absolute z-20 flex justify-end pointer-events-none bottom-[1px] right-[1px]">
         <ProgressBar
           isIndeterminate
           isHidden={!isLoading}
@@ -137,6 +155,8 @@ export function MapContainer({
           <AttributionControl sidebarWidth={sidebarWidth} />
         </>
       )}
+
+      <canvas ref={canvasRef} className="absolute z-10 pointer-events-none" />
     </div>
   );
 }

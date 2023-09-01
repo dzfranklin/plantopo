@@ -4,15 +4,11 @@ import { Toolbar } from './Toolbar';
 import { ResizeHandle } from './ResizeHandle';
 import cls from '@/generic/cls';
 import { useSync } from '../api/useSync';
+import { useScene } from '../api/useScene';
 
-export default function Sidebar({
-  width,
-  setWidth,
-}: {
-  width: number;
-  setWidth: (_: number) => void;
-}) {
+export default function Sidebar() {
   const { engine } = useSync();
+  const width = useScene((s) => s.sidebarWidth);
   const rootRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -37,7 +33,7 @@ export default function Sidebar({
           {engine && <FeatureTree engine={engine} />}
         </div>
 
-        <ResizeHandle setWidth={setWidth} />
+        <ResizeHandle />
       </div>
     </>
   );

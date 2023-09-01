@@ -1,4 +1,4 @@
-import { Scene, SceneLayer } from '../api/SyncEngine/Scene';
+import { Scene } from '../api/SyncEngine/Scene';
 import * as ml from 'maplibre-gl';
 import { MapSources } from '../api/mapSources';
 
@@ -14,7 +14,7 @@ export class LayerRenderer {
   constructor(map: ml.Map, sources: MapSources) {
     this._map = map;
     this._sources = sources;
-    map.on('data', (evt) => this._onPotentialLoad());
+    map.on('data', () => this._onPotentialLoad());
   }
 
   render(scene: Scene): void {

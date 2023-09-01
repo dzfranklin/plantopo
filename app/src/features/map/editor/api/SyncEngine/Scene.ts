@@ -2,6 +2,7 @@ import { LayerSource } from '../mapSources';
 import { FGeometry } from '../propTypes';
 
 export type Scene = {
+  sidebarWidth: number;
   layers: {
     active: SceneLayer[];
     /** Ordered by name */
@@ -46,9 +47,13 @@ export type SceneFeature = {
   parent: SceneRootFeature | SceneFeature;
   idx: string;
   children: SceneFeature[];
+  hidden: boolean;
+
   selectedByMe: boolean;
   selectedByPeers: string[] | null;
+
   geometry: FGeometry | null;
+
   name: string | null;
   color: string | null;
 };
@@ -63,7 +68,10 @@ export type SceneFInsertPlace =
       target: SceneFeature;
     };
 
+export const DEFAULT_SIDEBAR_WIDTH = 200;
+
 export const EMPTY_SCENE: Scene = {
+  sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   layers: {
     active: [],
     inactive: [],
@@ -76,3 +84,7 @@ export const EMPTY_SCENE: Scene = {
     },
   },
 };
+
+export function nameForUnnamedFeature(feature: SceneFeature): string {
+  return `Unnamed ${feature.geometry?.type ?? 'Feature'}`;
+}

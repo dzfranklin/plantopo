@@ -2,14 +2,12 @@ import { useMapMeta } from '@/features/map/api/useMapMeta';
 import { useCurrentUser } from '@/features/account/useCurrentUser';
 import { goToLogin } from '@/features/account/api/goToLogin';
 import { UnauthorizedError } from '@/api/errors';
-import { useSidebarWidth } from './Sidebar/useSidebarWidth';
-import { useInitialCamera } from './MapContainer/useInitialCamera';
 import { PageTitle } from '@/generic/PageTitle';
 import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
 import ErrorTechInfo from '@/generic/ErrorTechInfo';
 import { MapContainer } from './MapContainer/MapContainer';
 import Sidebar from './Sidebar/Sidebar';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Titlebar } from './TitleBar/Titlebar';
 import { SyncSocket } from './api/SyncSocket';
 import { SyncSocketProvider } from './api/useSync';
@@ -17,7 +15,6 @@ import { useMapSources } from '../api/useMapSources';
 import { EMPTY_SCENE } from './api/SyncEngine/Scene';
 import { SyncEngine } from './api/SyncEngine';
 import { SceneProvider } from './api/useScene';
-import { ZERO_CAMERA } from './CameraPosition';
 import { useTokens } from '../api/useTokens';
 
 export function MapEditor({ mapId }: { mapId: number }) {
@@ -53,23 +50,9 @@ export function MapEditor({ mapId }: { mapId: number }) {
   }, [mapSources, isLoggedIn, mapId]);
 
   const [scene, setScene] = useState(EMPTY_SCENE);
-  const nextTick = useRef<number | null>(null);
-  useEffect(() => {
-    if (!engine) return;
-    const enqueueTick = () => {
-      nextTick.current = requestAnimationFrame(() => {
-        setScene(engine.render());
-        enqueueTick();
-      });
-    };
-    enqueueTick();
-    return () => {
-      if (nextTick.current) cancelAnimationFrame(nextTick.current);
-    };
-  }, [engine]);
+  useEffect(() => engine?.onRender(setScene), [engine]);
 
-  const [sidebarWidth, setSidebarWidth] = useSidebarWidth();
-  const [initialCamera, saveCamera] = useInitialCamera(mapId);
+  // TODO: Put camera in title bar
 
   // Start fetching for the MapContainer
   useTokens();
@@ -98,17 +81,13 @@ export function MapEditor({ mapId }: { mapId: number }) {
         </DialogContainer>
 
         {/* syncSocket and initialCamera load quickly (no network) */}
-        {syncSocket && initialCamera.status === 'loaded' && (
+        {syncSocket && (
           <SyncSocketProvider socket={syncSocket}>
             <Titlebar />
 
             <div className="relative">
-              <MapContainer
-                sidebarWidth={sidebarWidth}
-                saveCamera={saveCamera}
-                initialCamera={initialCamera.value || ZERO_CAMERA}
-              />
-              <Sidebar width={sidebarWidth} setWidth={setSidebarWidth} />
+              <MapContainer />
+              <Sidebar />
             </div>
           </SyncSocketProvider>
         )}

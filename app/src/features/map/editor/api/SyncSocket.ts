@@ -4,6 +4,7 @@ import { SyncEngine } from './SyncEngine';
 import { SyncOp } from './SyncOp';
 import { IncomingMsg, OutgoingMsg } from './socketMessages';
 import { MapSources } from './mapSources';
+import { EngineLocalPersistence } from './SyncEngine/EngineLocalPersistence';
 
 export type SyncSocketState =
   | { status: 'opening' }
@@ -150,6 +151,7 @@ const MAX_OPEN_STEP_TRIES = 4;
 export class SyncSocket {
   private static readonly _KEEPALIVE_INTERVAL_MS = 15_000;
 
+  private _enginePersistence: EngineLocalPersistence;
   private _mapSources: MapSources;
   private _pending: Map<number, SyncOp[]> = new Map();
   private _pendingListeners = new Set<(_: number) => any>();
@@ -165,6 +167,7 @@ export class SyncSocket {
   private _stateListeners = new Set<(_: SyncSocketState) => any>();
 
   constructor(readonly mapId: number, props: { mapSources: MapSources }) {
+    this._enginePersistence = new EngineLocalPersistence(this.mapId);
     this._mapSources = props.mapSources;
     fetchAuthz(mapId)
       .then((authz) => {
@@ -410,6 +413,7 @@ export class SyncSocket {
         // Recreating the engine simplifies its code and might fix buggy states
         // that caused us to be disconnected
         const engine = new SyncEngine({
+          persistence: this._enginePersistence,
           mapSources: this._mapSources,
           clientId,
           fidBlockStart,

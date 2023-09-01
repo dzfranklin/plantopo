@@ -12,16 +12,16 @@ type Attribs = { id: string; html: string }[];
 type Logos = { alt: string; src: string }[];
 
 export function AttributionControl({ sidebarWidth }: { sidebarWidth: number }) {
-  const scene = useScene();
+  const activeLayers = useScene((s) => s.layers.active);
   const sources = useMapSources();
   const [logos, setLogos] = useState<Logos>([]);
   const [attribs, setAttribs] = useState<Attribs>([]);
   useEffect(() => {
     if (!sources.data) return;
-    const attribs = toAttribHtml(scene.layers.active, sources.data);
+    const attribs = toAttribHtml(activeLayers, sources.data);
     setAttribs(attribs);
     setLogos(toLogos(attribs));
-  }, [sources.data, scene.layers]);
+  }, [sources.data, activeLayers]);
 
   const [openFull, setOpenFull] = useState(false);
 

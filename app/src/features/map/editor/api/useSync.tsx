@@ -29,13 +29,15 @@ export function useSync() {
     throw new Error('useSync() must be used within a SyncSocketProvider');
   }
   const [state, setState] = useState<SyncSocketState>(socket.state());
-  const [pendingChanges, setPendingChanges] = useState(socket.pendingCount());
+  // TODO: Replace with overdue changes to avoid spamming the renderer
+  // just when we need it most
+  // const [pendingChanges, setPendingChanges] = useState(socket.pendingCount());
   useEffect(() => {
     const removeStateL = socket.addStateListener(setState);
-    const removePendingL = socket.addPendingCountListener(setPendingChanges);
+    // const removePendingL = socket.addPendingCountListener(setPendingChanges);
     return () => {
       removeStateL();
-      removePendingL();
+      // removePendingL();
     };
   }, [socket]);
   return {
@@ -44,6 +46,6 @@ export function useSync() {
     engine: 'engine' in state ? state.engine : null,
     state,
     socket,
-    pendingChanges,
+    pendingChanges: 0,
   };
 }
