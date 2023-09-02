@@ -20,8 +20,8 @@ import {
   usePopover,
 } from 'react-aria';
 import { OverlayTriggerState, useOverlayTriggerState } from 'react-stately';
-import { useScene } from '../api/useScene';
 import { InactiveSceneLayer, SceneLayer } from '../api/SyncEngine/Scene';
+import { useSceneSelector } from '../api/useEngine';
 
 export function LayersControl({ engine }: { engine: SyncEngine }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -118,7 +118,7 @@ function ControlPopover({
 }
 
 function OrderControl({ engine }: { engine: SyncEngine }) {
-  const layers = useScene((s) => s.layers);
+  const layers = useSceneSelector((s) => s.layers);
 
   const onSelectionChange =
     (which: 'active' | 'inactive') => (sel: 'all' | Set<string | number>) => {

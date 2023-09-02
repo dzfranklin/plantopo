@@ -52,3 +52,26 @@ export function deepEq(a: unknown, b: unknown): boolean {
 
   return false;
 }
+
+export function shallowArrayEq(a?: unknown[], b?: unknown[]): boolean {
+  if (a === b) {
+    return true;
+  }
+
+  if (a === null) return b === null;
+  if (b === null) return false;
+  if (a === undefined) return b === undefined;
+  if (b === undefined) return false;
+
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}

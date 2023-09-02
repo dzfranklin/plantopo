@@ -1,10 +1,5 @@
 import { CurrentCameraPosition } from '../CurrentCamera';
-import {
-  Scene,
-  SceneFeature,
-  SceneRootFeature,
-  nameForUnnamedFeature,
-} from '../api/SyncEngine/Scene';
+import { Scene, SceneFeature, SceneRootFeature } from '../api/SyncEngine/Scene';
 import * as GeoJSON from 'geojson';
 import { bboxClip, bboxPolygon, booleanContains } from '@turf/turf';
 import booleanIntersects from '@turf/boolean-intersects';
@@ -19,7 +14,7 @@ export interface RenderFeature {
 
   geometry: GeoJSON.Point | GeoJSON.LineString;
 
-  name: string;
+  name: string | null;
   color: string;
 }
 
@@ -111,7 +106,6 @@ export class FeatureRenderer {
       ...feature,
       children: [],
       geometry,
-      name: feature.name || nameForUnnamedFeature(feature),
       color: feature.color ?? inherited.color,
     };
 

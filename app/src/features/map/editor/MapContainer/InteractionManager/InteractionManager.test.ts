@@ -11,6 +11,7 @@ import { SceneFeature } from '../../api/SyncEngine/Scene';
 const mockEngine = SyncEngine as jest.Mock<SyncEngine>;
 const mockCamera =
   CurrentCameraPosition as any as jest.Mock<CurrentCameraPosition>;
+const mockMap = jest.fn();
 
 class ResizeObserver {
   constructor(public cb: any) {}
@@ -53,14 +54,17 @@ beforeEach(() => {
 
   mockEngine.mockClear();
   engine = new mockEngine();
-  engine.fLookupSceneNode = jest.fn((id) => {
+  engine.getFeature = jest.fn((id) => {
     return { id } as SceneFeature;
   });
+
+  mockMap.mockClear();
 
   subject = new InteractionManager({
     engine,
     initialCamera: camera,
     container,
+    map: mockMap(),
   });
 });
 

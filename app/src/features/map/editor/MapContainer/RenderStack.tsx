@@ -5,10 +5,9 @@ import { RefObject, useEffect, useRef, useState } from 'react';
 import { LayersControl } from './LayersControl';
 import { AttributionControl } from './attributionControl/AttributionControl';
 import { ProgressBar } from '@adobe/react-spectrum';
-import { useSync } from '../api/useSync';
+import { useEngine } from '../api/useEngine';
 import { useMapSources } from '../../api/useMapSources';
 import * as ml from 'maplibre-gl';
-import { useScene } from '../api/useScene';
 import { LayerRenderer } from './LayerRenderer';
 import { InteractionManager } from './InteractionManager/InteractionManager';
 import { CurrentCameraPosition } from '../CurrentCamera';
@@ -31,8 +30,7 @@ export function RenderStack({
   containerRef: RefObject<HTMLDivElement>;
 }) {
   const { data: sources } = useMapSources();
-  const { engine } = useSync();
-  const scene = useScene((s) => s);
+  const engine = useEngine();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
@@ -67,6 +65,7 @@ export function RenderStack({
       engine,
       initialCamera,
       container,
+      map,
     });
     const layerRenderer = new LayerRenderer(map, sources);
     console.log('Attached RenderStack', {
@@ -115,8 +114,9 @@ export function RenderStack({
 
   // REQUEST RE-RENDER when our scene changes
   useEffect(() => {
-    map?.triggerRepaint();
-  }, [scene, map]);
+    engine?.setRepaintRequestHandler(() => map?.triggerRepaint());
+    return engine?.setRepaintRequestHandler(null);
+  }, [map, engine]);
 
   return (
     <>

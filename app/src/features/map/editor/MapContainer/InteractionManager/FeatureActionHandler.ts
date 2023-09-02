@@ -28,4 +28,50 @@ export class FeatureHoverHandler implements InteractionHandler {
     this.cursor = undefined;
     return false;
   }
+
+  private dragging: number | null = null;
+
+  onDragStart(evt: InteractionEvent, engine: SyncEngine): boolean {
+    for (const hit of evt.queryHits()) {
+      if (!hit.feature.selectedByMe) continue;
+      if (hit.feature.geometry?.type === 'Point' && hit.minPixelsTo() < 0.5) {
+        this.dragging = hit.feature.id;
+
+        engine.fSetGeometry(hit.feature.id, {
+          type: 'Point',
+          coordinates: evt.unproject(),
+        });
+
+        this.cursor = 'grabbing';
+        return true;
+      }
+    }
+    return false;
+  }
+
+  onDrag(
+    evt: InteractionEvent,
+    _delta: [number, number],
+    engine: SyncEngine,
+  ): boolean {
+    if (this.dragging === null) return false;
+    engine.fSetGeometry(this.dragging, {
+      type: 'Point',
+      coordinates: evt.unproject(),
+    });
+    return true;
+  }
+
+  onDragEnd(evt: InteractionEvent, engine: SyncEngine): boolean {
+    if (this.dragging === null) return false;
+
+    engine.fSetGeometry(this.dragging, {
+      type: 'Point',
+      coordinates: evt.unproject(),
+    });
+
+    this.dragging = null;
+    this.cursor = undefined;
+    return true;
+  }
 }

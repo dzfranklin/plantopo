@@ -1,5 +1,5 @@
 import { useCallback, useRef, PointerEvent } from 'react';
-import { useSync } from '../api/useSync';
+import { useEngine } from '../api/useEngine';
 
 const WIDTH_MIN = 60;
 
@@ -10,7 +10,7 @@ const END_EVENTS: Array<'pointerup' | 'pointercancel' | 'pointerleave'> = [
 ];
 
 export function ResizeHandle() {
-  const { engine } = useSync();
+  const engine = useEngine();
   const ref = useRef<HTMLDivElement>(null);
   const dragAnimPrev = useRef<number | null>(null);
   const dragAnimNext = useRef<number | null>(null);

@@ -80,6 +80,10 @@ export class FeaturePainter {
       this.c.arc(0, 0, dotR + this.c.lineWidth / 2, 0, 2 * PI);
       this.c.stroke();
     }
+
+    if (feature.name) {
+      this.c.strokeText(feature.name, 0, 0); // TODO:
+    }
   }
 
   private _paintLineString(camera: CurrentCamera, feature: RenderFeature) {

@@ -28,7 +28,7 @@ import {
 } from './Scene';
 import { Presence } from '../Presence';
 import { IEngineLocalPersistence } from './EngineLocalPersistence';
-import { deepEq } from '@/generic/deepEq';
+import { deepEq } from '@/generic/equality';
 
 export type LInsertPlace =
   | { at: 'first' }
@@ -80,7 +80,7 @@ export class SyncEngine {
    */
   private _transaction: Array<Array<SyncOp>> | null = null;
 
-  private _scene = EMPTY_SCENE;
+  private _scene: Scene | null = null;
   private _sceneFNodes = new Map<number, SceneFeature>();
   private _sceneDirty = false;
 
@@ -154,10 +154,10 @@ export class SyncEngine {
 
   render(): Scene {
     if (!this._sceneDirty) {
-      return this._scene;
+      return this._scene || EMPTY_SCENE;
     } else if (this._transaction) {
       // Don't show changes until the transaction is committed
-      return this._scene;
+      return this._scene || EMPTY_SCENE;
     } else {
       this._scene = {
         sidebarWidth: this._sidebarWidth,
@@ -167,19 +167,53 @@ export class SyncEngine {
       this._sceneDirty = false;
       this._renderCount++;
 
-      for (const cb of this._onRenderListeners) {
-        cb(this._scene);
+      const query = (fid: number) => this.getFeature(fid);
+      for (const entry of this._sceneSelectors.values()) {
+        const value = entry.sel(this._scene, query);
+        if (value === entry.cached) continue;
+        if (entry.equalityFn) {
+          if (entry.equalityFn(value, entry.cached)) {
+            continue;
+          }
+        }
+        entry.cached = value;
+        entry.cb(value);
       }
 
       return this._scene;
     }
   }
 
-  private _onRenderListeners = new Set<(_: Scene) => any>();
+  get scene() {
+    return this._scene || EMPTY_SCENE;
+  }
 
-  onRender(cb: (scene: Scene) => any): () => void {
-    this._onRenderListeners.add(cb);
-    return () => this._onRenderListeners.delete(cb);
+  private _repaintRequestHandler: (() => any) | null = null;
+  setRepaintRequestHandler(cb: (() => any) | null) {
+    this._repaintRequestHandler = cb;
+  }
+
+  private _requestRepaint() {
+    this._sceneDirty = true;
+    this._repaintRequestHandler?.();
+  }
+
+  private _sceneSelectorId = 0;
+  private _sceneSelectors = new Map<number, SceneSelectorEntry>();
+
+  addSceneSelector<T>(
+    sel: (_: Scene, query: (fid: number) => SceneFeature | undefined) => T,
+    cb: (_: T) => any,
+    equalityFn?: (a: T, b: T) => boolean,
+  ): () => void {
+    const id = this._sceneSelectorId++;
+    const entry: SceneSelectorEntry = {
+      sel,
+      cb,
+    };
+    if (equalityFn) entry.equalityFn = equalityFn;
+    this._sceneSelectors.set(id, entry);
+    return () => this._sceneSelectors.delete(id);
   }
 
   /** Receive a message from the server */
@@ -191,7 +225,7 @@ export class SyncEngine {
       this._lSet(lid, k, v);
     }
     const convergeDeletes = this._fDelete(new Set(change.fdeletes));
-    this._sceneDirty = true;
+    this._requestRepaint();
     if (convergeDeletes !== undefined) {
       this._send?.([
         { action: 'fDeleteConverge', fids: Array.from(convergeDeletes) },
@@ -234,7 +268,7 @@ export class SyncEngine {
     if (this._transaction !== null) {
       this._transaction.push(ops);
     } else {
-      this._sceneDirty = true;
+      this._requestRepaint();
       this._send!(ops);
     }
   }
@@ -304,7 +338,7 @@ export class SyncEngine {
     this._sidebarWidth = width;
     this._hasChangedSidebarWidth = true;
     this._persistence.saveWhenIdle('sidebarWidth', width);
-    this._sceneDirty = true;
+    this._requestRepaint();
   }
 
   fParent(fid: Fid): Fid | undefined {
@@ -327,13 +361,13 @@ export class SyncEngine {
     return false;
   }
 
-  fLookupSceneNode(fid: Fid): SceneFeature | undefined {
+  getFeature(fid: Fid): SceneFeature | undefined {
     return this._sceneFNodes.get(fid);
   }
 
   /** Creates a feature, returning its fid */
   fCreate(props: Record<Key, Value> = {}): number {
-    const resolved = this._fResolvePlace(this._scene.features.insertPlace);
+    const resolved = this._fResolvePlace(this.scene.features.insertPlace);
     const idx = fracIdxBetween(resolved.before, resolved.after);
     const fid = this._allocateFid();
     this.apply([
@@ -344,6 +378,10 @@ export class SyncEngine {
       },
     ]);
     return fid;
+  }
+
+  fSetGeometry(fid: Fid, geometry: FGeometry | null): void {
+    this.apply([{ action: 'fSet', fid, key: 'geometry', value: geometry }]);
   }
 
   fSetName(fid: Fid, name: string): void {
@@ -363,17 +401,17 @@ export class SyncEngine {
 
   fSetHovered(feature: Fid | null): void {
     this._fHoveredByMe = feature;
-    this._sceneDirty = true;
+    this._requestRepaint();
   }
 
   fAddToMySelection(fid: Fid): void {
     this._fSelectedByMe.add(fid);
-    this._sceneDirty = true;
+    this._requestRepaint();
   }
 
   fRemoveFromMySelection(fid: Fid): void {
     this._fSelectedByMe.delete(fid);
-    this._sceneDirty = true;
+    this._requestRepaint();
   }
 
   fToggleSelectedByMe(fid: Fid): void {
@@ -387,12 +425,12 @@ export class SyncEngine {
   fReplaceMySelection(fid: Fid): void {
     this._fSelectedByMe.clear();
     this._fSelectedByMe.add(fid);
-    this._sceneDirty = true;
+    this._requestRepaint();
   }
 
   fClearMySelection(): void {
     this._fSelectedByMe.clear();
-    this._sceneDirty = true;
+    this._requestRepaint();
   }
 
   fMoveSelectedByMe(place: SceneFInsertPlace): void {
@@ -417,7 +455,7 @@ export class SyncEngine {
   }
 
   private _fComputeSelectedByMeForMove(start: Fid = 0, out: Fid[] = []): Fid[] {
-    const node = this.fLookupSceneNode(start);
+    const node = this.getFeature(start);
     if (!node) return out;
     for (const child of node.children) {
       if (child.selectedByMe) {
@@ -444,12 +482,12 @@ export class SyncEngine {
 
   lAddToMySelection(lid: Lid): void {
     this._lSelectedByMe.add(lid);
-    this._sceneDirty = true;
+    this._requestRepaint();
   }
 
   lRemoveFromMySelection(lid: Lid): void {
     this._lSelectedByMe.delete(lid);
-    this._sceneDirty = true;
+    this._requestRepaint();
   }
 
   lToggleSelectedByMe(lid: Lid): void {
@@ -463,12 +501,12 @@ export class SyncEngine {
   lReplaceMySelection(lid: Lid): void {
     this._lSelectedByMe.clear();
     this._lSelectedByMe.add(lid);
-    this._sceneDirty = true;
+    this._requestRepaint();
   }
 
   lClearMySelection(): void {
     this._lSelectedByMe.clear();
-    this._sceneDirty = true;
+    this._requestRepaint();
   }
 
   lMove(layers: number[], place: LInsertPlace): void {
@@ -516,7 +554,7 @@ export class SyncEngine {
     }
     active.sort((a, b) => stringOrd(a.idx, b.idx));
 
-    if (deepEq(this._scene.layers.active, active)) {
+    if (this._scene && deepEq(this._scene.layers.active, active)) {
       // Inactive can't have changed if active didn't because source is static
       return this._scene.layers;
     }
@@ -739,7 +777,7 @@ export class SyncEngine {
     // MUTATE
 
     if (valid) {
-      this._sceneDirty = true;
+      this._requestRepaint();
 
       if (key === 'pos' && fid !== 0) {
         const pos = value as FPos; // value = true
@@ -880,3 +918,10 @@ export class SyncEngine {
 }
 
 type FRenderCtx = { insertPlace: SceneFInsertPlace };
+
+interface SceneSelectorEntry {
+  cached?: any;
+  sel: (_: Scene, query: (fid: number) => SceneFeature | undefined) => unknown;
+  cb: (_: any) => any;
+  equalityFn?: (a: any, b: any) => boolean;
+}

@@ -3,12 +3,11 @@ import { FeatureTree } from './FeatureTree';
 import { Toolbar } from './Toolbar';
 import { ResizeHandle } from './ResizeHandle';
 import cls from '@/generic/cls';
-import { useSync } from '../api/useSync';
-import { useScene } from '../api/useScene';
+import { useEngine, useSceneSelector } from '../api/useEngine';
 
 export default function Sidebar() {
-  const { engine } = useSync();
-  const width = useScene((s) => s.sidebarWidth);
+  const engine = useEngine();
+  const width = useSceneSelector((s) => s.sidebarWidth);
   const rootRef = useRef<HTMLDivElement>(null);
 
   return (

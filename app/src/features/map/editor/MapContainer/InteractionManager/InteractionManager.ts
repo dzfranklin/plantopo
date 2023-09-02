@@ -9,7 +9,9 @@ import { CurrentCameraPosition } from '../../CurrentCamera';
 import { FeatureHoverHandler as FeatureActionHandler } from './FeatureActionHandler';
 import { add2, magnitude2, sub2 } from '@/generic/vector2';
 import { clamp } from '@/generic/clamp';
-import { MaplibreHandlerStub } from './MaplibreHandlerStub';
+import * as ml from 'maplibre-gl';
+
+// TODO: Should this be a maplibre handler at the top?
 
 type ScreenXY = [number, number];
 type LngLat = [number, number];
@@ -95,6 +97,7 @@ export interface InteractionHandler {
   cursor?: string;
   onHover?: (evt: InteractionEvent, engine: SyncEngine) => boolean;
   onPress?: (evt: InteractionEvent, engine: SyncEngine) => boolean;
+  onDragStart?: (evt: InteractionEvent, engine: SyncEngine) => boolean;
   onDrag?: (
     evt: InteractionEvent,
     delta: [number, number],
@@ -145,13 +148,13 @@ export class InteractionManager {
   private _elem: HTMLElement;
   cam: CurrentCameraPosition;
   private _engine: SyncEngine;
+  private _map: ml.Map;
 
   querySlop: [number, number] = [10, 10]; // In pixels
 
   handlers: InteractionHandler[] = [
     new FeatureActionHandler(),
     new CreateFeatureHandler(),
-    new MaplibreHandlerStub(),
   ];
 
   private _boundOnPointer = this._onPointer.bind(this);
@@ -162,9 +165,11 @@ export class InteractionManager {
     engine: SyncEngine;
     initialCamera: CurrentCameraPosition;
     container: HTMLDivElement;
+    map: ml.Map;
   }) {
     this.cam = props.initialCamera;
     this._engine = props.engine;
+    this._map = props.map;
 
     const elem = document.createElement('div');
     elem.style.position = 'absolute';
@@ -236,7 +241,7 @@ export class InteractionManager {
 
     const features: SceneFeature[] = [];
     for (const hit of hits) {
-      const value = this._engine.fLookupSceneNode(hit.id);
+      const value = this._engine.getFeature(hit.id);
       if (value) {
         features.push(value);
       }
@@ -299,8 +304,11 @@ export class InteractionManager {
       case 'pointermove': {
         // Fired when a pointer changes coordinates. This event is also used if
         // the change in pointer state cannot be reported by other events.
-
-        if (p.down) {
+        if (p.inDrag) {
+          const ievt = new InteractionEvent(this, pt);
+          const delta = sub2(pt, p.last!);
+          this._fire(evt, 'onDrag', ievt, delta, this._engine);
+        } else if (p.down) {
           // CHECK IF PINCH
           let pinchGap: number | null = null;
           for (const pointer of this._pointers) {
@@ -313,7 +321,7 @@ export class InteractionManager {
             }
           }
           let pinchDelta: number | null = null;
-          if (pinchGap && pinchGap > 10 && this._lastPinchGap !== null) {
+          if (pinchGap && pinchGap > 7 && this._lastPinchGap !== null) {
             pinchDelta = pinchGap - this._lastPinchGap;
           }
 
@@ -329,9 +337,8 @@ export class InteractionManager {
             // IS DRAG
             p.couldBePress = false;
             p.inDrag = true;
-            const ievt = new InteractionEvent(this, pt);
-            const delta: ScreenXY = [pt[0] - p.last![0], pt[1] - p.last![1]];
-            this._fire(evt, 'onDrag', ievt, delta, this._engine);
+            const ievt = new InteractionEvent(this, p.down);
+            this._fire(evt, 'onDragStart', ievt, this._engine);
             p.last = pt;
           }
         } else {
@@ -390,6 +397,8 @@ export class InteractionManager {
     this._fire(evt, 'onZoom', ievt, delta, this._engine);
   }
 
+  private _mlEnabled = true;
+
   private _fire<Type extends keyof InteractionHandler>(
     native: PointerEvent | WheelEvent,
     evt: Type,
@@ -414,6 +423,30 @@ export class InteractionManager {
     if (consumed) {
       native.stopPropagation();
       native.preventDefault();
+
+      if (this._mlEnabled) {
+        this._map.scrollZoom.disable();
+        this._map.boxZoom.disable();
+        this._map.dragRotate.disable();
+        this._map.dragPan.disable();
+        this._map.keyboard.disable();
+        this._map.doubleClickZoom.disable();
+        this._map.touchZoomRotate.disable();
+        this._map.touchPitch.disable();
+        this._mlEnabled = false;
+      }
+    } else {
+      if (!this._mlEnabled) {
+        this._map.scrollZoom.enable();
+        this._map.boxZoom.enable();
+        this._map.dragRotate.enable();
+        this._map.dragPan.enable();
+        this._map.keyboard.enable();
+        this._map.doubleClickZoom.enable();
+        this._map.touchZoomRotate.enable();
+        this._map.touchPitch.enable();
+        this._mlEnabled = true;
+      }
     }
   }
 

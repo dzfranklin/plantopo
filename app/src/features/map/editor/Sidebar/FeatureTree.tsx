@@ -1,6 +1,7 @@
 import { SyncEngine } from '../api/SyncEngine';
 import {
   DragEventHandler,
+  RefObject,
   UIEventHandler,
   useCallback,
   useEffect,
@@ -9,8 +10,10 @@ import {
 import AddAtIcon from '@spectrum-icons/workflow/Add';
 import cls from '@/generic/cls';
 import './FeatureTree.css';
-import { useScene } from '../api/useScene';
-import { SceneFeature, nameForUnnamedFeature } from '../api/SyncEngine/Scene';
+import { nameForUnnamedFeature } from '../api/SyncEngine/Scene';
+import { FeatureTreeFeatureEditButton } from './FeatureTreeFeatureEditButton';
+import { useSceneFeature, useSceneSelector } from '../api/useEngine';
+import { shallowArrayEq } from '@/generic/equality';
 
 const CHILD_INDENT_PX = 16;
 const VERTICAL_GAP_PX = 2;
@@ -23,9 +26,11 @@ interface DragTarget {
 }
 
 export function FeatureTree({ engine }: { engine: SyncEngine }) {
-  const dragTargetRef = useRef<DragTarget | null>(null);
   const rootRef = useRef<HTMLUListElement>(null);
   const dragAtElemRef = useRef<HTMLDivElement>(null);
+
+  const { onDragStart, onDragEnd, onDragOver, onDragEnter, onDrop, onScroll } =
+    useFeatureTreeInteractivity({ engine, rootRef, dragAtElemRef });
 
   useEffect(() => {
     const l = (evt: KeyboardEvent) => {
@@ -34,6 +39,57 @@ export function FeatureTree({ engine }: { engine: SyncEngine }) {
     window.addEventListener('keyup', l);
     return () => window.removeEventListener('keyup', l);
   }, [engine]);
+
+  const children = useSceneSelector(
+    (s) => s.features.root.children.map((f) => f.id),
+    shallowArrayEq,
+  );
+
+  return (
+    <ul
+      onDragStart={onDragStart}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      className="grow overflow-y-auto pt-0.5 pb-10"
+      onScroll={onScroll}
+      ref={rootRef}
+    >
+      {children.map((child) => (
+        <Entry key={child} fid={child} engine={engine} />
+      ))}
+
+      <div ref={dragAtElemRef} className="z-20 drag-at-marker">
+        <div className="flex items-center h-3 gap-1 mr-2 text-white">
+          <hr className="flex-grow border-0 h-[1.5px] bg-blue-500" />
+          <AddAtIcon
+            height="0.75rem"
+            UNSAFE_className="h-3 rounded-full bg-blue-500"
+          />
+        </div>
+      </div>
+    </ul>
+  );
+}
+
+function useFeatureTreeInteractivity({
+  engine,
+  rootRef,
+  dragAtElemRef,
+}: {
+  engine: SyncEngine;
+  rootRef: RefObject<HTMLUListElement>;
+  dragAtElemRef: RefObject<HTMLDivElement>;
+}): {
+  onDragStart: DragEventHandler<HTMLUListElement>;
+  onDrop: DragEventHandler<HTMLUListElement>;
+  onDragEnd: DragEventHandler<HTMLUListElement>;
+  onDragEnter: DragEventHandler<HTMLUListElement>;
+  onDragOver: DragEventHandler<HTMLUListElement>;
+  onScroll: UIEventHandler<HTMLUListElement>;
+} {
+  const dragTargetRef = useRef<DragTarget | null>(null);
 
   const onDragStart = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
@@ -75,7 +131,7 @@ export function FeatureTree({ engine }: { engine: SyncEngine }) {
         positionDragAtMarker(dragAtElem, targetRect, 'after', false);
       });
     },
-    [engine],
+    [dragAtElemRef, engine, rootRef],
   );
 
   const onDragEnter = useCallback<DragEventHandler<HTMLUListElement>>(
@@ -134,7 +190,7 @@ export function FeatureTree({ engine }: { engine: SyncEngine }) {
 
       evt.preventDefault();
     },
-    [engine.canEdit],
+    [dragAtElemRef, engine.canEdit, rootRef],
   );
 
   const onDrop = useCallback<DragEventHandler<HTMLUListElement>>(
@@ -147,7 +203,7 @@ export function FeatureTree({ engine }: { engine: SyncEngine }) {
       ) {
         return;
       }
-      const targetNode = engine.fLookupSceneNode(target.target);
+      const targetNode = engine.getFeature(target.target);
       if (!targetNode) return;
 
       engine.startTransaction();
@@ -162,12 +218,15 @@ export function FeatureTree({ engine }: { engine: SyncEngine }) {
       rootRef.current?.classList.remove('dragging');
       evt.preventDefault();
     },
-    [engine],
+    [engine, rootRef],
   );
 
-  const onDragEnd = useCallback<DragEventHandler<HTMLUListElement>>((_evt) => {
-    rootRef.current?.classList.remove('dragging');
-  }, []);
+  const onDragEnd = useCallback<DragEventHandler<HTMLUListElement>>(
+    (_evt) => {
+      rootRef.current?.classList.remove('dragging');
+    },
+    [rootRef],
+  );
 
   const dragMarkerDirty = useRef(false);
   const maybeDirtyDragMarker = useCallback(() => {
@@ -189,7 +248,7 @@ export function FeatureTree({ engine }: { engine: SyncEngine }) {
         dragMarkerDirty.current = false;
       });
     }
-  }, []);
+  }, [dragAtElemRef]);
 
   const onScroll = useCallback<UIEventHandler<HTMLUListElement>>(
     (_evt) => maybeDirtyDragMarker(),
@@ -201,36 +260,9 @@ export function FeatureTree({ engine }: { engine: SyncEngine }) {
     const observer = new ResizeObserver((_entries) => maybeDirtyDragMarker());
     observer.observe(rootRef.current);
     () => observer.disconnect();
-  }, [maybeDirtyDragMarker]);
+  }, [maybeDirtyDragMarker, rootRef]);
 
-  const root = useScene((s) => s.features.root.children);
-
-  return (
-    <ul
-      onDragStart={onDragStart}
-      onDrop={onDrop}
-      onDragEnd={onDragEnd}
-      onDragEnter={onDragEnter}
-      onDragOver={onDragOver}
-      className="grow overflow-y-auto pt-0.5 pb-10"
-      onScroll={onScroll}
-      ref={rootRef}
-    >
-      {root.map((child) => (
-        <Entry key={child.id} feature={child} engine={engine} />
-      ))}
-
-      <div ref={dragAtElemRef} className="z-20 drag-at-marker">
-        <div className="flex items-center h-3 gap-1 mr-2 text-white">
-          <hr className="flex-grow border-0 h-[1.5px] bg-blue-500" />
-          <AddAtIcon
-            height="0.75rem"
-            UNSAFE_className="h-3 rounded-full bg-blue-500"
-          />
-        </div>
-      </div>
-    </ul>
-  );
+  return { onDragStart, onDrop, onDragEnd, onDragEnter, onDragOver, onScroll };
 }
 
 function positionDragAtMarker(
@@ -270,34 +302,33 @@ interface Entry {
   ancestors: number[];
 }
 
-function Entry({
-  feature,
-  engine,
-}: {
-  feature: SceneFeature;
-  engine: SyncEngine;
-}) {
+function Entry({ fid, engine }: { fid: number; engine: SyncEngine }) {
+  const name = useSceneFeature(fid, (f) =>
+    f ? f.name ?? nameForUnnamedFeature(f) : null,
+  );
+  const selectedByMe = useSceneFeature(fid, (f) => f?.selectedByMe);
+
   return (
     <li
       draggable="true"
-      data-fid={feature.id}
+      data-fid={fid}
       onClick={(evt) => {
         if (evt.shiftKey) {
-          engine.fToggleSelectedByMe(feature.id);
+          engine.fToggleSelectedByMe(fid);
         } else {
-          if (engine.fIsSelectedByMe(feature.id)) {
+          if (engine.fIsSelectedByMe(fid)) {
             engine.fClearMySelection();
           } else {
-            engine.fReplaceMySelection(feature.id);
+            engine.fReplaceMySelection(fid);
           }
         }
         evt.stopPropagation();
       }}
-      className={cls(feature.selectedByMe && 'directly-selected')}
+      className={cls(selectedByMe && 'directly-selected')}
     >
       {/* We need this nested div so that we can find its parent by mouse
           position without the padding throwing us off */}
-      <div className={cls(feature.selectedByMe && 'bg-blue-100')}>
+      <div className={cls(selectedByMe && 'bg-blue-100')}>
         <div
           className={cls(
             'flex flex-row justify-start w-full gap-1 px-1 text-sm',
@@ -307,19 +338,30 @@ function Entry({
             borderLeft: `${INDICATOR_BORDER_PX}px`,
           }}
         >
-          <span className="flex-grow select-none text-start">
-            {feature.name || nameForUnnamedFeature(feature)}
-          </span>
+          <span className="flex-grow select-none text-start">{name}</span>
+          <FeatureTreeFeatureEditButton engine={engine} fid={fid} />
+          <FeatureChildren engine={engine} fid={fid} />
         </div>
-
-        {feature.children.length > 0 && (
-          <ul style={{ paddingLeft: `${CHILD_INDENT_PX}px` }}>
-            {feature.children.map((child) => (
-              <Entry key={child.id} feature={child} engine={engine} />
-            ))}
-          </ul>
-        )}
       </div>
     </li>
+  );
+}
+
+function FeatureChildren({ fid, engine }: { fid: number; engine: SyncEngine }) {
+  const children = useSceneFeature(
+    fid,
+    (f) => f?.children?.map((f) => f.id),
+    shallowArrayEq,
+  );
+  const prev = useRef<any>(children);
+  // console.log('FeatureChildren rerender', fid, children === prev.current);
+  prev.current = children;
+  if (!children || children.length === 0) return null;
+  return (
+    <ul style={{ paddingLeft: `${CHILD_INDENT_PX}px` }}>
+      {children.map((child) => (
+        <Entry key={child} fid={child} engine={engine} />
+      ))}
+    </ul>
   );
 }

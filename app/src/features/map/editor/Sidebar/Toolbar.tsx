@@ -1,9 +1,9 @@
 import { ActionButton } from '@adobe/react-spectrum';
 import FolderAddIcon from '@spectrum-icons/workflow/FolderAdd';
-import { useSync } from '../api/useSync';
+import { useEngine } from '../api/useEngine';
 
 export function Toolbar() {
-  const { engine } = useSync();
+  const engine = useEngine();
 
   return (
     <div className="flex items-center justify-end min-w-0 p-1 m-1 rounded bg-neutral-200">
