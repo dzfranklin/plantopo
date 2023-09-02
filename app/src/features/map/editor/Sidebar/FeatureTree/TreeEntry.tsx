@@ -1,5 +1,5 @@
 import { SyncEngine } from '../../api/SyncEngine';
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import cls from '@/generic/cls';
 import './FeatureTree.css';
 import { nameForUnnamedFeature } from '../../api/SyncEngine/Scene';
@@ -45,33 +45,39 @@ export function TreeEntry({
       {/* We need this nested div so that we can find its parent by mouse
           position without the padding throwing us off */}
       <div className={cls(selectedByMe && 'bg-blue-100')}>
-        <div
-          className={cls(
-            'flex flex-row justify-start w-full gap-1 px-1 text-sm',
-          )}
-          style={{
-            paddingTop: `${VERTICAL_GAP_PX}px`,
-            borderLeft: `${INDICATOR_BORDER_PX}px`,
-          }}
-        >
-          <EntryItself fid={fid} engine={engine} />
-          <EntryChildren engine={engine} fid={fid} />
-        </div>
+        <EntryItself fid={fid} engine={engine} />
+        <EntryChildren engine={engine} fid={fid} />
       </div>
     </li>
   );
 }
 
 function EntryItself({ fid, engine }: { fid: number; engine: SyncEngine }) {
+  const ref = useRef<HTMLDivElement>(null);
+
   const name = useSceneFeature(fid, (f) =>
     f ? f.name ?? nameForUnnamedFeature(f) : null,
   );
+  const selectedByMe = useSceneFeature(fid, (f) => f?.selectedByMe);
+
+  useEffect(() => {
+    if (selectedByMe) {
+      ref.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [selectedByMe]);
 
   return (
-    <>
+    <div
+      ref={ref}
+      className={cls('flex flex-row justify-start w-full gap-1 px-1 text-sm')}
+      style={{
+        paddingTop: `${VERTICAL_GAP_PX}px`,
+        borderLeft: `${INDICATOR_BORDER_PX}px`,
+      }}
+    >
       <span className="flex-grow select-none text-start">{name}</span>
       <EntryEditButton engine={engine} fid={fid} />
-    </>
+    </div>
   );
 }
 

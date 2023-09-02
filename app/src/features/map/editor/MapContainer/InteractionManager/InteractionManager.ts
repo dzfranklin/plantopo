@@ -10,6 +10,7 @@ import { FeatureHoverHandler as FeatureActionHandler } from './FeatureActionHand
 import { add2, magnitude2, sub2 } from '@/generic/vector2';
 import { clamp } from '@/generic/clamp';
 import * as ml from 'maplibre-gl';
+import { nearestPointInGeometry } from '../../nearestPointInFeature';
 
 // TODO: Should this be a maplibre handler at the top?
 
@@ -73,24 +74,15 @@ class FeatureHitImpl implements FeatureHit {
     const targetS = this.scope.screenXY; // target, screen space
     let pM: GeoJSON.Position; // nearest point, map space
     let depth = 0; // pixels from pM to edge
-    switch (g.type) {
-      case 'Point': {
-        // We want the render tree feature here, which should have the radius
-        const FIXME_R = 5;
-        pM = g.coordinates;
-        depth = Math.round(FIXME_R / 2);
-        break;
-      }
-      case 'LineString':
-      case 'MultiLineString': {
-        const targetM = this.scope.unproject();
-        pM = nearestPointOnLine(g, targetM).geometry.coordinates;
-        const FIXME_WIDTH = 2;
-        depth = Math.round(FIXME_WIDTH / 2);
-        break;
-      }
-      default:
-        throw new Error(`Unimplemented ${g.type}`);
+    if (g.type === 'Point') {
+      // We want the render tree feature here, which should have the radius
+      const FIXME_R = 5;
+      pM = g.coordinates;
+      depth = Math.round(FIXME_R / 2);
+    } else {
+      pM = nearestPointInGeometry(this.scope.unproject(), g);
+      const FIXME_WIDTH = 2;
+      depth = Math.round(FIXME_WIDTH / 2);
     }
     const pS = cam.project(pM);
     const pixelsToCenter = magnitude2(sub2(pS, targetS));

@@ -1,3 +1,4 @@
+import { bboxPolygon } from '@turf/turf';
 import type * as ml from 'maplibre-gl';
 
 export interface CameraBBox {
@@ -35,6 +36,16 @@ export class CurrentCameraPosition {
     );
   }
 
+  bboxPolygon(): BBoxPolygon {
+    // TODO: This should take into account sidebarWidth
+    return bboxPolygon([
+      this.bbox.minX,
+      this.bbox.minY,
+      this.bbox.maxX,
+      this.bbox.maxY,
+    ]) as BBoxPolygon; // as we know it has a bbox property
+  }
+
   // Hack: I should use https://github.com/proj4js/proj4js instead of keeping a
   // ref to map so it doesn't have to be just the current camera we can project
   // in. But remember we need to account for pitch and bearing
@@ -52,4 +63,8 @@ export class CurrentCameraPosition {
     const lnglat = this._map.unproject(xy);
     return [lnglat.lng, lnglat.lat];
   }
+}
+
+export interface BBoxPolygon extends GeoJSON.Feature<GeoJSON.Polygon> {
+  bbox: GeoJSON.BBox;
 }

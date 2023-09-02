@@ -603,6 +603,7 @@ export class SyncEngine {
         at: 'firstChild',
         target: root,
       },
+      selectedByMe: [],
     };
 
     for (const fid of this._fTree.neighbors(0)) {
@@ -614,6 +615,7 @@ export class SyncEngine {
     return {
       root,
       insertPlace: ctx.insertPlace,
+      selectedByMe: ctx.selectedByMe,
     };
   }
 
@@ -653,6 +655,7 @@ export class SyncEngine {
     const childFids = Array.from(this._fTree.neighbors(fid));
 
     if (selectedByMe) {
+      ctx.selectedByMe.push(feature);
       // The insertPlace should be the selected feature visually closest to the
       // bottom. If anyone is below us they'll overwrite as we're doing a depth
       // first search
@@ -933,7 +936,10 @@ export class SyncEngine {
   }
 }
 
-type FRenderCtx = { insertPlace: SceneFInsertPlace };
+type FRenderCtx = {
+  insertPlace: SceneFInsertPlace;
+  selectedByMe: SceneFeature[];
+};
 
 interface SceneSelectorEntry {
   cached?: any;

@@ -13,7 +13,10 @@ import { InteractionManager } from './InteractionManager/InteractionManager';
 import { CurrentCameraPosition } from '../CurrentCamera';
 import { FeatureRenderer } from './FeatureRenderer';
 import { FeaturePainter } from './FeaturePainter';
-import { Scene } from '../api/SyncEngine/Scene';
+import { Scene, SceneFeature, SceneRootFeature } from '../api/SyncEngine/Scene';
+import { nearestPointInGeometry } from '../nearestPointInFeature';
+import { FGeometry } from '../api/propTypes';
+import booleanIntersects from '@turf/boolean-intersects';
 
 // Instruct nextjs to remout this component on every edit
 // @refresh reset
@@ -78,12 +81,35 @@ export function RenderStack({
       layerRenderer,
     });
 
+    let lastSelection: SceneFeature[] = [];
     const renderScene = (scene: Scene) => {
       const camera = CurrentCameraPosition.fromMap(map);
 
       if (map.isStyleLoaded()) {
         layerRenderer.render(scene);
       }
+
+      outer: for (const f of scene.features.selectedByMe) {
+        for (const p of lastSelection) {
+          if (p.id === f.id) continue outer;
+        }
+
+        if (!f.geometry) continue;
+        const [nearestLng, nearestLat] = nearestPointInGeometry(
+          camera.center,
+          f.geometry,
+        );
+
+        if (
+          f.geometry.type !== 'GeometryCollection' &&
+          !booleanIntersects(f.geometry, camera.bboxPolygon())
+        ) {
+          map.flyTo({ center: [nearestLng!, nearestLat!] });
+        }
+
+        break;
+      }
+      lastSelection = scene.features.selectedByMe;
 
       const renderList = featureRenderer.render(scene, camera);
       featurePainter.paint(camera, renderList);

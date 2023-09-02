@@ -1,4 +1,4 @@
-import { CurrentCameraPosition } from '../CurrentCamera';
+import { BBoxPolygon, CurrentCameraPosition } from '../CurrentCamera';
 import { Scene, SceneFeature, SceneRootFeature } from '../api/SyncEngine/Scene';
 import * as GeoJSON from 'geojson';
 import { bboxClip, bboxPolygon, booleanContains } from '@turf/turf';
@@ -33,22 +33,13 @@ interface Inherited {
 
 const ROOT_INHERITED: Inherited = { color: '#000000' };
 
-interface ClipBox extends GeoJSON.Feature<GeoJSON.Polygon> {
-  bbox: GeoJSON.BBox;
-}
-
 export class FeatureRenderer {
   // TODO: Write code to import a large gpx to test perf
 
   render(scene: Scene, camera: CurrentCameraPosition): RenderFeatureList {
     const start = performance.now();
     // TODO: Make a little bigger
-    const clipBox = bboxPolygon([
-      camera.bbox.minX,
-      camera.bbox.minY,
-      camera.bbox.maxX,
-      camera.bbox.maxY,
-    ]) as ClipBox;
+    const clipBox = camera.bboxPolygon();
 
     const list: RenderFeature[] = [];
     this._render(clipBox, ROOT_INHERITED, scene.features.root, list);
@@ -57,7 +48,7 @@ export class FeatureRenderer {
   }
 
   private _render(
-    clipBox: ClipBox,
+    clipBox: BBoxPolygon,
     inherited: Inherited,
     feature: SceneRootFeature | SceneFeature,
     out: RenderFeature[],
@@ -78,7 +69,7 @@ export class FeatureRenderer {
   }
 
   private _renderItself(
-    clipBox: ClipBox,
+    clipBox: BBoxPolygon,
     inherited: Inherited,
     feature: SceneRootFeature | SceneFeature,
   ): [Inherited | null, RenderFeature | null] {

@@ -14,6 +14,8 @@ export type Scene = {
   };
   features: {
     root: SceneRootFeature;
+    /** Ordered by dfs of scene tree */
+    selectedByMe: SceneFeature[];
     insertPlace: SceneFInsertPlace;
   };
 };
@@ -91,6 +93,7 @@ export const EMPTY_SCENE: Scene = {
       at: 'firstChild',
       target: EMPTY_FEATURE_ROOT,
     },
+    selectedByMe: [],
   },
 };
 
