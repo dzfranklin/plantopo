@@ -732,6 +732,8 @@ export class SyncEngine {
       } else {
         valid = true;
       }
+    } else {
+      valid = true;
     }
 
     // MUTATE
@@ -830,6 +832,8 @@ export class SyncEngine {
         console.log('_lset: invalid opacity', value);
         valid = false;
       }
+    } else {
+      valid = true;
     }
 
     // MUTATE
