@@ -4,6 +4,15 @@ import * as GeoJSON from 'geojson';
 import { bboxClip, bboxPolygon, booleanContains } from '@turf/turf';
 import booleanIntersects from '@turf/boolean-intersects';
 
+export interface RenderFeatureList {
+  timing: {
+    scene: Scene['timing'];
+    start: number;
+    end: number;
+  };
+  list: RenderFeature[];
+}
+
 export interface RenderFeature {
   id: number;
   children: RenderFeature[];
@@ -31,7 +40,8 @@ interface ClipBox extends GeoJSON.Feature<GeoJSON.Polygon> {
 export class FeatureRenderer {
   // TODO: Write code to import a large gpx to test perf
 
-  render(scene: Scene, camera: CurrentCameraPosition): RenderFeature[] {
+  render(scene: Scene, camera: CurrentCameraPosition): RenderFeatureList {
+    const start = performance.now();
     // TODO: Make a little bigger
     const clipBox = bboxPolygon([
       camera.bbox.minX,
@@ -42,7 +52,8 @@ export class FeatureRenderer {
 
     const list: RenderFeature[] = [];
     this._render(clipBox, ROOT_INHERITED, scene.features.root, list);
-    return list;
+    const end = performance.now();
+    return { list, timing: { scene: scene.timing, start, end } };
   }
 
   private _render(

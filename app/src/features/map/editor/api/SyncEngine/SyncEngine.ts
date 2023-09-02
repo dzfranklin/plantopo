@@ -82,7 +82,6 @@ export class SyncEngine {
 
   private _scene: Scene | null = null;
   private _sceneFNodes = new Map<number, SceneFeature>();
-  private _sceneDirty = false;
 
   private _sidebarWidth = DEFAULT_SIDEBAR_WIDTH;
   private _hasChangedSidebarWidth = false;
@@ -143,7 +142,7 @@ export class SyncEngine {
     console.log('fidBlock', `[${this._fidBlockStart}, ${this._fidBlockUntil})`);
     console.log('nextFid', this._nextFid);
     console.log('render count', this._renderCount);
-    console.log('sceneDirty', this._sceneDirty);
+    console.log('scene dirty?', this._isDirty);
 
     console.groupCollapsed('features (dot)');
     console.log(this._debugTreeDot());
@@ -153,19 +152,31 @@ export class SyncEngine {
   }
 
   render(): Scene {
-    if (!this._sceneDirty) {
+    if (!this._isDirty) {
       return this._scene || EMPTY_SCENE;
     } else if (this._transaction) {
       // Don't show changes until the transaction is committed
       return this._scene || EMPTY_SCENE;
     } else {
+      const start = performance.now();
+      const layers = this._renderLayers();
+      const features = this._renderFeatures();
+      const end = performance.now();
       this._scene = {
+        timing: {
+          start,
+          end,
+        },
         sidebarWidth: this._sidebarWidth,
-        layers: this._renderLayers(),
-        features: this._renderFeatures(),
+        layers,
+        features,
       };
-      this._sceneDirty = false;
       this._renderCount++;
+      this._isDirty = false;
+
+      for (const cb of this._onRenders) {
+        cb(this._scene);
+      }
 
       const query = (fid: number) => this.getFeature(fid);
       for (const entry of this._sceneSelectors.values()) {
@@ -188,14 +199,16 @@ export class SyncEngine {
     return this._scene || EMPTY_SCENE;
   }
 
-  private _repaintRequestHandler: (() => any) | null = null;
-  setRepaintRequestHandler(cb: (() => any) | null) {
-    this._repaintRequestHandler = cb;
+  private _onRenders = new Set<(_: Scene) => any>();
+  onRender(cb: (_: Scene) => any): () => void {
+    this._onRenders.add(cb);
+    return () => this._onRenders.delete(cb);
   }
 
-  private _requestRepaint() {
-    this._sceneDirty = true;
-    this._repaintRequestHandler?.();
+  private _isDirty = false;
+  private _dirty() {
+    this._isDirty = true;
+    this.render();
   }
 
   private _sceneSelectorId = 0;
@@ -225,7 +238,7 @@ export class SyncEngine {
       this._lSet(lid, k, v);
     }
     const convergeDeletes = this._fDelete(new Set(change.fdeletes));
-    this._requestRepaint();
+    this._dirty();
     if (convergeDeletes !== undefined) {
       this._send?.([
         { action: 'fDeleteConverge', fids: Array.from(convergeDeletes) },
@@ -268,7 +281,10 @@ export class SyncEngine {
     if (this._transaction !== null) {
       this._transaction.push(ops);
     } else {
-      this._requestRepaint();
+      this._dirty();
+      // TODO: The send call takes 0.3-1.0ms on my computer, so we shouldn't
+      // have it in the render path. Probably we should enqueue for a batched
+      // send every few ms on idle
       this._send!(ops);
     }
   }
@@ -338,7 +354,7 @@ export class SyncEngine {
     this._sidebarWidth = width;
     this._hasChangedSidebarWidth = true;
     this._persistence.saveWhenIdle('sidebarWidth', width);
-    this._requestRepaint();
+    this._dirty();
   }
 
   fParent(fid: Fid): Fid | undefined {
@@ -401,17 +417,17 @@ export class SyncEngine {
 
   fSetHovered(feature: Fid | null): void {
     this._fHoveredByMe = feature;
-    this._requestRepaint();
+    this._dirty();
   }
 
   fAddToMySelection(fid: Fid): void {
     this._fSelectedByMe.add(fid);
-    this._requestRepaint();
+    this._dirty();
   }
 
   fRemoveFromMySelection(fid: Fid): void {
     this._fSelectedByMe.delete(fid);
-    this._requestRepaint();
+    this._dirty();
   }
 
   fToggleSelectedByMe(fid: Fid): void {
@@ -425,12 +441,12 @@ export class SyncEngine {
   fReplaceMySelection(fid: Fid): void {
     this._fSelectedByMe.clear();
     this._fSelectedByMe.add(fid);
-    this._requestRepaint();
+    this._dirty();
   }
 
   fClearMySelection(): void {
     this._fSelectedByMe.clear();
-    this._requestRepaint();
+    this._dirty();
   }
 
   fMoveSelectedByMe(place: SceneFInsertPlace): void {
@@ -482,12 +498,12 @@ export class SyncEngine {
 
   lAddToMySelection(lid: Lid): void {
     this._lSelectedByMe.add(lid);
-    this._requestRepaint();
+    this._dirty();
   }
 
   lRemoveFromMySelection(lid: Lid): void {
     this._lSelectedByMe.delete(lid);
-    this._requestRepaint();
+    this._dirty();
   }
 
   lToggleSelectedByMe(lid: Lid): void {
@@ -501,12 +517,12 @@ export class SyncEngine {
   lReplaceMySelection(lid: Lid): void {
     this._lSelectedByMe.clear();
     this._lSelectedByMe.add(lid);
-    this._requestRepaint();
+    this._dirty();
   }
 
   lClearMySelection(): void {
     this._lSelectedByMe.clear();
-    this._requestRepaint();
+    this._dirty();
   }
 
   lMove(layers: number[], place: LInsertPlace): void {
@@ -777,7 +793,7 @@ export class SyncEngine {
     // MUTATE
 
     if (valid) {
-      this._requestRepaint();
+      this._dirty();
 
       if (key === 'pos' && fid !== 0) {
         const pos = value as FPos; // value = true

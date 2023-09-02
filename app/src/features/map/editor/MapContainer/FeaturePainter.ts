@@ -1,6 +1,6 @@
-import { RenderFeature } from './FeatureRenderer';
 import * as GeoJSON from 'geojson';
 import { CurrentCameraPosition as CurrentCamera } from '../CurrentCamera';
+import { RenderFeature, RenderFeatureList } from './FeatureRenderer';
 
 const { PI } = Math;
 
@@ -16,21 +16,48 @@ export class FeaturePainter {
     this.c = canvas.getContext('2d')!;
   }
 
-  paint(camera: CurrentCamera, render: RenderFeature[]): void {
+  private _lastPreScene = 0;
+
+  paint(camera: CurrentCamera, render: RenderFeatureList): void {
+    const start = performance.now();
     this.c.save();
     this.c.scale(this.dpi, this.dpi); // Works with the css scale we do
     this.c.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    for (const feature of render) {
+    for (const feature of render.list) {
       this._paint(camera, feature);
     }
+    const end = performance.now();
 
     if (this.showDebug) {
-      this.c.strokeStyle = 'red';
-      this.c.strokeText(`${render.length} features`, this.canvas.width / 2, 30);
+      this._debugLine = 0;
+      const { timing } = render;
+
+      this._debugText(`count ${render.list.length}`);
+      this._debugTime('scene', timing.scene.end - timing.scene.start);
+      this._debugTime('render', timing.end - timing.start);
+      this._debugTime('paint', end - start);
     }
 
     this.c.restore();
+  }
+
+  private _debugTime(label: string, ms: number) {
+    if (!this.showDebug) return;
+    this._debugText(`${label}: ${ms.toFixed(1)}ms`);
+  }
+
+  private _debugLine = 0;
+  private _debugText(text: string): void {
+    if (!this.showDebug) return;
+    this.c.save();
+    this.c.translate(
+      this.canvas.width / this.dpi - 120,
+      this.canvas.height / this.dpi / 2 + this._debugLine * 10,
+    );
+    this.c.strokeStyle = 'red';
+    this.c.strokeText(text, 0, 0);
+    this.c.restore();
+    this._debugLine++;
   }
 
   private _paint(camera: CurrentCamera, feature: RenderFeature): void {

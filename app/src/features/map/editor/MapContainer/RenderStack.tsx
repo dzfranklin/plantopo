@@ -13,6 +13,7 @@ import { InteractionManager } from './InteractionManager/InteractionManager';
 import { CurrentCameraPosition } from '../CurrentCamera';
 import { FeatureRenderer } from './FeatureRenderer';
 import { FeaturePainter } from './FeaturePainter';
+import { Scene } from '../api/SyncEngine/Scene';
 
 // Instruct nextjs to remout this component on every edit
 // @refresh reset
@@ -77,26 +78,32 @@ export function RenderStack({
       layerRenderer,
     });
 
-    // Sync ourselves to ml's render loop
-    const render = () => {
+    const renderScene = (scene: Scene) => {
       const camera = CurrentCameraPosition.fromMap(map);
-      const scene = engine.render();
 
-      // Note that we don't have to worry about ml not being ready for
-      // manipulation in here
-      layerRenderer.render(scene);
+      if (map.isStyleLoaded()) {
+        layerRenderer.render(scene);
+      }
 
       const renderList = featureRenderer.render(scene, camera);
       featurePainter.paint(camera, renderList);
-      interactionManager.register(renderList, camera);
+      interactionManager.register(renderList.list, camera);
     };
-    map.on('render', render);
+
+    // Scene changed, camera didn't necessarily change
+    const removeOnRender = engine.onRender(renderScene);
+    // Camera changed, scene didn't necessarily change
+    const onMapRender = () => renderScene(engine.scene);
+    map.on('render', onMapRender);
+
+    engine.render();
     map.triggerRepaint();
 
     return () => {
       interactionManager.remove();
       layerRenderer.remove();
-      map.off('render', render);
+      removeOnRender();
+      map.off('render', onMapRender);
     };
   }, [sources, engine, containerRef, map]);
 
@@ -111,12 +118,6 @@ export function RenderStack({
     observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, [containerRef, map]);
-
-  // REQUEST RE-RENDER when our scene changes
-  useEffect(() => {
-    engine?.setRepaintRequestHandler(() => map?.triggerRepaint());
-    return engine?.setRepaintRequestHandler(null);
-  }, [map, engine]);
 
   return (
     <>

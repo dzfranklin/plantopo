@@ -2,6 +2,10 @@ import { LayerSource } from '../mapSources';
 import { FGeometry } from '../propTypes';
 
 export type Scene = {
+  timing: {
+    start: number;
+    end: number;
+  };
   sidebarWidth: number;
   layers: {
     active: SceneLayer[];
@@ -72,6 +76,10 @@ export type SceneFInsertPlace =
 export const DEFAULT_SIDEBAR_WIDTH = 200;
 
 export const EMPTY_SCENE: Scene = {
+  timing: {
+    start: 0,
+    end: 0,
+  },
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   layers: {
     active: [],
