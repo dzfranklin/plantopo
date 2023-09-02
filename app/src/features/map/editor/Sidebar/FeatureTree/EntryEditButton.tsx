@@ -4,11 +4,11 @@ import {
   DialogTrigger,
   TextField,
 } from '@adobe/react-spectrum';
-import { SyncEngine } from '../api/SyncEngine';
+import { SyncEngine } from '../../api/SyncEngine';
 import EditIcon from '@spectrum-icons/workflow/Edit';
-import { useSceneFeature } from '../api/useEngine';
+import { useSceneFeature } from '../../api/useEngine';
 
-export function FeatureTreeFeatureEditButton({
+export function EntryEditButton({
   fid,
   engine,
 }: {
