@@ -52,7 +52,7 @@ localhost {
 	}
 }
 
-release.localhost {
+r.localhost {
 	log release.localhost
 
 	import allow_origin_only "https://release.localhost"
