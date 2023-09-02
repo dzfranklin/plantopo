@@ -288,10 +288,7 @@ function Entry({
           if (engine.fIsSelectedByMe(feature.id)) {
             engine.fClearMySelection();
           } else {
-            engine.startTransaction();
-            engine.fClearMySelection();
-            engine.fAddToMySelection(feature.id);
-            engine.commitTransaction();
+            engine.fReplaceMySelection(feature.id);
           }
         }
         evt.stopPropagation();
