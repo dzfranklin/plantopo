@@ -102,6 +102,7 @@ export class SyncEngine {
 
   private _fSelectedByMe = new Set<Fid>();
   private _fSelectedByPeers: Map<Fid, Set<ClientId>> = new Map();
+  private _fHoveredByMe: Fid | null = null;
   private _lSelectedByMe = new Set<Lid>();
   private _lSelectedByPeers: Map<Lid, Set<ClientId>> = new Map();
 
@@ -360,6 +361,11 @@ export class SyncEngine {
     return this.fHasAncestorSelectedByMe(parent);
   }
 
+  fSetHovered(feature: Fid | null): void {
+    this._fHoveredByMe = feature;
+    this._sceneDirty = true;
+  }
+
   fAddToMySelection(fid: Fid): void {
     this._fSelectedByMe.add(fid);
     this._sceneDirty = true;
@@ -567,6 +573,7 @@ export class SyncEngine {
 
     const selectedByMe = this._fSelectedByMe.has(fid);
     const selectedByPeers = this._fPeersWhoSelected(fid);
+    const hoveredByMe = this._fHoveredByMe === fid;
 
     const geometry = props.get('geometry') as FGeometry | null;
 
@@ -585,6 +592,7 @@ export class SyncEngine {
       color,
       selectedByMe,
       selectedByPeers,
+      hoveredByMe,
     };
     this._sceneFNodes.set(fid, feature);
 

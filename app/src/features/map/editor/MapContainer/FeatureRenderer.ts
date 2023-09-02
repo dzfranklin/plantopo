@@ -15,6 +15,7 @@ export interface RenderFeature {
 
   selectedByMe: boolean;
   selectedByPeers: string[] | null;
+  hoveredByMe: boolean;
 
   geometry: GeoJSON.Point | GeoJSON.LineString;
 
@@ -107,10 +108,8 @@ export class FeatureRenderer {
     }
 
     const itself: RenderFeature = {
-      id: feature.id,
+      ...feature,
       children: [],
-      selectedByMe: feature.selectedByMe,
-      selectedByPeers: feature.selectedByPeers,
       geometry,
       name: feature.name || nameForUnnamedFeature(feature),
       color: feature.color ?? inherited.color,

@@ -1,12 +1,15 @@
 import { RenderFeature } from '../FeatureRenderer';
 import RBush from 'rbush';
 import { FGeometry } from '../../api/propTypes';
-import { BBox, bbox as computeBBox } from '@turf/turf';
+import { BBox, bbox as computeBBox, nearestPointOnLine } from '@turf/turf';
 import { SceneFeature } from '../../api/SyncEngine/Scene';
 import { SyncEngine } from '../../api/SyncEngine';
 import { CreateFeatureHandler } from './CreateFeatureHandler';
 import { CurrentCameraPosition } from '../../CurrentCamera';
-import { add2, sub2 } from '@/generic/vector2';
+import { FeatureHoverHandler as FeatureActionHandler } from './FeatureActionHandler';
+import { add2, magnitude2, sub2 } from '@/generic/vector2';
+import { clamp } from '@/generic/clamp';
+import { MaplibreHandlerStub } from './MaplibreHandlerStub';
 
 type ScreenXY = [number, number];
 type LngLat = [number, number];
@@ -22,6 +25,10 @@ export class InteractionEvent {
 
   private _cachedLngLat: LngLat | null = null;
 
+  get camera(): CurrentCameraPosition {
+    return this._scope.cam;
+  }
+
   unproject(): LngLat {
     if (this._cachedLngLat === null) {
       this._cachedLngLat = this._scope.unproject(this.screenXY);
@@ -29,19 +36,63 @@ export class InteractionEvent {
     return this._cachedLngLat;
   }
 
-  private _cachedHits: SceneFeature[] | null = null;
+  private _cachedHits: FeatureHit[] | null = null;
 
   /** The first entry in the list is the feature on top */
-  queryHits(): SceneFeature[] {
+  queryHits(): FeatureHit[] {
     if (this._cachedHits === null) {
-      const value = this._scope.queryHits(this.screenXY, this.unproject());
+      const value = this._scope
+        .queryHits(this.screenXY, this.unproject())
+        .map((f) => new FeatureHitImpl(this, f));
       this._cachedHits = value;
     }
     return this._cachedHits;
   }
 }
 
+export interface FeatureHit {
+  feature: SceneFeature;
+
+  /** Pixel distance from the event to the nearest point on the feature */
+  minPixelsTo(): number;
+}
+
+class FeatureHitImpl implements FeatureHit {
+  constructor(private scope: InteractionEvent, public feature: SceneFeature) {}
+
+  minPixelsTo(): number {
+    const cam = this.scope.camera;
+    const g = this.feature.geometry!;
+    const targetS = this.scope.screenXY; // target, screen space
+    let pM: GeoJSON.Position; // nearest point, map space
+    let depth = 0; // pixels from pM to edge
+    switch (g.type) {
+      case 'Point': {
+        // We want the render tree feature here, which should have the radius
+        const FIXME_R = 5;
+        pM = g.coordinates;
+        depth = Math.round(FIXME_R / 2);
+        break;
+      }
+      case 'LineString':
+      case 'MultiLineString': {
+        const targetM = this.scope.unproject();
+        pM = nearestPointOnLine(g, targetM).geometry.coordinates;
+        const FIXME_WIDTH = 2;
+        depth = Math.round(FIXME_WIDTH / 2);
+        break;
+      }
+      default:
+        throw new Error(`Unimplemented ${g.type}`);
+    }
+    const pS = cam.project(pM);
+    const pixelsToCenter = magnitude2(sub2(pS, targetS));
+    return clamp(pixelsToCenter - depth, 0, Infinity);
+  }
+}
+
 export interface InteractionHandler {
+  cursor?: string;
   onHover?: (evt: InteractionEvent, engine: SyncEngine) => boolean;
   onPress?: (evt: InteractionEvent, engine: SyncEngine) => boolean;
   onDrag?: (
@@ -49,6 +100,7 @@ export interface InteractionHandler {
     delta: [number, number],
     engine: SyncEngine,
   ) => boolean;
+  onDragEnd?: (evt: InteractionEvent, engine: SyncEngine) => boolean;
   // delta is negative for zooms out
   onZoom?: (
     evt: InteractionEvent,
@@ -74,6 +126,7 @@ interface PointerState {
   last: ScreenXY | null;
   outside: boolean;
   couldBePress: boolean;
+  inDrag: boolean;
 }
 
 const BOUND_POINTER_EVENTS = [
@@ -84,20 +137,21 @@ const BOUND_POINTER_EVENTS = [
   'pointerout',
 ] as const;
 
+// Note there's a bug where the cursor update will lag if the chrome devtools is
+// open. See <https://stackoverflow.com/questions/36597412/mouse-cursor-set-using-jquery-css-not-changing-until-mouse-moved>
+
 export class InteractionManager {
   private _rbush = new RBush<IndexEntry>();
   private _elem: HTMLElement;
-  private _cam: CurrentCameraPosition;
+  cam: CurrentCameraPosition;
   private _engine: SyncEngine;
 
   querySlop: [number, number] = [10, 10]; // In pixels
 
   handlers: InteractionHandler[] = [
-    // new DeleteFeatureHandler(),
+    new FeatureActionHandler(),
     new CreateFeatureHandler(),
-    // new MoveFeatureHandler(),
-    // new SelectFeatureHandler(),
-    // new FeatureHoverHandler(),
+    new MaplibreHandlerStub(),
   ];
 
   private _boundOnPointer = this._onPointer.bind(this);
@@ -109,12 +163,13 @@ export class InteractionManager {
     initialCamera: CurrentCameraPosition;
     container: HTMLDivElement;
   }) {
-    this._cam = props.initialCamera;
+    this.cam = props.initialCamera;
     this._engine = props.engine;
 
     const elem = document.createElement('div');
     elem.style.position = 'absolute';
     elem.style.inset = '0';
+    elem.style.cursor = 'crosshair';
     const mlElem = props.container.querySelector(
       '.maplibregl-canvas-container.maplibregl-interactive',
     )!;
@@ -136,21 +191,11 @@ export class InteractionManager {
   }
 
   remove() {
-    this._elem.removeEventListener('wheel', this._boundOnWheel, {
-      capture: true,
-    });
-
-    for (const type of BOUND_POINTER_EVENTS) {
-      this._elem.removeEventListener(type, this._boundOnPointer, {
-        capture: true,
-      });
-    }
-
-    this._resizeObserver.disconnect();
+    this._elem.remove();
   }
 
   register(render: RenderFeature[], camera: CurrentCameraPosition) {
-    this._cam = camera;
+    this.cam = camera;
 
     const entries: IndexEntry[] = [];
     for (let i = 0; i < render.length; i++) {
@@ -230,13 +275,12 @@ export class InteractionManager {
         last: null,
         outside: false,
         couldBePress: false,
+        inDrag: false,
       };
       this._pointers.push(p);
     }
 
     const pt: ScreenXY = [evt.offsetX, evt.offsetY];
-
-    let consumed = false;
 
     switch (evt.type) {
       case 'pointerdown': {
@@ -277,45 +321,38 @@ export class InteractionManager {
             // IS PINCH
             p.couldBePress = false;
             if (this._lastPinchGap !== null) {
-              const evt = new InteractionEvent(this, pt);
-              for (const handler of this.handlers) {
-                consumed = handler.onPress?.(evt, this._engine) ?? false;
-                if (consumed) break;
-              }
+              const ievt = new InteractionEvent(this, pt);
+              this._fire(evt, 'onPress', ievt, this._engine);
             }
             this._lastPinchGap = pinchGap;
           } else if (d(p.down, pt) > 10) {
             // IS DRAG
             p.couldBePress = false;
-            const evt = new InteractionEvent(this, pt);
+            p.inDrag = true;
+            const ievt = new InteractionEvent(this, pt);
             const delta: ScreenXY = [pt[0] - p.last![0], pt[1] - p.last![1]];
-            for (const handler of this.handlers) {
-              consumed = handler.onDrag?.(evt, delta, this._engine) ?? false;
-              if (consumed) break;
-            }
+            this._fire(evt, 'onDrag', ievt, delta, this._engine);
             p.last = pt;
           }
         } else {
           // IS HOVER
-          const evt = new InteractionEvent(this, pt);
-          for (const handler of this.handlers) {
-            consumed = handler.onHover?.(evt, this._engine) ?? false;
-            if (consumed) break;
-          }
+          const ievt = new InteractionEvent(this, pt);
+          this._fire(evt, 'onHover', ievt, this._engine);
         }
         break;
       }
       case 'pointerup': {
         // Fired when a pointer is no longer active buttons state.
-        if (!p.outside && p.couldBePress) {
-          const evt = new InteractionEvent(this, pt);
-          for (const handler of this.handlers) {
-            consumed = handler.onPress?.(evt, this._engine) ?? false;
-            if (consumed) break;
-          }
+        if (p.inDrag) {
+          const ievt = new InteractionEvent(this, pt);
+          this._fire(evt, 'onDragEnd', ievt, this._engine);
+        } else if (!p.outside && p.couldBePress) {
+          const ievt = new InteractionEvent(this, pt);
+          this._fire(evt, 'onPress', ievt, this._engine);
         }
         p.down = null;
         p.couldBePress = false;
+        p.inDrag = false;
         break;
       }
       case 'pointerleave': {
@@ -344,28 +381,39 @@ export class InteractionManager {
     }
 
     p.last = pt;
-
-    if (consumed) {
-      evt.preventDefault();
-      evt.stopPropagation();
-    }
   }
 
   private _onWheel(evt: WheelEvent): void {
     const pt: ScreenXY = [evt.offsetX, evt.offsetY];
-
     const ievt = new InteractionEvent(this, pt);
     const delta = evt.deltaY;
+    this._fire(evt, 'onZoom', ievt, delta, this._engine);
+  }
 
+  private _fire<Type extends keyof InteractionHandler>(
+    native: PointerEvent | WheelEvent,
+    evt: Type,
+    ...args: any[]
+  ) {
+    let cursor: string | undefined = undefined;
     let consumed = false;
     for (const handler of this.handlers) {
-      consumed = handler.onZoom?.(ievt, delta, this._engine) ?? false;
+      if (!(evt in handler)) continue;
+      consumed = (handler as any)[evt](...args);
+      if (consumed && handler.cursor) {
+        cursor = handler.cursor;
+      }
       if (consumed) break;
     }
 
+    cursor = cursor || 'crosshair';
+    if (this._elem.style.cursor !== cursor) {
+      this._elem.style.cursor = cursor;
+    }
+
     if (consumed) {
-      evt.stopPropagation();
-      evt.preventDefault();
+      native.stopPropagation();
+      native.preventDefault();
     }
   }
 
@@ -382,7 +430,7 @@ export class InteractionManager {
   }
 
   unproject(xy: ScreenXY): LngLat {
-    return this._cam.unproject(xy);
+    return this.cam.unproject(xy);
   }
 }
 

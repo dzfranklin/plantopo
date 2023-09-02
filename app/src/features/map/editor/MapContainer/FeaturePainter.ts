@@ -55,21 +55,30 @@ export class FeaturePainter {
     const dotR = 5;
 
     this.c.save();
+    if (feature.hoveredByMe) {
+      this.c.shadowBlur = 8;
+      this.c.shadowColor = 'hsla(205, 36%, 54%, 1)';
+
+      this.c.beginPath();
+      this.c.fillStyle = 'hsl(0, 0%, 70%)';
+      this.c.arc(0, 0, dotR, 0, 2 * PI);
+      this.c.closePath();
+      this.c.fill();
+      this.c.globalCompositeOperation = 'overlay';
+    }
     this.c.beginPath();
-    this.c.fillStyle = feature.color;
+    this.c.fillStyle = 'blue' || feature.color;
     this.c.arc(0, 0, dotR, 0, 2 * PI);
     this.c.closePath();
     this.c.fill();
     this.c.restore();
 
     if (feature.selectedByMe) {
-      this.c.save();
-      this.c.strokeStyle = '#e5f0ff';
-      this.c.lineWidth = 3;
       this.c.beginPath();
+      this.c.lineWidth = 3;
+      this.c.strokeStyle = '#e5f0ff';
       this.c.arc(0, 0, dotR + this.c.lineWidth / 2, 0, 2 * PI);
       this.c.stroke();
-      this.c.restore();
     }
   }
 

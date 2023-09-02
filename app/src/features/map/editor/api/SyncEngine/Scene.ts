@@ -51,6 +51,7 @@ export type SceneFeature = {
 
   selectedByMe: boolean;
   selectedByPeers: string[] | null;
+  hoveredByMe: boolean;
 
   geometry: FGeometry | null;
 
