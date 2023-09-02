@@ -132,7 +132,7 @@ export class SyncEngine {
 
     this._persistence.load('sidebarWidth').then((width) => {
       if (!this._hasChangedSidebarWidth) {
-        this._sidebarWidth = width as number;
+        this._sidebarWidth = (width ?? DEFAULT_SIDEBAR_WIDTH) as number;
       }
     });
   }
