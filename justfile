@@ -7,6 +7,12 @@ te: test-engine
 ts: test-server
 ta: test-app
 
+tsyncserver:
+  go test ./server/mapsync -race
+
+syncschema:
+  cd ./sync_schema && go run ./gen
+
 caddy:
   caddy stop; caddy run
 

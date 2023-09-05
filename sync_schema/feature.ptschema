@@ -1,0 +1,8 @@
+// Add validations to validate.go
+
+Parent string
+Idx string
+Geometry Geometry
+Name string
+Color string
+Hidden bool
