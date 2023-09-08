@@ -5,11 +5,15 @@ go 1.21.0
 require (
 	github.com/alicebob/miniredis/v2 v2.30.5
 	github.com/google/uuid v1.3.1
+	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/sessions v1.2.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/redis/go-redis/v9 v9.1.0
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/zap v1.25.0
 )
+
+require github.com/gorilla/securecookie v1.1.1 // indirect
 
 require (
 	github.com/alicebob/gopher-json v0.0.0-20200520072559-a9ecdc9d1d3a // indirect

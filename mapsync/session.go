@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/danielzfranklin/plantopo/server/logger"
-	"github.com/danielzfranklin/plantopo/server/mapsync/store"
+	"github.com/danielzfranklin/plantopo/logger"
+	"github.com/danielzfranklin/plantopo/mapsync/store"
 	schema "github.com/danielzfranklin/plantopo/sync_schema"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -38,15 +38,15 @@ func (e *ErrOldSeq) Error() string {
 }
 
 type connectRequest struct {
-	mapId    uuid.UUID
+	mapId    uuid.UUID // needed for matchmaker
 	clientId uuid.UUID // random, identifies specific request
 	outgoing chan OutgoingSessionMsg
 	ok       chan Connection
-	err      chan error
+	err      chan error // used by matchmaker
 }
 
 type session struct {
-	connect chan connectRequest
+	connect chan *connectRequest
 }
 
 func newSession(
@@ -64,7 +64,7 @@ func newSession(
 	}
 	l.Info("loaded store")
 
-	connect := make(chan connectRequest)
+	connect := make(chan *connectRequest)
 	go handler(
 		ctx,
 		c,
@@ -78,7 +78,7 @@ func newSession(
 
 type client struct {
 	out   chan OutgoingSessionMsg
-	seq   int32
+	seq   *int32
 	aware schema.Aware
 }
 
@@ -88,7 +88,7 @@ func handler(
 	notifyClosed chan uuid.UUID,
 	store *store.Store,
 	mapId uuid.UUID,
-	connectChan chan connectRequest,
+	connectChan chan *connectRequest,
 ) {
 	if c.Session.EmptyTimeout == 0 {
 		c.Session.EmptyTimeout = time.Minute * 5
@@ -112,8 +112,8 @@ func handler(
 
 	incoming := make(chan IncomingSessionMsg)
 	clientDisconnects := make(chan uuid.UUID)
-	clients := make(map[uuid.UUID]client)
-	unsent := schema.Changeset{}
+	clients := make(map[uuid.UUID]*client)
+	var unsent *schema.Changeset
 	saveError := make(chan error)
 	trafficLog := maybeOpenTrafficLog(l, c, mapId)
 
@@ -157,20 +157,24 @@ func handler(
 			}
 			return
 		case <-broadcastTimeout:
+			// NOTE: We may want to reduce the interval if there are no changes
 			acks := make(map[uuid.UUID]int32, len(clients))
 			for clientId, client := range clients {
-				acks[clientId] = client.seq
+				if client.seq != nil {
+					acks[clientId] = *client.seq
+				}
 			}
 			msg := OutgoingSessionMsg{
 				Acks:   &acks,
 				Aware:  makeAwareMap(clients),
-				Change: &unsent,
+				Change: unsent,
 			}
 			trafficLog.maybeWriteBroadcast(l, msg)
 			for _, client := range clients {
 				client.out <- msg
 			}
-			unsent = schema.Changeset{}
+			l.Debug("sent bcast")
+			unsent = nil
 			broadcastTimeout = time.After(c.Session.BroadcastInterval)
 		case req := <-connectChan:
 			if req.mapId != mapId {
@@ -182,7 +186,12 @@ func handler(
 			}
 
 			l := l.With(zap.String("clientId", req.clientId.String()))
-			client := client{out: req.outgoing}
+			client := &client{
+				out: req.outgoing,
+				aware: schema.Aware{
+					ClientId: req.clientId,
+				},
+			}
 			clients[req.clientId] = client
 
 			req.ok <- Connection{
@@ -212,24 +221,27 @@ func handler(
 				continue
 			}
 			l := l.With(zap.String("clientId", inMsg.From.String()))
+			l.Debug("received message")
 			trafficLog.maybeWriteIncoming(l, inMsg)
 
-			if inMsg.Seq <= client.seq {
+			if client.seq != nil && inMsg.Seq <= *client.seq {
 				l.Info("client sent old seq",
-					zap.Int32("sent", inMsg.Seq), zap.Int32("last", client.seq))
+					zap.Int32("sent", inMsg.Seq), zap.Int32("last", *client.seq))
 				replyMsg := OutgoingSessionMsg{Error: &ErrOldSeq{}}
 				trafficLog.maybeWriteReply(l, inMsg.From, replyMsg)
 				client.out <- replyMsg
 				continue
 			}
-			client.seq = inMsg.Seq
+			client.seq = &inMsg.Seq
 
 			if inMsg.Aware != nil {
 				client.aware = *inMsg.Aware
+				client.aware.ClientId = inMsg.From
+				l.Debug("updated aware")
 			}
 
 			if inMsg.Change != nil {
-				fixes, err := store.Update(inMsg.Change)
+				fixes, err := store.Update(l, inMsg.Change)
 				if err != nil {
 					l.Info("client sent unfixable changeset",
 						zap.Error(err), zap.Any("inMsg", inMsg))
@@ -240,7 +252,12 @@ func handler(
 				} else if fixes != nil {
 					replyMsg := OutgoingSessionMsg{Change: fixes}
 					trafficLog.maybeWriteReply(l, inMsg.From, replyMsg)
+					l.Info("replying with fixes")
 					client.out <- replyMsg
+				}
+
+				if unsent == nil {
+					unsent = &schema.Changeset{}
 				}
 				unsent.Merge(inMsg.Change)
 				unsent.Merge(fixes)
@@ -249,7 +266,7 @@ func handler(
 	}
 }
 
-func makeAwareMap(clients map[uuid.UUID]client) *map[uuid.UUID]schema.Aware {
+func makeAwareMap(clients map[uuid.UUID]*client) *map[uuid.UUID]schema.Aware {
 	out := make(map[uuid.UUID]schema.Aware, len(clients))
 	for _, client := range clients {
 		out[client.aware.ClientId] = client.aware
@@ -275,7 +292,7 @@ func maybeOpenTrafficLog(l *zap.Logger, c Config, mapId uuid.UUID) *trafficLog {
 	}
 	now := time.Now()
 	dirname := fmt.Sprintf("traffic/%s_%s_%s",
-		c.Addr, now.Format(time.DateOnly), c.RunId.String())
+		c.Host, now.Format(time.DateOnly), c.RunId.String())
 	dir := filepath.Join(os.TempDir(), dirname)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		l.DPanic("failed to create temp dir", zap.Error(err))

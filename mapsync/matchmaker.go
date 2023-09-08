@@ -6,13 +6,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/danielzfranklin/plantopo/server/logger"
+	"github.com/danielzfranklin/plantopo/logger"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
-type Matchmaker chan connectRequest
+type Matchmaker chan matchmakerCommand
+
+type matchmakerCommand struct {
+	connect *connectRequest
+	healthz chan bool
+}
 
 type ErrShouldTrySpecific struct {
 	addr string
@@ -27,12 +32,11 @@ func NewMatchmaker(
 	ctx context.Context,
 	c Config,
 ) Matchmaker {
-	if c.Addr == "" {
+	if c.Host == "" {
 		panic("Addr must be set")
 	}
 	if c.RunId == uuid.Nil {
 		c.RunId = uuid.New()
-		panic("RunId must be set")
 	}
 	if c.Rdb == nil {
 		panic("Rdb must be set")
@@ -42,9 +46,9 @@ func NewMatchmaker(
 	}
 
 	c.Wg.Add(1)
-	reqChan := make(chan connectRequest)
-	go matchmaker(ctx, c, reqChan)
-	return reqChan
+	commandChan := make(chan matchmakerCommand)
+	go matchmaker(ctx, c, commandChan)
+	return commandChan
 }
 
 type TryOtherError struct {
@@ -62,7 +66,20 @@ type Connection struct {
 	Disconnect func()
 }
 
-func (m Matchmaker) Connect(
+func (m *Matchmaker) Healthz(ctx context.Context) bool {
+	l := logger.FromCtx(ctx).Named("matchmaker.Healthz")
+	healthz := make(chan bool)
+	*m <- matchmakerCommand{healthz: healthz}
+	select {
+	case <-ctx.Done():
+		l.Error("timeout waiting for matchmaker healthz")
+		return false
+	case ok := <-healthz:
+		return ok
+	}
+}
+
+func (m *Matchmaker) Connect(
 	ctx context.Context,
 	mapId uuid.UUID,
 	// You receive outgoing messages on this channel
@@ -71,12 +88,14 @@ func (m Matchmaker) Connect(
 	requestId := uuid.New()
 	errChan := make(chan error)
 	successChan := make(chan Connection)
-	m <- connectRequest{
-		mapId:    mapId,
-		clientId: requestId,
-		outgoing: outgoing,
-		ok:       successChan,
-		err:      errChan,
+	*m <- matchmakerCommand{
+		connect: &connectRequest{
+			mapId:    mapId,
+			clientId: requestId,
+			outgoing: outgoing,
+			ok:       successChan,
+			err:      errChan,
+		},
 	}
 	select {
 	case <-ctx.Done():
@@ -91,11 +110,11 @@ func (m Matchmaker) Connect(
 func matchmaker(
 	ctx context.Context,
 	c Config,
-	reqChan chan connectRequest,
+	commandChan chan matchmakerCommand,
 ) {
 	l := logger.FromCtx(ctx).Named("matchmaker").With(
 		zap.String("runId", c.RunId.String()),
-		zap.String("addr", c.Addr),
+		zap.String("addr", c.Host),
 	)
 	ctx = logger.WithCtx(ctx, l)
 	l.Info("started matchmaker")
@@ -152,35 +171,42 @@ func matchmaker(
 			l.Info("session closed, cleaning up", zap.String("mapId", mapId.String()))
 			delete(localSessions, mapId)
 			releaseLocks(ctx, c, []string{lockKey(mapId)})
-		case req := <-reqChan:
-			// Handle connect request
-			l := l.With(zap.String("mapId", req.mapId.String()))
-			l.Debug("got connect request", zap.String("requestId", req.clientId.String()))
+		case cmd := <-commandChan:
+			if cmd.healthz != nil {
+				cmd.healthz <- true
+			} else if cmd.connect != nil {
+				// Handle connect request
+				req := cmd.connect
+				l := l.With(zap.String("mapId", req.mapId.String()))
+				l.Debug("got connect request",
+					zap.String("requestId", req.clientId.String()))
 
-			session, ok := localSessions[req.mapId]
-			if ok {
-				l.Info("found existing local session")
-				session.connect <- req
-				continue
-			}
-
-			l.Debug("trying to aquire lock")
-			lockStatus, err := tryAcquireLock(ctx, c, lockKey(req.mapId))
-			if err != nil {
-				l.Error("error when trying to aquire lock", zap.Error(err))
-				req.err <- err
-			} else if !lockStatus.acquired {
-				l.Info("session locked by remote", zap.String("existingAddr", lockStatus.existingAddr))
-				req.err <- ErrShouldTrySpecific{addr: lockStatus.existingAddr}
-			} else {
-				l.Info("acquired lock, creating new local session")
-				session, err := newSession(sessionCtx, c, closeNotifies, req.mapId)
-				if err != nil {
-					l.DPanic("failed to create new session", zap.Error(err))
+				session, ok := localSessions[req.mapId]
+				if ok {
+					l.Info("found existing local session")
+					session.connect <- req
 					continue
 				}
-				localSessions[req.mapId] = session
-				session.connect <- req
+
+				l.Debug("trying to aquire lock")
+				lockStatus, err := tryAcquireLock(ctx, c, lockKey(req.mapId))
+				if err != nil {
+					l.Error("error when trying to aquire lock", zap.Error(err))
+					req.err <- err
+				} else if !lockStatus.acquired {
+					l.Info("session locked by remote",
+						zap.String("existingAddr", lockStatus.existingAddr))
+					req.err <- ErrShouldTrySpecific{addr: lockStatus.existingAddr}
+				} else {
+					l.Info("acquired lock, creating new local session")
+					session, err := newSession(sessionCtx, c, closeNotifies, req.mapId)
+					if err != nil {
+						l.DPanic("failed to create new session", zap.Error(err))
+						continue
+					}
+					localSessions[req.mapId] = session
+					session.connect <- req
+				}
 			}
 		}
 	}
@@ -220,7 +246,7 @@ func releaseLocks(ctx context.Context, c Config, keys []string) error {
 		return nil
 	}
 
-	expected := marshallLockValue(c.Addr, c.RunId)
+	expected := marshallLockValue(c.Host, c.RunId)
 	res := releaseLocksScript.Run(ctx, c.Rdb, keys, expected)
 
 	if res.Err() != nil {
@@ -272,7 +298,7 @@ func refreshLocks(
 	c Config,
 	keys []string,
 ) error {
-	expected := marshallLockValue(c.Addr, c.RunId)
+	expected := marshallLockValue(c.Host, c.RunId)
 	expiry := c.Matchmaker.LockExpiry
 	res := refreshLocksScript.Run(ctx, c.Rdb, keys, expected, expiry)
 
@@ -312,7 +338,7 @@ func tryAcquireLock(
 	c Config,
 	key string,
 ) (lockStatus, error) {
-	value := marshallLockValue(c.Addr, c.RunId)
+	value := marshallLockValue(c.Host, c.RunId)
 	args := redis.SetArgs{Mode: "NX", Get: true, TTL: c.Matchmaker.LockExpiry}
 	res := c.Rdb.SetArgs(ctx, key, value, args)
 	if res.Err() == redis.Nil {

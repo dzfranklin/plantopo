@@ -4,14 +4,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/danielzfranklin/plantopo/server/mapsync/store"
+	"github.com/danielzfranklin/plantopo/mapsync/store"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
 type Config struct {
-	// the address this server can be externally reached at
-	Addr string
+	// the host this server can be externally reached at
+	Host string
 	// uniquely identifies this instance. must change on restart
 	RunId      uuid.UUID // random if uuid.Nil
 	Rdb        *redis.Client

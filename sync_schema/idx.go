@@ -30,7 +30,7 @@ func validateIdxDigits(value string) error {
 	return nil
 }
 
-func IdxBetween(before string, after string) (string, error) {
+func IdxBetween(rng *rand.Rand, before string, after string) (string, error) {
 	if err := validateIdxDigits(before); err != nil {
 		return "", err
 	}
@@ -107,7 +107,7 @@ func IdxBetween(before string, after string) (string, error) {
 		// number will bias the result slightly. This doesn't matter when we
 		// use a large base so the bias is small. The bias only really matters
 		// for smaller bases such as base 2.
-		jitter := uint(rand.Intn(maxJitter))
+		jitter := uint(rng.Intn(maxJitter))
 		for jitter > 0 {
 			base := maxDigit - minDigit + 1
 			mod := jitter % base

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/danielzfranklin/plantopo/server/logger"
+	"github.com/danielzfranklin/plantopo/logger"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
@@ -29,14 +29,19 @@ var testLockExpiry = time.Duration(time.Millisecond * 5)
 var testIdleTimeout = time.Duration(time.Millisecond * 5)
 
 type mockDb struct {
+	mu     sync.Mutex
 	values map[uuid.UUID][]byte
 }
 
 func (m *mockDb) GetMapSnapshot(ctx context.Context, mapId uuid.UUID) ([]byte, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	return m.values[mapId], nil
 }
 
 func (m *mockDb) SetMapSnapshot(ctx context.Context, mapId uuid.UUID, value []byte) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.values[mapId] = value
 	return nil
 }
@@ -87,7 +92,7 @@ func CreateSubject(ctx context.Context, s *setup, wg *sync.WaitGroup) *Matchmake
 		panic("current setup implementation presumes no more than 9")
 	}
 	config := Config{
-		Addr:  fmt.Sprintf("fake%d.plantopo.com", i),
+		Host:  fmt.Sprintf("fake%d.plantopo.com", i),
 		RunId: uuid.MustParse(fmt.Sprintf("a0000000-0000-0000-0000-00000000000%d", i)),
 		Rdb:   s.rdb,
 		Wg:    wg,
@@ -170,7 +175,7 @@ func TestClosesEmptySession(t *testing.T) {
 	_, err = server1.Connect(ctx, mapA, noopOutgoingChan())
 	require.ErrorIs(t, err, ErrShouldTrySpecific{addr: "fake0.plantopo.com"})
 
-	time.Sleep(testIdleTimeout + time.Millisecond)
+	time.Sleep(testIdleTimeout * 2)
 
 	_, err = server1.Connect(ctx, mapA, noopOutgoingChan())
 	require.NoError(t, err)

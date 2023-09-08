@@ -37,8 +37,7 @@ func FromCtx(ctx context.Context) *zap.Logger {
 	} else if l := logger; l != nil {
 		return l
 	}
-
-	return zap.NewNop()
+	return Get()
 }
 
 func WithCtx(ctx context.Context, l *zap.Logger) context.Context {

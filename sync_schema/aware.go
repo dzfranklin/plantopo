@@ -5,8 +5,8 @@ import "github.com/google/uuid"
 type Aware struct {
 	ClientId         uuid.UUID `json:"clientId"` // changes every session
 	Name             string    `json:"name"`
-	Camera           Camera    `json:"camera"`
-	SelectedFeatures []string  `json:"selectedFeatures"`
+	Camera           *Camera   `json:"camera,omitempty"`
+	SelectedFeatures *[]string `json:"selectedFeatures,omitempty"`
 }
 
 type Camera struct {

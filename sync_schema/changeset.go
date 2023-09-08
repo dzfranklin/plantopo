@@ -6,7 +6,10 @@ type Changeset struct {
 	FDelete map[string]struct{}
 	// Newly added children must come after their newly added parents. This can
 	// be satisfied by simply recording adds in the order they happened.
-	FAdd map[string]struct{}
+	//
+	// Because order matters we can't use a map here. Instead we deduplicate on
+	// marshalling. But duplicate adds should be rare.
+	FAdd []string
 	FSet map[string]Feature
 	LSet map[string]Layer
 }
@@ -16,12 +19,16 @@ func (c *Changeset) Merge(incoming *Changeset) {
 		return
 	}
 	for id := range incoming.FDelete {
+		if c.FDelete == nil {
+			c.FDelete = make(map[string]struct{})
+		}
 		c.FDelete[id] = struct{}{}
 	}
-	for id := range incoming.FAdd {
-		c.FAdd[id] = struct{}{}
-	}
+	c.FAdd = append(c.FAdd, incoming.FAdd...)
 	for k, v := range incoming.FSet {
+		if c.FSet == nil {
+			c.FSet = make(map[string]Feature)
+		}
 		if existing, ok := c.FSet[k]; ok {
 			existing.Merge(v)
 			c.FSet[k] = existing
@@ -30,6 +37,9 @@ func (c *Changeset) Merge(incoming *Changeset) {
 		}
 	}
 	for k, v := range incoming.LSet {
+		if c.LSet == nil {
+			c.LSet = make(map[string]Layer)
+		}
 		if existing, ok := c.LSet[k]; ok {
 			existing.Merge(v)
 			c.LSet[k] = existing
@@ -40,16 +50,25 @@ func (c *Changeset) Merge(incoming *Changeset) {
 }
 
 type dto struct {
-	FDelete []string           `json:"fdelete"`
-	FAdd    []string           `json:"fadd"`
-	FSet    map[string]Feature `json:"fset"`
-	LSet    map[string]Layer   `json:"lset"`
+	FDelete []string           `json:"fdelete,omitempty"`
+	FAdd    []string           `json:"fadd,omitempty"`
+	FSet    map[string]Feature `json:"fset,omitempty"`
+	LSet    map[string]Layer   `json:"lset,omitempty"`
 }
 
 func (c Changeset) MarshalJSON() ([]byte, error) {
+	adds := make([]string, 0, len(c.FAdd))
+	addsSeen := make(map[string]struct{})
+	for _, id := range c.FAdd {
+		if _, ok := addsSeen[id]; ok {
+			continue
+		}
+		addsSeen[id] = struct{}{}
+		adds = append(adds, id)
+	}
 	return json.Marshal(dto{
 		FDelete: keys(c.FDelete),
-		FAdd:    keys(c.FAdd),
+		FAdd:    adds,
 		FSet:    c.FSet,
 		LSet:    c.LSet,
 	})
@@ -60,14 +79,13 @@ func (c *Changeset) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &dto); err != nil {
 		return err
 	}
-	c.FDelete = make(map[string]struct{})
-	for _, id := range dto.FDelete {
-		c.FDelete[id] = struct{}{}
+	if dto.FDelete != nil {
+		c.FDelete = make(map[string]struct{})
+		for _, id := range dto.FDelete {
+			c.FDelete[id] = struct{}{}
+		}
 	}
-	c.FAdd = make(map[string]struct{})
-	for _, id := range dto.FAdd {
-		c.FAdd[id] = struct{}{}
-	}
+	c.FAdd = dto.FAdd
 	c.FSet = dto.FSet
 	c.LSet = dto.LSet
 	return nil
