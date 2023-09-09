@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/danielzfranklin/plantopo/mapsync/store"
+	"github.com/danielzfranklin/plantopo/mapsync/repo"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
@@ -16,7 +16,7 @@ type Config struct {
 	RunId      uuid.UUID // random if uuid.Nil
 	Rdb        *redis.Client
 	Wg         *sync.WaitGroup // optional
-	Db         store.Db
+	Repo       repo.Repo
 	Matchmaker struct {
 		LockExpiry time.Duration // default if 0
 	}

@@ -1,0 +1,5 @@
+Hi {{.FullName}}
+
+Confirm your email address to get started with PlanTopo.
+
+Click or paste this link: {{.ConfirmUrl}}

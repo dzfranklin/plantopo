@@ -1,4 +1,4 @@
-package store
+package repo
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type Db interface {
+type Repo interface {
 	GetMapSnapshot(ctx context.Context, mapId uuid.UUID) ([]byte, error)
 	SetMapSnapshot(ctx context.Context, mapId uuid.UUID, value []byte) error
 }

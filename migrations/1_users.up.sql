@@ -1,0 +1,23 @@
+CREATE EXTENSION IF NOT EXISTS "citext";
+
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email CITEXT UNIQUE NOT NULL,
+  full_name TEXT NOT NULL,
+  hashed_password TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  confirmed_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE TABLE unsent_confirmation_emails (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  failed_at TIMESTAMP WITH TIME ZONE,
+  claimed_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE email_confirmation_tokens (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  token UUID NOT NULL DEFAULT gen_random_uuid(),
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);

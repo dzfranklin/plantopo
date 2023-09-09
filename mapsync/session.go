@@ -58,7 +58,7 @@ func newSession(
 	l := logger.FromCtx(ctx).Named("newSession").With(zap.String("mapId", mapId.String()))
 
 	l.Info("loading store")
-	store, err := store.Load(ctx, c.Db, mapId)
+	store, err := store.Load(ctx, c.Repo, mapId)
 	if err != nil {
 		return session{}, err
 	}

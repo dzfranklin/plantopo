@@ -8,6 +8,7 @@ import (
 	"github.com/danielzfranklin/plantopo/server/session"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -15,6 +16,7 @@ import (
 type Services struct {
 	Matchmaker     *mapsync.Matchmaker
 	Redis          *redis.Client
+	Postgres       *pgxpool.Pool
 	SessionManager *session.SessionManager
 }
 

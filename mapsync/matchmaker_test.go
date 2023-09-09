@@ -96,7 +96,7 @@ func CreateSubject(ctx context.Context, s *setup, wg *sync.WaitGroup) *Matchmake
 		RunId: uuid.MustParse(fmt.Sprintf("a0000000-0000-0000-0000-00000000000%d", i)),
 		Rdb:   s.rdb,
 		Wg:    wg,
-		Db:    s.db,
+		Repo:  s.db,
 	}
 	config.Matchmaker.LockExpiry = testLockExpiry
 	config.Session.EmptyTimeout = testIdleTimeout

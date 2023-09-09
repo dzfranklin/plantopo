@@ -71,3 +71,9 @@ install-server-deps:
   cd web && mix local.hex --force
   cd web && mix deps.get
   cd web && mix deps.compile
+
+migrate *ARGS:
+  docker run -v ./migrations:/migrations --network host migrate/migrate \
+    -path=/migrations/ \
+    -database postgres://postgres:postgres@localhost:5432/plantopo_api_dev \
+    {{ ARGS }}

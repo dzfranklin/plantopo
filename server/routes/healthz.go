@@ -23,7 +23,15 @@ func (s *Services) healthzHandler(w http.ResponseWriter, r *http.Request) {
 		"matchmaker": func() bool {
 			return s.Matchmaker.Healthz(ctx)
 		},
-		"postgres": func() bool { return true }, // TODO:
+		"postgres": func() bool {
+			rows, err := s.Postgres.Query(ctx, "SELECT 1")
+			if err != nil {
+				l.Error("postgres health check failed", zap.Error(err))
+				return false
+			}
+			defer rows.Close()
+			return true
+		},
 	}
 
 	output := make(map[string]bool)

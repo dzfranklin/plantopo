@@ -10,6 +10,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/danielzfranklin/plantopo/mapsync/repo"
 	schema "github.com/danielzfranklin/plantopo/sync_schema"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -18,7 +19,7 @@ import (
 type Store struct {
 	mu              sync.Mutex
 	rng             *rand.Rand
-	db              Db
+	repo            repo.Repo
 	mapId           uuid.UUID
 	layers          map[string]*schema.Layer
 	layerOrder      map[string]*schema.Layer // by idx
@@ -35,8 +36,8 @@ type fnode struct {
 	value    *schema.Feature
 }
 
-func Load(ctx context.Context, db Db, mapId uuid.UUID) (*Store, error) {
-	value, err := db.GetMapSnapshot(ctx, mapId)
+func Load(ctx context.Context, r repo.Repo, mapId uuid.UUID) (*Store, error) {
+	value, err := r.GetMapSnapshot(ctx, mapId)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +54,7 @@ func Load(ctx context.Context, db Db, mapId uuid.UUID) (*Store, error) {
 
 	store := &Store{
 		rng:             rng,
-		db:              db,
+		repo:            r,
 		mapId:           mapId,
 		layers:          make(map[string]*schema.Layer),
 		layerOrder:      make(map[string]*schema.Layer),
@@ -210,7 +211,7 @@ func (s *Store) Save(ctx context.Context) error {
 		return err
 	}
 	s.hasUnsaved = false
-	return s.db.SetMapSnapshot(ctx, s.mapId, value)
+	return s.repo.SetMapSnapshot(ctx, s.mapId, value)
 }
 
 func idxCollisionFix[V any](rng *rand.Rand, indexMap map[string]V, colliding string) string {

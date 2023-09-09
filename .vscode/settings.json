@@ -18,7 +18,7 @@
     "files.associations": {
         "*.leex": "html-eex",
         "*.eex": "html-eex",
-        "*.sql": "sqlite",
+        "*.sql": "sql",
         "*.heex": "phoenix-heex",
         "iosfwd": "cpp",
         "optional": "cpp",

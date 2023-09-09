@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,6 +16,8 @@ import (
 	"github.com/danielzfranklin/plantopo/mapsync"
 	"github.com/danielzfranklin/plantopo/server/routes"
 	"github.com/gorilla/securecookie"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -23,6 +26,13 @@ func main() {
 	l := logger.Get()
 	defer l.Sync()
 	ctx := logger.WithCtx(context.Background(), l)
+
+	if os.Getenv("APP_ENV") == "development" {
+		err := godotenv.Load("../.env")
+		if err != nil {
+			log.Fatal("Error loading .env file")
+		}
+	}
 
 	genSessionAuthKey := flag.Bool("gen-session-auth-key", false, "")
 	flag.Parse()
@@ -46,6 +56,11 @@ func main() {
 		Addr: os.Getenv("REDIS_ADDR"),
 	})
 
+	pg, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	if err != nil {
+		l.Fatal("error connecting to postgres", zap.Error(err))
+	}
+
 	l.Info("Starting matchmaker")
 	matchmakerCtx, cancelMatchmaker := context.WithCancel(ctx)
 	matchmaker := mapsync.NewMatchmaker(matchmakerCtx, mapsync.Config{
@@ -55,8 +70,9 @@ func main() {
 	})
 
 	router := routes.New(&routes.Services{
-		Matchmaker: &matchmaker,
 		Redis:      redis,
+		Postgres:   pg,
+		Matchmaker: &matchmaker,
 	})
 	server := &http.Server{
 		Addr:    fmt.Sprintf("%s:%s", host, port),
