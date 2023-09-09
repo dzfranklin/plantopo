@@ -6,9 +6,10 @@ tm: test-sources
 te: test-engine
 ts: test-server
 ta: test-app
+tg: test-go
 
-tsyncserver:
-  go test ./server/mapsync -race
+test-go:
+  go test ./... -race
 
 syncschema:
   cd ./sync_schema && go run ./gen
