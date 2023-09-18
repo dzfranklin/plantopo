@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/danielzfranklin/plantopo/api/logger"
-	"github.com/danielzfranklin/plantopo/api/user"
+	"github.com/danielzfranklin/plantopo/api/types"
 	"github.com/danielzfranklin/plantopo/api/users"
 	"go.uber.org/zap"
 )
@@ -20,44 +20,43 @@ func (s *Services) sessionHandler(w http.ResponseWriter, r *http.Request) {
 	case "DELETE":
 		s.deleteSessionHandler(w, r)
 	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		writeMethodNotAllowed(w)
 	}
 }
 
-type userReply struct {
-	User *user.User `json:"user"`
+type sessionReply struct {
+	User *types.User `json:"user"`
 }
 
 func (s *Services) getSessionHandler(w http.ResponseWriter, r *http.Request) {
-	l := logger.FromCtx(r.Context()).Named("getSessionHandler")
+	l := logger.FromR(r)
 	session, err := s.SessionManager.Get(r)
 	if err != nil {
-		l.Error("failed to get session", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
+		writeInternalError(w, err)
 		return
 	}
+
 	if session == nil {
-		w.WriteHeader(http.StatusNotFound)
+		l.Info("no session")
+		writeData(w, sessionReply{})
 		return
 	}
 
 	user, err := s.Users.Get(r.Context(), session.UserId)
 	if err != nil {
-		l.Error("failed to get logged in user", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		if errors.Is(err, users.ErrNotFound) {
+			l.Info("session user not found ", zap.String("userId", user.Id.String()))
+			s.SessionManager.Delete(r, w)
+			writeData(w, sessionReply{})
+			return
+		} else {
+			writeInternalError(w, err)
+			return
+		}
 	}
 
-	out, err := json.Marshal(userReply{user})
-	if err != nil {
-		l.Error("failed to marshal json", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(out)
-	w.Write([]byte("\n"))
+	l.Info("got session", zap.String("userId", user.Id.String()))
+	writeData(w, sessionReply{user})
 }
 
 type createSessionRequest struct {
@@ -65,18 +64,11 @@ type createSessionRequest struct {
 	Password string `json:"password"`
 }
 
-type createSessionError struct {
-	Error *users.ErrLoginIssue `json:"error"`
-}
-
 func (s *Services) postSessionHandler(w http.ResponseWriter, r *http.Request) {
-	l := logger.FromCtx(r.Context()).Named("postSessionHandler")
-
 	var req createSessionRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		l.Info("failed to decode json", zap.Error(err))
-		w.WriteHeader(http.StatusBadRequest)
+		writeBadRequest(w)
 		return
 	}
 
@@ -88,48 +80,36 @@ func (s *Services) postSessionHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var errLoginIssue *users.ErrLoginIssue
 		if errors.As(err, &errLoginIssue) {
-			out, err := json.Marshal(createSessionError{errLoginIssue})
-			if err != nil {
-				l.Error("failed to marshal json", zap.Error(err))
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write(out)
+			writeError(w, &ErrorReply{
+				Code:    http.StatusUnauthorized,
+				Reason:  "badField",
+				Details: errLoginIssue,
+			})
 			return
 		} else {
-			l.Error("failed to check login", zap.Error(err))
-			w.WriteHeader(http.StatusInternalServerError)
+			writeInternalError(w, err)
 			return
 		}
 	}
 
 	err = s.SessionManager.Create(r, w, user.Id)
 	if err != nil {
-		l.Error("failed to create session", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	l.Info("created session", zap.String("userId", user.Id.String()))
-
-	out, err := json.Marshal(userReply{user})
-	if err != nil {
-		l.Error("failed to marshal json", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
+		writeInternalError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(out)
+	logger.FromR(r).Sugar().Info("created session", "userId", user.Id)
+	writeData(w, sessionReply{user})
 }
 
 func (s *Services) deleteSessionHandler(w http.ResponseWriter, r *http.Request) {
-	l := logger.FromCtx(r.Context()).Named("deleteSessionHandler")
-	err := s.SessionManager.Delete(r, w)
+	sess, err := s.SessionManager.Delete(r, w)
 	if err != nil {
-		l.Error("failed to delete session", zap.Error(err))
-		w.WriteHeader(http.StatusInternalServerError)
+		writeInternalError(w, err)
 		return
 	}
+	if sess != nil {
+		logger.FromR(r).Sugar().Info("deleted session", "userId", sess.UserId)
+	}
+	writeData(w, nil)
 }

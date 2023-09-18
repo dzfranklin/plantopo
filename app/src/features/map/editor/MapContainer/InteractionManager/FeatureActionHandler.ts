@@ -1,26 +1,26 @@
-import { SyncEngine } from '../../api/SyncEngine';
+import { EditorEngine } from '../../engine/EditorEngine';
 import { InteractionEvent, InteractionHandler } from './InteractionManager';
 
 export class FeatureHoverHandler implements InteractionHandler {
   cursor?: string | undefined;
 
-  onHover(evt: InteractionEvent, engine: SyncEngine): boolean {
+  onHover(evt: InteractionEvent, engine: EditorEngine): boolean {
     for (const hit of evt.queryHits()) {
       if (hit.minPixelsTo() < 0.5) {
-        engine.fSetHovered(hit.feature.id);
+        engine.setHovered(hit.feature.id);
         this.cursor = 'pointer';
         return true;
       }
     }
-    engine.fSetHovered(null);
+    engine.setHovered(null);
     this.cursor = undefined;
     return false;
   }
 
-  onPress(evt: InteractionEvent, engine: SyncEngine): boolean {
+  onPress(evt: InteractionEvent, engine: EditorEngine): boolean {
     for (const hit of evt.queryHits()) {
       if (hit.minPixelsTo() < 0.5) {
-        engine.fReplaceMySelection(hit.feature.id);
+        engine.toggleSelection(hit.feature.id, 'single');
         this.cursor = 'pointer';
         return true;
       }
@@ -29,17 +29,20 @@ export class FeatureHoverHandler implements InteractionHandler {
     return false;
   }
 
-  private dragging: number | null = null;
+  private dragging: string | null = null;
 
-  onDragStart(evt: InteractionEvent, engine: SyncEngine): boolean {
+  onDragStart(evt: InteractionEvent, engine: EditorEngine): boolean {
     for (const hit of evt.queryHits()) {
       if (!hit.feature.selectedByMe) continue;
       if (hit.feature.geometry?.type === 'Point' && hit.minPixelsTo() < 0.5) {
         this.dragging = hit.feature.id;
 
-        engine.fSetGeometry(hit.feature.id, {
-          type: 'Point',
-          coordinates: evt.unproject(),
+        engine.changeFeature({
+          id: hit.feature.id,
+          geometry: {
+            type: 'Point',
+            coordinates: evt.unproject(),
+          },
         });
 
         this.cursor = 'grabbing';
@@ -52,22 +55,28 @@ export class FeatureHoverHandler implements InteractionHandler {
   onDrag(
     evt: InteractionEvent,
     _delta: [number, number],
-    engine: SyncEngine,
+    engine: EditorEngine,
   ): boolean {
     if (this.dragging === null) return false;
-    engine.fSetGeometry(this.dragging, {
-      type: 'Point',
-      coordinates: evt.unproject(),
+    engine.changeFeature({
+      id: this.dragging,
+      geometry: {
+        type: 'Point',
+        coordinates: evt.unproject(),
+      },
     });
     return true;
   }
 
-  onDragEnd(evt: InteractionEvent, engine: SyncEngine): boolean {
+  onDragEnd(evt: InteractionEvent, engine: EditorEngine): boolean {
     if (this.dragging === null) return false;
 
-    engine.fSetGeometry(this.dragging, {
-      type: 'Point',
-      coordinates: evt.unproject(),
+    engine.changeFeature({
+      id: this.dragging,
+      geometry: {
+        type: 'Point',
+        coordinates: evt.unproject(),
+      },
     });
 
     this.dragging = null;

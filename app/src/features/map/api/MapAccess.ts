@@ -4,17 +4,21 @@ export type GeneralAccessLevel = 'restricted' | 'public';
 
 export type GeneralAccessRole = 'viewer' | 'editor';
 
-export type UserAccessRole = 'viewer' | 'editor' | 'owner';
+export type UserAccessRole = 'editor' | 'viewer';
 
-export type InviteRole = 'viewer' | 'editor';
-
-export interface UserAccessEntry extends User {
+export interface UserAccessEntry {
+  user: User;
   role: UserAccessRole;
 }
 
-export interface PutUserAccessEntry {
-  id: number;
-  role: UserAccessRole | null;
+export type PutUserAccessEntry = SetUserAccess | DeleteUserAccess;
+
+export interface SetUserAccess {
+  role: UserAccessRole;
+}
+
+export interface DeleteUserAccess {
+  delete: true;
 }
 
 export interface PendingInvite {
@@ -22,8 +26,15 @@ export interface PendingInvite {
   role: UserAccessRole;
 }
 
+export interface InviteRequest {
+  email: string;
+  role: UserAccessRole;
+  notify: boolean;
+  notifyMessage?: string;
+}
+
 export interface MapAccess {
-  id: number;
+  mapId: string;
   owner: User;
   generalAccessLevel: GeneralAccessLevel;
   generalAccessRole: GeneralAccessRole;
@@ -31,9 +42,10 @@ export interface MapAccess {
   pendingInvites: PendingInvite[];
 }
 
-export interface PutMapAccess {
-  id: number;
+export interface PutMapAccessRequest {
+  owner?: string;
   generalAccessLevel?: GeneralAccessLevel;
   generalAccessRole?: GeneralAccessRole;
-  userAccess?: PutUserAccessEntry[];
+  userAccess?: Record<string, PutUserAccessEntry>; // by userId
+  invite?: InviteRequest[];
 }

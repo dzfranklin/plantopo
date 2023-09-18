@@ -10,9 +10,17 @@ INSERT INTO
 VALUES
   (
     'dddddddd-dddd-dddd-dddd-000000000001',
-    'test@example.com',
-    'Test User',
+    'bob@test.plantopo.com',
+    'Bob Doe',
     '$2a$10$LMnYdddL3Vat3uNoKubsOefMtNBDcGvpq459V8fFQaM/.tWzm/GuC',
-    '2023-09-12T11:05:04+00:00',
-    '2023-09-12T11:50:19+00:00'
+    '2023-09-12T11:05:04Z',
+    '2023-09-12T11:50:19Z'
+  ),
+  (
+    'dddddddd-dddd-dddd-dddd-000000000002',
+    'alice@test.plantopo.com',
+    'Alice Doe',
+    '$2a$10$LMnYdddL3Vat3uNoKubsOefMtNBDcGvpq459V8fFQaM/.tWzm/GuC',
+    '2023-09-20T19:24:49Z',
+    null
   );

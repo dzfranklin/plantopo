@@ -4,20 +4,20 @@ import {
   DialogTrigger,
   TextField,
 } from '@adobe/react-spectrum';
-import { SyncEngine } from '../../api/SyncEngine';
 import EditIcon from '@spectrum-icons/workflow/Edit';
-import { useSceneFeature } from '../../api/useEngine';
+import { useSceneFeature } from '../../engine/useEngine';
+import { EditorEngine } from '../../engine/EditorEngine';
 
 export function EntryEditButton({
   fid,
   engine,
 }: {
-  fid: number;
-  engine: SyncEngine;
+  fid: string;
+  engine: EditorEngine;
 }) {
   return (
     <DialogTrigger type="popover">
-      <ActionButton aria-label="edit" isDisabled={!engine.canEdit} isQuiet>
+      <ActionButton aria-label="edit" isDisabled={!engine.mayEdit} isQuiet>
         <EditIcon />
       </ActionButton>
       <FeatureEditPopover key={fid} fid={fid} engine={engine} />
@@ -29,8 +29,8 @@ function FeatureEditPopover({
   fid,
   engine,
 }: {
-  fid: number;
-  engine: SyncEngine;
+  fid: string;
+  engine: EditorEngine;
 }) {
   const name = useSceneFeature(fid, (f) => f?.name ?? '');
   return (
@@ -38,7 +38,7 @@ function FeatureEditPopover({
       <TextField
         label="Name"
         value={name}
-        onChange={(value) => engine.fSetName(fid, value)}
+        onChange={(value) => engine.changeFeature({ id: fid, name: value })}
       />
     </Dialog>
   );

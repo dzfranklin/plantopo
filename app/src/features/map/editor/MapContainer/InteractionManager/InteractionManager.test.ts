@@ -1,14 +1,14 @@
-jest.mock('../../api/SyncEngine');
+jest.mock('../../engine/EditorEngine');
 jest.mock('../../CurrentCamera');
 
 import { InteractionManager } from './InteractionManager';
-import { SyncEngine } from '../../api/SyncEngine';
 import { CurrentCameraPosition } from '../../CurrentCamera';
 import { RenderFeature } from '../FeatureRenderer';
 import { add2 } from '@/generic/vector2';
-import { SceneFeature } from '../../api/SyncEngine/Scene';
+import { EditorEngine } from '../../engine/EditorEngine';
+import { SceneFeature } from '../../engine/Scene';
 
-const mockEngine = SyncEngine as jest.Mock<SyncEngine>;
+const mockEngine = EditorEngine as jest.Mock<EditorEngine>;
 const mockCamera =
   CurrentCameraPosition as any as jest.Mock<CurrentCameraPosition>;
 const mockMap = jest.fn();
@@ -23,12 +23,12 @@ class ResizeObserver {
 let camera: CurrentCameraPosition;
 let subject: InteractionManager;
 let container: HTMLDivElement;
-let engine: SyncEngine;
+let engine: EditorEngine;
 
 let nextFid = 1;
 const makeFeature = (props: Partial<RenderFeature> = {}): RenderFeature => ({
   ...props,
-  id: nextFid++,
+  id: `fake-${nextFid++}`,
   children: [],
   selectedByMe: false,
   selectedByPeers: null,
@@ -73,7 +73,7 @@ describe('queryHits', () => {
     subject.register(
       [
         makeFeature({
-          id: 1,
+          id: 'fake-1',
           geometry: { type: 'Point', coordinates: [0, 0] },
         }),
       ],
@@ -89,6 +89,6 @@ describe('queryHits', () => {
 
     expect(camera.unproject).toHaveBeenCalledTimes(1);
     expect(actual).toHaveLength(1);
-    expect(actual[0]!.id).toBe(1);
+    expect(actual[0]!.id).toBe('fake-1');
   });
 });

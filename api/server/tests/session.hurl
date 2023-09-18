@@ -1,6 +1,6 @@
 # TEST: A logged out user gets a 404 when trying to get the session 
 GET {{endpoint}}/api/v1/session
-HTTP 404
+HTTP 401
 
 # TEST: A logged out user gets a 200 when trying to delete the session
 DELETE {{endpoint}}/api/v1/session
@@ -11,32 +11,32 @@ HTTP 200
 POST {{endpoint}}/api/v1/session
 Content-Type: application/json
 {
-  "email": "test@example.com",
+  "email": "bob@test.plantopo.com",
   "password": "wrongpassword"
 }
 
 HTTP 401
 [Asserts]
 jsonpath "$.error.email" not exists
-jsonpath "$.error.password" == "is incorrect"
+jsonpath "$.error.details.password" == "is incorrect"
 
 # TEST: A user can log in
 
 POST {{endpoint}}/api/v1/session
 Content-Type: application/json
 {
-  "email": "test@example.com",
+  "email": "bob@test.plantopo.com",
   "password": "testpassword"
 }
 
 HTTP 200
 [Asserts]
 cookie "currentUser" exists
-jsonpath "$.user.id" == "dddddddd-dddd-dddd-dddd-000000000001"
-jsonpath "$.user.email" == "test@example.com"
-jsonpath "$.user.fullName" == "Test User"
-jsonpath "$.user.createdAt" == "2023-09-12T11:05:04Z"
-jsonpath "$.user.confirmedAt" == "2023-09-12T11:50:19Z"
+jsonpath "$.data.id" == "dddddddd-dddd-dddd-dddd-000000000001"
+jsonpath "$.data.email" == "bob@test.plantopo.com"
+jsonpath "$.data.fullName" == "Test User"
+jsonpath "$.data.createdAt" == "2023-09-12T11:05:04Z"
+jsonpath "$.data.confirmedAt" == "2023-09-12T11:50:19Z"
 
 # A logged in user can GET
 
@@ -44,8 +44,8 @@ GET {{endpoint}}/api/v1/session
 
 HTTP 200
 [Asserts]
-jsonpath "$.user.id" == "dddddddd-dddd-dddd-dddd-000000000001"
-jsonpath "$.user.fullName" == "Test User"
+jsonpath "$.data.id" == "dddddddd-dddd-dddd-dddd-000000000001"
+jsonpath "$.data.fullName" == "Test User"
 
 # A user can log out
 
@@ -57,4 +57,4 @@ HTTP 200
 # After logout a user cannot GET the session
 
 GET {{endpoint}}/api/v1/session
-HTTP 404
+HTTP 401

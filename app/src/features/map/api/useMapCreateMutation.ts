@@ -1,38 +1,23 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MapMeta } from './MapMeta';
-import { respToError } from '@/api/support';
+import { useQueryClient } from '@tanstack/react-query';
+import { MapMeta } from './mapMeta';
+import { apiMutationKey, useApiMutation } from '@/api/useApiMutation';
+import { mapsOwnedByMeKey } from './mapList';
 
-export interface MapCreateParams {
-  name?: string;
-  generalAccessLevel?: 'restricted' | 'public';
-  generalAccessRole?: 'viewer' | 'editor';
-}
-
-async function sendMapCreate(params: MapCreateParams): Promise<MapMeta> {
-  const resp = await fetch('/api/map/create', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(params),
-  });
-  if (resp.ok) {
-    return await resp.json();
-  } else {
-    throw await respToError(resp);
-  }
-}
+const CREATE_PATH = ['map'];
 
 export function useMapCreateMutation({
   onSuccess,
-}: { onSuccess?: (_: MapMeta) => void } = {}) {
+}: {
+  onSuccess?: (data: MapMeta) => void;
+}) {
   const client = useQueryClient();
-  return useMutation({
-    mutationKey: ['map', 'create'],
-    mutationFn: (params: MapCreateParams) => sendMapCreate(params),
+  return useApiMutation<MapMeta, unknown, void>({
+    path: CREATE_PATH,
     onSuccess: async (data) => {
-      client.invalidateQueries(['map', 'ownedByMe', 'meta']);
+      client.invalidateQueries(mapsOwnedByMeKey);
       onSuccess?.(data);
     },
   });
 }
+
+export const mapCreateKey = apiMutationKey({ path: CREATE_PATH });

@@ -1,9 +1,7 @@
 import { RenderFeature } from '../FeatureRenderer';
 import RBush from 'rbush';
 import { FGeometry } from '../../api/propTypes';
-import { BBox, bbox as computeBBox, nearestPointOnLine } from '@turf/turf';
-import { SceneFeature } from '../../api/SyncEngine/Scene';
-import { SyncEngine } from '../../api/SyncEngine';
+import { BBox, bbox as computeBBox } from '@turf/turf';
 import { CreateFeatureHandler } from './CreateFeatureHandler';
 import { CurrentCameraPosition } from '../../CurrentCamera';
 import { FeatureHoverHandler as FeatureActionHandler } from './FeatureActionHandler';
@@ -11,6 +9,8 @@ import { add2, magnitude2, sub2 } from '@/generic/vector2';
 import { clamp } from '@/generic/clamp';
 import * as ml from 'maplibre-gl';
 import { nearestPointInGeometry } from '../../nearestPointInFeature';
+import { SceneFeature } from '../../engine/Scene';
+import { EditorEngine } from '../../engine/EditorEngine';
 
 // TODO: Should this be a maplibre handler at the top?
 
@@ -92,25 +92,25 @@ class FeatureHitImpl implements FeatureHit {
 
 export interface InteractionHandler {
   cursor?: string;
-  onHover?: (evt: InteractionEvent, engine: SyncEngine) => boolean;
-  onPress?: (evt: InteractionEvent, engine: SyncEngine) => boolean;
-  onDragStart?: (evt: InteractionEvent, engine: SyncEngine) => boolean;
+  onHover?: (evt: InteractionEvent, engine: EditorEngine) => boolean;
+  onPress?: (evt: InteractionEvent, engine: EditorEngine) => boolean;
+  onDragStart?: (evt: InteractionEvent, engine: EditorEngine) => boolean;
   onDrag?: (
     evt: InteractionEvent,
     delta: [number, number],
-    engine: SyncEngine,
+    engine: EditorEngine,
   ) => boolean;
-  onDragEnd?: (evt: InteractionEvent, engine: SyncEngine) => boolean;
+  onDragEnd?: (evt: InteractionEvent, engine: EditorEngine) => boolean;
   // delta is negative for zooms out
   onZoom?: (
     evt: InteractionEvent,
     delta: number,
-    engine: SyncEngine,
+    engine: EditorEngine,
   ) => boolean;
 }
 
 interface IndexEntry {
-  id: number;
+  id: string;
   idx: number;
   // Required by rbush
   minX: number;
@@ -144,7 +144,7 @@ export class InteractionManager {
   private _rbush = new RBush<IndexEntry>();
   private _elem: HTMLElement;
   cam: CurrentCameraPosition;
-  private _engine: SyncEngine;
+  private _engine: EditorEngine;
   private _map: ml.Map;
 
   querySlop: [number, number] = [10, 10]; // In pixels
@@ -159,7 +159,7 @@ export class InteractionManager {
   private _resizeObserver: ResizeObserver;
 
   constructor(props: {
-    engine: SyncEngine;
+    engine: EditorEngine;
     initialCamera: CurrentCameraPosition;
     container: HTMLDivElement;
     map: ml.Map;

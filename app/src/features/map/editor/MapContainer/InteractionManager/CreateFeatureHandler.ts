@@ -1,19 +1,17 @@
-import { SyncEngine } from '../../api/SyncEngine';
+import { EditorEngine } from '../../engine/EditorEngine';
 import { InteractionEvent, InteractionHandler } from './InteractionManager';
-import * as GeoJSON from 'geojson';
 
 export class CreateFeatureHandler implements InteractionHandler {
   cursor = 'crosshair';
 
-  onPress(evt: InteractionEvent, engine: SyncEngine): boolean {
-    const geometry: GeoJSON.Point = {
-      type: 'Point',
-      coordinates: evt.unproject(),
-    };
-    const fid = engine.fCreate({
-      geometry,
+  onPress(evt: InteractionEvent, engine: EditorEngine): boolean {
+    const fid = engine.createFeature({
+      geometry: {
+        type: 'Point',
+        coordinates: evt.unproject(),
+      },
     });
-    engine.fReplaceMySelection(fid);
+    engine.toggleSelection(fid, 'single');
     return true;
   }
 }

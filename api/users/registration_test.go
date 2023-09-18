@@ -9,89 +9,79 @@ import (
 
 func TestValidateRegistration(t *testing.T) {
 	scenarios := []struct {
-		req  RegistraterRequest
+		req  RegisterRequest
 		want *ErrRegistrationIssue
 	}{
 		{
-			RegistraterRequest{},
+			RegisterRequest{},
 			&ErrRegistrationIssue{
-				Email:                "is required",
-				FullName:             "is required",
-				Password:             "is required",
-				PasswordConfirmation: "is required",
+				Email:    "is required",
+				FullName: "is required",
+				Password: "is required",
 			},
 		},
 		{
-			RegistraterRequest{
-				FullName:             "Test",
-				Password:             "testpassword",
-				PasswordConfirmation: "nottestpassword",
+			RegisterRequest{
+				FullName: "Test",
+				Password: "testpassword",
 			},
 			&ErrRegistrationIssue{
-				Email:                "is required",
-				PasswordConfirmation: "must match password",
+				Email: "is required",
 			},
 		},
 		{
-			RegistraterRequest{
-				FullName:             "Test",
-				Email:                "test@example.com",
-				Password:             "1",
-				PasswordConfirmation: "not1",
+			RegisterRequest{
+				FullName: "Test",
+				Email:    "bob@test.plantopo.com",
+				Password: "1",
 			},
 			&ErrRegistrationIssue{
-				Password:             "must be at least 8 characters",
-				PasswordConfirmation: "must match password",
+				Password: "must be at least 8 characters",
 			},
 		},
 		{
-			RegistraterRequest{
-				FullName:             "Test",
-				Email:                "test@example.com",
-				Password:             strings.Repeat("1", 73),
-				PasswordConfirmation: strings.Repeat("1", 73),
+			RegisterRequest{
+				FullName: "Test",
+				Email:    "bob@test.plantopo.com",
+				Password: strings.Repeat("1", 73),
 			},
 			&ErrRegistrationIssue{
 				Password: "must not be more than 72 characters",
 			},
 		},
 		{
-			RegistraterRequest{
-				FullName:             "Test",
-				Email:                "test@example.com",
-				Password:             "notascii☺️",
-				PasswordConfirmation: "notascii☺️",
+			RegisterRequest{
+				FullName: "Test",
+				Email:    "bob@test.plantopo.com",
+				Password: "notascii☺️",
 			},
 			&ErrRegistrationIssue{
-				Password: "may only contain letters, numbers, and symbols ~`! @#$%^&*()_-+={[}]|\\:;\"'<,>.?/",
+				Password: "may only contain English letters, numbers, and symbols ~`! @#$%^&*()_-+={[}]|\\:;\"'<,>.?/",
 			},
 		},
 		{
-			RegistraterRequest{
-				FullName:             "Test",
-				Email:                "test@example.com",
-				Password:             "Aa1~`! @#$%^&*()_-+={[}]|\\:;\"'<,>.?/",
-				PasswordConfirmation: "Aa1~`! @#$%^&*()_-+={[}]|\\:;\"'<,>.?/",
+			RegisterRequest{
+				FullName: "Test",
+				Email:    "bob@test.plantopo.com",
+				Password: "Aa1~`! @#$%^&*()_-+={[}]|\\:;\"'<,>.?/",
 			},
 			nil,
 		},
 		{
-			RegistraterRequest{
-				FullName:             "Test",
-				Email:                "invalid",
-				Password:             "Aa1~`! @#$%^&*()_-+={[}]|\\:;\"'<,>.?/",
-				PasswordConfirmation: "Aa1~`! @#$%^&*()_-+={[}]|\\:;\"'<,>.?/",
+			RegisterRequest{
+				FullName: "Test",
+				Email:    "invalid",
+				Password: "Aa1~`! @#$%^&*()_-+={[}]|\\:;\"'<,>.?/",
 			},
 			&ErrRegistrationIssue{
 				Email: "is invalid",
 			},
 		},
 		{
-			RegistraterRequest{
-				FullName:             strings.Repeat("a", 256),
-				Email:                strings.Repeat("a", 256) + "@example.com",
-				Password:             strings.Repeat("1", 73),
-				PasswordConfirmation: strings.Repeat("1", 73),
+			RegisterRequest{
+				FullName: strings.Repeat("a", 256),
+				Email:    strings.Repeat("a", 256) + "@example.com",
+				Password: strings.Repeat("1", 73),
 			},
 			&ErrRegistrationIssue{
 				FullName: "must not be more than 255 characters",

@@ -8,8 +8,9 @@ import (
 
 	"github.com/danielzfranklin/plantopo/api/db"
 	"github.com/danielzfranklin/plantopo/api/logger"
+	"github.com/danielzfranklin/plantopo/api/mailer"
 	"github.com/danielzfranklin/plantopo/api/testutil"
-	"github.com/danielzfranklin/plantopo/api/user"
+	"github.com/danielzfranklin/plantopo/api/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -26,15 +27,32 @@ type S struct {
 }
 
 type mockMailer struct {
-	confirm func(user user.User, token string) error
+	confirms map[uuid.UUID]string
+	resets   map[uuid.UUID]string
 }
 
-func (m *mockMailer) SendConfirmation(user user.User, token string) error {
-	if m.confirm != nil {
-		return m.confirm(user, token)
-	} else {
-		return nil
+func (m *mockMailer) SendConfirmation(user *types.User, token string) error {
+	if m.confirms == nil {
+		m.confirms = make(map[uuid.UUID]string)
 	}
+	m.confirms[user.Id] = token
+	return nil
+}
+
+func (m *mockMailer) SendPasswordReset(user *types.User, token string) error {
+	if m.resets == nil {
+		m.resets = make(map[uuid.UUID]string)
+	}
+	m.resets[user.Id] = token
+	return nil
+}
+
+func (m *mockMailer) SendShareNotification(req mailer.ShareNotificationRequest) error {
+	return nil
+}
+
+func (m *mockMailer) SendInvite(req mailer.InviteRequest) error {
+	return nil
 }
 
 var validName = "Test User"
@@ -58,17 +76,17 @@ func (s *S) SetupTest() {
 
 type noopSender struct{}
 
-func (s *noopSender) SendConfirmation(user user.User, token string) error {
+func (s *noopSender) Send(p mailer.Payload) error {
 	return nil
 }
 
 func (s *S) makeSubject() (*impl, func()) {
 	ctx, cancel := context.WithCancel(s.ctx)
 	cleanup := func() {
-		fmt.Println("starting subject cleanup")
 		cancel()
 	}
-	subject := NewService(ctx, s.pg, &noopSender{})
+	mailer := mailer.New(ctx, mailer.Config{Sender: &noopSender{}})
+	subject := NewService(ctx, s.pg, mailer)
 	return subject.(*impl), cleanup
 }
 
@@ -77,14 +95,14 @@ func (s *S) TestGetNonexistant() {
 	defer cleanup()
 
 	got, err := subject.Get(s.ctx, uuid.New())
-	require.ErrorIs(s.T(), err, &ErrNotFound{})
+	require.ErrorIs(s.T(), err, ErrNotFound)
 	require.Nil(s.T(), got)
 }
 
 func (s *S) TestRegisterTaken() {
 	subject, cleanup := s.makeSubject()
 	defer cleanup()
-	reg := s.validReq()
+	reg := s.validRegisterRequest()
 
 	user, err := subject.Register(reg)
 	require.NoError(s.T(), err)
@@ -101,96 +119,175 @@ func (s *S) TestNewlyRegisteredUserHasNullConfirmedAt() {
 	subject, cleanup := s.makeSubject()
 	defer cleanup()
 
-	user, err := subject.Register(s.validReq())
+	user, err := subject.Register(s.validRegisterRequest())
 	require.NoError(s.T(), err)
 	require.False(s.T(), user.ConfirmedAt.Valid)
 }
 
 func (s *S) TestMailsConfirmation() {
 	ctx, cancel := context.WithCancel(s.ctx)
-	defer func() {
-		cancel()
-	}()
-	confirms := make(chan user.User, 1)
-	mailer := &mockMailer{confirm: func(user user.User, token string) error {
-		confirms <- user
-		return nil
-	}}
+	defer cancel()
+	mailer := &mockMailer{}
 	subject := NewService(ctx, s.pg, mailer)
 
-	user, err := subject.Register(s.validReq())
+	user, err := subject.Register(s.validRegisterRequest())
 	require.NoError(s.T(), err)
 	fmt.Printf("user: %+v\n", user)
 
-	confirm := <-confirms
-	require.Equal(s.T(), user.Id, confirm.Id)
+	got := mailer.confirms[user.Id]
+	require.NotNil(s.T(), got)
 }
 
 func (s *S) TestConfirmExpired() {
 	ctx, cancel := context.WithCancel(s.ctx)
-	defer func() {
-		cancel()
-	}()
-	tokens := make(chan string, 1)
-	mailer := &mockMailer{confirm: func(user user.User, token string) error {
-		tokens <- token
-		return nil
-	}}
+	defer cancel()
+	mailer := &mockMailer{}
 	subject := NewService(ctx, s.pg, mailer)
 	subject.(*impl).tokenExpiry = time.Nanosecond
 
-	_, err := subject.Register(s.validReq())
+	user, err := subject.Register(s.validRegisterRequest())
 	require.NoError(s.T(), err)
 
-	token := <-tokens
+	token := mailer.confirms[user.Id]
 	_, err = subject.Confirm(token)
-	require.ErrorIs(s.T(), err, &ErrTokenExpired{})
+	require.ErrorIs(s.T(), err, ErrTokenExpired)
+}
+
+func (s *S) TestConfirmInvalid() {
+	subject, cleanup := s.makeSubject()
+	defer cleanup()
+	_, err := subject.Confirm("invalid token")
+	require.ErrorIs(s.T(), err, ErrNotFound)
 }
 
 func (s *S) TestConfirm() {
 	ctx, cancel := context.WithCancel(s.ctx)
-	defer func() {
-		cancel()
-	}()
-	tokens := make(chan string, 1)
-	mailer := &mockMailer{confirm: func(user user.User, token string) error {
-		tokens <- token
-		return nil
-	}}
+	defer cancel()
+	mailer := &mockMailer{}
 	subject := NewService(ctx, s.pg, mailer)
 
-	user, err := subject.Register(s.validReq())
+	user, err := subject.Register(s.validRegisterRequest())
 	require.NoError(s.T(), err)
 
-	token := <-tokens
+	token := mailer.confirms[user.Id]
 	confirmed, err := subject.Confirm(token)
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), user.Id, confirmed)
+
+	_, err = subject.Confirm(token)
+	require.Error(s.T(), err)
+	require.ErrorIs(s.T(), err, ErrTokenUsed)
+
+	got, err := subject.Get(s.ctx, user.Id)
+	require.NoError(s.T(), err)
+	require.True(s.T(), got.ConfirmedAt.Valid)
+}
+
+func (s *S) TestRerequestConfirmation() {
+	ctx, cancel := context.WithCancel(s.ctx)
+	defer cancel()
+	mailer := &mockMailer{}
+	subject := NewService(ctx, s.pg, mailer)
+
+	user, err := subject.Register(s.validRegisterRequest())
+	require.NoError(s.T(), err)
+	token1 := mailer.confirms[user.Id]
+
+	err = subject.RerequestConfirmation(user.Email)
+	require.NoError(s.T(), err)
+	token2 := mailer.confirms[user.Id]
+
+	require.NotEqual(s.T(), token1, token2)
+
+	confirmed, err := subject.Confirm(token2)
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), user.Id, confirmed)
 }
 
-func (s *S) TestConfirmAlreadyUsed() {
+func (s *S) TestRequestPasswordReset() {
+	cases := []struct {
+		email string
+		err   error
+	}{
+		{"nonexistant@example.com", ErrNotFound},
+		{s.validUnconfirmedUser().Email, nil},
+		{s.validUser().Email, nil},
+	}
+	for _, c := range cases {
+		subject, cleanup := s.makeSubject()
+		defer cleanup()
+
+		err := subject.RequestPasswordReset(c.email)
+		if c.err == nil {
+			require.NoError(s.T(), err)
+		} else {
+			require.ErrorIs(s.T(), err, c.err)
+		}
+	}
+}
+
+func (s *S) TestResetPasswordExpiredToken() {
 	ctx, cancel := context.WithCancel(s.ctx)
-	defer func() {
-		cancel()
-	}()
-	tokens := make(chan string, 1)
-	mailer := &mockMailer{confirm: func(user user.User, token string) error {
-		tokens <- token
-		return nil
-	}}
+	defer cancel()
+	mailer := &mockMailer{}
 	subject := NewService(ctx, s.pg, mailer)
+	subject.(*impl).tokenExpiry = time.Nanosecond
+	user := s.validUser()
 
-	user, err := subject.Register(s.validReq())
+	err := subject.RequestPasswordReset(user.Email)
 	require.NoError(s.T(), err)
-	token := <-tokens
+	token := mailer.resets[user.Id]
+	require.NotEmpty(s.T(), token)
 
-	confirm1, err := subject.Confirm(token)
-	require.NoError(s.T(), err)
-	require.Equal(s.T(), user.Id, confirm1)
+	_, err = subject.ResetPassword(token, "new password")
+	require.ErrorIs(s.T(), err, ErrTokenExpired)
+}
 
-	confirm2, err := subject.Confirm(token)
+func (s *S) TestResetPasswordInvalidToken() {
+	subject, cleanup := s.makeSubject()
+	defer cleanup()
+	user := s.validUser()
+
+	err := subject.RequestPasswordReset(user.Email)
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), user.Id, confirm2)
+
+	_, err = subject.CheckPasswordReset(s.ctx, "invalid token")
+	require.ErrorIs(s.T(), err, ErrNotFound)
+
+	_, err = subject.ResetPassword("invalid token", "new password")
+	require.ErrorIs(s.T(), err, ErrNotFound)
+}
+
+func (s *S) TestResetPassword() {
+	ctx, cancel := context.WithCancel(s.ctx)
+	defer cancel()
+	mailer := &mockMailer{}
+	subject := NewService(ctx, s.pg, mailer)
+	user := s.validUser()
+
+	err := subject.RequestPasswordReset(user.Email)
+	require.NoError(s.T(), err)
+	token := mailer.resets[user.Id]
+	require.NotEmpty(s.T(), token)
+
+	checkReply, err := subject.CheckPasswordReset(s.ctx, token)
+	require.NoError(s.T(), err)
+	require.Equal(s.T(), user, checkReply)
+
+	_, err = subject.CheckLogin(s.ctx, LoginRequest{
+		Email:    user.Email,
+		Password: "new password",
+	})
+	require.Error(s.T(), err)
+
+	_, err = subject.ResetPassword(token, "new password")
+	require.NoError(s.T(), err)
+
+	_, err = subject.CheckLogin(s.ctx, LoginRequest{
+		Email:    user.Email,
+		Password: "new password",
+	})
+	require.NoError(s.T(), err)
 }
 
 func (s *S) TestCheckLoginNonexistantEmail() {
@@ -209,7 +306,7 @@ func (s *S) TestCheckLoginNonexistantEmail() {
 func (s *S) TestCheckLoginWrongPassword() {
 	subject, cleanup := s.makeSubject()
 	defer cleanup()
-	reg := s.validReq()
+	reg := s.validRegisterRequest()
 
 	_, err := subject.Register(reg)
 	require.NoError(s.T(), err)
@@ -226,7 +323,7 @@ func (s *S) TestCheckLoginWrongPassword() {
 func (s *S) TestCheckLogin() {
 	subject, cleanup := s.makeSubject()
 	defer cleanup()
-	reg := s.validReq()
+	reg := s.validRegisterRequest()
 
 	user, err := subject.Register(reg)
 	require.NoError(s.T(), err)
@@ -239,17 +336,41 @@ func (s *S) TestCheckLogin() {
 	require.Equal(s.T(), user.Id, got.Id)
 }
 
-func (s *S) validEmail() string {
+func (s *S) validUnregisteredEmail() string {
 	email := fmt.Sprintf("test%d@example.com", s.nextEmail)
 	s.nextEmail++
 	return email
 }
 
-func (s *S) validReq() RegistraterRequest {
-	return RegistraterRequest{
-		Email:                s.validEmail(),
-		FullName:             validName,
-		Password:             validPassword,
-		PasswordConfirmation: validPassword,
+func (s *S) validRegisterRequest() RegisterRequest {
+	return RegisterRequest{
+		Email:    s.validUnregisteredEmail(),
+		FullName: validName,
+		Password: validPassword,
 	}
+}
+
+func (s *S) validUnconfirmedUser() *types.User {
+	subject, cleanup := s.makeSubject()
+	defer cleanup()
+
+	user, err := subject.Register(s.validRegisterRequest())
+	require.NoError(s.T(), err)
+	return user
+}
+
+func (s *S) validUser() *types.User {
+	subject, cleanup := s.makeSubject()
+	defer cleanup()
+
+	user, err := subject.Register(s.validRegisterRequest())
+	require.NoError(s.T(), err)
+
+	err = subject.forceConfirm(user.Id)
+	require.NoError(s.T(), err)
+
+	user, err = subject.Get(s.ctx, user.Id)
+	require.NoError(s.T(), err)
+
+	return user
 }

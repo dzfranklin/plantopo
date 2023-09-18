@@ -1,4 +1,3 @@
-import { SyncEngine } from '../../api/SyncEngine';
 import {
   DragEventHandler,
   RefObject,
@@ -9,20 +8,21 @@ import {
 } from 'react';
 import AddAtIcon from '@spectrum-icons/workflow/Add';
 import './FeatureTree.css';
-import { useSceneSelector } from '../../api/useEngine';
+import { useSceneSelector } from '../../engine/useEngine';
 import { shallowArrayEq } from '@/generic/equality';
 import { TreeEntry } from './TreeEntry';
+import { EditorEngine } from '../../engine/EditorEngine';
 
 export const CHILD_INDENT_PX = 16;
 export const INDICATOR_BORDER_PX = 2;
 
 interface DragTarget {
   at: 'before' | 'after' | 'firstChild';
-  target: number;
+  target: string;
   elem: HTMLElement;
 }
 
-export function FeatureTree({ engine }: { engine: SyncEngine }) {
+export function FeatureTree({ engine }: { engine: EditorEngine }) {
   const rootRef = useRef<HTMLUListElement>(null);
   const dragAtElemRef = useRef<HTMLDivElement>(null);
 
@@ -31,7 +31,7 @@ export function FeatureTree({ engine }: { engine: SyncEngine }) {
 
   useEffect(() => {
     const l = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') engine.fClearMySelection();
+      if (evt.key === 'Escape') engine.clearSelection();
     };
     window.addEventListener('keyup', l);
     return () => window.removeEventListener('keyup', l);
@@ -75,7 +75,7 @@ function useFeatureTreeInteractivity({
   rootRef,
   dragAtElemRef,
 }: {
-  engine: SyncEngine;
+  engine: EditorEngine;
   rootRef: RefObject<HTMLUListElement>;
   dragAtElemRef: RefObject<HTMLDivElement>;
 }): {
@@ -90,28 +90,25 @@ function useFeatureTreeInteractivity({
 
   const onDragStart = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
-      if (!engine.canEdit) return;
+      if (!engine.mayEdit) return;
       const rootElem = rootRef.current;
       const dragAtElem = dragAtElemRef.current;
       if (!rootElem || !dragAtElem) return;
 
       if (!(evt.target instanceof HTMLElement)) return;
       if (evt.target.dataset.fid === undefined) return;
-      const dragTargetId = parseInt(evt.target.dataset.fid, 10);
+      const dragTargetId = evt.target.dataset.fid;
 
       // Add the dragged element to targets if necessary
-      let dragTargetIncluded = engine.fIsSelectedByMe(dragTargetId);
+      let dragTargetIncluded = engine.isSelectedByMe(dragTargetId);
       if (!dragTargetIncluded) {
-        dragTargetIncluded = engine.fHasAncestorSelectedByMe(dragTargetId);
+        dragTargetIncluded = engine.hasAncestorSelectedByMe(dragTargetId);
       }
       if (!dragTargetIncluded) {
         if (evt.shiftKey) {
-          engine.fAddToMySelection(dragTargetId);
+          engine.toggleSelection(dragTargetId, 'single');
         } else {
-          engine.startTransaction();
-          engine.fClearMySelection();
-          engine.fAddToMySelection(dragTargetId);
-          engine.commitTransaction();
+          engine.toggleSelection(dragTargetId, 'multi');
         }
       }
 
@@ -133,18 +130,18 @@ function useFeatureTreeInteractivity({
 
   const onDragEnter = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
-      if (!engine.canEdit) return;
+      if (!engine.mayEdit) return;
       if (evt.dataTransfer.types.includes('x/pt')) {
         return;
       }
       evt.preventDefault();
     },
-    [engine.canEdit],
+    [engine.mayEdit],
   );
 
   const onDragOver = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
-      if (!engine.canEdit) return;
+      if (!engine.mayEdit) return;
       if (evt.dataTransfer.types.includes('x/pt')) {
         return;
       }
@@ -165,7 +162,7 @@ function useFeatureTreeInteractivity({
         if (!(targetElem instanceof HTMLElement)) return;
       }
 
-      const targetId = parseInt(targetElem.dataset.fid, 10);
+      const targetId = targetElem.dataset.fid;
 
       let targetPlace: DragTarget['at'];
       const targetRect = targetElem.getBoundingClientRect();
@@ -187,12 +184,12 @@ function useFeatureTreeInteractivity({
 
       evt.preventDefault();
     },
-    [dragAtElemRef, engine.canEdit, rootRef],
+    [dragAtElemRef, engine.mayEdit, rootRef],
   );
 
   const onDrop = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
-      if (!engine.canEdit) return;
+      if (!engine.mayEdit) return;
       const target = dragTargetRef.current;
       if (
         evt.dataTransfer.getData('x-pt/features') !== 'selected' ||
@@ -203,13 +200,11 @@ function useFeatureTreeInteractivity({
       const targetNode = engine.getFeature(target.target);
       if (!targetNode) return;
 
-      engine.startTransaction();
-      engine.fMoveSelectedByMe({
+      engine.moveSelected({
         at: target.at,
         target: targetNode,
       });
-      engine.fClearMySelection();
-      engine.commitTransaction();
+      engine.clearSelection();
 
       dragTargetRef.current = null;
       rootRef.current?.classList.remove('dragging');

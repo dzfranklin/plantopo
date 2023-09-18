@@ -1,12 +1,12 @@
-import { SyncEngine } from '../../api/SyncEngine';
 import { useEffect, useRef } from 'react';
 import cls from '@/generic/cls';
 import './FeatureTree.css';
-import { nameForUnnamedFeature } from '../../api/SyncEngine/Scene';
+import { nameForUnnamedFeature } from '../../engine/Scene';
 import { EntryEditButton } from './EntryEditButton';
-import { useSceneFeature } from '../../api/useEngine';
+import { useSceneFeature } from '../../engine/useEngine';
 import { shallowArrayEq } from '@/generic/equality';
 import { CHILD_INDENT_PX, INDICATOR_BORDER_PX } from './FeatureTree';
+import { EditorEngine } from '../../engine/EditorEngine';
 
 const VERTICAL_GAP_PX = 2;
 
@@ -19,8 +19,8 @@ export function TreeEntry({
   fid,
   engine,
 }: {
-  fid: number;
-  engine: SyncEngine;
+  fid: string;
+  engine: EditorEngine;
 }) {
   const selectedByMe = useSceneFeature(fid, (f) => f?.selectedByMe);
 
@@ -30,13 +30,9 @@ export function TreeEntry({
       data-fid={fid}
       onClick={(evt) => {
         if (evt.shiftKey) {
-          engine.fToggleSelectedByMe(fid);
+          engine.toggleSelection(fid, 'multi');
         } else {
-          if (engine.fIsSelectedByMe(fid)) {
-            engine.fClearMySelection();
-          } else {
-            engine.fReplaceMySelection(fid);
-          }
+          engine.toggleSelection(fid, 'single');
         }
         evt.stopPropagation();
       }}
@@ -52,7 +48,7 @@ export function TreeEntry({
   );
 }
 
-function EntryItself({ fid, engine }: { fid: number; engine: SyncEngine }) {
+function EntryItself({ fid, engine }: { fid: string; engine: EditorEngine }) {
   const ref = useRef<HTMLDivElement>(null);
 
   const name = useSceneFeature(fid, (f) =>
@@ -81,7 +77,7 @@ function EntryItself({ fid, engine }: { fid: number; engine: SyncEngine }) {
   );
 }
 
-function EntryChildren({ fid, engine }: { fid: number; engine: SyncEngine }) {
+function EntryChildren({ fid, engine }: { fid: string; engine: EditorEngine }) {
   const children = useSceneFeature(
     fid,
     (f) => f?.children?.map((f) => f.id),

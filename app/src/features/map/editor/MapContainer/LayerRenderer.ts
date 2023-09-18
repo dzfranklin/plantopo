@@ -1,6 +1,6 @@
-import { Scene } from '../api/SyncEngine/Scene';
 import * as ml from 'maplibre-gl';
 import { MapSources } from '../api/mapSources';
+import { Scene } from '../engine/Scene';
 
 export class LayerRenderer {
   private _pendingTilesets = new Set<string>();

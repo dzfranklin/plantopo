@@ -113,7 +113,7 @@ export class FeaturePainter {
     }
   }
 
-  private _paintLineString(camera: CurrentCamera, feature: RenderFeature) {
+  private _paintLineString(_camera: CurrentCamera, _feature: RenderFeature) {
     // TODO:
   }
 }

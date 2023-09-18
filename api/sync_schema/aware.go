@@ -3,10 +3,15 @@ package sync_schema
 import "github.com/google/uuid"
 
 type Aware struct {
-	ClientId         uuid.UUID `json:"clientId"` // changes every session
-	Name             string    `json:"name"`
-	Camera           *Camera   `json:"camera,omitempty"`
-	SelectedFeatures *[]string `json:"selectedFeatures,omitempty"`
+	Trusted          TrustedAware `json:"trusted"`
+	Camera           *Camera      `json:"camera,omitempty"`
+	SelectedFeatures *[]string    `json:"selectedFeatures,omitempty"`
+}
+
+type TrustedAware struct {
+	ClientId uuid.UUID  `json:"clientId"` // changes every session
+	UserId   *uuid.UUID `json:"userId"`   // nil for anonymous
+	Name     string     `json:"name"`
 }
 
 type Camera struct {

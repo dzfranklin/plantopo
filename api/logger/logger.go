@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"sync"
 	"testing"
@@ -43,6 +44,10 @@ func FromCtx(ctx context.Context) *zap.Logger {
 		return l
 	}
 	return Get()
+}
+
+func FromR(r *http.Request) *zap.Logger {
+	return FromCtx(r.Context())
 }
 
 func WithCtx(ctx context.Context, l *zap.Logger) context.Context {

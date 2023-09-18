@@ -13,7 +13,7 @@ wait_for_ready() {
 }
 
 run_tests() {
-  hurl --test ./server/tests/*.hurl \
+  hurl --test ./api/server/tests/*.hurl \
     --error-format long \
     --variable endpoint="$ENDPOINT"
 }

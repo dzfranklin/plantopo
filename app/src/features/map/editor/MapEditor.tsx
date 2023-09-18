@@ -1,7 +1,4 @@
-import { useMapMeta } from '@/features/map/api/useMapMeta';
-import { useCurrentUser } from '@/features/account/useCurrentUser';
-import { goToLogin } from '@/features/account/api/goToLogin';
-import { UnauthorizedError } from '@/api/errors';
+import { useMapMeta } from '@/features/map/api/mapMeta';
 import { PageTitle } from '@/generic/PageTitle';
 import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
 import ErrorTechInfo from '@/generic/ErrorTechInfo';
@@ -9,38 +6,46 @@ import { MapContainer } from './MapContainer/MapContainer';
 import Sidebar from './Sidebar/Sidebar';
 import { useEffect, useState } from 'react';
 import { Titlebar } from './TitleBar/Titlebar';
-import { SyncSocket } from './api/SyncSocket';
-import { SyncSocketProvider } from './api/useEngine';
+import { EditorEngineProvider } from './engine/useEngine';
 import { useMapSources } from '../api/useMapSources';
-import { useTokens } from '../api/useTokens';
+import { useTokensQuery } from '../api/useTokens';
+import { useSession, useSessionRedirector } from '@/features/account/session';
+import { EditorEngine } from './engine/EditorEngine';
+import { AppError } from '@/api/errors';
+import { notFound } from 'next/navigation';
 
-export function MapEditor({ mapId }: { mapId: number }) {
-  const isLoggedIn = useCurrentUser() !== null;
+export function MapEditor({ mapId }: { mapId: string }) {
+  const session = useSession();
+  const sessionRedirector = useSessionRedirector();
 
   const meta = useMapMeta(mapId);
-  const { data: mapSources } = useMapSources();
+  const mapSources = useMapSources();
 
-  const [syncSocket, setSyncSocket] = useState<SyncSocket | null>(null);
-  const [openError, setOpenError] = useState<Error>();
   useEffect(() => {
-    if (!mapSources) return;
-    // NOTE: We could fetch mapSources in parallel with the socket connect
-    const socket = new SyncSocket(mapId, { mapSources });
-    socket.addStateListener((state) => {
-      if (state.status === 'openError') {
-        if (state.error instanceof UnauthorizedError && !isLoggedIn) {
-          goToLogin();
-        } else {
-          setOpenError(state.error);
-        }
-      }
+    if (meta.error instanceof AppError) {
+      if (meta.error.code === 404) notFound();
+      else if (meta.error.code === 401 && !session) sessionRedirector();
+    }
+  }, [meta.error, session, sessionRedirector]);
+
+  const [engine, setEngine] = useState<EditorEngine | null>(null);
+  useEffect(() => {
+    if (!meta.data) return;
+    const engine = new EditorEngine({
+      mapId,
+      // NOTE: We shouldn't need to wait for meta to load to initialize the engine
+      mayEdit: meta.data.currentSessionMayEdit,
+      mapSources,
     });
-    setSyncSocket(socket);
-    return () => socket.close();
-  }, [mapSources, isLoggedIn, mapId]);
+    setEngine(engine);
+    return () => {
+      setEngine(null);
+      engine.destroy();
+    };
+  }, [mapSources, mapId, meta.data]);
 
   // Start fetching for the MapContainer
-  useTokens();
+  useTokensQuery();
 
   return (
     <div className="grid grid-cols-1 grid-rows-[30px_minmax(0,1fr)] w-full h-full overflow-hidden">
@@ -49,29 +54,28 @@ export function MapEditor({ mapId }: { mapId: number }) {
       />
 
       <DialogContainer isDismissable={false} onDismiss={() => {}}>
-        {openError && (
+        {meta.error && (
           <AlertDialog
             title={'Error opening map'}
             variant="error"
             primaryActionLabel={'Reload'}
             onPrimaryAction={() => document.location.reload()}
           >
-            <h1 className="mb-4">{openError.message}</h1>
-            <ErrorTechInfo error={openError} />
+            <h1 className="mb-4">{meta.error.message}</h1>
+            <ErrorTechInfo error={meta.error} />
           </AlertDialog>
         )}
       </DialogContainer>
 
-      {/* syncSocket and initialCamera load quickly (no network) */}
-      {syncSocket && (
-        <SyncSocketProvider socket={syncSocket}>
+      {engine && (
+        <EditorEngineProvider engine={engine}>
           <Titlebar />
 
           <div className="relative">
             <MapContainer />
             <Sidebar />
           </div>
-        </SyncSocketProvider>
+        </EditorEngineProvider>
       )}
     </div>
   );

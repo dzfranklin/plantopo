@@ -29,12 +29,11 @@ func (s *Services) healthzHandler(w http.ResponseWriter, r *http.Request) {
 			return s.Matchmaker.Healthz(ctx)
 		},
 		"postgres": func() bool {
-			rows, err := s.Postgres.Query(ctx, "SELECT 1")
+			err := s.Pg.Ping(r.Context())
 			if err != nil {
 				l.Error("postgres health check failed", zap.Error(err))
 				return false
 			}
-			defer rows.Close()
 			return true
 		},
 	}

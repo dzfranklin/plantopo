@@ -1,5 +1,5 @@
 {
-  "lid": 2,
+  "id": "pt/hillshading",
   "name": "Hillshading",
   "defaultOpacity": 0.25,
   "sublayers": [

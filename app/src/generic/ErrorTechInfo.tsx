@@ -24,7 +24,7 @@ export default function ErrorTechInfo({ error }: { error: unknown }) {
   }, [error]);
 
   return (
-    <details className="prose">
+    <details className="my-1 prose">
       <summary className="text-sm">Technical Information</summary>
 
       <pre>

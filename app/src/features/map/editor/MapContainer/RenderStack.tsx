@@ -5,17 +5,15 @@ import { RefObject, useEffect, useRef, useState } from 'react';
 import { LayersControl } from './LayersControl';
 import { AttributionControl } from './attributionControl/AttributionControl';
 import { ProgressBar } from '@adobe/react-spectrum';
-import { useEngine } from '../api/useEngine';
-import { useMapSources } from '../../api/useMapSources';
+import { useEngine } from '../engine/useEngine';
 import * as ml from 'maplibre-gl';
 import { LayerRenderer } from './LayerRenderer';
 import { InteractionManager } from './InteractionManager/InteractionManager';
 import { CurrentCameraPosition } from '../CurrentCamera';
 import { FeatureRenderer } from './FeatureRenderer';
 import { FeaturePainter } from './FeaturePainter';
-import { Scene, SceneFeature, SceneRootFeature } from '../api/SyncEngine/Scene';
+import { Scene, SceneFeature } from '../engine/Scene';
 import { nearestPointInGeometry } from '../nearestPointInFeature';
-import { FGeometry } from '../api/propTypes';
 import booleanIntersects from '@turf/boolean-intersects';
 
 // Instruct nextjs to remout this component on every edit
@@ -33,7 +31,6 @@ export function RenderStack({
   map: ml.Map | null;
   containerRef: RefObject<HTMLDivElement>;
 }) {
-  const { data: sources } = useMapSources();
   const engine = useEngine();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -46,7 +43,9 @@ export function RenderStack({
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
-    if (!map || !engine || !sources) return;
+    if (!map || !engine) return;
+
+    engine.setCameraGetter(() => CurrentCameraPosition.fromMap(map).toAware());
 
     let canvasCtx;
     if (canvasCtxRef.current) {
@@ -71,7 +70,7 @@ export function RenderStack({
       container,
       map,
     });
-    const layerRenderer = new LayerRenderer(map, sources);
+    const layerRenderer = new LayerRenderer(map, engine.sources);
     console.log('Attached RenderStack', {
       map,
       engine,
@@ -100,10 +99,7 @@ export function RenderStack({
           f.geometry,
         );
 
-        if (
-          f.geometry.type !== 'GeometryCollection' &&
-          !booleanIntersects(f.geometry, camera.bboxPolygon())
-        ) {
+        if (!booleanIntersects(f.geometry, camera.bboxPolygon())) {
           map.flyTo({ center: [nearestLng!, nearestLat!] });
         }
 
@@ -116,14 +112,12 @@ export function RenderStack({
       interactionManager.register(renderList.list, camera);
     };
 
-    // Scene changed, camera didn't necessarily change
-    const removeOnRender = engine.onRender(renderScene);
-    // Camera changed, scene didn't necessarily change
+    // Scene changed
+    const removeOnRender = engine.addSceneSelector((s) => s, renderScene);
+
+    // Camera changed
     const onMapRender = () => renderScene(engine.scene);
     map.on('render', onMapRender);
-
-    engine.render();
-    map.triggerRepaint();
 
     return () => {
       interactionManager.remove();
@@ -131,7 +125,7 @@ export function RenderStack({
       removeOnRender();
       map.off('render', onMapRender);
     };
-  }, [sources, engine, containerRef, map]);
+  }, [engine, containerRef, map]);
 
   // SIZE/RESIZE
   useEffect(() => {

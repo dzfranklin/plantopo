@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/bitcomplete/sqltestutil"
 	"github.com/danielzfranklin/plantopo/api/db"
@@ -27,7 +28,17 @@ func PgxSandbox() *Pgx {
 		log.Fatal(fmt.Errorf("PgxSandbox: failed to start postgres container: %w", err))
 	}
 	url := container.ConnectionString() + "?sslmode=disable"
+
+	// Fixes an intermittent bug when I test the entire project without any cached
+	// results from the command line (i.e. `go clean -testcache && go test ./...`)
+	time.Sleep(1 * time.Second)
+
 	log.Printf("PgxSandbox: started postgres container at %s", url)
+
+	pg, err := db.NewPg(context.Background(), url)
+	if err != nil {
+		log.Fatal(fmt.Errorf("PgxSandbox: failed to create pg instance: %w", err))
+	}
 
 	m, err := migrate.NewWithSourceInstance(
 		"iofs",
@@ -36,11 +47,6 @@ func PgxSandbox() *Pgx {
 	)
 	if err != nil {
 		log.Fatal(fmt.Errorf("PgxSandbox: failed to create migration instance: %w", err))
-	}
-
-	pg, err := db.NewPg(context.Background(), url)
-	if err != nil {
-		log.Fatal(fmt.Errorf("PgxSandbox: failed to create pg instance: %w", err))
 	}
 
 	c := &Pgx{container, pg, url, m}
@@ -52,6 +58,7 @@ func PgxSandbox() *Pgx {
 }
 
 func (c *Pgx) Reset() {
+	c.Pg.Reset()
 	c.migrateDown()
 	c.migrateUp()
 	log.Println("PgxSandbox: reset")

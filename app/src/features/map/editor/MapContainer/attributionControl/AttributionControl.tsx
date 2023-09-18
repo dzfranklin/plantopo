@@ -4,9 +4,8 @@ import { Dispatch, SetStateAction, useMemo, useState } from 'react';
 import stringOrd from '@/generic/stringOrd';
 import { Content, Dialog, DialogContainer } from '@adobe/react-spectrum';
 import { MapSources } from '../../api/mapSources';
-import { SceneLayer } from '../../api/SyncEngine/Scene';
-import { useMapSources } from '@/features/map/api/useMapSources';
-import { useSceneSelector } from '../../api/useEngine';
+import { SceneLayer } from '../../engine/Scene';
+import { useEngine, useSceneSelector } from '../../engine/useEngine';
 
 type Attribs = { id: string; html: string }[];
 type Logos = { alt: string; src: string }[];
@@ -14,17 +13,16 @@ type Logos = { alt: string; src: string }[];
 export function AttributionControl() {
   const sidebarWidth = useSceneSelector((s) => s.sidebarWidth);
   const activeLayers = useSceneSelector((s) => s.layers.active);
-
-  const sources = useMapSources();
+  const engine = useEngine();
+  const sources = engine.sources;
 
   const value = useMemo(() => {
-    if (!sources.data) return { logos: [], attribs: [] };
-    const attribs = toAttribHtml(activeLayers, sources.data);
+    const attribs = toAttribHtml(activeLayers, sources);
     return {
       logos: toLogos(attribs),
       attribs,
     };
-  }, [sources.data, activeLayers]);
+  }, [sources, activeLayers]);
 
   const [openFull, setOpenFull] = useState(false);
 

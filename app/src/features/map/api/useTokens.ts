@@ -1,5 +1,4 @@
-import { handleResp } from '@/api/support';
-import { UseQueryResult, useQuery } from '@tanstack/react-query';
+import { useApiQuery } from '@/api/useApiQuery';
 
 export interface TokenValues {
   mapbox: string;
@@ -7,12 +6,9 @@ export interface TokenValues {
   maptiler: string;
 }
 
-const fetchTokens = () => handleResp(fetch('/api/map/tokens'));
-
-export function useTokens(): UseQueryResult<TokenValues> {
-  return useQuery({
-    queryKey: ['tokens'],
-    queryFn: fetchTokens,
+export const useTokensQuery = () =>
+  useApiQuery<TokenValues>({
+    path: ['map', 'tokens'],
     staleTime: Infinity,
+    refetchOnWindowFocus: false,
   });
-}

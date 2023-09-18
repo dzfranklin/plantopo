@@ -1,6 +1,6 @@
 import { ActionButton } from '@adobe/react-spectrum';
 import FolderAddIcon from '@spectrum-icons/workflow/FolderAdd';
-import { useEngine } from '../api/useEngine';
+import { useEngine } from '../engine/useEngine';
 
 export function Toolbar() {
   const engine = useEngine();
@@ -11,7 +11,7 @@ export function Toolbar() {
         isQuiet
         isDisabled={!engine}
         onPress={() => {
-          engine?.fCreate();
+          engine?.createFeature();
         }}
       >
         <FolderAddIcon />

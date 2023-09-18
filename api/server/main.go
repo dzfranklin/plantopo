@@ -9,23 +9,27 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"time"
 
 	"github.com/danielzfranklin/plantopo/api/db"
 	"github.com/danielzfranklin/plantopo/api/logger"
 	"github.com/danielzfranklin/plantopo/api/mailer"
-	"github.com/danielzfranklin/plantopo/api/mapsync"
+	"github.com/danielzfranklin/plantopo/api/map_sync"
+	"github.com/danielzfranklin/plantopo/api/maps"
 	"github.com/danielzfranklin/plantopo/api/server/routes"
 	"github.com/danielzfranklin/plantopo/api/users"
+	"github.com/google/uuid"
 	"github.com/gorilla/securecookie"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
 func main() {
+	uuid.EnableRandPool()
+
 	l := logger.Get()
 	defer l.Sync()
 	ctx := logger.WithCtx(context.Background(), l)
@@ -59,34 +63,40 @@ func main() {
 		Addr: os.Getenv("REDIS_ADDR"),
 	})
 
-	pg, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	mailerConfig := mailer.Config{}
+	if os.Getenv("APP_ENV") == "development" {
+		mailerConfig.Sender = &mailer.LogSender{Logger: l.Sugar()}
+	} else {
+		sesSender, err := mailer.NewSESSender()
+		if err != nil {
+			l.Fatal("error creating SES sender", zap.Error(err))
+		}
+		mailerConfig.Sender = sesSender
+	}
+	mailer := mailer.New(ctx, mailerConfig)
+
+	pg, err := db.NewPg(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
 		l.Fatal("error connecting to postgres", zap.Error(err))
 	}
 
-	l.Info("Starting matchmaker")
+	users := users.NewService(ctx, pg, mailer)
+	maps := maps.NewService(l, pg, users, mailer)
+
 	matchmakerCtx, cancelMatchmaker := context.WithCancel(ctx)
-	matchmaker := mapsync.NewMatchmaker(matchmakerCtx, mapsync.Config{
+	matchmaker := map_sync.NewMatchmaker(matchmakerCtx, map_sync.Config{
 		Host: host,
 		Rdb:  redis,
 		Wg:   &wg,
+		Repo: map_sync.NewRepo(l, pg),
 	})
 
-	mailer, err := mailer.New(ctx, mailer.Config{})
-	if err != nil {
-		panic("TODO: ")
-	}
-	todoPg, err := db.NewPg(ctx, os.Getenv("DATABASE_URL"))
-	if err != nil {
-		panic("TODO: ")
-	}
-	users := users.NewService(ctx, todoPg, mailer)
-
 	router := routes.New(&routes.Services{
-		Redis:      redis,
-		Postgres:   pg,
 		Matchmaker: &matchmaker,
+		Redis:      redis,
+		Pg:         pg,
 		Users:      users,
+		Maps:       maps,
 	})
 	server := &http.Server{
 		Addr:    fmt.Sprintf("%s:%s", host, port),
@@ -107,13 +117,32 @@ func main() {
 	signal.Notify(ctrlc, os.Interrupt)
 	<-ctrlc
 
-	cancelCtx, cancelCancel := context.WithTimeout(ctx, time.Second*15)
-	defer cancelCancel()
-	if err := server.Shutdown(cancelCtx); err != nil {
-		l.Fatal("server shutdown error", zap.Error(err))
-	}
-	cancelMatchmaker()
+	gracefulShutdownDone := make(chan struct{}, 1)
+	go func() {
+		cancelCtx, cancelCancel := context.WithTimeout(ctx, time.Second*15)
+		defer cancelCancel()
+		if err := server.Shutdown(cancelCtx); err != nil {
+			l.Fatal("server shutdown error", zap.Error(err))
+		}
 
-	wg.Wait()
-	l.Info("server shutdown complete")
+		cancelMatchmaker()
+
+		wg.Wait()
+
+		l.Info("server shutdown complete")
+		gracefulShutdownDone <- struct{}{}
+	}()
+
+	select {
+	case <-gracefulShutdownDone:
+		return
+	case <-time.After(time.Second * 30):
+		stackBuf := make([]byte, 1024*1024)
+		length := runtime.Stack(stackBuf, true)
+		stack := string(stackBuf[:length])
+
+		l.Error("graceful server shutdown timed out", zap.String("stack", stack))
+		fmt.Println(stack)
+		l.Fatal("graceful server shutdown timed out")
+	}
 }

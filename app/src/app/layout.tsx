@@ -9,6 +9,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import cls from '../generic/cls';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { SessionProvider } from '@/features/account/session';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -17,13 +18,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const queryClient = new QueryClient();
-
   if (process.env.JEST_WORKER_ID !== undefined) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { worker } = require('../mocks/browser');
     worker.start();
   }
+
+  const queryClient = new QueryClient();
 
   return (
     <html lang="en" className="min-h-full">
@@ -40,7 +41,7 @@ export default function RootLayout({
             scale="medium"
             minHeight="100vh"
           >
-            {children}
+            <SessionProvider>{children}</SessionProvider>
             <div id="portal-container" className="z-[60]"></div>
             <ReactQueryDevtools initialIsOpen={false} />
           </SpectrumProvider>

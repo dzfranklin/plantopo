@@ -1,5 +1,4 @@
 import RootOverlay from '@/generic/RootOverlay';
-import { SyncEngine } from '../api/SyncEngine/SyncEngine';
 import {
   ActionButton,
   Dialog,
@@ -20,10 +19,11 @@ import {
   usePopover,
 } from 'react-aria';
 import { OverlayTriggerState, useOverlayTriggerState } from 'react-stately';
-import { InactiveSceneLayer, SceneLayer } from '../api/SyncEngine/Scene';
-import { useSceneSelector } from '../api/useEngine';
+import { InactiveSceneLayer, SceneLayer } from '../engine/Scene';
+import { useSceneSelector } from '../engine/useEngine';
+import { EditorEngine } from '../engine/EditorEngine';
 
-export function LayersControl({ engine }: { engine: SyncEngine }) {
+export function LayersControl({ engine }: { engine: EditorEngine }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverState = useOverlayTriggerState({});
   const { triggerProps, overlayProps } = useOverlayTrigger(
@@ -117,49 +117,48 @@ function ControlPopover({
   );
 }
 
-function OrderControl({ engine }: { engine: SyncEngine }) {
+function OrderControl({ engine }: { engine: EditorEngine }) {
   const layers = useSceneSelector((s) => s.layers);
 
-  const onSelectionChange =
-    (which: 'active' | 'inactive') => (sel: 'all' | Set<string | number>) => {
-      engine.startTransaction();
-      for (const layer of layers[which]) {
-        if (sel === 'all' || sel.has(layer.id)) {
-          engine.lAddToMySelection(layer.id);
-        } else {
-          engine.lRemoveFromMySelection(layer.id);
-        }
-      }
-      engine.commitTransaction();
-    };
-
-  const serializeKey = (key: string | number) => key.toString();
-  const deserializeKey = (key: unknown): number => {
-    if (typeof key === 'number') return key;
-    if (typeof key === 'string') {
-      const v = Number.parseInt(key, 10);
-      if (isNaN(v)) throw new Error('Unreachable');
-      return v;
-    } else {
-      throw new Error('Unreachable');
+  const onSelectionChange = (sel: 'all' | Set<string | number>) => {
+    if (!engine.mayEdit) return;
+    if (sel === 'all') {
+      console.error('onSelectionChange: sel is all');
+      return;
     }
+    if (sel.size > 1) {
+      console.error('onSelectionChange: sel >1');
+      return;
+    }
+    if (sel.size === 0) {
+      engine.setSelectedLayer(null);
+      return;
+    }
+    const [lid] = sel;
+    if (typeof lid !== 'string') {
+      console.error('onSelectionChange: expected string');
+      return;
+    }
+    engine.setSelectedLayer(lid);
   };
+
   const { dragAndDropHooks: activeDndHooks } = useDragAndDrop({
     getItems: (keys) =>
-      Array.from(keys).map((k) => ({ 'x-pt/lmove-active': serializeKey(k) })),
+      Array.from(keys).map((k) => ({ 'x-pt/lmove-active': k.toString() })),
     acceptedDragTypes: ['x-pt/lmove-active', 'x-pt/lmove-inactive'],
     getAllowedDropOperations: () => ['move'],
     onReorder: async ({ keys, target }) => {
-      let key;
-      for (const k of keys) {
-        if (key) throw new Error('Unreachable: expected one key');
-        key = deserializeKey(k);
-      }
-      if (key === undefined) return;
+      if (keys.size === 0) return;
+      if (keys.size > 1) throw new Error('Unreachable: expected one key');
+      const [key] = keys;
+      if (typeof key !== 'string') throw new Error('Unreachable');
+      if (typeof target.key !== 'string') throw new Error('Unreachable');
 
-      const targetLid = deserializeKey(target.key);
-      const at = target.dropPosition === 'on' ? 'after' : target.dropPosition;
-      engine.lMove([key], { target: targetLid, at });
+      engine.setSelectedLayer(key);
+      engine.moveSelectedLayer({
+        target: target.key,
+        at: target.dropPosition === 'on' ? 'after' : target.dropPosition,
+      });
     },
     onRootDrop: async (evt) => {
       let key;
@@ -169,12 +168,12 @@ function OrderControl({ engine }: { engine: SyncEngine }) {
 
         if (key) throw new Error('Unreachable: expected one key');
 
-        const textValue = await item.getText('x-pt/lmove-inactive');
-        key = deserializeKey(textValue);
+        key = await item.getText('x-pt/lmove-inactive');
       }
       if (key === undefined) return;
 
-      engine.lMove([key], { at: 'last' });
+      engine.setSelectedLayer(key);
+      engine.moveSelectedLayer({ at: 'last' });
     },
     onInsert: async ({ items, target }) => {
       let key;
@@ -184,14 +183,17 @@ function OrderControl({ engine }: { engine: SyncEngine }) {
 
         if (key) throw new Error('Unreachable: expected one key');
 
-        const textValue = await item.getText('x-pt/lmove-inactive');
-        key = deserializeKey(textValue);
+        key = await item.getText('x-pt/lmove-inactive');
       }
       if (key === undefined) return;
+      if (typeof key !== 'string') throw new Error('Unreachable');
+      if (typeof target.key !== 'string') throw new Error('Unreachable');
 
-      const targetLid = deserializeKey(target.key);
-      const at = target.dropPosition === 'on' ? 'after' : target.dropPosition;
-      engine.lMove([key], { target: targetLid, at });
+      engine.setSelectedLayer(key);
+      engine.moveSelectedLayer({
+        target: target.key,
+        at: target.dropPosition === 'on' ? 'after' : target.dropPosition,
+      });
     },
   });
   const { dragAndDropHooks: inactiveDndHooks } = useDragAndDrop({
@@ -208,12 +210,11 @@ function OrderControl({ engine }: { engine: SyncEngine }) {
 
         if (key) throw new Error('Unreachable: expected one key');
 
-        const textValue = await item.getText('x-pt/lmove-active');
-        key = deserializeKey(textValue);
+        key = await item.getText('x-pt/lmove-active');
       }
       if (key === undefined) return;
 
-      engine.lRemove(key);
+      engine.changeLayer({ id: key, idx: null });
     },
   });
 
@@ -228,11 +229,11 @@ function OrderControl({ engine }: { engine: SyncEngine }) {
         selectionStyle="highlight"
         density="compact"
         selectionMode="single"
-        dragAndDropHooks={engine.canEdit ? activeDndHooks : undefined}
+        dragAndDropHooks={engine.mayEdit ? activeDndHooks : undefined}
         selectedKeys={layers.active
           .filter((l) => l.selectedByMe)
           .map((l) => l.id)}
-        onSelectionChange={onSelectionChange('active')}
+        onSelectionChange={onSelectionChange}
       >
         {(layer) => (
           <Item textValue={layer.source.name}>
@@ -252,11 +253,11 @@ function OrderControl({ engine }: { engine: SyncEngine }) {
         selectionStyle="highlight"
         density="compact"
         selectionMode="single"
-        dragAndDropHooks={engine.canEdit ? inactiveDndHooks : undefined}
+        dragAndDropHooks={engine.mayEdit ? inactiveDndHooks : undefined}
         selectedKeys={layers.inactive
           .filter((l) => l.selectedByMe)
           .map((l) => l.id)}
-        onSelectionChange={onSelectionChange('inactive')}
+        onSelectionChange={onSelectionChange}
       >
         {(layer) => (
           <Item textValue={layer.source.name}>
@@ -288,14 +289,14 @@ function ActiveLayerActionMenu({
   engine,
 }: {
   layer: SceneLayer;
-  engine: SyncEngine;
+  engine: EditorEngine;
 }) {
   return (
     <DialogTrigger type="popover">
       <ActionButton
         aria-label="edit"
         marginEnd={'-10px'}
-        isDisabled={!engine.canEdit}
+        isDisabled={!engine.mayEdit}
       >
         <EditIcon />
       </ActionButton>
@@ -312,7 +313,7 @@ function ActiveLayerEditor({
   layer,
   engine,
 }: {
-  engine: SyncEngine;
+  engine: EditorEngine;
   layer: SceneLayer;
 }) {
   const [opacity, _setOpacity] = useState(
@@ -329,10 +330,10 @@ function ActiveLayerEditor({
       }
 
       if (immediate) {
-        engine.lSetOpacity(layer.id, value);
+        engine.changeLayer({ id: layer.id, opacity: value });
       } else {
         tick.current = window.setTimeout(() => {
-          engine.lSetOpacity(layer.id, value);
+          engine.changeLayer({ id: layer.id, opacity: value });
           tick.current = null;
         }, MAX_UPDATE_INTERVAL);
       }

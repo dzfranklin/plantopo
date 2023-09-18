@@ -1,0 +1,46 @@
+// Request id context
+package rid
+
+import (
+	"context"
+	"net/http"
+
+	"github.com/danielzfranklin/plantopo/api/logger"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
+)
+
+type ctxKey struct{}
+
+func FromCtx(ctx context.Context) uuid.UUID {
+	if rid, ok := ctx.Value(ctxKey{}).(uuid.UUID); ok {
+		return rid
+	}
+	panic("expected rid (request id) to be in context")
+}
+
+func RequestWithContext(r *http.Request) *http.Request {
+	l := logger.FromCtx(r.Context()).Sugar()
+
+	var value uuid.UUID
+	headerValue := r.Header.Get("X-Request-Id")
+	if headerValue != "" {
+		var err error
+		value, err = uuid.Parse(headerValue)
+		if err != nil {
+			l.Info("Failed to parse X-Request-Id header", zap.Error(err))
+		}
+	}
+
+	if value == uuid.Nil {
+		value = uuid.New()
+		l.Info("generated random rid")
+	} else {
+		l.Info("using rid from header")
+	}
+
+	l = l.With("rid", value)
+	ctx := logger.WithCtx(r.Context(), l.Desugar())
+	ctx = context.WithValue(ctx, ctxKey{}, value)
+	return r.WithContext(ctx)
+}

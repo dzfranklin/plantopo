@@ -1,5 +1,5 @@
 import { useCallback, useRef, PointerEvent } from 'react';
-import { useEngine } from '../api/useEngine';
+import { useEngine } from '../engine/useEngine';
 
 const WIDTH_MIN = 60;
 
@@ -17,8 +17,7 @@ export function ResizeHandle() {
   const animateStep = useCallback(() => {
     if (dragAnimNext.current === null) return;
     if (dragAnimPrev.current !== dragAnimNext.current) {
-      engine?.setSidebarWidth(dragAnimNext.current);
-      engine?.render();
+      engine.setSidebarWidth(dragAnimNext.current);
       dragAnimPrev.current = dragAnimNext.current;
     }
     requestAnimationFrame(animateStep);

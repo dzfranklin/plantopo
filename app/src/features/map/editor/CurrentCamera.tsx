@@ -1,5 +1,6 @@
 import { bboxPolygon } from '@turf/turf';
 import type * as ml from 'maplibre-gl';
+import { AwareCamera } from './api/sessionMsg';
 
 export interface CameraBBox {
   minX: number;
@@ -62,6 +63,16 @@ export class CurrentCameraPosition {
   unproject(xy: [number, number]): [number, number] {
     const lnglat = this._map.unproject(xy);
     return [lnglat.lng, lnglat.lat];
+  }
+
+  toAware(): AwareCamera {
+    return {
+      lng: this.center[0],
+      lat: this.center[1],
+      zoom: this.zoom,
+      bearing: this.bearing,
+      pitch: this.pitch,
+    };
   }
 }
 
