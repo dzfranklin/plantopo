@@ -1,21 +1,14 @@
 import { useRef } from 'react';
-import { FInsertPlace } from '../api/SyncEngine';
 import { FeatureTree } from './FeatureTree';
 import { Toolbar } from './Toolbar';
 import { ResizeHandle } from './ResizeHandle';
 import cls from '@/generic/cls';
-import { useSync } from '../api/useSync';
+import { useEngine, useSceneSelector } from '../api/useEngine';
 
-export default function Sidebar({
-  width,
-  setWidth,
-}: {
-  width: number;
-  setWidth: (_: number) => void;
-}) {
-  const { engine } = useSync();
+export default function Sidebar() {
+  const engine = useEngine();
+  const width = useSceneSelector((s) => s.sidebarWidth);
   const rootRef = useRef<HTMLDivElement>(null);
-  const insertAt = useRef<FInsertPlace>({ at: 'firstChild', target: 0 });
 
   return (
     <>
@@ -34,12 +27,12 @@ export default function Sidebar({
             'border-r border-neutral-300',
           )}
         >
-          <Toolbar insertAt={insertAt} />
+          <Toolbar />
 
-          {engine && <FeatureTree insertAt={insertAt} engine={engine} />}
+          {engine && <FeatureTree engine={engine} />}
         </div>
 
-        <ResizeHandle setWidth={setWidth} />
+        <ResizeHandle />
       </div>
     </>
   );

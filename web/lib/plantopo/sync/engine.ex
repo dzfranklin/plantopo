@@ -123,14 +123,18 @@ defmodule PlanTopo.Sync.Engine do
         "fid_block_until" => fid_block_until,
         "state" => map_state
       } ->
-        # Matches ConnectAcceptMsg in app/src/sync/socketMessages.ts
-        send_client(state.sessions, session_id, %{
-          type: "connectAccept",
-          sessionId: session_id,
-          fidBlockStart: fid_block_start,
-          fidBlockUntil: fid_block_until,
-          state: map_state
-        })
+        client_pid = BiMap.get(state.sessions, session_id)
+
+        send(
+          client_pid,
+          {self(), :accept,
+           %{
+             session_id: session_id,
+             fid_block_start: fid_block_start,
+             fid_block_until: fid_block_until,
+             map_state: map_state
+           }}
+        )
 
         {:noreply, state}
 
@@ -183,9 +187,9 @@ defmodule PlanTopo.Sync.Engine do
   end
 
   @spec send_client(State.sessions(), number(), map()) :: nil
-  defp send_client(sessions, client_id, msg) do
+  defp send_client(sessions, session_id, msg) do
     msg = Jason.encode!(msg)
-    pid = BiMap.get(sessions, client_id)
+    pid = BiMap.get(sessions, session_id)
     send(pid, {self(), :send, msg})
     nil
   end

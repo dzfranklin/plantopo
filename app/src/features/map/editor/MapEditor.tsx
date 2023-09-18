@@ -2,8 +2,6 @@ import { useMapMeta } from '@/features/map/api/useMapMeta';
 import { useCurrentUser } from '@/features/account/useCurrentUser';
 import { goToLogin } from '@/features/account/api/goToLogin';
 import { UnauthorizedError } from '@/api/errors';
-import { useSidebarWidth } from './Sidebar/useSidebarWidth';
-import { useInitialCamera } from './MapContainer/useInitialCamera';
 import { PageTitle } from '@/generic/PageTitle';
 import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
 import ErrorTechInfo from '@/generic/ErrorTechInfo';
@@ -12,8 +10,9 @@ import Sidebar from './Sidebar/Sidebar';
 import { useEffect, useState } from 'react';
 import { Titlebar } from './TitleBar/Titlebar';
 import { SyncSocket } from './api/SyncSocket';
-import { SyncSocketProvider } from './api/useSync';
+import { SyncSocketProvider } from './api/useEngine';
 import { useMapSources } from '../api/useMapSources';
+import { useTokens } from '../api/useTokens';
 
 export function MapEditor({ mapId }: { mapId: number }) {
   const isLoggedIn = useCurrentUser() !== null;
@@ -40,8 +39,8 @@ export function MapEditor({ mapId }: { mapId: number }) {
     return () => socket.close();
   }, [mapSources, isLoggedIn, mapId]);
 
-  const [sidebarWidth, setSidebarWidth] = useSidebarWidth();
-  const [initialCamera, saveCamera] = useInitialCamera(mapId);
+  // Start fetching for the MapContainer
+  useTokens();
 
   return (
     <div className="grid grid-cols-1 grid-rows-[30px_minmax(0,1fr)] w-full h-full overflow-hidden">
@@ -64,17 +63,13 @@ export function MapEditor({ mapId }: { mapId: number }) {
       </DialogContainer>
 
       {/* syncSocket and initialCamera load quickly (no network) */}
-      {syncSocket && initialCamera.status === 'loaded' && (
+      {syncSocket && (
         <SyncSocketProvider socket={syncSocket}>
           <Titlebar />
 
           <div className="relative">
-            <MapContainer
-              sidebarWidth={sidebarWidth}
-              onMoveEnd={saveCamera}
-              initialCamera={initialCamera.value}
-            />
-            <Sidebar width={sidebarWidth} setWidth={setSidebarWidth} />
+            <MapContainer />
+            <Sidebar />
           </div>
         </SyncSocketProvider>
       )}

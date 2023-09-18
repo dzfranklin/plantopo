@@ -18,3 +18,12 @@ export class NetworkError extends Error {
     this.stack = cause instanceof Error ? cause.stack : undefined;
   }
 }
+
+export class JsonDecodeError extends Error {
+  readonly name = 'JsonDecodeError';
+
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : `${cause}`);
+    this.stack = cause instanceof Error ? cause.stack : undefined;
+  }
+}

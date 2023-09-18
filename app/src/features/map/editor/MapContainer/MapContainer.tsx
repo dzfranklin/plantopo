@@ -2,85 +2,77 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import './MapContainer.css';
 import { useEffect, useRef, useState } from 'react';
-import { CameraPosition, MapManager } from './MapManager';
-import { LayersControl } from './LayersControl';
-import { AttributionControl } from './attributionControl/AttributionControl';
-import { ProgressBar, ProgressCircle } from '@adobe/react-spectrum';
-import { useSync } from '../api/useSync';
-import { useMapSources } from '../../api/useMapSources';
+import * as ml from 'maplibre-gl';
+import { TokenValues, useTokens } from '../../api/useTokens';
+import { RenderStack } from './RenderStack';
 
-export function MapContainer({
-  sidebarWidth,
-  onMoveEnd,
-  initialCamera,
-}: {
-  sidebarWidth: number;
-  initialCamera: CameraPosition | null;
-  onMoveEnd: (_: CameraPosition) => void;
-}) {
-  const { data: sources } = useMapSources();
-  const { engine } = useSync();
+const GLYPH_URL = 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf';
+
+/**
+ * This should not run on every render. Things that update
+ * frequently go in MapRenderStack
+ */
+
+export function MapContainer() {
+  const { data: tokens } = useTokens();
   const containerRef = useRef<HTMLDivElement>(null);
-  const managerRef = useRef<MapManager | null>(null);
-  const sidebarWidthRef = useRef<number>(sidebarWidth);
-  const initialCameraRef = useRef<CameraPosition | null>(initialCamera);
-  const [isLoading, setIsLoading] = useState(false);
+  const [map, setMap] = useState<ml.Map | null>(null);
 
+  // CREATE
   useEffect(() => {
-    sidebarWidthRef.current = sidebarWidth;
-    managerRef.current?.resizeForSidebar(sidebarWidth);
-  }, [sidebarWidth]);
-  useEffect(() => {
-    initialCameraRef.current = initialCamera;
-  }, [initialCamera]);
+    if (!containerRef.current) return;
 
-  useEffect(() => {
-    if (!containerRef.current || !engine || !sources) return;
-    const manager = new MapManager({
-      sources,
+    const map = new ml.Map({
       container: containerRef.current,
-      engine,
-      initialCamera: initialCameraRef.current,
-      onMoveEnd,
-      setIsLoading,
+      style: {
+        version: 8,
+        sources: {},
+        layers: [],
+        glyphs: GLYPH_URL,
+      },
+      keyboard: true,
+      attributionControl: false, // So that we can implement our own
+      interactive: true,
     });
-    managerRef.current = manager;
-    manager.resizeForSidebar(sidebarWidthRef.current);
+    setMap(map);
+    console.log('Created map', map);
+
+    map.addControl(new ml.NavigationControl());
+
     return () => {
-      manager.remove();
-      managerRef.current = null;
+      map.remove();
     };
-  }, [sources, engine, onMoveEnd]);
+  }, []);
+
+  // PROVIDE AUTH TOKENS
+  useEffect(() => {
+    if (!tokens || !map) return;
+    map.setTransformRequest((url) => ({ url: transformUrl(url, tokens) }));
+    () => map.setTransformRequest((url) => ({ url }));
+  }, [map, tokens]);
 
   return (
     <div ref={containerRef} className="relative w-full h-full">
-      <div className="absolute z-10 flex justify-end pointer-events-none bottom-[1px] right-[1px]">
-        <ProgressBar
-          isIndeterminate
-          isHidden={!isLoading}
-          size="S"
-          aria-label="map loading"
-        />
-      </div>
-
-      {!engine && (
-        <div
-          className="absolute top-0 bottom-0 right-0 z-50 grid place-items-center"
-          style={{ left: `${sidebarWidth}px` }}
-        >
-          <div>
-            <ProgressCircle isIndeterminate aria-label="loading" size="L" />
-            <h1 className="mt-4 text-center">Opening map</h1>
-          </div>
-        </div>
-      )}
-
-      {engine && (
-        <>
-          <LayersControl engine={engine} />
-          <AttributionControl engine={engine} sidebarWidth={sidebarWidth} />
-        </>
-      )}
+      <RenderStack map={map} containerRef={containerRef} />
     </div>
   );
+}
+
+function transformUrl(url: string, tokens: TokenValues): string {
+  {
+    let query = '';
+    if (url.startsWith('https://api.mapbox.com')) {
+      query = 'access_token=' + tokens.mapbox;
+    } else if (url.startsWith('https://api.os.uk')) {
+      query = 'srs=3857&key=' + tokens.os;
+    } else if (url.startsWith('https://api.maptiler.com')) {
+      query = 'key=' + tokens.maptiler;
+    }
+
+    if (url.includes('?')) {
+      return url + '&' + query;
+    } else {
+      return url + '?' + query;
+    }
+  }
 }

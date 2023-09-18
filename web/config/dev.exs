@@ -28,6 +28,13 @@ config :aws_credentials,
   aws_session_token: aws_cred_value.("SessionToken"),
   aws_region: ~c"eu-west-2"
 
+config :plantopo, PlanTopo.Maps,
+  frontend_tokens: [
+    mapbox: System.fetch_env!("PLANTOPO_MAPBOX_ACCESS_TOKEN"),
+    os: System.fetch_env!("PLANTOPO_OS_API_KEY"),
+    maptiler: System.fetch_env!("PLANTOPO_MAPTILER_KEY")
+  ]
+
 # Configure your database
 config :plantopo, PlanTopo.Repo,
   stacktrace: true,

@@ -146,4 +146,14 @@ defmodule PlanTopoWeb.MapApiController do
       render(conn, :list, %{list: list})
     end
   end
+
+  def sync_client_name(conn, %{"clientId" => client_id}) do
+    with {:ok, name} <- PlanTopo.Sync.client_name(client_id) do
+      render(conn, :sync_client_name, %{name: name})
+    end
+  end
+
+  def tokens(conn, _) do
+    render(conn, :tokens, %{tokens: Maps.frontend_tokens()})
+  end
 end

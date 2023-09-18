@@ -454,4 +454,26 @@ defmodule PlanTopoWeb.MapApiControllerTest do
                ]
     end
   end
+
+  describe "GET sync_client_name" do
+    test "user", %{conn: conn} do
+      user = user_fixture(%{name: "John Doe"})
+      session_id = 42
+      client_id = PlanTopo.Sync.client_id_for(user.id, session_id)
+
+      conn = conn |> get(~p"/api/map/sync_client_name", %{clientId: client_id})
+
+      assert json_response(conn, 200) == %{"name" => "John Doe"}
+    end
+
+    test "anon", %{conn: conn} do
+      user_id = nil
+      session_id = 42
+      client_id = PlanTopo.Sync.client_id_for(user_id, session_id)
+
+      conn = conn |> get(~p"/api/map/sync_client_name", %{clientId: client_id})
+
+      assert json_response(conn, 200) == %{"name" => "Anonymous Golden Minke Whale"}
+    end
+  end
 end

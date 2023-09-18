@@ -32,13 +32,59 @@ localhost {
 	@server_path {
 		path /api/*
 		path /account/*
+		path /live/*
+		path /assets/*
+		path /phoenix/live_reload/*
 	}
-	reverse_proxy @server_path localhost:4000
-
-	file_server /mapSources.json {
-		root layer_data/out/
+	handle @server_path {
+		reverse_proxy localhost:4000
 	}
 
-	# nextjs dev server
-	reverse_proxy * localhost:3000
+	handle /mapSources.json {
+		file_server {
+			root map_sources/out/
+		}
+	}
+
+	handle * {
+		# nextjs dev server
+		reverse_proxy localhost:3000
+	}
+}
+
+r.localhost {
+	log release.localhost
+
+	import allow_origin_only "https://release.localhost"
+
+	@logged_in_home {
+		header Cookie *unchecked_user*
+		path /
+	}
+	rewrite @logged_in_home /user_home
+
+	@server_path {
+		path /api/*
+		path /account/*
+		path /live/*
+		path /assets/*
+		path /phoenix/live_reload/*
+	}
+	handle @server_path {
+		reverse_proxy localhost:4000
+	}
+
+	handle /mapSources.json {
+		file_server {
+			root map_sources/out/
+		}
+	}
+
+	handle * {
+		rewrite /map /map.html
+
+		file_server {
+			root app/out
+		}
+	}
 }

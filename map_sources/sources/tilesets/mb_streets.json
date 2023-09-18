@@ -64,7 +64,7 @@
     "scheme": "xyz",
     "tilejson": "2.2.0",
     "tiles": [
-      "https://mapbox-proxy.localhost/v4/mapbox.mapbox-streets-v8,mapbox.mapbox-terrain-v2,mapbox.mapbox-bathymetry-v2/{z}/{x}/{y}.vector.pbf"
+      "https://api.mapbox.com/v4/mapbox.mapbox-streets-v8,mapbox.mapbox-terrain-v2,mapbox.mapbox-bathymetry-v2/{z}/{x}/{y}.vector.pbf"
     ],
     "vector_layers": [
       {

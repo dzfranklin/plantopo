@@ -33,6 +33,11 @@ defmodule PlanTopo.Accounts do
   """
   def get_user!(id), do: Repo.get!(User, id)
 
+  def get_user_name(id) do
+    from(u in User, where: u.id == ^id, select: u.name)
+    |> Repo.one()
+  end
+
   ## User registration
 
   @doc """

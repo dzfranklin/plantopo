@@ -302,4 +302,13 @@ defmodule PlanTopo.Maps do
     from(s in Snapshot, where: s.map_id == ^map_id, order_by: [desc: s.inserted_at], limit: 1)
     |> Repo.one()
   end
+
+  @frontend_tokens Application.compile_env!(:plantopo, __MODULE__)
+                   |> Keyword.fetch!(:frontend_tokens)
+
+  def frontend_tokens do
+    [:mapbox, :os, :maptiler]
+    |> Enum.map(&{&1, Keyword.fetch!(@frontend_tokens, &1)})
+    |> Enum.into(%{})
+  end
 end

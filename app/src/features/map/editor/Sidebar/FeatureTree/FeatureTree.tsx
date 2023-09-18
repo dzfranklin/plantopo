@@ -1,78 +1,92 @@
-import { FInsertPlace, SyncEngine } from '../api/SyncEngine';
+import { SyncEngine } from '../../api/SyncEngine';
 import {
-  Dispatch,
   DragEventHandler,
-  MutableRefObject,
-  SetStateAction,
+  RefObject,
   UIEventHandler,
   useCallback,
   useEffect,
-  useMemo,
   useRef,
-  useState,
 } from 'react';
 import AddAtIcon from '@spectrum-icons/workflow/Add';
-import cls from '@/generic/cls';
 import './FeatureTree.css';
+import { useSceneSelector } from '../../api/useEngine';
+import { shallowArrayEq } from '@/generic/equality';
+import { TreeEntry } from './TreeEntry';
 
-const CHILD_INDENT_PX = 16;
-const VERTICAL_GAP_PX = 2;
-const INDICATOR_BORDER_PX = 2;
+export const CHILD_INDENT_PX = 16;
+export const INDICATOR_BORDER_PX = 2;
 
-interface DragTarget extends FInsertPlace {
+interface DragTarget {
+  at: 'before' | 'after' | 'firstChild';
+  target: number;
   elem: HTMLElement;
 }
 
-export function FeatureTree({
-  engine,
-  insertAt,
-}: {
-  engine: SyncEngine;
-  /** mutated by FeatureTree as user selects */
-  insertAt: MutableRefObject<FInsertPlace>;
-}) {
-  const [children, setChildren] = useState(() => engine.fChildOrder(0));
-  useEffect(() => {
-    engine.addFChildOrderListener(0, setChildren);
-    return () => engine.removeFChildOrderListener(0, setChildren);
-  }, [engine]);
-
-  const [selected, _setSelected] = useState<number[]>([]);
-  const dragTargetRef = useRef<DragTarget | null>(null);
-  const setSelected = useCallback(
-    (arg: SetStateAction<number[]>) => {
-      if (typeof arg === 'function') {
-        _setSelected((p) => {
-          const v = arg(p);
-          const target = v.at(-1) ?? 0;
-          insertAt.current = {
-            target,
-            at: target === 0 ? 'firstChild' : 'after',
-          };
-          return v;
-        });
-      } else {
-        const target = arg.at(-1) ?? 0;
-        insertAt.current = {
-          target,
-          at: target === 0 ? 'firstChild' : 'after',
-        };
-        _setSelected(arg);
-      }
-    },
-    [insertAt],
-  );
-
+export function FeatureTree({ engine }: { engine: SyncEngine }) {
   const rootRef = useRef<HTMLUListElement>(null);
   const dragAtElemRef = useRef<HTMLDivElement>(null);
 
+  const { onDragStart, onDragEnd, onDragOver, onDragEnter, onDrop, onScroll } =
+    useFeatureTreeInteractivity({ engine, rootRef, dragAtElemRef });
+
   useEffect(() => {
     const l = (evt: KeyboardEvent) => {
-      if (evt.key === 'Escape') setSelected([]);
+      if (evt.key === 'Escape') engine.fClearMySelection();
     };
     window.addEventListener('keyup', l);
     return () => window.removeEventListener('keyup', l);
-  });
+  }, [engine]);
+
+  const children = useSceneSelector(
+    (s) => s.features.root.children.map((f) => f.id),
+    shallowArrayEq,
+  );
+
+  return (
+    <ul
+      onDragStart={onDragStart}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      className="grow overflow-y-auto pt-0.5 pb-10"
+      onScroll={onScroll}
+      ref={rootRef}
+    >
+      {children.map((child) => (
+        <TreeEntry key={child} fid={child} engine={engine} />
+      ))}
+
+      <div ref={dragAtElemRef} className="z-20 drag-at-marker">
+        <div className="flex items-center h-3 gap-1 mr-2 text-white">
+          <hr className="flex-grow border-0 h-[1.5px] bg-blue-500" />
+          <AddAtIcon
+            height="0.75rem"
+            UNSAFE_className="h-3 rounded-full bg-blue-500"
+          />
+        </div>
+      </div>
+    </ul>
+  );
+}
+
+function useFeatureTreeInteractivity({
+  engine,
+  rootRef,
+  dragAtElemRef,
+}: {
+  engine: SyncEngine;
+  rootRef: RefObject<HTMLUListElement>;
+  dragAtElemRef: RefObject<HTMLDivElement>;
+}): {
+  onDragStart: DragEventHandler<HTMLUListElement>;
+  onDrop: DragEventHandler<HTMLUListElement>;
+  onDragEnd: DragEventHandler<HTMLUListElement>;
+  onDragEnter: DragEventHandler<HTMLUListElement>;
+  onDragOver: DragEventHandler<HTMLUListElement>;
+  onScroll: UIEventHandler<HTMLUListElement>;
+} {
+  const dragTargetRef = useRef<DragTarget | null>(null);
 
   const onDragStart = useCallback<DragEventHandler<HTMLUListElement>>(
     (evt) => {
@@ -86,18 +100,18 @@ export function FeatureTree({
       const dragTargetId = parseInt(evt.target.dataset.fid, 10);
 
       // Add the dragged element to targets if necessary
-      let dragTargetIncluded = selected.includes(dragTargetId);
+      let dragTargetIncluded = engine.fIsSelectedByMe(dragTargetId);
       if (!dragTargetIncluded) {
-        dragTargetIncluded = engine.fHasAncestor(
-          dragTargetId,
-          new Set(selected),
-        );
+        dragTargetIncluded = engine.fHasAncestorSelectedByMe(dragTargetId);
       }
       if (!dragTargetIncluded) {
         if (evt.shiftKey) {
-          setSelected([...selected, dragTargetId]);
+          engine.fAddToMySelection(dragTargetId);
         } else {
-          setSelected([dragTargetId]);
+          engine.startTransaction();
+          engine.fClearMySelection();
+          engine.fAddToMySelection(dragTargetId);
+          engine.commitTransaction();
         }
       }
 
@@ -114,7 +128,7 @@ export function FeatureTree({
         positionDragAtMarker(dragAtElem, targetRect, 'after', false);
       });
     },
-    [engine, selected, setSelected],
+    [dragAtElemRef, engine, rootRef],
   );
 
   const onDragEnter = useCallback<DragEventHandler<HTMLUListElement>>(
@@ -153,7 +167,7 @@ export function FeatureTree({
 
       const targetId = parseInt(targetElem.dataset.fid, 10);
 
-      let targetPlace: FInsertPlace['at'];
+      let targetPlace: DragTarget['at'];
       const targetRect = targetElem.getBoundingClientRect();
       if (evt.clientY > targetRect.bottom - targetRect.height / 3) {
         targetPlace = 'after';
@@ -173,7 +187,7 @@ export function FeatureTree({
 
       evt.preventDefault();
     },
-    [engine.canEdit],
+    [dragAtElemRef, engine.canEdit, rootRef],
   );
 
   const onDrop = useCallback<DragEventHandler<HTMLUListElement>>(
@@ -186,20 +200,30 @@ export function FeatureTree({
       ) {
         return;
       }
+      const targetNode = engine.getFeature(target.target);
+      if (!targetNode) return;
 
-      engine.fMove(selected, target);
-      setSelected([]);
+      engine.startTransaction();
+      engine.fMoveSelectedByMe({
+        at: target.at,
+        target: targetNode,
+      });
+      engine.fClearMySelection();
+      engine.commitTransaction();
 
       dragTargetRef.current = null;
       rootRef.current?.classList.remove('dragging');
       evt.preventDefault();
     },
-    [engine, selected, setSelected],
+    [engine, rootRef],
   );
 
-  const onDragEnd = useCallback<DragEventHandler<HTMLUListElement>>((_evt) => {
-    rootRef.current?.classList.remove('dragging');
-  }, []);
+  const onDragEnd = useCallback<DragEventHandler<HTMLUListElement>>(
+    (_evt) => {
+      rootRef.current?.classList.remove('dragging');
+    },
+    [rootRef],
+  );
 
   const dragMarkerDirty = useRef(false);
   const maybeDirtyDragMarker = useCallback(() => {
@@ -221,7 +245,7 @@ export function FeatureTree({
         dragMarkerDirty.current = false;
       });
     }
-  }, []);
+  }, [dragAtElemRef]);
 
   const onScroll = useCallback<UIEventHandler<HTMLUListElement>>(
     (_evt) => maybeDirtyDragMarker(),
@@ -233,46 +257,15 @@ export function FeatureTree({
     const observer = new ResizeObserver((_entries) => maybeDirtyDragMarker());
     observer.observe(rootRef.current);
     () => observer.disconnect();
-  }, [maybeDirtyDragMarker]);
+  }, [maybeDirtyDragMarker, rootRef]);
 
-  return (
-    <ul
-      onDragStart={onDragStart}
-      onDrop={onDrop}
-      onDragEnd={onDragEnd}
-      onDragEnter={onDragEnter}
-      onDragOver={onDragOver}
-      className="grow overflow-y-auto pt-0.5 pb-10"
-      onScroll={onScroll}
-      ref={rootRef}
-    >
-      {children.map((child) => (
-        <Entry
-          key={child}
-          fid={child}
-          engine={engine}
-          selected={selected}
-          setSelected={setSelected}
-        />
-      ))}
-
-      <div ref={dragAtElemRef} className="z-20 drag-at-marker">
-        <div className="flex items-center h-3 gap-1 mr-2 text-white">
-          <hr className="flex-grow border-0 h-[1.5px] bg-blue-500" />
-          <AddAtIcon
-            height="0.75rem"
-            UNSAFE_className="h-3 rounded-full bg-blue-500"
-          />
-        </div>
-      </div>
-    </ul>
-  );
+  return { onDragStart, onDrop, onDragEnd, onDragEnter, onDragOver, onScroll };
 }
 
 function positionDragAtMarker(
   dragAtElem: HTMLDivElement,
   targetRect: DOMRect,
-  targetPlace: FInsertPlace['at'],
+  targetPlace: DragTarget['at'],
   animate: boolean,
 ) {
   const markerHeight = dragAtElem.getBoundingClientRect().height;
@@ -298,84 +291,4 @@ function positionDragAtMarker(
   }
   dragAtElem.style.width = `${toWidth}px`;
   dragAtElem.style.transform = `translateX(${toX}px) translateY(${toY}px)`;
-}
-
-interface Entry {
-  id: number;
-  children: Entry[];
-  ancestors: number[];
-}
-
-function Entry({
-  fid,
-  engine,
-  selected,
-  setSelected,
-}: {
-  fid: number;
-  engine: SyncEngine;
-  selected: number[];
-  setSelected: Dispatch<SetStateAction<number[]>>;
-}) {
-  const isSelected = useMemo(() => selected.includes(fid), [fid, selected]);
-
-  const [children, setChildren] = useState(() => engine.fChildOrder(fid));
-  useEffect(() => {
-    engine.addFChildOrderListener(fid, setChildren);
-    return () => engine.removeFChildOrderListener(fid, setChildren);
-  }, [fid, engine]);
-
-  return (
-    <li
-      draggable="true"
-      data-fid={fid}
-      onClick={(evt) => {
-        if (evt.shiftKey) {
-          if (isSelected) {
-            setSelected(selected.filter((id) => id !== fid));
-          } else {
-            setSelected(selected.concat(fid));
-          }
-        } else {
-          if (isSelected) {
-            setSelected([]);
-          } else {
-            setSelected([fid]);
-          }
-        }
-        evt.stopPropagation();
-      }}
-      className={cls(isSelected && 'directly-selected')}
-    >
-      {/* We need this nested div so that we can find its parent by mouse
-          position without the padding throwing us off */}
-      <div className={cls(isSelected && 'bg-blue-100')}>
-        <div
-          className={cls(
-            'flex flex-row justify-start w-full gap-1 px-1 text-sm',
-          )}
-          style={{
-            paddingTop: `${VERTICAL_GAP_PX}px`,
-            borderLeft: `${INDICATOR_BORDER_PX}px`,
-          }}
-        >
-          <span className="flex-grow select-none text-start">{fid}</span>
-        </div>
-
-        {children.length > 0 && (
-          <ul style={{ paddingLeft: `${CHILD_INDENT_PX}px` }}>
-            {children.map((child) => (
-              <Entry
-                key={child}
-                fid={child}
-                engine={engine}
-                selected={selected}
-                setSelected={setSelected}
-              />
-            ))}
-          </ul>
-        )}
-      </div>
-    </li>
-  );
 }

@@ -1,2 +1,4 @@
 #!/usr/bin/env bash
-exec crlfify-stdio cargo run --package pt_sync_engine -- "$@"
+set -euo pipefail
+cd ../sync_engine
+exec crlfify-stdio cargo run -- "$@"

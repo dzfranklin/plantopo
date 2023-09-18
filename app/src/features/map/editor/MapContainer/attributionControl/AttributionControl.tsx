@@ -1,38 +1,30 @@
 import osLogo from './osLogo.svg';
 import mapboxLogo from './mapboxLogo.svg';
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useMemo, useState } from 'react';
 import stringOrd from '@/generic/stringOrd';
 import { Content, Dialog, DialogContainer } from '@adobe/react-spectrum';
-import { SyncEngine } from '../../api/SyncEngine';
 import { MapSources } from '../../api/mapSources';
-import { useMapSources } from '../../../api/useMapSources';
+import { SceneLayer } from '../../api/SyncEngine/Scene';
+import { useMapSources } from '@/features/map/api/useMapSources';
+import { useSceneSelector } from '../../api/useEngine';
 
 type Attribs = { id: string; html: string }[];
 type Logos = { alt: string; src: string }[];
 
-export function AttributionControl({
-  sidebarWidth,
-  engine,
-}: {
-  sidebarWidth: number;
-  engine: SyncEngine;
-}) {
-  const sources = useMapSources();
-  const [logos, setLogos] = useState<Logos>([]);
-  const [attribs, setAttribs] = useState<Attribs>([]);
-  useEffect(() => {
-    if (!sources.data) return;
-    const attribs = toAttribHtml(sources.data, engine.lOrder());
-    setAttribs(attribs);
-    setLogos(toLogos(attribs));
+export function AttributionControl() {
+  const sidebarWidth = useSceneSelector((s) => s.sidebarWidth);
+  const activeLayers = useSceneSelector((s) => s.layers.active);
 
-    const l = engine.addLOrderListener((v) => {
-      const attribs = toAttribHtml(sources.data, v);
-      setAttribs(attribs);
-      setLogos(toLogos(attribs));
-    });
-    return () => engine.removeLOrderListener(l);
-  }, [sources.data, engine]);
+  const sources = useMapSources();
+
+  const value = useMemo(() => {
+    if (!sources.data) return { logos: [], attribs: [] };
+    const attribs = toAttribHtml(activeLayers, sources.data);
+    return {
+      logos: toLogos(attribs),
+      attribs,
+    };
+  }, [sources.data, activeLayers]);
 
   const [openFull, setOpenFull] = useState(false);
 
@@ -41,21 +33,21 @@ export function AttributionControl({
       className="absolute bottom-0 right-0 z-10 flex items-end min-w-0 gap-3 ml-2 mr-16"
       style={{ left: `${sidebarWidth}px` }}
     >
-      {logos.length > 0 && (
+      {value.logos.length > 0 && (
         <div className="min-w-fit h-[20px] mb-1 flex gap-1 pointer-events-none">
-          {logos.map(({ alt, src }) => (
+          {value.logos.map(({ alt, src }) => (
             <img src={src} alt={alt} key={src} />
           ))}
         </div>
       )}
 
-      <AttribPreview attribs={attribs} setOpenFull={setOpenFull} />
+      <AttribPreview attribs={value.attribs} setOpenFull={setOpenFull} />
 
       <DialogContainer type="modal" onDismiss={() => setOpenFull(false)}>
         {openFull && (
           <Dialog isDismissable>
             <Content>
-              <AttribFull attribs={attribs} />
+              <AttribFull attribs={value.attribs} />
             </Content>
           </Dialog>
         )}
@@ -99,24 +91,22 @@ function AttribFull({ attribs }: { attribs: Attribs }) {
 }
 
 function toAttribHtml(
-  source: MapSources,
-  layers: number[],
+  layers: SceneLayer[],
+  sources: MapSources,
 ): { id: string; html: string }[] {
   const attribs = [];
   const tilesets = new Set<string>();
-  for (const lid of layers) {
-    const ldata = source.layers[lid];
-    if (!ldata) continue;
-    if (ldata.attribution !== undefined) {
-      const html = rewriteHtml(ldata.attribution);
-      attribs.push({ id: `layer-${lid}`, html });
+  for (const layer of layers) {
+    if (layer.source.attribution !== undefined) {
+      const html = rewriteHtml(layer.source.attribution);
+      attribs.push({ id: `layer-${layer.id}`, html });
     }
-    for (const tid of ldata.sublayerTilesets) {
+    for (const tid of layer.source.sublayerTilesets) {
       tilesets.add(tid);
     }
   }
   for (const tid of tilesets) {
-    const tdata = source.tilesets[tid];
+    const tdata = sources.tilesets[tid];
     if (!tdata) continue;
     if ('attribution' in tdata && tdata.attribution !== undefined) {
       const html = rewriteHtml(tdata.attribution);

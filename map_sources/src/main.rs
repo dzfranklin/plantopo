@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     fs,
     path::{Path, PathBuf},
 };
@@ -141,6 +141,22 @@ fn main() -> eyre::Result<()> {
         layers.insert(layer.lid, layer);
     }
 
+    let mut opacity_exprs = HashMap::<String, usize>::new();
+    for layer in layers.values() {
+        for props in layer.sublayer_opacity.values() {
+            for value in props.values() {
+                if let Value::Array(expr) = value {
+                    if let Some(expr_name) = expr.get(0) {
+                        let expr_name =
+                            expr_name.as_str().expect("expr_name is string").to_string();
+                        *opacity_exprs.entry(expr_name).or_default() += 1;
+                    }
+                }
+            }
+        }
+    }
+    info!("opacity expression types: {opacity_exprs:#?}");
+
     let output = LayersFile {
         layers,
         tilesets,
@@ -206,19 +222,7 @@ fn rewrite_layer(
 
         let mut opacity = BTreeMap::new();
         for prop in opacity_props_for(subl._type) {
-            let orig_value = subl.paint.get(&prop).cloned().unwrap_or(1.into());
-            let mut in_context = Value::Array(vec!["*".into(), orig_value, 0.into()]);
-            rewrite_expr(
-                &format!("{}-opacity-prop-context", subl.id),
-                &prop,
-                &mut in_context,
-            )?;
-            let value = in_context
-                .get(1)
-                .ok_or(eyre!(
-                    "rewrite_expr unexpectedly changed shape of opacity prop context"
-                ))
-                .cloned()?;
+            let value = subl.paint.get(&prop).cloned().unwrap_or(1.into());
             opacity.insert(prop, value);
         }
         sublayer_opacity.insert(subl.id.clone(), opacity);

@@ -1,8 +1,8 @@
 set shell := ["bash", "-cu"]
 
-t: test-map-sources test-engine test-server test-app
+t: test-sources test-engine test-server test-app
 
-tm: test-map-sources
+tm: test-sources
 te: test-engine
 ts: test-server
 ta: test-app
@@ -16,6 +16,13 @@ iex:
 app:
   cd app && npm run dev
 
+ba:
+  cd app && npm run build
+
+# Build the app for profiling
+bpa:
+  cd app && npm run build -- --profile
+
 find-unused:
   cd web && mix deps.unlock --check-unused
 
@@ -26,11 +33,14 @@ test-engine:
   cd sync_engine && cargo clippy
   cd sync_engine && cargo test
 
-test-map-sources:
+test-sources:
   cd map_sources && cargo check
   cd map_sources && cargo clippy
   cd map_sources && cargo test
   cd map_sources && RUST_LOG=warn cargo run .
+
+gen-sources:
+  cd map_sources && RUST_LOG=info cargo run .
 
 ci-prepare-map-sources:
   cd map_sources && cargo check
@@ -41,7 +51,7 @@ ci-prepare-map-sources:
 test-app:
   cd app && tsc --noEmit
   cd app && npm run lint
-  cd app && npm run test -- --passWithNoTests # TODO: add tests
+  cd app && npm run test
 
 test-server:
   cd web && mix format --dry-run --check-formatted

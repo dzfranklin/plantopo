@@ -1,4 +1,5 @@
 import { useCallback, useRef, PointerEvent } from 'react';
+import { useEngine } from '../api/useEngine';
 
 const WIDTH_MIN = 60;
 
@@ -8,18 +9,20 @@ const END_EVENTS: Array<'pointerup' | 'pointercancel' | 'pointerleave'> = [
   'pointerleave',
 ];
 
-export function ResizeHandle({ setWidth }: { setWidth: (_: number) => void }) {
+export function ResizeHandle() {
+  const engine = useEngine();
   const ref = useRef<HTMLDivElement>(null);
   const dragAnimPrev = useRef<number | null>(null);
   const dragAnimNext = useRef<number | null>(null);
   const animateStep = useCallback(() => {
     if (dragAnimNext.current === null) return;
     if (dragAnimPrev.current !== dragAnimNext.current) {
-      setWidth(dragAnimNext.current);
+      engine?.setSidebarWidth(dragAnimNext.current);
+      engine?.render();
       dragAnimPrev.current = dragAnimNext.current;
     }
     requestAnimationFrame(animateStep);
-  }, [setWidth]);
+  }, [engine]);
   const onPointerMove = useCallback((evt: globalThis.PointerEvent) => {
     dragAnimNext.current = Math.max(WIDTH_MIN, evt.clientX);
     evt.preventDefault();

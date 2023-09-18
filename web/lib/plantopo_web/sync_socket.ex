@@ -107,6 +107,25 @@ defmodule PlanTopoWeb.SyncSocket do
   end
 
   @impl true
+  def websocket_info(
+        {engine, :accept, params},
+        state
+      )
+      when engine == state.engine do
+    # Matches ConnectAcceptMsg in app/src/sync/socketMessages.ts
+    msg = %{
+      type: "connectAccept",
+      sessionId: params.session_id,
+      clientId: Sync.client_id_for(state.maybe_user_id, params.session_id),
+      fidBlockStart: params.fid_block_start,
+      fidBlockUntil: params.fid_block_until,
+      state: params.map_state
+    }
+
+    {[{:text, Jason.encode!(msg)}], state}
+  end
+
+  @impl true
   def websocket_info({engine, :send, msg}, state) when engine == state.engine do
     {[{:text, msg}], state}
   end

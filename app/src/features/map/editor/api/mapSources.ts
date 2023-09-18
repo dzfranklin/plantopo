@@ -2,7 +2,7 @@ import type * as ml from 'maplibre-gl';
 
 export interface MapSources {
   layers: {
-    [lid: string]: LayerData;
+    [lid: string]: LayerSource;
   };
   tilesets: {
     [id: string]: ml.SourceSpecification;
@@ -12,7 +12,7 @@ export interface MapSources {
   };
 }
 
-export interface LayerData {
+export interface LayerSource {
   lid: number;
   name: string;
   defaultOpacity: number; // 0..1

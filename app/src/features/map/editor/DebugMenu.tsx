@@ -14,8 +14,8 @@ export default function DebugMenu({
   const onAction = useCallback(
     (key: string | number) => {
       switch (key) {
-        case 'logUpdateSummary': {
-          engine.logUpdateSummary();
+        case 'logEngineDebug': {
+          engine.logDebug();
           break;
         }
         case 'assignEngine': {
@@ -51,7 +51,7 @@ export default function DebugMenu({
       </ActionButton>
 
       <Menu onAction={onAction}>
-        <Item key="logUpdateSummary">Log update summary</Item>
+        <Item key="logEngineDebug">Log engine debug data</Item>
         <Item key="assignEngine">Assign engine to global</Item>
         <Item key="logSocketState">Log socket state</Item>
         <Item key="assignSocket">Assign socket to global</Item>
