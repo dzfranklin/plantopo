@@ -1,8 +1,7 @@
 set shell := ["bash", "-cu"]
 
-t: test-sources test-app test-go test-integration
+t: test-app test-go test-integration
 
-tm: test-sources
 ta: test-app
 tg: test-go
 ti: test-integration
