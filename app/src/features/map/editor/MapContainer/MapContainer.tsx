@@ -53,7 +53,7 @@ export function MapContainer() {
 
   return (
     <div ref={containerRef} className="relative w-full h-full">
-      <RenderStack map={map} containerRef={containerRef} />
+      {tokens && <RenderStack map={map} containerRef={containerRef} />}
     </div>
   );
 }
