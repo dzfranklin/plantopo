@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
 
-FROM rust:bookworm as buildRust
-WORKDIR /app
+# FROM rust:bookworm as buildRust
+# WORKDIR /app
 
-COPY map_sources ./
-RUN cd ./map_sources && cargo run -- .
+# COPY map_sources ./
+# RUN cd ./map_sources && cargo run -- .
 
 FROM golang:1.21.1-bookworm as buildGo
 WORKDIR /app
