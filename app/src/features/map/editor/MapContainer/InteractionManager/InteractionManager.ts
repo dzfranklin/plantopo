@@ -1,6 +1,5 @@
 import { RenderFeature } from '../FeatureRenderer';
 import RBush from 'rbush';
-import { FGeometry } from '../../api/propTypes';
 import { BBox, bbox as computeBBox } from '@turf/turf';
 import { CreateFeatureHandler } from './CreateFeatureHandler';
 import { CurrentCameraPosition } from '../../CurrentCamera';
@@ -11,6 +10,7 @@ import * as ml from 'maplibre-gl';
 import { nearestPointInGeometry } from '../../nearestPointInFeature';
 import { SceneFeature } from '../../engine/Scene';
 import { EditorEngine } from '../../engine/EditorEngine';
+import { SyncGeometry } from '../../api/sync_schema';
 
 // TODO: Should this be a maplibre handler at the top?
 
@@ -451,8 +451,8 @@ export class InteractionManager {
     }
   }
 
-  private _bboxCache = new WeakMap<FGeometry, BBox>();
-  private _computeBboxCached(geo: FGeometry): BBox {
+  private _bboxCache = new WeakMap<SyncGeometry, BBox>();
+  private _computeBboxCached(geo: SyncGeometry): BBox {
     const cached = this._bboxCache.get(geo);
     if (cached) {
       return cached;
