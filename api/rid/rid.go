@@ -34,13 +34,14 @@ func RequestWithContext(r *http.Request) *http.Request {
 
 	if value == uuid.Nil {
 		value = uuid.New()
-		l.Info("generated random rid")
-	} else {
-		l.Info("using rid from header")
 	}
 
 	l = l.With("rid", value)
 	ctx := logger.WithCtx(r.Context(), l.Desugar())
 	ctx = context.WithValue(ctx, ctxKey{}, value)
 	return r.WithContext(ctx)
+}
+
+func HasHeader(r *http.Request) bool {
+	return r.Header.Get("X-Request-Id") != ""
 }
