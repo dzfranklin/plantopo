@@ -1,9 +1,8 @@
 set shell := ["bash", "-cu"]
 
-t: test-sources test-engine test-app test-go test-integration
+t: test-sources test-app test-go test-integration
 
 tm: test-sources
-te: test-engine
 ta: test-app
 tg: test-go
 ti: test-integration
@@ -24,43 +23,8 @@ gen:
   cd map_sources && RUST_LOG=info cargo run .
   mkdir -p app/src/gen && cp map_sources/out/mapSources.json app/src/gen
 
-caddy:
-  caddy stop; caddy run
-
-iex:
-  cd web && iex -S mix server
-
 app:
   cd app && npm run dev
-
-ba:
-  cd app && npm run build
-
-# Build the app for profiling
-bpa:
-  cd app && npm run build -- --profile
-
-find-unused:
-  cd web && mix deps.unlock --check-unused
-
-ci: ci-prepare-map-sources
-
-test-engine:
-  cd sync_engine && cargo check
-  cd sync_engine && cargo clippy
-  cd sync_engine && cargo test
-
-test-sources:
-  cd map_sources && cargo check
-  cd map_sources && cargo clippy
-  cd map_sources && cargo test
-  cd map_sources && RUST_LOG=warn cargo run .
-
-ci-prepare-map-sources:
-  cd map_sources && cargo check
-  cd map_sources && cargo clippy
-  cd map_sources && cargo test
-  cd map_sources && RUST_LOG=warn cargo run .
 
 test-app:
   cd app && tsc --noEmit
