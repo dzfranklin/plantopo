@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"flag"
 	"fmt"
@@ -60,6 +61,9 @@ func main() {
 
 	// must be single-node for matchmaker
 	redisOpts, err := redis.ParseURL(os.Getenv("REDIS_URL"))
+	redisOpts.TLSConfig = &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
 	if err != nil {
 		l.Fatal("error parsing redis url", zap.Error(err))
 	}
