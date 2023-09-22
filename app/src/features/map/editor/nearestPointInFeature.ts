@@ -1,19 +1,18 @@
 import { nearestPointOnLine } from '@turf/turf';
-import { FGeometry } from './api/propTypes';
+import { SyncGeometry } from './api/sync_schema';
 
 export function nearestPointInGeometry(
   target: GeoJSON.Position,
-  geom: FGeometry,
+  geom: SyncGeometry,
 ): GeoJSON.Position {
   switch (geom.type) {
-    case 'Point': {
+    case 'Point':
       return geom.coordinates;
-    }
     case 'LineString':
-    case 'MultiLineString': {
       return nearestPointOnLine(geom, target).geometry.coordinates;
-    }
     default:
-      throw new Error(`nearestPointInGeometry unimplemented for  ${geom.type}`);
+      throw new Error(
+        `nearestPointInGeometry unimplemented for  ${geom['type']}`,
+      );
   }
 }

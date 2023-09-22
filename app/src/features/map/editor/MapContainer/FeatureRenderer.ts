@@ -3,6 +3,7 @@ import { Scene, SceneFeature, SceneRootFeature } from '../engine/Scene';
 import * as GeoJSON from 'geojson';
 import { bboxClip, booleanContains } from '@turf/turf';
 import booleanIntersects from '@turf/boolean-intersects';
+import { LineStringSyncGeometry, SyncGeometry } from '../api/sync_schema';
 
 export interface RenderFeatureList {
   timing: {
@@ -21,7 +22,7 @@ export interface RenderFeature {
   selectedByPeers: string[] | null;
   hoveredByMe: boolean;
 
-  geometry: GeoJSON.Point | GeoJSON.LineString;
+  geometry: SyncGeometry;
 
   name: string | null;
   color: string;
@@ -87,7 +88,7 @@ export class FeatureRenderer {
       return [newInherited, null];
     }
 
-    let geometry: GeoJSON.Point | GeoJSON.LineString;
+    let geometry: SyncGeometry;
     if (feature.geometry.type === 'Point') {
       if (!booleanContains(clipBox, feature.geometry)) {
         return [newInherited, null];
@@ -98,7 +99,7 @@ export class FeatureRenderer {
         return [newInherited, null];
       }
       const clipped = bboxClip(feature.geometry, clipBox.bbox);
-      geometry = clipped.geometry as GeoJSON.LineString;
+      geometry = clipped.geometry as LineStringSyncGeometry;
     } else {
       console.log('Unknown geometry type', feature.geometry['type']);
       return [newInherited, null];
