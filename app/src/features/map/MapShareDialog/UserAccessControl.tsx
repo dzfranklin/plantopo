@@ -1,11 +1,11 @@
 import { User } from '@/features/account/api/User';
+import { useSession } from '@/features/account/session';
 import {
   PendingInvite,
   PutUserAccessEntry,
   UserAccessEntry,
 } from '@/features/map/api/MapAccess';
 import cls from '@/generic/cls';
-import { useCurrentUser } from '@/features/account/useCurrentUser';
 import { Item, Section, Picker } from '@adobe/react-spectrum';
 import { ReactNode } from 'react';
 
@@ -20,34 +20,36 @@ export function UserAccessControl({
   owner: User;
   current: UserAccessEntry[];
   pending: PendingInvite[];
-  changes: Record<number, PutUserAccessEntry>;
-  setChanges: (changes: Record<number, PutUserAccessEntry>) => any;
+  changes: Record<string, PutUserAccessEntry>; // by userId
+  setChanges: (changes: Record<string, PutUserAccessEntry>) => any;
   isDisabled: boolean;
 }) {
   return (
     <ul className="flex flex-col gap-1">
       <EntryContainer>
-        <EntryUserName entry={owner} />
-        <EntryEmail entry={owner} />
-        <div className="row-span-2 pr-2 text-neutral-600 text-md text-right">
+        <EntryUserName user={owner} />
+        <EntryEmail user={owner} />
+        <div className="row-span-2 pr-2 text-right text-neutral-600 text-md">
           Owner
         </div>
       </EntryContainer>
 
       {current.map((entry) => (
         <AccessEntry
-          key={`current-${entry.id}`}
+          key={`current-${entry.user.id}`}
           isDisabled={isDisabled}
           entry={entry}
-          change={changes[entry.id]}
-          setChange={(change) => setChanges({ ...changes, [entry.id]: change })}
+          change={changes[entry.user.id]}
+          setChange={(change) =>
+            setChanges({ ...changes, [entry.user.id]: change })
+          }
         />
       ))}
 
       {pending.map((entry) => (
         <EntryContainer key={`pending-${entry.email}`}>
           <div className="font-semibold text-md">{entry.email}</div>
-          <div className="row-span-2 pr-2 text-neutral-600 text-md text-right">
+          <div className="row-span-2 pr-2 text-right text-neutral-600 text-md">
             Invite sent
           </div>
         </EntryContainer>
@@ -69,18 +71,26 @@ function AccessEntry({
 }) {
   return (
     <EntryContainer>
-      <EntryUserName entry={entry} />
-      <EntryEmail entry={entry} />
-      <div className="row-span-2 flex justify-end">
+      <EntryUserName user={entry.user} />
+      <EntryEmail user={entry.user} />
+      <div className="flex justify-end row-span-2">
         <Picker
           isDisabled={isDisabled}
-          selectedKey={change ? change.role ?? 'remove' : entry.role}
+          selectedKey={
+            change ? ('delete' in change ? 'remove' : change.role) : entry.role
+          }
           onSelectionChange={(key) => {
-            let role: PutUserAccessEntry['role'];
-            if (key === 'remove') role = null;
-            else if (key === 'viewer' || key === 'editor') role = key;
-            else throw new Error('Unreachable');
-            setChange?.({ id: entry.id, role });
+            switch (key) {
+              case 'remove':
+                setChange?.({ delete: true });
+                break;
+              case 'viewer':
+              case 'editor':
+                setChange?.({ role: key });
+                break;
+              default:
+                throw new Error('Unreachable');
+            }
           }}
           gridRow="-1 / 1"
           aria-label="role"
@@ -98,18 +108,18 @@ function AccessEntry({
   );
 }
 
-function EntryUserName({ entry }: { entry: User }) {
-  const currentUser = useCurrentUser();
-  const isYou = currentUser?.id === entry.id;
+function EntryUserName({ user: entry }: { user: User }) {
+  const session = useSession();
+  const isYou = session && session.user.id === entry.id;
   return (
     <span className="font-semibold text-md">
-      {entry.name}
+      {entry.fullName}
       {isYou && ' (You)'}
     </span>
   );
 }
 
-function EntryEmail({ entry }: { entry: User }) {
+function EntryEmail({ user: entry }: { user: User }) {
   return (
     <span className="row-start-2 text-sm leading-tight">{entry.email}</span>
   );

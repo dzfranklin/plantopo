@@ -1,11 +1,28 @@
 set shell := ["bash", "-cu"]
 
-t: test-sources test-engine test-server test-app
+t: test-sources test-engine test-app test-go test-integration
 
 tm: test-sources
 te: test-engine
-ts: test-server
 ta: test-app
+tg: test-go
+ti: test-integration
+
+test-integration:
+  ./api/server/tests/integration_test.sh
+
+api:
+  HOST=localhost PORT=3001 go run ./api/server
+
+test-go *ARGS:
+  go test ./... -race {{ ARGS }}
+
+gen:
+  cd ./api/sync_schema && go run ./gen
+  cp ./api/sync_schema/out/schema.ts ./app/src/features/map/editor/api/sync_schema.ts
+  
+  cd map_sources && RUST_LOG=info cargo run .
+  mkdir -p app/src/gen && cp map_sources/out/mapSources.json app/src/gen
 
 caddy:
   caddy stop; caddy run
@@ -39,9 +56,6 @@ test-sources:
   cd map_sources && cargo test
   cd map_sources && RUST_LOG=warn cargo run .
 
-gen-sources:
-  cd map_sources && RUST_LOG=info cargo run .
-
 ci-prepare-map-sources:
   cd map_sources && cargo check
   cd map_sources && cargo clippy
@@ -53,15 +67,18 @@ test-app:
   cd app && npm run lint
   cd app && npm run test
 
-test-server:
-  cd web && mix format --dry-run --check-formatted
-  cd web && mix compile
-  cd web && mix dialyzer
-  cd web && mix test
-  cd web && MIX_ENV=prod mix compile --all-warnings --no-compile --no-deps-check
-  cd web && mix hex.audit
+migrate *ARGS:
+  docker run -v ./api/migrations:/migrations --network host migrate/migrate \
+    -path=/migrations/ \
+    -database postgres://postgres:postgres@localhost:5432/plantopo_api_dev \
+    {{ ARGS }}
 
-install-server-deps:
-  cd web && mix local.hex --force
-  cd web && mix deps.get
-  cd web && mix deps.compile
+recreatedb:
+  dropdb plantopo_api_dev
+  createdb plantopo_api_dev
+  docker run -v ./api/migrations:/migrations --network host migrate/migrate \
+    -path=/migrations/ \
+    -database postgres://postgres:postgres@localhost:5432/plantopo_api_dev \
+    up
+  psql -d plantopo_api_dev \
+    -f api/migrations/test_seed.sql

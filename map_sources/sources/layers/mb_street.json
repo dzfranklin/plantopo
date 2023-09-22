@@ -1,5 +1,5 @@
 {
-  "lid": 5,
+  "id": "pt/mb_street",
   "name": "Streets",
   "sublayers": "../mb_streets_sublayers.json",
   "sprites": "mb_streets",

@@ -3,11 +3,14 @@ import { beforeAll, afterEach, afterAll } from '@jest/globals';
 import { jestPreviewConfigure } from 'jest-preview';
 import console from 'console';
 
+process.env.NEXT_PUBLIC_API_ENDPOINT = 'https://nonexistent.plantopo.com';
+
 global.console = console; // Just more readable output
 jestPreviewConfigure({ autoPreview: true });
 
-// Establish API mocking before all tests.
-beforeAll(() => server.listen());
+beforeAll(() => {
+  server.listen(); // Establish API mocking before all tests.
+});
 
 // Reset any request handlers that we may add during the tests,
 // so they don't affect other tests.

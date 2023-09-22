@@ -1,5 +1,5 @@
 {
-  "lid": 3,
+  "id": "pt/os_vec",
   "name": "Ordinance Survey Vector (UK)",
   "sublayers": "../os_vec_sublayers.json",
   "sprites": "osv",

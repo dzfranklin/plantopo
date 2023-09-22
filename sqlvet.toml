@@ -1,0 +1,5 @@
+[[sqlfunc_matchers]]
+pkg_path = "github.com/jackc/pgx/v5"
+[[sqlfunc_matchers.rules]]
+query_arg_name = "sql"
+query_arg_pos = 1

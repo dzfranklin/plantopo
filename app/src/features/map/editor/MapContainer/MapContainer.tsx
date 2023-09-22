@@ -3,7 +3,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import './MapContainer.css';
 import { useEffect, useRef, useState } from 'react';
 import * as ml from 'maplibre-gl';
-import { TokenValues, useTokens } from '../../api/useTokens';
+import { TokenValues, useTokensQuery } from '../../api/useTokens';
 import { RenderStack } from './RenderStack';
 
 const GLYPH_URL = 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf';
@@ -14,7 +14,7 @@ const GLYPH_URL = 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf';
  */
 
 export function MapContainer() {
-  const { data: tokens } = useTokens();
+  const { data: tokens } = useTokensQuery();
   const containerRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<ml.Map | null>(null);
 

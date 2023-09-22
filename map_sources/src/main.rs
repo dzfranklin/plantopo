@@ -7,13 +7,13 @@ use std::{
 use eyre::{bail, eyre, Context};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tracing::info;
+use tracing::{debug, info};
 use tracing_subscriber::{prelude::*, EnvFilter};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct LayersFile {
-    layers: BTreeMap<u32, OutputLayer>,
+    layers: BTreeMap<String, OutputLayer>,
     tilesets: BTreeMap<String, serde_json::Value>,
     sprites: Sprites,
 }
@@ -23,7 +23,7 @@ type Sprites = BTreeMap<String, String>; // id -> url
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct InputLayer {
-    lid: u32,
+    id: String,
     name: String,
     default_opacity: Option<f64>,
     attribution: Option<String>, // Only needed if differs from tileset attribution
@@ -37,7 +37,7 @@ struct InputLayer {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct OutputLayer {
-    lid: u32,
+    id: String,
     name: String,
     default_opacity: f64, // 0..1
     attribution: Option<String>,
@@ -138,7 +138,7 @@ fn main() -> eyre::Result<()> {
             serde_json::from_str(&layer).wrap_err_with(|| eyre!("parse {}", layer_f.display()))?;
         let layer: OutputLayer = rewrite_layer(&sprites, &tilesets, &source_layers_dir, layer)
             .wrap_err_with(|| eyre!("rewrite {}", layer_f.display()))?;
-        layers.insert(layer.lid, layer);
+        layers.insert(layer.id.clone(), layer);
     }
 
     let mut opacity_exprs = HashMap::<String, usize>::new();
@@ -155,7 +155,6 @@ fn main() -> eyre::Result<()> {
             }
         }
     }
-    info!("opacity expression types: {opacity_exprs:#?}");
 
     let output = LayersFile {
         layers,
@@ -163,10 +162,9 @@ fn main() -> eyre::Result<()> {
         sprites,
     };
 
-    fs::write(
-        out_dir.join("mapSources.json"),
-        serde_json::to_string(&output)?,
-    )?;
+    let out_path = out_dir.join("mapSources.json");
+    fs::write(&out_path, serde_json::to_string(&output)?)?;
+    info!("Wrote {}", out_path.display());
 
     Ok(())
 }
@@ -178,7 +176,7 @@ fn rewrite_layer(
     layer: InputLayer,
 ) -> eyre::Result<OutputLayer> {
     let InputLayer {
-        lid,
+        id,
         name,
         default_opacity,
         attribution,
@@ -207,7 +205,7 @@ fn rewrite_layer(
         BTreeMap::new();
     let mut sublayer_tilesets = BTreeSet::new();
     for subl in &mut sublayers {
-        subl.id = format!("{lid}:{}", subl.id);
+        subl.id = format!("{id}:{}", subl.id);
 
         rewrite_sprite_refs(sprites.as_deref(), subl)?;
         for (key, value) in &mut subl.paint {
@@ -239,7 +237,7 @@ fn rewrite_layer(
     }
 
     Ok(OutputLayer {
-        lid,
+        id,
         name,
         default_opacity,
         attribution,
@@ -265,7 +263,7 @@ fn _rewrite_expr(label: &str, prop: &str, value: &mut Value) -> eyre::Result<()>
         Value::Array(expr) => match expr.get(0) {
             Some(first) => match first.as_str() {
                 Some("step") if prop == "layout.icon-image" => {
-                    info!("{label} step in layout.icon-image unsupported, picking first");
+                    debug!("{label} step in layout.icon-image unsupported, picking first");
                     // 1 is the predicate, 2 is the first option
                     let first_option = expr.get(2).ok_or(eyre!("step missing first option"))?;
                     *value = first_option.clone();
@@ -273,12 +271,12 @@ fn _rewrite_expr(label: &str, prop: &str, value: &mut Value) -> eyre::Result<()>
                 }
                 Some("literal") => Ok(()),
                 Some("pitch") => {
-                    info!("{label} Replacing unsupported pitch expr with default");
+                    debug!("{label} Replacing unsupported pitch expr with default");
                     *value = Value::Number(0.into());
                     Ok(())
                 }
                 Some("distance-from-center") => {
-                    info!("{label} Replacing unsupported distance-from-center expr with center");
+                    debug!("{label} Replacing unsupported distance-from-center expr with center");
                     *value = Value::Number(0.into());
                     Ok(())
                 }

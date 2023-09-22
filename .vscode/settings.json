@@ -1,5 +1,11 @@
 {
     "elixirLS.projectDir": "./web",
+    "go.testFlags": [
+        "-race"
+    ],
+    "go.testEnvVars": {
+        "APP_ENV": "test"
+    },
     "files.exclude": {
         "/web/_build/**": true,
         "/web/.elixir_ls/**": true,
@@ -18,7 +24,7 @@
     "files.associations": {
         "*.leex": "html-eex",
         "*.eex": "html-eex",
-        "*.sql": "sqlite",
+        "*.sql": "sql",
         "*.heex": "phoenix-heex",
         "iosfwd": "cpp",
         "optional": "cpp",

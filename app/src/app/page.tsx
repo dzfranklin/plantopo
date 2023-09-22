@@ -1,11 +1,11 @@
 'use client';
 
-import Navbar from '@/generic/Navbar';
+import { Layout } from '@/features/layout';
 
-export default function PublicHomePage() {
+export default function HomePage() {
   return (
-    <div>
-      <Navbar />
-    </div>
+    <Layout>
+      <div>TODO: LandingPage</div>
+    </Layout>
   );
 }

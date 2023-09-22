@@ -13,7 +13,7 @@ export interface MapSources {
 }
 
 export interface LayerSource {
-  lid: number;
+  id: string;
   name: string;
   defaultOpacity: number; // 0..1
   attribution?: string; // Only if differs from tileset attribution

@@ -1,4 +1,4 @@
-import { MapMeta } from '../api/MapMeta';
+import { MapMeta, usePutMapAccessMutation } from '../api/mapMeta';
 import {
   Button,
   ButtonGroup,
@@ -8,14 +8,8 @@ import {
   ProgressCircle,
 } from '@adobe/react-spectrum';
 import { InlineErrorComponent } from '@/generic/InlineErrorComponent';
-import { useMapAccess } from '../api/useMapAccess';
-import { useSetMapSharingMutation } from '../api/useSetMapSharingMutation';
-import {
-  PutMapAccess,
-  GeneralAccessLevel,
-  GeneralAccessRole,
-  PutUserAccessEntry,
-} from '../api/MapAccess';
+import { useMapAccess } from '../api/mapMeta';
+import { PutMapAccessRequest } from '../api/MapAccess';
 import { useState } from 'react';
 import { GeneralAccessPicker } from '../GeneralAccessPicker';
 import { UserAccessControl } from './UserAccessControl';
@@ -29,30 +23,15 @@ export function MapShareDialog({
   close: () => void;
 }) {
   const query = useMapAccess(item.id);
-  const mutation = useSetMapSharingMutation(item.id, {
+  const mutation = usePutMapAccessMutation(item.id, {
     onSuccess: close,
   });
 
-  const [newGenAccessLevel, setNewGenAccessLevel] =
-    useState<GeneralAccessLevel | null>(null);
-  const [newGenAccessRole, setNewGenAccessRole] =
-    useState<GeneralAccessRole | null>(null);
-  const [newUserAccess, setNewUserAccess] = useState<
-    Record<number, PutUserAccessEntry>
-  >({});
-  const hasChanges =
-    newGenAccessLevel !== null ||
-    newGenAccessRole !== null ||
-    Object.keys(newUserAccess).length > 0;
-
+  const [changes, setChanges] = useState<PutMapAccessRequest>({});
+  const hasChanges = Object.keys(changes).length > 0;
   const onSave = () => {
     if (!hasChanges) close();
-
-    const props: Omit<PutMapAccess, 'id'> = {};
-    if (newGenAccessLevel) props.generalAccessLevel = newGenAccessLevel;
-    if (newGenAccessRole) props.generalAccessRole = newGenAccessRole;
-    props.userAccess = Object.values(newUserAccess);
-    mutation.mutate(props);
+    mutation.mutate(changes);
   };
 
   return (
@@ -65,6 +44,7 @@ export function MapShareDialog({
         {query.isLoading && (
           <ProgressCircle isIndeterminate aria-label="loading" size="M" />
         )}
+        {query.isError && <InlineErrorComponent error={query.error} />}
         {query.isSuccess && (
           <div className="flex flex-col gap-6 pt-1 pb-1">
             <section>
@@ -78,8 +58,10 @@ export function MapShareDialog({
                 owner={query.data.owner}
                 current={query.data.userAccess}
                 pending={query.data.pendingInvites}
-                changes={newUserAccess}
-                setChanges={setNewUserAccess}
+                changes={changes.userAccess || {}}
+                setChanges={(userAccess) =>
+                  setChanges((p) => ({ ...p, userAccess }))
+                }
                 isDisabled={mutation.isLoading}
               />
             </section>
@@ -87,10 +69,16 @@ export function MapShareDialog({
             <section>
               <h3 className="pb-2 text-lg font-semibold">General access</h3>
               <GeneralAccessPicker
-                level={newGenAccessLevel || query.data.generalAccessLevel}
-                role={newGenAccessRole || query.data.generalAccessRole}
-                setLevel={setNewGenAccessLevel}
-                setRole={setNewGenAccessRole}
+                level={
+                  changes.generalAccessLevel || query.data.generalAccessLevel
+                }
+                role={changes.generalAccessRole || query.data.generalAccessRole}
+                setLevel={(generalAccessLevel) =>
+                  setChanges((p) => ({ ...p, generalAccessLevel }))
+                }
+                setRole={(generalAccessRole) =>
+                  setChanges((p) => ({ ...p, generalAccessRole }))
+                }
                 isDisabled={mutation.isLoading}
               />
             </section>

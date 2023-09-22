@@ -3,7 +3,7 @@ import { FeatureTree } from './FeatureTree';
 import { Toolbar } from './Toolbar';
 import { ResizeHandle } from './ResizeHandle';
 import cls from '@/generic/cls';
-import { useEngine, useSceneSelector } from '../api/useEngine';
+import { useEngine, useSceneSelector } from '../engine/useEngine';
 
 export default function Sidebar() {
   const engine = useEngine();

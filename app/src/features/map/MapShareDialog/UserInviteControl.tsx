@@ -1,15 +1,16 @@
-import { InviteRole } from '@/features/map/api/MapAccess';
-import { useMapInviteMutation } from '@/features/map/api/useMapInviteMutation';
 import cls from '@/generic/cls';
 import { Button, Checkbox, Item, Picker } from '@adobe/react-spectrum';
 import { useCallback, useState } from 'react';
+import { usePutMapAccessMutation } from '../api/mapMeta';
+import { UserAccessRole } from '../api/MapAccess';
+import { InlineErrorComponent } from '@/generic/InlineErrorComponent';
 
 const DEFAULT_ROLE = 'editor';
 const DEFAULT_NOTIFY = true;
 
-export function UserInviteControl({ map }: { map: number }) {
+export function UserInviteControl({ map }: { map: string }) {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<InviteRole>(DEFAULT_ROLE);
+  const [role, setRole] = useState<UserAccessRole>(DEFAULT_ROLE);
   const [notify, _setNotify] = useState(DEFAULT_NOTIFY);
   const [notifyMessage, setNotifyMessage] = useState('');
   const setNotify = useCallback((value: boolean) => {
@@ -18,7 +19,7 @@ export function UserInviteControl({ map }: { map: number }) {
   }, []);
   const isExpanded = email.length > 0;
 
-  const mutation = useMapInviteMutation({
+  const mutation = usePutMapAccessMutation(map, {
     onSuccess: () => {
       setEmail('');
       setRole(DEFAULT_ROLE);
@@ -28,11 +29,14 @@ export function UserInviteControl({ map }: { map: number }) {
   });
   const doSend = () => {
     mutation.mutate({
-      mapId: map,
-      email,
-      role,
-      notify,
-      notifyMessage: notifyMessage.length > 0 ? notifyMessage : undefined,
+      invite: [
+        {
+          email,
+          role,
+          notify,
+          notifyMessage: notifyMessage.length > 0 ? notifyMessage : undefined,
+        },
+      ],
     });
   };
 
@@ -47,6 +51,8 @@ export function UserInviteControl({ map }: { map: number }) {
         'motion-safe:transition-[padding]',
       )}
     >
+      {mutation.isError && <InlineErrorComponent error={mutation.error} />}
+
       <div className="flex justify-end row-start-1 grow">
         <input
           type="email"

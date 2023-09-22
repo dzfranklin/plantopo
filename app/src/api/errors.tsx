@@ -1,29 +1,32 @@
-export class UnauthorizedError extends Error {
-  readonly name = 'UnauthorizedError';
-}
+import { ErrorReply } from './reply';
 
-export class ForbiddenError extends Error {
-  readonly name = 'ForbiddenError';
-}
+export type ApiError<TDetails = unknown> = TransportError | AppError<TDetails>;
 
-export class NotFoundError extends Error {
-  readonly name = 'NotFoundError';
-}
+export class TransportError extends Error {
+  readonly name = 'TransportError';
 
-export class NetworkError extends Error {
-  readonly name = 'NetworkError';
+  constructor(public requestId: string, public cause: unknown) {
+    const errCause = cause instanceof Error ? cause : new Error(`${cause}`);
+    super(`${errCause.message} (requestId: ${requestId})`);
+  }
 
-  constructor(cause: unknown) {
-    super(cause instanceof Error ? cause.message : `${cause}`);
-    this.stack = cause instanceof Error ? cause.stack : undefined;
+  static notJson(requestId: string, status: number, body: string) {
+    return new TransportError(requestId, `not json: ${status}\n\n${body}`);
   }
 }
 
-export class JsonDecodeError extends Error {
-  readonly name = 'JsonDecodeError';
+export class AppError<TDetails> extends Error {
+  readonly name = 'AppError';
 
-  constructor(cause: unknown) {
-    super(cause instanceof Error ? cause.message : `${cause}`);
-    this.stack = cause instanceof Error ? cause.stack : undefined;
+  readonly code: number;
+  readonly reason?: string;
+  readonly details?: TDetails;
+
+  constructor(public requestId: string, public cause: ErrorReply<TDetails>) {
+    const msg = cause.error.message || `Error ${cause.error.code}`;
+    super(`${msg} (requestId: ${requestId})`);
+    this.code = cause.error.code;
+    this.reason = cause.error.reason;
+    this.details = cause.error.details;
   }
 }

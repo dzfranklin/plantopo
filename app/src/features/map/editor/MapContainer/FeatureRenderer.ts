@@ -1,7 +1,7 @@
 import { BBoxPolygon, CurrentCameraPosition } from '../CurrentCamera';
-import { Scene, SceneFeature, SceneRootFeature } from '../api/SyncEngine/Scene';
+import { Scene, SceneFeature, SceneRootFeature } from '../engine/Scene';
 import * as GeoJSON from 'geojson';
-import { bboxClip, bboxPolygon, booleanContains } from '@turf/turf';
+import { bboxClip, booleanContains } from '@turf/turf';
 import booleanIntersects from '@turf/boolean-intersects';
 
 export interface RenderFeatureList {
@@ -14,7 +14,7 @@ export interface RenderFeatureList {
 }
 
 export interface RenderFeature {
-  id: number;
+  id: string;
   children: RenderFeature[];
 
   selectedByMe: boolean;
@@ -100,7 +100,7 @@ export class FeatureRenderer {
       const clipped = bboxClip(feature.geometry, clipBox.bbox);
       geometry = clipped.geometry as GeoJSON.LineString;
     } else {
-      console.log('Unknown geometry type', feature.geometry.type);
+      console.log('Unknown geometry type', feature.geometry['type']);
       return [newInherited, null];
     }
 
