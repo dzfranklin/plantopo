@@ -61,12 +61,13 @@ func main() {
 
 	// must be single-node for matchmaker
 	redisOpts, err := redis.ParseURL(os.Getenv("REDIS_URL"))
-	redisOpts.TLSConfig = &tls.Config{
-		MinVersion: tls.VersionTLS12,
-	}
 	if err != nil {
 		l.Fatal("error parsing redis url", zap.Error(err))
 	}
+	redisOpts.TLSConfig = &tls.Config{
+		MinVersion: tls.VersionTLS12,
+	}
+	l.Warn("TODO: Redis config is", zap.Any("redisOpts", redisOpts))
 	redis := redis.NewClient(redisOpts)
 
 	mailerConfig := mailer.Config{}
