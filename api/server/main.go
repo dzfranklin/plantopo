@@ -59,9 +59,11 @@ func main() {
 	var wg sync.WaitGroup
 
 	// must be single-node for matchmaker
-	redis := redis.NewClient(&redis.Options{
-		Addr: os.Getenv("REDIS_ADDR"),
-	})
+	redisOpts, err := redis.ParseURL(os.Getenv("REDIS_URL"))
+	if err != nil {
+		l.Fatal("error parsing redis url", zap.Error(err))
+	}
+	redis := redis.NewClient(redisOpts)
 
 	mailerConfig := mailer.Config{}
 	if os.Getenv("APP_ENV") == "development" {
