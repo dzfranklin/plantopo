@@ -59,7 +59,6 @@ func New(s *Services) http.Handler {
 	r.HandleFunc("/api/v1/account/{id:[a-z0-9-]+}.png", s.accountImageHandler)
 
 	r.HandleFunc("/api/v1/map/tokens", s.mapTokensHandler)
-	r.HandleFunc("/api/v1/map/sources", s.mapSourcesHandler)
 
 	r.HandleFunc("/api/v1/map/list/owned-by-me", s.mapListOwnedByMeHandler)
 	r.HandleFunc("/api/v1/map/list/shared-with-me", s.mapListSharedWithMeHandler)
