@@ -99,7 +99,7 @@ func main() {
 		Maps:       maps,
 	})
 	server := &http.Server{
-		Addr:    fmt.Sprintf("%s:%s", host, port),
+		Addr:    fmt.Sprintf(":%s", port),
 		Handler: router,
 	}
 
