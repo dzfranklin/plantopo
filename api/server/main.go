@@ -67,7 +67,6 @@ func main() {
 	redisOpts.TLSConfig = &tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
-	l.Warn("TODO: Redis config is", zap.Any("redisOpts", redisOpts))
 	redis := redis.NewClient(redisOpts)
 
 	mailerConfig := mailer.Config{}

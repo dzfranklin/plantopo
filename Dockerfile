@@ -6,8 +6,10 @@
 # COPY map_sources ./
 # RUN cd ./map_sources && cargo run -- .
 
-FROM golang:1.21.1-bookworm as buildGo
+FROM golang:1.21.1-bookworm as build
 WORKDIR /app
+
+RUN apt install --yes ca-certificates
 
 COPY go.mod ./
 RUN go mod download
@@ -19,7 +21,8 @@ RUN go build -o ./out/server ./api/server
 
 FROM debian:bookworm
 
-COPY --from=buildGo /app/out/server /server
+COPY --from=build /app/out/server /server
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 ENV PORT=8080
 EXPOSE $PORT
