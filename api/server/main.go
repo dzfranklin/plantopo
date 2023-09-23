@@ -60,12 +60,15 @@ func main() {
 	var wg sync.WaitGroup
 
 	// must be single-node for matchmaker
-	redisOpts, err := redis.ParseURL(os.Getenv("REDIS_URL"))
+	redisUrl := os.Getenv("REDIS_URL")
+	redisOpts, err := redis.ParseURL(redisUrl)
 	if err != nil {
 		l.Fatal("error parsing redis url", zap.Error(err))
 	}
-	redisOpts.TLSConfig = &tls.Config{
-		MinVersion: tls.VersionTLS12,
+	if strings.Contains(redisUrl, "rediss://") {
+		redisOpts.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
 	}
 	redis := redis.NewClient(redisOpts)
 
