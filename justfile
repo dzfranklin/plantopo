@@ -1,13 +1,17 @@
 set shell := ["bash", "-cu"]
 
-t: test-app test-go test-integration
+t: test-app test-go test-integration test-build-prod
 
 ta: test-app
 tg: test-go
 ti: test-integration
+tp: test-build-prod
 
 test-integration:
   ./api/server/tests/integration_test.sh
+
+test-build-prod:
+  docker build -t plantopo:latest .
 
 api:
   HOST=localhost PORT=3001 go run ./api/server
