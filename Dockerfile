@@ -23,7 +23,7 @@ COPY --from=buildGo /build/api/sync_schema/out/schema.ts \
   ./app/src/gen/sync_schema.ts
 
 RUN mkdir -p ./app
-COPY ./app/package*.json ./app
+COPY ./app/package*.json ./app/
 RUN cd ./app && npm ci
 COPY ./app ./app
 RUN cd ./app && NEXT_TELEMETRY_DISABLED=0 npm run build
