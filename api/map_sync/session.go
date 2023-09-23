@@ -126,7 +126,10 @@ func handler(
 		for _, client := range clients {
 			close(client.out)
 		}
-		store.Save(context.Background())
+		err := store.Save(context.Background())
+		if err != nil {
+			l.Error("closing save error", zap.Error(err))
+		}
 		trafficLog.maybeClose(ul)
 	}()
 
