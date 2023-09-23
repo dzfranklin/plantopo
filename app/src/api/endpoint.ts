@@ -1,15 +1,19 @@
-const base = process.env.NEXT_PUBLIC_API_ENDPOINT;
-if (!base) {
+const envVar = process.env.NEXT_PUBLIC_API_ENDPOINT;
+if (!envVar) {
   throw new Error('NEXT_PUBLIC_API_ENDPOINT is not set');
 }
-if (base.endsWith('/')) {
-  throw new Error(`NEXT_PUBLIC_API_ENDPOINT not end with / (got ${base})`);
+if (envVar.endsWith('/')) {
+  throw new Error(
+    `NEXT_PUBLIC_API_ENDPOINT must not end with / (got ${envVar})`,
+  );
 }
 try {
-  new URL(base);
+  new URL(envVar);
 } catch (err) {
-  throw new Error(`NEXT_PUBLIC_API_ENDPOINT is not a valid URL (got ${base})`);
+  throw new Error(
+    `NEXT_PUBLIC_API_ENDPOINT is not a valid URL (got ${envVar})`,
+  );
 }
 
-export const API_ENDPOINT = base + '/api/v1/';
-export const API_ENDPOINT_WS = base.replace(/^http/, 'ws') + '/api/v1/';
+export const API_ENDPOINT = envVar;
+export const API_ENDPOINT_WS = API_ENDPOINT.replace(/^http/, 'ws');

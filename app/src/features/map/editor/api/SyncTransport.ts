@@ -72,7 +72,7 @@ export class SyncTransport {
     if (this._sock !== null || this._destroyed) {
       return;
     }
-    const endpoint = `${API_ENDPOINT_WS}map/${this.mapId}/sync-socket?clientId=${this.clientId}`;
+    const endpoint = `${API_ENDPOINT_WS}/map/${this.mapId}/sync-socket?clientId=${this.clientId}`;
     console.log('Connecting to', endpoint);
     this._sock = new WebSocket(endpoint);
     this._sock.onopen = () => {
