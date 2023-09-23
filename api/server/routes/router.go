@@ -7,6 +7,7 @@ import (
 	"github.com/danielzfranklin/plantopo/api/db"
 	"github.com/danielzfranklin/plantopo/api/frontend_map_tokens"
 	"github.com/danielzfranklin/plantopo/api/logger"
+	"github.com/danielzfranklin/plantopo/api/mailer"
 	"github.com/danielzfranklin/plantopo/api/map_sync"
 	"github.com/danielzfranklin/plantopo/api/maps"
 	"github.com/danielzfranklin/plantopo/api/rid"
@@ -24,6 +25,7 @@ type Services struct {
 	Pg                *db.Pg
 	Users             users.Service
 	Maps              maps.Service
+	Mailer            mailer.Service
 	SessionManager    *session.SessionManager
 	FrontendMapTokens *frontend_map_tokens.Tokens
 }

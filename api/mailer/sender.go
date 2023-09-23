@@ -1,9 +1,14 @@
 package mailer
 
-import "go.uber.org/zap"
+import (
+	"context"
+
+	"go.uber.org/zap"
+)
 
 type Sender interface {
 	Send(p Payload) error
+	Healthz(ctx context.Context) bool
 }
 
 type Payload struct {
@@ -19,8 +24,16 @@ func (s *LogSender) Send(p Payload) error {
 	return nil
 }
 
+func (s *LogSender) Healthz(ctx context.Context) bool {
+	return true
+}
+
 type NoopSender struct{}
 
 func (s *NoopSender) Send(p Payload) error {
 	return nil
+}
+
+func (s *NoopSender) Healthz(ctx context.Context) bool {
+	return true
 }

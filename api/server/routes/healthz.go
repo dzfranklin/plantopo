@@ -36,6 +36,9 @@ func (s *Services) healthzHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return true
 		},
+		"mailer": func() bool {
+			return s.Mailer.Healthz(ctx)
+		},
 	}
 
 	services := make(map[string]bool)

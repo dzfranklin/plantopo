@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,9 +32,10 @@ import (
 func main() {
 	uuid.EnableRandPool()
 
-	l := logger.Get()
-	defer l.Sync()
-	ctx := logger.WithCtx(context.Background(), l)
+	ul := logger.Get()
+	defer ul.Sync()
+	ctx := logger.WithCtx(context.Background(), ul)
+	l := ul.Sugar()
 
 	if os.Getenv("APP_ENV") == "development" {
 		err := godotenv.Load(".env")
@@ -53,9 +55,10 @@ func main() {
 	host := os.Getenv("HOST")
 	port := os.Getenv("PORT")
 	if host == "" || port == "" {
-		l.Fatal("HOST and PORT must be set")
+		l.Fatalw("HOST and PORT must be set")
 	}
 	l = l.With(zap.String("host", host), zap.String("port", port))
+	l.Infow("starting")
 
 	var wg sync.WaitGroup
 
@@ -63,7 +66,7 @@ func main() {
 	redisUrl := os.Getenv("REDIS_URL")
 	redisOpts, err := redis.ParseURL(redisUrl)
 	if err != nil {
-		l.Fatal("error parsing redis url", zap.Error(err))
+		l.Fatalw("error parsing redis url", zap.Error(err))
 	}
 	if strings.Contains(redisUrl, "rediss://") {
 		redisOpts.TLSConfig = &tls.Config{
@@ -71,34 +74,51 @@ func main() {
 		}
 	}
 	redis := redis.NewClient(redisOpts)
+	_, err = redis.Ping(ctx).Result()
+	l.Infow("checking redis")
+	if err != nil {
+		l.Fatalw("error connecting to redis", zap.Error(err))
+	}
 
 	mailerConfig := mailer.Config{}
 	if os.Getenv("APP_ENV") == "development" {
-		mailerConfig.Sender = &mailer.LogSender{Logger: l.Sugar()}
+		mailerConfig.Sender = &mailer.LogSender{Logger: l}
 	} else {
 		sesSender, err := mailer.NewSESSender()
 		if err != nil {
-			l.Fatal("error creating SES sender", zap.Error(err))
+			l.Fatalw("error creating SES sender", zap.Error(err))
 		}
 		mailerConfig.Sender = sesSender
 	}
 	mailer := mailer.New(ctx, mailerConfig)
+	l.Infow("checking mailer")
+	if !mailer.Healthz(ctx) {
+		l.Fatalw("mailer health check failed")
+	}
 
 	pg, err := db.NewPg(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
-		l.Fatal("error connecting to postgres", zap.Error(err))
+		l.Fatalw("error creating postgres pool", zap.Error(err))
+	}
+	l.Infow("checking postgres")
+	if err := pg.Ping(ctx); err != nil {
+		l.Fatalw("error pinging postgres", zap.Error(err))
 	}
 
 	users := users.NewService(ctx, pg, mailer)
-	maps := maps.NewService(l, pg, users, mailer)
+	maps := maps.NewService(l.Desugar(), pg, users, mailer)
 
 	matchmakerCtx, cancelMatchmaker := context.WithCancel(ctx)
 	matchmaker := map_sync.NewMatchmaker(matchmakerCtx, map_sync.Config{
 		Host: host,
 		Rdb:  redis,
 		Wg:   &wg,
-		Repo: map_sync.NewRepo(l, pg),
+		Repo: map_sync.NewRepo(l.Desugar(), pg),
 	})
+	l.Infow("checking matchmaker")
+	if !matchmaker.Healthz(ctx) {
+		l.Fatalw("matchmaker health check failed")
+	}
 
 	router := routes.New(&routes.Services{
 		Matchmaker: &matchmaker,
@@ -106,6 +126,7 @@ func main() {
 		Pg:         pg,
 		Users:      users,
 		Maps:       maps,
+		Mailer:     mailer,
 	})
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
@@ -113,12 +134,12 @@ func main() {
 	}
 
 	go func() {
-		l.Info("starting http server")
+		l.Infow("starting http server")
 		err := server.ListenAndServe()
 		if err == http.ErrServerClosed {
-			l.Info("http server closed")
+			l.Infow("http server closed")
 		} else {
-			l.Fatal("http server error", zap.Error(err))
+			l.Fatalw("http server error", zap.Error(err))
 		}
 	}()
 
@@ -131,14 +152,14 @@ func main() {
 		cancelCtx, cancelCancel := context.WithTimeout(ctx, time.Second*15)
 		defer cancelCancel()
 		if err := server.Shutdown(cancelCtx); err != nil {
-			l.Fatal("server shutdown error", zap.Error(err))
+			l.Fatalw("server shutdown error", zap.Error(err))
 		}
 
 		cancelMatchmaker()
 
 		wg.Wait()
 
-		l.Info("server shutdown complete")
+		l.Infow("server shutdown complete")
 		gracefulShutdownDone <- struct{}{}
 	}()
 
@@ -152,6 +173,6 @@ func main() {
 
 		l.Error("graceful server shutdown timed out", zap.String("stack", stack))
 		fmt.Println(stack)
-		l.Fatal("graceful server shutdown timed out")
+		l.Fatalw("graceful server shutdown timed out")
 	}
 }

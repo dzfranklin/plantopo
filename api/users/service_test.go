@@ -55,6 +55,10 @@ func (m *mockMailer) SendInvite(req mailer.InviteRequest) error {
 	return nil
 }
 
+func (m *mockMailer) Healthz(ctx context.Context) bool {
+	return true
+}
+
 var validName = "Test User"
 var validPassword = "testpassword"
 
@@ -78,6 +82,10 @@ type noopSender struct{}
 
 func (s *noopSender) Send(p mailer.Payload) error {
 	return nil
+}
+
+func (s *noopSender) Healthz(ctx context.Context) bool {
+	return true
 }
 
 func (s *S) makeSubject() (*impl, func()) {
