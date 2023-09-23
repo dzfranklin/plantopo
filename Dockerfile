@@ -9,7 +9,6 @@
 FROM golang:1.21.1-bookworm as build
 WORKDIR /app
 
-RUN apt install --yes ca-certificates
 
 COPY go.mod ./
 RUN go mod download
