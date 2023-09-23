@@ -43,6 +43,12 @@ migrate *ARGS:
     -database postgres://postgres:postgres@localhost:5432/plantopo_api_dev \
     {{ ARGS }}
 
+migrate-prod-up url:
+  docker run -v ./api/migrations:/migrations --network host migrate/migrate \
+    -path=/migrations/ \
+    -database {{url}} \
+    up
+
 recreatedb:
   dropdb plantopo_api_dev
   createdb plantopo_api_dev
