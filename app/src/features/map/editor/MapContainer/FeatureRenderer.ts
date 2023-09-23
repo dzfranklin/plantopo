@@ -1,6 +1,5 @@
 import { BBoxPolygon, CurrentCameraPosition } from '../CurrentCamera';
 import { Scene, SceneFeature, SceneRootFeature } from '../engine/Scene';
-import * as GeoJSON from 'geojson';
 import { bboxClip, booleanContains } from '@turf/turf';
 import booleanIntersects from '@turf/boolean-intersects';
 import { LineStringSyncGeometry, SyncGeometry } from '../api/sync_schema';
