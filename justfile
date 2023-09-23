@@ -17,10 +17,11 @@ test-go *ARGS:
 
 gen:
   rm -rf ./api/sync_schema/out && mkdir ./api/sync_schema/out
+  rm -rf ./app/src/gen && mkdir ./app/src/gen
+
   go run ./api/sync_schema/generator
   cp ./api/sync_schema/out/schema.ts ./app/src/gen/sync_schema.ts
   
-  rm -rf ./app/src/gen && mkdir ./app/src/gen
   go run ./sources
   mkdir -p app/src/gen && cp sources/out/mapSources.json app/src/gen
 
