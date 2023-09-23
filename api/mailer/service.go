@@ -19,7 +19,6 @@ type Service interface {
 	SendPasswordReset(to *types.User, token string) error
 	SendShareNotification(req ShareNotificationRequest) error
 	SendInvite(req InviteRequest) error
-	Healthz(ctx context.Context) bool
 }
 
 type ShareNotificationRequest struct {
@@ -63,10 +62,6 @@ func NewNoop() Service {
 		context.Background(),
 		Config{Sender: &NoopSender{}},
 	)
-}
-
-func (m *impl) Healthz(ctx context.Context) bool {
-	return m.s.Healthz(ctx)
 }
 
 //go:embed templates/*

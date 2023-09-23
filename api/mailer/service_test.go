@@ -19,10 +19,6 @@ func (m *mockSender) Send(p Payload) error {
 	return args.Error(0)
 }
 
-func (m *mockSender) Healthz(ctx context.Context) bool {
-	return true
-}
-
 func setup(t *testing.T) (*impl, *mockSender) {
 	sender := new(mockSender)
 	subject := New(context.Background(), Config{Sender: sender})

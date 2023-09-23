@@ -45,6 +45,7 @@ func main() {
 	}
 
 	genSessionAuthKey := flag.Bool("gen-session-auth-key", false, "")
+	noSendMail := flag.Bool("no-send-mail", false, "")
 	flag.Parse()
 	if *genSessionAuthKey {
 		key := securecookie.GenerateRandomKey(64)
@@ -81,20 +82,16 @@ func main() {
 	}
 
 	mailerConfig := mailer.Config{}
-	if os.Getenv("APP_ENV") == "development" {
-		mailerConfig.Sender = &mailer.LogSender{Logger: l}
+	if *noSendMail {
+		mailerConfig.Sender = &mailer.LogSender{}
 	} else {
-		sesSender, err := mailer.NewSESSender()
+		creds, err := mailer.ParseCredentials(os.Getenv("MAILJET_CREDENTIALS"))
 		if err != nil {
-			l.Fatalw("error creating SES sender", zap.Error(err))
+			l.Fatalw("error parsing mailjet credentials", zap.Error(err))
 		}
-		mailerConfig.Sender = sesSender
+		mailerConfig.Sender = mailer.NewMailjetSender(l, creds)
 	}
 	mailer := mailer.New(ctx, mailerConfig)
-	l.Infow("checking mailer")
-	if !mailer.Healthz(ctx) {
-		l.Fatalw("mailer health check failed")
-	}
 
 	pg, err := db.NewPg(ctx, os.Getenv("DATABASE_URL"))
 	if err != nil {
