@@ -10,7 +10,7 @@ import * as ml from 'maplibre-gl';
 import { nearestPointInGeometry } from '../../nearestPointInFeature';
 import { SceneFeature } from '../../engine/Scene';
 import { EditorEngine } from '../../engine/EditorEngine';
-import { SyncGeometry } from '../../api/sync_schema';
+import { SyncGeometry } from '@/gen/sync_schema';
 
 // TODO: Should this be a maplibre handler at the top?
 

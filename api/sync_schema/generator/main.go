@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"go/format"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/iancoleman/strcase"
@@ -14,10 +15,17 @@ import (
 var tsGeometry string
 
 func main() {
-	dir, err := os.ReadDir(".")
+	workingDir := "./api/sync_schema"
+	dir, err := os.ReadDir(workingDir)
 	if err != nil {
 		panic(err)
 	}
+	if err = os.Mkdir(path.Join(workingDir, "out"), 0755); err != nil {
+		if !os.IsExist(err) {
+			panic(err)
+		}
+	}
+
 	inputs := make([]string, 0)
 	for _, f := range dir {
 		if f.Type().IsRegular() {
@@ -30,7 +38,7 @@ func main() {
 
 	types := make([]typeIR, 0, len(inputs))
 	for _, infile := range inputs {
-		inschema, err := os.ReadFile(infile)
+		inschema, err := os.ReadFile(path.Join(workingDir, infile))
 		if err != nil {
 			panic(err)
 		}
@@ -39,12 +47,20 @@ func main() {
 	}
 
 	goGen := genGo(types)
-	os.WriteFile("schema.go", goGen, 0644)
-	fmt.Println("Wrote ./schema.go")
+	goOut := path.Join(workingDir, "schema.go")
+	err = os.WriteFile(goOut, goGen, 0644)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Wrote %s\n", goOut)
 
 	tsGen := genTs(types)
-	os.WriteFile("out/schema.ts", tsGen, 0644)
-	fmt.Println("Wrote ./out/schema.ts")
+	tsOut := path.Join(workingDir, "out/schema.ts")
+	err = os.WriteFile(tsOut, tsGen, 0644)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Wrote %s\n", tsOut)
 }
 
 type typeIR struct {

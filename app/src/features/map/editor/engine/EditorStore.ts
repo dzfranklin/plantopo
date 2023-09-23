@@ -6,7 +6,7 @@ import {
   LayerChange,
   mergeFeature,
   mergeLayer,
-} from '../api/sync_schema';
+} from '@/gen/sync_schema';
 
 export class EditorStore {
   public readonly clientId: string;

@@ -1,4 +1,4 @@
-import { FeatureChange, LayerChange } from './sync_schema';
+import { FeatureChange, LayerChange } from '@/gen/sync_schema';
 
 export interface Changeset {
   fdelete?: string[];

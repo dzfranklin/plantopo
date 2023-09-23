@@ -1,5 +1,5 @@
 import { nearestPointOnLine } from '@turf/turf';
-import { SyncGeometry } from './api/sync_schema';
+import { SyncGeometry } from '@/gen/sync_schema';
 
 export function nearestPointInGeometry(
   target: GeoJSON.Position,

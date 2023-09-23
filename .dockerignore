@@ -1,6 +1,5 @@
-target
-out
-gen
-.next
-node_modules
+**/out
+**/gen
+**/.next
+**/node_modules
 maplibre-gl-js

@@ -1,5 +1,5 @@
 import { LayerSource } from '../api/mapSources';
-import { SyncGeometry } from '../api/sync_schema';
+import { SyncGeometry } from '@/gen/sync_schema';
 
 export type Scene = {
   timing: {

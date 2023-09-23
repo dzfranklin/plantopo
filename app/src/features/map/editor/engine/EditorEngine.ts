@@ -14,7 +14,7 @@ import {
 } from './Scene';
 import { LayerSource, MapSources } from '../api/mapSources';
 import { EditorPrefStore } from './EditorPrefStore';
-import { FeatureChange, LayerChange } from '../api/sync_schema';
+import { FeatureChange, LayerChange } from '@/gen/sync_schema';
 import fracIdxBetween from './fracIdxBetween';
 import { Changeset } from '../api/Changeset';
 import { deepEq } from '@/generic/equality';

@@ -2,7 +2,7 @@ import { BBoxPolygon, CurrentCameraPosition } from '../CurrentCamera';
 import { Scene, SceneFeature, SceneRootFeature } from '../engine/Scene';
 import { bboxClip, booleanContains } from '@turf/turf';
 import booleanIntersects from '@turf/boolean-intersects';
-import { LineStringSyncGeometry, SyncGeometry } from '../api/sync_schema';
+import { LineStringSyncGeometry, SyncGeometry } from '@/gen/sync_schema';
 
 export interface RenderFeatureList {
   timing: {
