@@ -2,10 +2,8 @@ const envVar = process.env.NEXT_PUBLIC_API_ENDPOINT;
 if (!envVar) {
   throw new Error('NEXT_PUBLIC_API_ENDPOINT is not set');
 }
-if (envVar.endsWith('/')) {
-  throw new Error(
-    `NEXT_PUBLIC_API_ENDPOINT must not end with / (got ${envVar})`,
-  );
+if (!envVar.endsWith('/')) {
+  throw new Error(`NEXT_PUBLIC_API_ENDPOINT must end with / (got ${envVar})`);
 }
 try {
   new URL(envVar);
