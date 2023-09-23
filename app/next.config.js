@@ -2,6 +2,7 @@
 const config = {
   reactStrictMode: true,
   productionBrowserSourceMaps: true,
+  trailingSlash: true,
   output: 'export',
   transpilePackages: [
     '@tanstack/react-query-devtools',
