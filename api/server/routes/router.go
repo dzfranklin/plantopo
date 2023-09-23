@@ -46,7 +46,7 @@ func New(s *Services) http.Handler {
 	r.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 	r.MethodNotAllowedHandler = http.HandlerFunc(notAllowedHandler)
 
-	r.HandleFunc("/healthz", s.healthzHandler).Methods("GET")
+	r.HandleFunc("/api/v1/healthz", s.healthzHandler).Methods("GET")
 
 	r.HandleFunc("/api/v1/session", s.sessionHandler)
 
