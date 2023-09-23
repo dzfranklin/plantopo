@@ -2,6 +2,8 @@ module github.com/danielzfranklin/plantopo
 
 go 1.21.0
 
+replace github.com/tidwall/btree => github.com/danielzfranklin/btree v0.0.0-20230923110200-3b8d757db6db
+
 require (
 	github.com/alicebob/miniredis/v2 v2.30.5
 	github.com/google/uuid v1.3.1
@@ -31,7 +33,9 @@ require (
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jmoiron/sqlx v1.3.5 // indirect
+	github.com/josharian/intern v1.0.0 // indirect
 	github.com/lib/pq v1.10.2 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -63,7 +67,9 @@ require (
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/joho/godotenv v1.5.1
 	github.com/mazznoer/csscolorparser v0.1.3
+	github.com/perimeterx/marshmallow v1.1.5
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/tidwall/btree v1.7.0
 	github.com/vgarvardt/pgx-google-uuid/v5 v5.0.0
 	github.com/yuin/gopher-lua v1.1.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect

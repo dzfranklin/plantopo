@@ -19,8 +19,8 @@ gen:
   cd ./api/sync_schema && go run ./gen
   cp ./api/sync_schema/out/schema.ts ./app/src/features/map/editor/api/sync_schema.ts
   
-  cd map_sources && RUST_LOG=info cargo run .
-  mkdir -p app/src/gen && cp map_sources/out/mapSources.json app/src/gen
+  go run ./sources
+  mkdir -p app/src/gen && cp sources/out/mapSources.json app/src/gen
 
 app:
   cd app && npm run dev
