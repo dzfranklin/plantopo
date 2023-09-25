@@ -39,7 +39,6 @@ func writeData(w http.ResponseWriter, value interface{}) {
 }
 
 func writeError(w http.ResponseWriter, err error) {
-	logger.Get().Info("writing error", zap.Any("err", err))
 	var errReply *ErrorReply
 	if !errors.As(err, &errReply) {
 		errReply = &ErrorReply{
@@ -47,6 +46,11 @@ func writeError(w http.ResponseWriter, err error) {
 			Message: "internal server error",
 		}
 	}
+	logger.Get().Info("writing error response",
+		zap.Int("code", errReply.Code),
+		zap.String("reason", errReply.Reason),
+		zap.Any("err", err),
+	)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(errReply.Code)
