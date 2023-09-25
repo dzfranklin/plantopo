@@ -8,24 +8,13 @@ export function UserImage({
   user: User | undefined;
 }) {
   if (user) {
-    let src;
-    if (process.env.NODE_ENV === 'development') {
-      // TODO: once we deploy just use prod here
-      src = user.imageUrl.replace(
-        'https://api.plantopo.com',
-        'http://localhost:3001',
-      );
-    } else {
-      src = user.imageUrl;
-    }
-
     return (
       <img
         className="rounded-full"
         width={width + 'px'}
         height={width + 'px'}
         crossOrigin="anonymous"
-        src={src}
+        src={user.imageUrl}
         alt=""
       />
     );

@@ -460,5 +460,5 @@ func createHashedPassword(password string) ([]byte, error) {
 }
 
 func imageUrlFor(userId uuid.UUID) string {
-	return fmt.Sprintf("https://api.plantopo.com/api/v1/account/%s.png", userId)
+	return fmt.Sprintf("https://plantopo.com/api/v1/account/%s.png", userId)
 }
