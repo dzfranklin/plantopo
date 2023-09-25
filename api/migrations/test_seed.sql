@@ -1,5 +1,5 @@
 INSERT INTO
-  users (
+  pt.users (
     id,
     email,
     full_name,

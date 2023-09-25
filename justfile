@@ -40,8 +40,15 @@ test-app:
 migrate *ARGS:
   docker run -v ./api/migrations:/migrations --network host migrate/migrate \
     -path=/migrations/ \
-    -database postgres://postgres:postgres@localhost:5432/plantopo_api_dev \
+    -database postgres://postgres:postgres@localhost:5432/pt \
     {{ ARGS }}
+
+# Usage
+# Go to <https://cloud.digitalocean.com/databases/db-postgresql-lon1-08658>
+# Select user doadmin and database pt
+# Copy connection string
+# > read PROD_URL (paste copied)
+# > just migrate-prod-up $PROD_URL
 
 migrate-prod-up url:
   docker run -v ./api/migrations:/migrations --network host migrate/migrate \
@@ -49,12 +56,18 @@ migrate-prod-up url:
     -database {{url}} \
     up
 
+migrate-prod-down url:
+    docker run -v ./api/migrations:/migrations --network host migrate/migrate \
+    -path=/migrations/ \
+    -database {{url}} \
+    down 1
+
 recreatedb:
-  dropdb plantopo_api_dev
-  createdb plantopo_api_dev
+  dropdb --if-exists pt
+  createdb pt
   docker run -v ./api/migrations:/migrations --network host migrate/migrate \
     -path=/migrations/ \
-    -database postgres://postgres:postgres@localhost:5432/plantopo_api_dev \
+    -database postgres://postgres:postgres@localhost:5432/pt \
     up
-  psql -d plantopo_api_dev \
+  psql -d pt \
     -f api/migrations/test_seed.sql

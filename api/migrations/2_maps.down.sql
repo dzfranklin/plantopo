@@ -1,13 +1,13 @@
-DROP TABLE pending_map_invites;
+DROP TABLE pt.pending_map_invites;
 
-DROP TABLE map_roles;
+DROP TABLE pt.map_roles;
 
-DROP TABLE map_snapshots;
+DROP TABLE pt.map_snapshots;
 
-DROP TABLE maps;
+DROP TABLE pt.maps;
 
-DROP TYPE general_access_role;
+DROP TYPE pt.general_access_role;
 
-DROP TYPE general_access_level;
+DROP TYPE pt.general_access_level;
 
-DROP TYPE my_role;
+DROP TYPE pt.my_role;
