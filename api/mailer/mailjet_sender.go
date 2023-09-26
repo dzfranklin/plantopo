@@ -20,7 +20,7 @@ type MailjetCredentials struct {
 	Private string `json:"private"`
 }
 
-func ParseCredentials(creds string) (*MailjetCredentials, error) {
+func ParseMailjetCredentials(creds string) (*MailjetCredentials, error) {
 	var c MailjetCredentials
 	err := json.Unmarshal([]byte(creds), &c)
 	return &c, err
@@ -46,7 +46,7 @@ func (s *MailjetSender) Send(payload Payload) error {
 		Info: []mailjet.InfoMessagesV31{{
 			From: &mailjet.RecipientV31{
 				Email: "daniel@plantopo.com",
-				Name:  "Daniel Franklin (Plantopo)",
+				Name:  "PlanTopo",
 			},
 			To: &mailjet.RecipientsV31{
 				mailjet.RecipientV31{
@@ -59,7 +59,7 @@ func (s *MailjetSender) Send(payload Payload) error {
 	}
 	s.l.Debug("sending to mailjet", "req", req)
 	resp, err := s.m.SendMailV31(req)
-	s.l.Debug("mailjet response", "resp", resp, "err", err)
+	s.l.Debug("mailjet response", "resp", resp, "error", err)
 
 	if err != nil {
 		var apiFeedbackErr *mailjet.APIFeedbackErrorsV31

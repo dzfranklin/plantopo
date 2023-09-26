@@ -13,8 +13,8 @@ test-integration:
 test-build-prod:
   docker build -t plantopo:latest .
 
-api:
-  HOST=localhost PORT=3001 go run ./api/server
+api *ARGS:
+  HOST=localhost PORT=3001 go run ./api/server {{ ARGS }}
 
 test-go *ARGS:
   go test ./... -race {{ ARGS }}

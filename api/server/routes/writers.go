@@ -49,7 +49,7 @@ func writeError(w http.ResponseWriter, err error) {
 	logger.Get().Info("writing error response",
 		zap.Int("code", errReply.Code),
 		zap.String("reason", errReply.Reason),
-		zap.Any("err", err),
+		zap.Any("error", err),
 	)
 
 	w.Header().Set("Content-Type", "application/json")

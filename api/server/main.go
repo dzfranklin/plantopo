@@ -37,7 +37,8 @@ func main() {
 	ctx := logger.WithCtx(context.Background(), ul)
 	l := ul.Sugar()
 
-	if os.Getenv("APP_ENV") == "development" {
+	appEnv := os.Getenv("APP_ENV")
+	if appEnv == "development" {
 		err := godotenv.Load(".env")
 		if err != nil {
 			log.Fatal("Error loading .env file")
@@ -45,7 +46,7 @@ func main() {
 	}
 
 	genSessionAuthKey := flag.Bool("gen-session-auth-key", false, "")
-	noSendMail := flag.Bool("no-send-mail", false, "")
+	devLiveMailer := flag.Bool("dev-live-mailer", false, "")
 	flag.Parse()
 	if *genSessionAuthKey {
 		key := securecookie.GenerateRandomKey(64)
@@ -81,15 +82,13 @@ func main() {
 		l.Fatalw("error connecting to redis", zap.Error(err))
 	}
 
-	mailerConfig := mailer.Config{}
-	if *noSendMail {
-		mailerConfig.Sender = &mailer.LogSender{}
-	} else {
-		creds, err := mailer.ParseCredentials(os.Getenv("MAILJET_CREDENTIALS"))
-		if err != nil {
-			l.Fatalw("error parsing mailjet credentials", zap.Error(err))
+	mailerConfig := mailer.Config{Sender: &mailer.LogSender{}}
+	if appEnv == "production" || (appEnv == "development" && *devLiveMailer) {
+		mailgunKey := os.Getenv("PT_MAILGUN_KEY")
+		if mailgunKey == "" {
+			l.Fatalw("PT_MAILGUN_KEY must be set")
 		}
-		mailerConfig.Sender = mailer.NewMailjetSender(l, creds)
+		mailerConfig.Sender = mailer.NewMailgunSender(l, mailgunKey)
 	}
 	mailer := mailer.New(ctx, mailerConfig)
 

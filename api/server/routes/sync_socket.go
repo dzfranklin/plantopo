@@ -195,7 +195,7 @@ func socketWriter(
 	for msg := range outgoing {
 		err := sock.WriteJSON(msg)
 		if err != nil {
-			l.Info("socket write error", "err", err)
+			l.Info("socket write error", "error", err)
 			return
 		}
 	}

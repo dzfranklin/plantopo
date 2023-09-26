@@ -24,6 +24,7 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/felixge/httpsnoop v1.0.1 // indirect
+	github.com/go-chi/chi/v5 v5.0.8 // indirect
 	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -34,9 +35,12 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
+	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/lib/pq v1.10.2 // indirect
 	github.com/mailjet/mailjet-apiv3-go/v3 v3.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
+	github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -67,6 +71,7 @@ require (
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/joho/godotenv v1.5.1
+	github.com/mailgun/mailgun-go/v4 v4.11.0
 	github.com/mailjet/mailjet-apiv3-go/v4 v4.0.1
 	github.com/mazznoer/csscolorparser v0.1.3
 	github.com/perimeterx/marshmallow v1.1.5
