@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"regexp"
 	"time"
 
 	"github.com/bitcomplete/sqltestutil"
@@ -11,14 +12,14 @@ import (
 	"github.com/danielzfranklin/plantopo/api/migrations"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/jackc/pgx/v5"
 )
 
 // Sandboxed connection
 type Pgx struct {
 	*sqltestutil.PostgresContainer
 	*db.Pg
-	url string
-	m   *migrate.Migrate
+	m *migrate.Migrate
 }
 
 func PgxSandbox() *Pgx {
@@ -27,29 +28,43 @@ func PgxSandbox() *Pgx {
 	if err != nil {
 		log.Fatal(fmt.Errorf("PgxSandbox: failed to start postgres container: %w", err))
 	}
-	url := container.ConnectionString() + "?sslmode=disable"
+	r := regexp.MustCompile("postgres://pgtest:.+@127.0.0.1:(.+)/pgtest")
+	matches := r.FindStringSubmatch(container.ConnectionString())
+	port := matches[1]
+	log.Printf("PgxSandbox: postgres container listening on port %s", port)
 
 	// Fixes an intermittent bug when I test the entire project without any cached
 	// results from the command line (i.e. `go clean -testcache && go test ./...`)
 	time.Sleep(1 * time.Second)
 
-	log.Printf("PgxSandbox: started postgres container at %s", url)
-
-	pg, err := db.NewPg(context.Background(), url)
+	setupPg, err := pgx.Connect(context.Background(), container.ConnectionString()+"?sslmode=disable")
 	if err != nil {
-		log.Fatal(fmt.Errorf("PgxSandbox: failed to create pg instance: %w", err))
+		log.Fatal(fmt.Errorf("PgxSandbox: failed to connect to postgres container: %w", err))
+	}
+	_, err = setupPg.Exec(
+		context.Background(),
+		"CREATE ROLE pt WITH LOGIN PASSWORD 'postgres'",
+	)
+	if err != nil {
+		log.Fatal(fmt.Errorf("PgxSandbox: failed to execute: %w", err))
 	}
 
 	m, err := migrate.NewWithSourceInstance(
 		"iofs",
 		migrations.Iofs(),
-		url,
+		container.ConnectionString()+"?sslmode=disable",
 	)
 	if err != nil {
 		log.Fatal(fmt.Errorf("PgxSandbox: failed to create migration instance: %w", err))
 	}
 
-	c := &Pgx{container, pg, url, m}
+	url := fmt.Sprintf("postgres://pt:postgres@127.0.0.1:%s/pgtest?sslmode=disable", port)
+	pg, err := db.NewPg(context.Background(), url)
+	if err != nil {
+		log.Fatal(fmt.Errorf("PgxSandbox: failed to create pg instance: %w", err))
+	}
+
+	c := &Pgx{container, pg, m}
 
 	c.migrateUp()
 
