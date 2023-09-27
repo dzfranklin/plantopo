@@ -102,5 +102,11 @@ func (c *EmailableDeliverabilityChecker) CheckDeliverable(
 		return false, fmt.Errorf("unmarshal response body: %w", err)
 	}
 
-	return reply.State == "deliverable", nil
+	if reply.State == "deliverable" {
+		return true, nil
+	} else {
+		c.l.Info("emailable says not deliverable",
+			"email", email, "state", reply.State, "body", string(body))
+		return false, nil
+	}
 }
