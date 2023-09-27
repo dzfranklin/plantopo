@@ -15,6 +15,7 @@ import (
 )
 
 type Service interface {
+	CheckDeliverable(ctx context.Context, email string) (bool, error)
 	SendConfirmation(to *types.User, token string) error
 	SendPasswordReset(to *types.User, token string) error
 	SendShareNotification(req ShareNotificationRequest) error
@@ -36,32 +37,43 @@ type InviteRequest struct {
 }
 
 type impl struct {
-	ctx context.Context
-	l   *zap.SugaredLogger
-	s   Sender
+	ctx                   context.Context
+	l                     *zap.SugaredLogger
+	s                     Sender
+	deliverabilityChecker DeliverabilityChecker
 }
 
 type Config struct {
-	Sender Sender
+	Sender                Sender
+	DeliverabilityChecker DeliverabilityChecker
 }
 
 func New(ctx context.Context, c Config) Service {
-	l := logger.FromCtx(ctx).Sugar()
+	l := logger.FromCtx(ctx).Sugar().Named("mailer")
 	if c.Sender == nil {
 		l.Fatal("must provide sender")
 	}
+
 	return &impl{
-		ctx: ctx,
-		l:   l,
-		s:   c.Sender,
+		ctx:                   ctx,
+		l:                     l,
+		s:                     c.Sender,
+		deliverabilityChecker: c.DeliverabilityChecker,
 	}
 }
 
 func NewNoop() Service {
 	return New(
 		context.Background(),
-		Config{Sender: &NoopSender{}},
+		Config{
+			Sender:                &NoopSender{},
+			DeliverabilityChecker: &NoopDeliverabilityChecker{},
+		},
 	)
+}
+
+func (m *impl) CheckDeliverable(ctx context.Context, email string) (bool, error) {
+	return m.deliverabilityChecker.CheckDeliverable(ctx, email)
 }
 
 //go:embed templates/*

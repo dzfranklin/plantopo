@@ -82,13 +82,22 @@ func main() {
 		l.Fatalw("error connecting to redis", zap.Error(err))
 	}
 
-	mailerConfig := mailer.Config{Sender: &mailer.LogSender{}}
+	mailerConfig := mailer.Config{
+		Sender:                &mailer.LogSender{},
+		DeliverabilityChecker: &mailer.NoopDeliverabilityChecker{},
+	}
 	if appEnv == "production" || (appEnv == "development" && *devLiveMailer) {
 		mailgunKey := os.Getenv("PT_MAILGUN_KEY")
 		if mailgunKey == "" {
 			l.Fatalw("PT_MAILGUN_KEY must be set")
 		}
 		mailerConfig.Sender = mailer.NewMailgunSender(l, mailgunKey)
+
+		emailableKey := os.Getenv("PT_EMAILABLE_KEY")
+		if emailableKey == "" {
+			l.Fatalw("PT_EMAILABLE_KEY must be set")
+		}
+		mailerConfig.DeliverabilityChecker = mailer.NewEmailableDeliverabilityChecker(ctx, emailableKey)
 	}
 	mailer := mailer.New(ctx, mailerConfig)
 

@@ -55,6 +55,10 @@ func (m *mockMailer) SendInvite(req mailer.InviteRequest) error {
 	return nil
 }
 
+func (m *mockMailer) CheckDeliverable(ctx context.Context, email string) (bool, error) {
+	return true, nil
+}
+
 var validName = "Test User"
 var validPassword = "testpassword"
 
@@ -74,19 +78,12 @@ func (s *S) SetupTest() {
 	s.sandbox.Reset()
 }
 
-type noopSender struct{}
-
-func (s *noopSender) Send(p mailer.Payload) error {
-	return nil
-}
-
 func (s *S) makeSubject() (*impl, func()) {
 	ctx, cancel := context.WithCancel(s.ctx)
 	cleanup := func() {
 		cancel()
 	}
-	mailer := mailer.New(ctx, mailer.Config{Sender: &noopSender{}})
-	subject := NewService(ctx, s.pg, mailer)
+	subject := NewService(ctx, s.pg, mailer.NewNoop())
 	return subject.(*impl), cleanup
 }
 

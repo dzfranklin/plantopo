@@ -131,6 +131,16 @@ func (r *impl) Register(req RegisterRequest) (*types.User, error) {
 		return nil, err
 	}
 
+	ok, err := r.mailer.CheckDeliverable(r.ctx, req.Email)
+	if err != nil {
+		r.l.Info("failed to check deliverability", zap.Error(err))
+		return nil, err
+	}
+	if !ok {
+		r.l.Info("email is not deliverable", zap.String("email", req.Email))
+		return nil, &ErrRegistrationIssue{Email: "could not be sent to"}
+	}
+
 	hashedPassword, err := createHashedPassword(req.Password)
 	if err != nil {
 		r.l.DPanic("failed to hash password", zap.Error(err))
