@@ -1,17 +1,13 @@
 'use client';
 
 import './globals.css';
-import { Inter } from 'next/font/google';
 import {
   defaultTheme as defaultSpectrumTheme,
   Provider as SpectrumProvider,
 } from '@adobe/react-spectrum';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import cls from '../generic/cls';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { SessionProvider } from '@/features/account/session';
-
-const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({
   children,
@@ -31,7 +27,7 @@ export default function RootLayout({
       <head>
         <title>PlanTopo</title>
       </head>
-      <body className={cls(inter.className, 'min-h-full')}>
+      <body className="min-h-full">
         <QueryClientProvider client={queryClient}>
           <SpectrumProvider
             theme={defaultSpectrumTheme}
