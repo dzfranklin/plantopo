@@ -102,7 +102,7 @@ func logMiddleware(next http.Handler) http.Handler {
 
 var (
 	allowedOrigins = []string{
-		"http://localhost:3000",
+		"https://geder.reindeer-neon.ts.net",
 		"https://plantopo.com",
 		"",
 	}
