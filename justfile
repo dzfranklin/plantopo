@@ -22,10 +22,10 @@ api *ARGS:
   caddy stop --config ./Caddyfile.development
 
 test-go-short:
-  go test ./... -race -short
+  go test ./... -race -short -timeout 30s
 
 test-go-long:
-  go test ./... -race
+  go test ./... -race -timeout 30s
 
 gen:
   rm -rf ./api/sync_schema/out && mkdir ./api/sync_schema/out
