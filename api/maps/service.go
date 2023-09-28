@@ -90,7 +90,7 @@ func (s *impl) Create(ctx context.Context, owner uuid.UUID) (types.MapMeta, erro
 		return types.MapMeta{}, err
 	}
 
-	err = s.grant(ctx, meta.Id, owner, RoleOwner)
+	err = grant(ctx, tx, meta.Id, owner, RoleOwner)
 	if err != nil {
 		return types.MapMeta{}, err
 	}
@@ -399,7 +399,7 @@ func (r *impl) PutAccess(ctx context.Context, from *types.User, req PutAccessReq
 			return err
 		}
 
-		r.grant(ctx, req.MapId, *req.Owner, RoleOwner)
+		grant(ctx, tx, req.MapId, *req.Owner, RoleOwner)
 		if err != nil {
 			return err
 		}
@@ -440,7 +440,7 @@ func (r *impl) PutAccess(ctx context.Context, from *types.User, req PutAccessReq
 			} else if entry.Role == RoleOwner {
 				return errors.New("cannot set to owner via user access")
 			}
-			err = r.grant(ctx, req.MapId, userId, entry.Role)
+			err = grant(ctx, tx, req.MapId, userId, entry.Role)
 			if err != nil {
 				return err
 			}
@@ -563,7 +563,7 @@ func (r *impl) invite(
 		r.l.Info("inviting existing user to map",
 			zap.String("mapId", req.MapId.String()))
 
-		err := r.grant(ctx, req.MapId, to.Id, req.Role)
+		err := grant(ctx, r.pg, req.MapId, to.Id, req.Role)
 		if err != nil {
 			return err
 		}
@@ -580,10 +580,11 @@ func (r *impl) invite(
 	}
 }
 
-func (r *impl) grant(
-	ctx context.Context, mapId uuid.UUID, userId uuid.UUID, role Role,
+func grant(
+	ctx context.Context, db db.Querier,
+	mapId uuid.UUID, userId uuid.UUID, role Role,
 ) error {
-	_, err := r.pg.Exec(ctx,
+	_, err := db.Exec(ctx,
 		`INSERT INTO map_roles (map_id, user_id, my_role)
 			VALUES ($1, $2, $3)
 			ON CONFLICT (map_id, user_id)
