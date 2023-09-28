@@ -83,7 +83,7 @@ func main() {
 	}
 
 	mailerConfig := mailer.Config{
-		Sender:                &mailer.LogSender{},
+		Sender:                &mailer.LogSender{Logger: l},
 		DeliverabilityChecker: &mailer.NoopDeliverabilityChecker{},
 	}
 	if appEnv == "production" || (appEnv == "development" && *devLiveMailer) {
