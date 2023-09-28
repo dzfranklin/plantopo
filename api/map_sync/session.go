@@ -116,16 +116,14 @@ func handler(
 	clientDisconnects := make(chan uuid.UUID)
 	clients := make(map[uuid.UUID]*client)
 	var unsent *schema.Changeset
-	saveError := make(chan error)
 	trafficLog := maybeOpenTrafficLog(l, c, mapId)
-	stopSaver := make(chan struct{})
 
 	emptyTicker := time.NewTicker(c.Session.EmptyTimeout)
 	broadcastTicker := time.NewTicker(c.Session.BroadcastInterval)
+	saveTicker := time.NewTicker(c.Session.SaveInterval)
 
 	defer func() {
 		l.Info("session closing")
-		close(stopSaver)
 		emptyTicker.Stop()
 		broadcastTicker.Stop()
 		for _, client := range clients {
@@ -138,32 +136,13 @@ func handler(
 		trafficLog.maybeClose(ul)
 	}()
 
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-stopSaver:
-				return
-			case <-time.After(c.Session.SaveInterval):
-				l.Info("saving")
-				err := store.Save(ctx)
-				if ctx.Err() != nil {
-					return
-				} else if err != nil {
-					l.Error("save error", zap.Error(err))
-					saveError <- err
-					return
-				}
-			}
-		}
-	}()
-
 	l.Info("session started")
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-time.After(15 * time.Second):
+			l.Panic("session hung")
 		case clientId := <-clientDisconnects:
 			l.Info("disconnecting")
 			delete(clients, clientId)
@@ -171,13 +150,19 @@ func handler(
 			if len(clients) == 0 {
 				return
 			}
-		case err := <-saveError:
-			l.Error("disconnecting for save error", zap.Error(err))
-			err = fmt.Errorf("cannot save: %w", err)
-			for _, client := range clients {
-				client.out <- OutgoingSessionMsg{Error: err}
+		case <-saveTicker.C:
+			l.Info("saving")
+			err := store.Save(ctx)
+			if ctx.Err() != nil {
+				return
+			} else if err != nil {
+				l.Error("disconnecting for save error", zap.Error(err))
+				err = fmt.Errorf("cannot save: %w", err)
+				for _, client := range clients {
+					client.out <- OutgoingSessionMsg{Error: err}
+				}
+				return
 			}
-			return
 		case <-broadcastTicker.C:
 			// NOTE: We may want to reduce the interval if there are no changes
 			acks := make(map[uuid.UUID]int32, len(clients))

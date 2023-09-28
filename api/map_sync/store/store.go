@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
-	"sync"
 
 	"github.com/danielzfranklin/plantopo/api/logger"
 	"github.com/danielzfranklin/plantopo/api/map_sync/repo"
@@ -17,8 +16,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// / Store is not thread-safe.
 type Store struct {
-	mu              sync.Mutex
 	rng             *rand.Rand
 	repo            repo.Repo
 	mapId           uuid.UUID
@@ -85,12 +84,6 @@ func Load(ctx context.Context, r repo.Repo, mapId uuid.UUID) (*Store, error) {
 }
 
 func (s *Store) ToSnapshot() schema.Changeset {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.toSnapshotCallerLocks()
-}
-
-func (s *Store) toSnapshotCallerLocks() schema.Changeset {
 	out := schema.Changeset{}
 	if len(s.deletedFeatures) > 0 {
 		out.FDelete = make(map[string]struct{}, len(s.deletedFeatures))
@@ -133,9 +126,6 @@ func (n *fnode) snapshotFAddOrder(out *[]string) {
 
 // Returns fixes for values in change inconsistent with the store.
 func (s *Store) Update(l *zap.Logger, change *schema.Changeset) (*schema.Changeset, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	// Note: The atomic unit of change here is the layer/feature. If there are
 	// errors in the changeset we can't end up with partial changes for any given
 	// feature, but it's fine if some feature/layers were updated already.
@@ -203,13 +193,11 @@ func (s *Store) Update(l *zap.Logger, change *schema.Changeset) (*schema.Changes
 }
 
 func (s *Store) Save(ctx context.Context) error {
-	s.mu.Lock()
 	if !s.hasUnsaved {
 		return nil
 	}
 	s.hasUnsaved = false
-	snapshot := s.toSnapshotCallerLocks()
-	s.mu.Unlock()
+	snapshot := s.ToSnapshot()
 
 	value, err := marshalSnapshot(snapshot)
 	if err != nil {
