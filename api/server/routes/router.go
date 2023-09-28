@@ -142,6 +142,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
+	logger.FromCtx(r.Context()).Info("no handler", zap.String("path", r.URL.Path))
 	writeError(w, &ErrorReply{
 		Code:    http.StatusNotFound,
 		Reason:  "notFound",
