@@ -21,7 +21,7 @@ interface ResetFormValues {
 }
 
 export default function ResetPasswordPage() {
-  const token = useSearchParams().get('token') ?? '';
+  const token = useSearchParams()?.get('token') ?? '';
   const checkQuery = usePasswordResetCheckQuery(token);
   const mutation = usePasswordResetCompleteMutation();
   const methods = useForm<ResetFormValues>();

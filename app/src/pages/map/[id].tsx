@@ -1,12 +1,17 @@
 'use client';
 
-import { notFound, useSearchParams } from 'next/navigation';
+import '../../globals.css';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { PageTitle } from '../../generic/PageTitle';
 import { useMapMeta } from '@/features/map/api/mapMeta';
 import { useEffect, useState } from 'react';
 import { AppError } from '@/api/errors';
 import { MapEditor } from '@/features/map/editor/MapEditor';
-import { useSession, useSessionRedirector } from '@/features/account/session';
+import {
+  SessionProvider,
+  useSession,
+  useSessionRedirector,
+} from '@/features/account/session';
 import { useMapSources } from '@/features/map/api/useMapSources';
 import { EditorEngine } from '@/features/map/editor/engine/EditorEngine';
 import { EditorEngineProvider } from '@/features/map/editor/engine/useEngine';
@@ -14,14 +19,45 @@ import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
 import ErrorTechInfo from '@/generic/ErrorTechInfo';
 import { useTokensQuery } from '@/features/map/api/useTokens';
 import { CommandProvider } from '@/features/commands/commands';
+import { GetStaticPaths, GetStaticProps } from 'next';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import {
+  defaultTheme as defaultSpectrumTheme,
+  Provider as SpectrumProvider,
+} from '@adobe/react-spectrum';
 
-export default function MapPage() {
+export default function MapPageShell() {
+  const queryClient = new QueryClient();
+
   const session = useSession();
   const sessionRedirector = useSessionRedirector();
-
+  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const mapId = searchParams.get('id');
-  if (!mapId) notFound();
+
+  const mapId = pathname ? pathParts(pathname).at(-1) : undefined;
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SpectrumProvider
+        theme={defaultSpectrumTheme}
+        // Set render consistently on the server so Next.js can
+        // rehydrate. Is there a better way to do this?
+        locale="en-US"
+        scale="medium"
+        minHeight="100vh"
+      >
+        <SessionProvider>{mapId && <MapPage mapId={mapId} />}</SessionProvider>
+        <div id="portal-container" className="z-[60]"></div>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </SpectrumProvider>
+    </QueryClientProvider>
+  );
+}
+
+function MapPage({ mapId }: { mapId: string }) {
+  const session = useSession();
+  const sessionRedirector = useSessionRedirector();
 
   const meta = useMapMeta(mapId);
   useEffect(() => {
@@ -82,4 +118,38 @@ export default function MapPage() {
       )}
     </div>
   );
+}
+
+export const getStaticProps = (async () => {
+  return {
+    props: {},
+  };
+}) satisfies GetStaticProps;
+
+export const getStaticPaths = (async () => {
+  return {
+    paths: [
+      {
+        params: {
+          id: '__id__',
+        },
+      },
+    ],
+    fallback: false,
+  };
+}) satisfies GetStaticPaths;
+
+function notFound(): never {
+  window.location.href = '/map-not-found';
+  throw new Error('Redirecting');
+}
+
+function pathParts(pathname: string): string[] {
+  if (pathname.startsWith('/')) {
+    pathname = pathname.substring(1);
+  }
+  if (pathname.endsWith('/')) {
+    pathname = pathname.substring(0, pathname.length - 1);
+  }
+  return pathname.split('/');
 }

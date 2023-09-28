@@ -252,7 +252,7 @@ const useCurrentSessionNav = (): string | null => {
   const [current, setCurrent] = useState<string | null>(null);
   useEffect(() => {
     for (const option of sessionNav.slice().reverse()) {
-      if ('path' in option && currentPathname.startsWith(option.path)) {
+      if ('path' in option && currentPathname?.startsWith(option.path)) {
         setCurrent(option.path);
         break;
       }

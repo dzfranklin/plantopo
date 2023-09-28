@@ -19,7 +19,7 @@ interface LoginFormValues {
 
 export default function LoginPage() {
   const router = useRouter();
-  const returnToEncoded = useSearchParams().get('returnTo');
+  const returnToEncoded = useSearchParams()?.get('returnTo');
   const session = useSession();
 
   useEffect(() => {
