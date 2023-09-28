@@ -137,7 +137,7 @@ func (s *Store) Update(l *zap.Logger, change *schema.Changeset) (*schema.Changes
 	s.hasUnsaved = true
 	var fixes *schema.Changeset = nil
 
-	s.deleteAllCallerLocks(change.FDelete, &fixes)
+	s.deleteAll(change.FDelete, &fixes)
 
 	added := make(map[string]struct{})
 	for _, id := range change.FAdd {
@@ -151,7 +151,7 @@ func (s *Store) Update(l *zap.Logger, change *schema.Changeset) (*schema.Changes
 		if incoming.Id != id {
 			return nil, fmt.Errorf("feature id doesn't match fset key")
 		}
-		if err := s.finsertCallerLocks(l, true, incoming, &fixes); err != nil {
+		if err := s.finsert(l, true, incoming, &fixes); err != nil {
 			return nil, err
 		}
 		added[id] = struct{}{}
@@ -170,7 +170,7 @@ func (s *Store) Update(l *zap.Logger, change *schema.Changeset) (*schema.Changes
 		if incoming.Id != id {
 			return nil, fmt.Errorf("feature id doesn't match fset key")
 		}
-		if err := s.finsertCallerLocks(l, false, incoming, &fixes); err != nil {
+		if err := s.finsert(l, false, incoming, &fixes); err != nil {
 			return nil, err
 		}
 	}
@@ -184,7 +184,7 @@ func (s *Store) Update(l *zap.Logger, change *schema.Changeset) (*schema.Changes
 		if incoming.Id != id {
 			return nil, fmt.Errorf("layer id doesn't match lset key")
 		}
-		if err := s.linsertCallerLocks(l, incoming, &fixes); err != nil {
+		if err := s.linsert(l, incoming, &fixes); err != nil {
 			return nil, err
 		}
 	}
@@ -231,7 +231,7 @@ func idxCollisionFix[V any](rng *rand.Rand, indexMap map[string]V, colliding str
 	return between
 }
 
-func (s *Store) linsertCallerLocks(l *zap.Logger, incoming schema.Layer, fixes **schema.Changeset) error {
+func (s *Store) linsert(l *zap.Logger, incoming schema.Layer, fixes **schema.Changeset) error {
 	id := incoming.Id
 	layer := s.layers[id]
 	hasPrevIdx := false
@@ -271,7 +271,7 @@ func (s *Store) linsertCallerLocks(l *zap.Logger, incoming schema.Layer, fixes *
 	return nil
 }
 
-func (s *Store) finsertCallerLocks(l *zap.Logger, isAdd bool, incoming schema.Feature, fixes **schema.Changeset) error {
+func (s *Store) finsert(l *zap.Logger, isAdd bool, incoming schema.Feature, fixes **schema.Changeset) error {
 	if incoming.Id == "" {
 		return fmt.Errorf("cannot change root feature")
 	}
@@ -327,7 +327,7 @@ func (s *Store) finsertCallerLocks(l *zap.Logger, isAdd bool, incoming schema.Fe
 		}
 
 		// fix cycle
-		if s.wouldCycleCallerLocks(feature, parent) {
+		if s.wouldCycle(feature, parent) {
 			// NOTE: Maybe we can figure out a better way to handle this, depending on
 			// how likely it is
 			l.Info("feature would cycle, reparenting to root",
@@ -372,12 +372,12 @@ func (s *Store) finsertCallerLocks(l *zap.Logger, isAdd bool, incoming schema.Fe
 	return nil
 }
 
-func (s *Store) deleteAllCallerLocks(incoming map[string]struct{}, fixes **schema.Changeset) {
+func (s *Store) deleteAll(incoming map[string]struct{}, fixes **schema.Changeset) {
 	for id := range incoming {
 		node, ok := s.features[id]
 		if ok {
 			// if we know the feature being deleted delete it and all its children
-			s.deleteRecurseCallerLocks(node, &incoming, fixes)
+			s.deleteRecurse(node, &incoming, fixes)
 		} else {
 			// otherwise just record this feature was deleted
 			s.deletedFeatures[id] = struct{}{}
@@ -385,7 +385,7 @@ func (s *Store) deleteAllCallerLocks(incoming map[string]struct{}, fixes **schem
 	}
 }
 
-func (s *Store) deleteRecurseCallerLocks(
+func (s *Store) deleteRecurse(
 	node *fnode,
 	incoming *map[string]struct{},
 	fixes **schema.Changeset, // out param
@@ -402,11 +402,11 @@ func (s *Store) deleteRecurseCallerLocks(
 	s.deletedFeatures[node.id] = struct{}{}
 	// recurse into children
 	for _, child := range node.children {
-		s.deleteRecurseCallerLocks(child, incoming, fixes)
+		s.deleteRecurse(child, incoming, fixes)
 	}
 }
 
-func (s *Store) wouldCycleCallerLocks(feature *fnode, parent *fnode) bool {
+func (s *Store) wouldCycle(feature *fnode, parent *fnode) bool {
 	for node := parent; node != nil; node = node.parent {
 		if node.id == feature.id {
 			return true
