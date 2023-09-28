@@ -18,12 +18,12 @@ import { ReactElement, useState } from 'react';
 import { DateTimeText } from '@/generic/DateTimeText';
 import EditIcon from '@spectrum-icons/workflow/Edit';
 import ShareIcon from '@spectrum-icons/workflow/UserShare';
-import { useRouter } from 'next/navigation';
 import { UseQueryResult } from '@tanstack/react-query';
 import { InlineErrorComponent } from '@/generic/InlineErrorComponent';
 import { RenamePopover } from './RenamePopover';
 import { useMapDeleteMutation } from '@/features/map/api/useMapDeleteMutation';
 import { MapShareDialog } from '@/features/map/MapShareDialog/MapShareDialog';
+import Link from 'next/link';
 
 export function MapsManagerSection({
   title,
@@ -36,7 +36,6 @@ export function MapsManagerSection({
   renderEmptyState?: () => ReactElement;
   query: UseQueryResult<MapMeta[]>;
 }) {
-  const router = useRouter();
   const [selectedKeys, setSelectedKeys] = useState<Selection>(new Set([]));
   const selectedIds = () => {
     if (selectedKeys === 'all') {
@@ -77,7 +76,6 @@ export function MapsManagerSection({
           aria-label="maps"
           renderEmptyState={renderEmptyState}
           selectionMode="multiple"
-          onAction={(key) => router.push(`/map?id=${key}`)}
           selectedKeys={selectedKeys}
           onSelectionChange={setSelectedKeys}
           flexGrow={1}
@@ -96,9 +94,16 @@ export function MapsManagerSection({
             {(item) => (
               <Row>
                 <Cell textValue={item.name || 'Unnamed map'}>
-                  {item.name || (
-                    <span className="italic text-neutral-700">Unnamed map</span>
-                  )}
+                  <Link
+                    href={`/map?id=${item.id}`}
+                    className="inline-block w-full"
+                  >
+                    {item.name || (
+                      <span className="italic text-neutral-700">
+                        Unnamed map
+                      </span>
+                    )}
+                  </Link>
                 </Cell>
                 <Cell>
                   <DateTimeText utc={item.createdAt} />
