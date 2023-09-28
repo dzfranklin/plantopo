@@ -10,6 +10,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/danielzfranklin/plantopo/api/logger"
 	"github.com/danielzfranklin/plantopo/api/map_sync/repo"
 	schema "github.com/danielzfranklin/plantopo/api/sync_schema"
 	"github.com/google/uuid"
@@ -37,6 +38,9 @@ type fnode struct {
 }
 
 func Load(ctx context.Context, r repo.Repo, mapId uuid.UUID) (*Store, error) {
+	l := logger.FromCtx(ctx).Named("store.Load").With(
+		zap.String("mapId", mapId.String()))
+
 	value, err := r.GetMapSnapshot(ctx, mapId)
 	if err != nil {
 		return nil, err
@@ -69,7 +73,7 @@ func Load(ctx context.Context, r repo.Repo, mapId uuid.UUID) (*Store, error) {
 	store.ftree = root
 	store.features[""] = root
 
-	fixes, err := store.Update(nil, &snapshot)
+	fixes, err := store.Update(l, &snapshot)
 	if err != nil {
 		return nil, err
 	}
