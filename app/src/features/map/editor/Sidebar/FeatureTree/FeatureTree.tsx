@@ -54,7 +54,7 @@ export function FeatureTree({ engine }: { engine: EditorEngine }) {
       ref={rootRef}
     >
       {children.map((child) => (
-        <TreeEntry key={child} fid={child} engine={engine} />
+        <TreeEntry key={child} fid={child} />
       ))}
 
       <div ref={dragAtElemRef} className="z-20 drag-at-marker">

@@ -13,6 +13,7 @@ import { EditorEngineProvider } from '@/features/map/editor/engine/useEngine';
 import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
 import ErrorTechInfo from '@/generic/ErrorTechInfo';
 import { useTokensQuery } from '@/features/map/api/useTokens';
+import { CommandProvider } from '@/features/commands/commands';
 
 export default function MapPage() {
   const session = useSession();
@@ -74,7 +75,9 @@ export default function MapPage() {
 
       {engine && (
         <EditorEngineProvider engine={engine}>
-          <MapEditor />
+          <CommandProvider>
+            <MapEditor />
+          </CommandProvider>
         </EditorEngineProvider>
       )}
     </div>
