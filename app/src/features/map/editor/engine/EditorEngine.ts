@@ -268,6 +268,14 @@ export class EditorEngine {
     return out;
   }
 
+  deleteSelected(): void {
+    this._store.change({ fdelete: [...this._selectedByMe] });
+  }
+
+  delete(fid: string): void {
+    this._store.change({ fdelete: [fid] });
+  }
+
   changeLayer(change: LayerChange) {
     if (change.id === undefined || change.id === null) {
       throw new Error('Cannot update layer without id');

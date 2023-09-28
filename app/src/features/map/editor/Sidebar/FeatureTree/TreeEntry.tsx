@@ -2,11 +2,10 @@ import { useEffect, useRef } from 'react';
 import cls from '@/generic/cls';
 import './FeatureTree.css';
 import { nameForUnnamedFeature } from '../../engine/Scene';
-import { EntryEditButton } from './EntryEditButton';
-import { useSceneFeature } from '../../engine/useEngine';
+import { useEngine, useSceneFeature } from '../../engine/useEngine';
 import { shallowArrayEq } from '@/generic/equality';
 import { CHILD_INDENT_PX, INDICATOR_BORDER_PX } from './FeatureTree';
-import { EditorEngine } from '../../engine/EditorEngine';
+import { EntryActionButtons } from './EntryActionButtons';
 
 const VERTICAL_GAP_PX = 2;
 
@@ -15,20 +14,23 @@ const VERTICAL_GAP_PX = 2;
  * defined here.
  */
 
-export function TreeEntry({
-  fid,
-  engine,
-}: {
-  fid: string;
-  engine: EditorEngine;
-}) {
+export function TreeEntry({ fid }: { fid: string }) {
+  const engine = useEngine();
   const selectedByMe = useSceneFeature(fid, (f) => f?.selectedByMe);
-
+  const ref = useRef<HTMLLIElement>(null);
   return (
     <li
+      ref={ref}
       draggable="true"
-      data-fid={fid}
       onClick={(evt) => {
+        if (!(evt.target instanceof HTMLElement)) return;
+        // Otherwise clicking in the edit popover would trigger this
+        let targetEntryElem = evt.target;
+        while (targetEntryElem !== ref.current) {
+          if (!targetEntryElem.parentElement) return;
+          targetEntryElem = targetEntryElem.parentElement;
+        }
+
         if (evt.shiftKey) {
           engine.toggleSelection(fid, 'multi');
         } else {
@@ -36,19 +38,20 @@ export function TreeEntry({
         }
         evt.stopPropagation();
       }}
+      data-fid={fid}
       className={cls(selectedByMe && 'directly-selected')}
     >
       {/* We need this nested div so that we can find its parent by mouse
           position without the padding throwing us off */}
       <div className={cls(selectedByMe && 'bg-blue-100')}>
-        <EntryItself fid={fid} engine={engine} />
-        <EntryChildren engine={engine} fid={fid} />
+        <EntryItself fid={fid} />
+        <EntryChildren fid={fid} />
       </div>
     </li>
   );
 }
 
-function EntryItself({ fid, engine }: { fid: string; engine: EditorEngine }) {
+function EntryItself({ fid }: { fid: string }) {
   const ref = useRef<HTMLDivElement>(null);
 
   const name = useSceneFeature(fid, (f) =>
@@ -72,12 +75,12 @@ function EntryItself({ fid, engine }: { fid: string; engine: EditorEngine }) {
       }}
     >
       <span className="flex-grow select-none text-start">{name}</span>
-      <EntryEditButton engine={engine} fid={fid} />
+      {selectedByMe && <EntryActionButtons fid={fid} />}
     </div>
   );
 }
 
-function EntryChildren({ fid, engine }: { fid: string; engine: EditorEngine }) {
+function EntryChildren({ fid }: { fid: string }) {
   const children = useSceneFeature(
     fid,
     (f) => f?.children?.map((f) => f.id),
@@ -90,7 +93,7 @@ function EntryChildren({ fid, engine }: { fid: string; engine: EditorEngine }) {
   return (
     <ul style={{ paddingLeft: `${CHILD_INDENT_PX}px` }}>
       {children.map((child) => (
-        <TreeEntry key={child} fid={child} engine={engine} />
+        <TreeEntry key={child} fid={child} />
       ))}
     </ul>
   );
