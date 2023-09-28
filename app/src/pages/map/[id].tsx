@@ -30,8 +30,6 @@ import {
 export default function MapPageShell() {
   const queryClient = new QueryClient();
 
-  const session = useSession();
-  const sessionRedirector = useSessionRedirector();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
