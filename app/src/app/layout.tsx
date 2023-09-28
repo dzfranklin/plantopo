@@ -14,12 +14,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  if (process.env.JEST_WORKER_ID !== undefined) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { worker } = require('../mocks/browser');
-    worker.start();
-  }
-
   const queryClient = new QueryClient();
 
   return (
