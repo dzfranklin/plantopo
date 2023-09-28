@@ -18,10 +18,7 @@ export function InlineErrorComponent({ error }: { error: unknown }) {
       <Content>
         <div className="flex flex-col gap-1">
           <p className="mb-2">Error: {message}</p>
-          <p>
-            If you need help you can contact me at my personal email
-            daniel@danielzfranklin.org
-          </p>
+          <p>If you need help you can contact me at daniel@plantopo.com</p>
           <ErrorTechInfo error={error} />
           <div className="flex flex-row justify-end">
             <Button

@@ -103,10 +103,7 @@ function ConfirmIssue({ reason }: { reason: string | undefined }) {
         {primary}
       </h3>
       <p>{secondary}</p>
-      <p>
-        If you need help you can contact me at my personal email
-        daniel@danielzfranklin.org
-      </p>
+      <p>If you need help you can contact me at daniel@plantopo.com</p>
     </div>
   );
 }

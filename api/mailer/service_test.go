@@ -50,8 +50,8 @@ Click or paste this link to confirm:
 
 https://plantopo.com/confirm?token=valid-token
 
-If you have any questions or need help please contact me at my personal email
-daniel@danielzfranklin.org
+If you have any questions or need help please contact me at
+daniel@plantopo.com
 `}).Return(nil)
 
 	err := subject.SendConfirmation(&user, token)
@@ -78,8 +78,8 @@ https://plantopo.com/login/forgot-password/reset?token=valid-token
 
 No changes have been made to your account yet.
 
-If you have any questions or need help please contact me at my personal email
-daniel@danielzfranklin.org
+If you have any questions or need help please contact me at
+daniel@plantopo.com
 `}).Return(nil)
 
 	err := subject.SendPasswordReset(&user, token)
