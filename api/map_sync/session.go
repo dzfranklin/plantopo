@@ -120,9 +120,14 @@ func handler(
 	trafficLog := maybeOpenTrafficLog(l, c, mapId)
 	stopSaver := make(chan struct{})
 
+	emptyTicker := time.NewTicker(c.Session.EmptyTimeout)
+	broadcastTicker := time.NewTicker(c.Session.BroadcastInterval)
+
 	defer func() {
 		l.Info("session closing")
 		close(stopSaver)
+		emptyTicker.Stop()
+		broadcastTicker.Stop()
 		for _, client := range clients {
 			close(client.out)
 		}
@@ -154,8 +159,6 @@ func handler(
 		}
 	}()
 
-	emptyTimeout := time.After(c.Session.EmptyTimeout)
-	broadcastTimeout := time.After(c.Session.BroadcastInterval)
 	l.Info("session started")
 	for {
 		select {
@@ -164,11 +167,9 @@ func handler(
 		case clientId := <-clientDisconnects:
 			l.Info("disconnecting")
 			delete(clients, clientId)
-		case <-emptyTimeout:
+		case <-emptyTicker.C:
 			if len(clients) == 0 {
 				return
-			} else {
-				emptyTimeout = time.After(c.Session.EmptyTimeout)
 			}
 		case err := <-saveError:
 			l.Error("disconnecting for save error", zap.Error(err))
@@ -177,7 +178,7 @@ func handler(
 				client.out <- OutgoingSessionMsg{Error: err}
 			}
 			return
-		case <-broadcastTimeout:
+		case <-broadcastTicker.C:
 			// NOTE: We may want to reduce the interval if there are no changes
 			acks := make(map[uuid.UUID]int32, len(clients))
 			for clientId, client := range clients {
@@ -195,7 +196,6 @@ func handler(
 				client.out <- msg
 			}
 			unsent = nil
-			broadcastTimeout = time.After(c.Session.BroadcastInterval)
 		case req := <-connectChan:
 			if req.mapId != mapId {
 				l.DPanic("connect request sent to wrong session", zap.String("requestMapId", req.mapId.String()))
