@@ -256,7 +256,12 @@ export class EditorEngine {
     start = ROOT_FID,
     out: string[] = [],
   ): string[] {
-    const node = this.getFeature(start);
+    let node: SceneFeature | SceneRootFeature | undefined;
+    if (start === ROOT_FID) {
+      node = this._scene?.features.root;
+    } else {
+      node = this.getFeature(start);
+    }
     if (!node) return out;
     for (const child of node.children) {
       if (child.selectedByMe) {
