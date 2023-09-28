@@ -1,4 +1,5 @@
 geder.reindeer-neon.ts.net
 
 reverse_proxy /api/* localhost:3001
+rewrite /map/* /map/__id__/
 reverse_proxy /* localhost:3000

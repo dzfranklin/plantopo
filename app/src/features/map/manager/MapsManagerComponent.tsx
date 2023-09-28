@@ -20,7 +20,7 @@ export function MapsManagerComponent() {
   const sharedQuery = useMapsSharedWithMe();
   const createMutation = useMapCreateMutation({
     onSuccess: (map) => {
-      router.push(`/map?id=${map.id}`);
+      router.push(`/map/${map.id}`);
     },
   });
   const doNew = useCallback(() => createMutation.mutate(), [createMutation]);
