@@ -112,13 +112,14 @@ function NavBar({ open }: { open: boolean }) {
 function ProfileDropdown() {
   const session = useSession();
   const doAction = useDoAction();
+  if (!session) return;
   return (
     <Menu as="div" className="relative ml-3">
       <div>
         <Menu.Button className="relative flex items-center max-w-xs text-sm bg-gray-800 rounded-full focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800">
           <span className="absolute -inset-1.5" />
           <span className="sr-only">Open user menu</span>
-          <UserImage width={32} user={session?.user} />
+          <UserImage width={32} user={session.user} />
         </Menu.Button>
       </div>
       <Transition
@@ -131,6 +132,11 @@ function ProfileDropdown() {
         leaveTo="transform opacity-0 scale-95"
       >
         <Menu.Items className="absolute right-0 z-10 w-48 py-1 mt-2 origin-top-right bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+          <Menu.Item>
+            <div className="flex justify-start px-4 pt-2 pb-2 mb-1 text-sm text-gray-500 align-middle border-b border-neutral-200">
+              {session.user.email}
+            </div>
+          </Menu.Item>
           {userNav.map((item) => (
             <Menu.Item key={item.name}>
               {({ active }) => (
