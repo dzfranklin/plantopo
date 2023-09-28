@@ -1,10 +1,9 @@
 'use client';
 
 import '../../globals.css';
-import { usePathname, useSearchParams } from 'next/navigation';
 import { PageTitle } from '../../generic/PageTitle';
 import { useMapMeta } from '@/features/map/api/mapMeta';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AppError } from '@/api/errors';
 import { MapEditor } from '@/features/map/editor/MapEditor';
 import {
@@ -26,14 +25,17 @@ import {
   defaultTheme as defaultSpectrumTheme,
   Provider as SpectrumProvider,
 } from '@adobe/react-spectrum';
+import {
+  parseCameraURLParam,
+  serializeCameraURLParam,
+} from '@/features/map/editor/cameraURLParam';
+import { useRouter } from 'next/router';
 
 export default function MapPageShell() {
   const queryClient = new QueryClient();
+  const router = useRouter();
 
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const mapId = pathname ? pathParts(pathname).at(-1) : undefined;
+  const mapId = useMemo(() => pathParts(router.asPath).at(-1), [router.asPath]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -53,9 +55,22 @@ export default function MapPageShell() {
   );
 }
 
+const defaultInitialCamera = {
+  center: [-55.6923608, 42.4948239],
+  zoom: 2,
+  bearing: 0,
+  pitch: 0,
+};
+
 function MapPage({ mapId }: { mapId: string }) {
+  const router = useRouter();
   const session = useSession();
   const sessionRedirector = useSessionRedirector();
+
+  const [initialCamera] = useState(() => {
+    const query = new URL(router.asPath, 'https://plantopo.com').searchParams;
+    return parseCameraURLParam(query.get('c') ?? '') ?? defaultInitialCamera;
+  });
 
   const meta = useMapMeta(mapId);
   useEffect(() => {
@@ -75,13 +90,23 @@ function MapPage({ mapId }: { mapId: string }) {
       // NOTE: We shouldn't need to wait for meta to load to initialize the engine
       mayEdit: meta.data.currentSessionMayEdit,
       mapSources,
+      initialCamera,
+    });
+
+    let updateCameraTick: number | undefined;
+    engine.addCameraListener((cam) => {
+      updateCameraTick && cancelIdleCallback(updateCameraTick);
+      updateCameraTick = requestIdleCallback(() => {
+        history.replaceState(null, '', `?c=${serializeCameraURLParam(cam)}`);
+        updateCameraTick = undefined;
+      });
     });
     setEngine(engine);
     return () => {
       setEngine(null);
       engine.destroy();
     };
-  }, [mapSources, mapId, meta.data]);
+  }, [mapSources, mapId, meta.data, router, initialCamera]);
 
   // Avoid starting this blocker after the metadata is loaded.
   // NOTE: If we fix waiting for meta to load the engine we don't need this
@@ -143,11 +168,16 @@ function notFound(): never {
 }
 
 function pathParts(pathname: string): string[] {
+  // needed because the nextjs pages router includes the query in pathname
+  const url = new URL(pathname, 'https://plantopo.com');
+  pathname = url.pathname;
+
   if (pathname.startsWith('/')) {
     pathname = pathname.substring(1);
   }
   if (pathname.endsWith('/')) {
     pathname = pathname.substring(0, pathname.length - 1);
   }
+
   return pathname.split('/');
 }
