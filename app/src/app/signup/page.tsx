@@ -24,8 +24,8 @@ export default function SignupPage() {
   const router = useRouter();
   const session = useSession();
   const params = useSearchParams();
-  const returnToEncoded = params.get('returnTo');
-  const initialEmail = decodeURIComponent(params.get('email') || '');
+  const returnToEncoded = params?.get('returnTo');
+  const initialEmail = decodeURIComponent(params?.get('email') || '');
 
   useEffect(() => {
     if (session) {

@@ -15,7 +15,7 @@ interface ForgotFormValues {
 }
 
 export default function ForgotPasswordPage() {
-  const emailParam = useSearchParams().get('email');
+  const emailParam = useSearchParams()?.get('email');
   const methods = useForm<ForgotFormValues>({
     shouldUseNativeValidation: true,
     defaultValues: {

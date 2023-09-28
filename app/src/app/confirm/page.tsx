@@ -8,7 +8,7 @@ import { useSearchParams } from 'next/navigation';
 import { ReactNode } from 'react';
 
 export default function ConfirmPage() {
-  const token = useSearchParams().get('token');
+  const token = useSearchParams()?.get('token');
   const mutation = useConfirmCompleteMutation();
   return (
     <div className="grid min-h-screen place-items-center">
