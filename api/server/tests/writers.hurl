@@ -1,15 +1,15 @@
 # Error writer omits `data`
 
-GET {{endpoint}}/api/v1/session
+POST {{endpoint}}/api/v1/session
 
-HTTP 401
+HTTP 400
 ```json
-{"error":{"code":401,"reason":"noSession"}}
+{"error":{"code":400,"message":"bad request"}}
 ```
 
 # Success writer omits `error`
 
-GET {{endpoint}}/healthz
+GET {{endpoint}}/api/v1/healthz
 
 HTTP 200
 [Asserts]

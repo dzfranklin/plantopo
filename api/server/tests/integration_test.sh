@@ -8,7 +8,7 @@ ENDPOINT="http://$HOST:$PORT"
 
 wait_for_ready() {
   echo "Waiting for /healthz"
-  printf 'GET %s\nHTTP 200' "$ENDPOINT/healthz" | hurl --retry 60 >/dev/null
+  printf 'GET %s\nHTTP 200' "$ENDPOINT/api/v1/healthz" | hurl --retry 60 >/dev/null
   return 0
 }
 
