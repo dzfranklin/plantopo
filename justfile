@@ -15,7 +15,7 @@ test-integration:
 test-build-prod:
   docker build -t plantopo:latest .
 
-api *ARGS:
+serve *ARGS:
   caddy stop 2> /dev/null || true
   caddy start --adapter caddyfile  --config  ./dev.Caddyfile
   HOST=localhost PORT=3001 go run ./api/server {{ ARGS }}
