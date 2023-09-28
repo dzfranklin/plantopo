@@ -16,10 +16,10 @@ test-build-prod:
   docker build -t plantopo:latest .
 
 api *ARGS:
-  caddy stop --config ./Caddyfile.development 2> /dev/null || true
-  caddy start --config ./Caddyfile.development
+  caddy stop --config ./dev.Caddyfile 2> /dev/null || true
+  caddy start --config ./dev.Caddyfile
   HOST=localhost PORT=3001 go run ./api/server {{ ARGS }}
-  caddy stop --config ./Caddyfile.development
+  caddy stop --config ./dev.Caddyfile
 
 test-go-short:
   go test ./... -race -short -timeout 30s
