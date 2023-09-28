@@ -1,9 +1,11 @@
 set shell := ["bash", "-cu"]
 
-t: test-app test-go test-integration test-build-prod
+t: test-app test-go-short test-integration test-build-prod
+  echo 'All tests passed (long go tests skipped)'
 
 ta: test-app
-tg: test-go
+tg: test-go-short
+tgl: test-go-long
 ti: test-integration
 tp: test-build-prod
 
@@ -16,8 +18,11 @@ test-build-prod:
 api *ARGS:
   HOST=localhost PORT=3001 go run ./api/server {{ ARGS }}
 
-test-go *ARGS:
-  go test ./... -race {{ ARGS }}
+test-go-short:
+  go test ./... -race -short
+
+test-go-long:
+  go test ./... -race
 
 gen:
   rm -rf ./api/sync_schema/out && mkdir ./api/sync_schema/out
