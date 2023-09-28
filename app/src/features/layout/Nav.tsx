@@ -112,7 +112,7 @@ function NavBar({ open }: { open: boolean }) {
 function ProfileDropdown() {
   const session = useSession();
   const doAction = useDoAction();
-  if (!session) return;
+  if (!session) return <></>;
   return (
     <Menu as="div" className="relative ml-3">
       <div>
