@@ -25,7 +25,7 @@ type S struct {
 	nextUser int
 }
 
-func TestMapmeta(t *testing.T) {
+func TestMapService(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration tests against postgres")
 	}
