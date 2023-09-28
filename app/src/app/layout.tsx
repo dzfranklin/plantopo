@@ -1,6 +1,6 @@
 'use client';
 
-import './globals.css';
+import '../globals.css';
 import {
   defaultTheme as defaultSpectrumTheme,
   Provider as SpectrumProvider,
