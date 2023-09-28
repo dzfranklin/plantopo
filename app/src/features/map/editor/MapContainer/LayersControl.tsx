@@ -234,6 +234,7 @@ function OrderControl({ engine }: { engine: EditorEngine }) {
           .filter((l) => l.selectedByMe)
           .map((l) => l.id)}
         onSelectionChange={onSelectionChange}
+        minHeight="2rem"
       >
         {(layer) => (
           <Item textValue={layer.source.name}>
