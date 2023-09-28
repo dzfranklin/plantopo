@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -150,8 +151,9 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 	l.Info("accepted")
 
 	// Note gorilla supports one concurrent reader and one concurrent writer
-	go socketReader(l, sync, sock, trustedAware)
-	go socketWriter(l, outgoing, sock)
+	writerCtx, cancelWriter := context.WithCancel(r.Context())
+	go socketReader(l, sync, sock, trustedAware, cancelWriter)
+	go socketWriter(writerCtx, l, outgoing, sock)
 }
 
 func socketReader(
@@ -159,11 +161,13 @@ func socketReader(
 	sync *map_sync.Connection,
 	sock *websocket.Conn,
 	trustedAware sync_schema.TrustedAware,
+	cancelWriter func(),
 ) {
 	l = l.Named("socketReader")
 	defer func() {
-		l.Debug("closing sock")
-		sock.Close()
+		l.Info("closing")
+		l.Debug("cancelling writer")
+		cancelWriter()
 		l.Debug("disconnecting from session")
 		sync.Disconnect()
 	}()
@@ -183,20 +187,27 @@ func socketReader(
 }
 
 func socketWriter(
+	ctx context.Context,
 	l *zap.SugaredLogger,
 	outgoing chan map_sync.OutgoingSessionMsg,
 	sock *websocket.Conn,
 ) {
 	l = l.Named("socketWriter")
 	defer func() {
-		l.Debug("closing sock")
+		l.Info("closing")
+		l.Debug("closing socket")
 		sock.Close()
 	}()
-	for msg := range outgoing {
-		err := sock.WriteJSON(msg)
-		if err != nil {
-			l.Info("socket write error", "error", err)
+	for {
+		select {
+		case <-ctx.Done():
 			return
+		case msg := <-outgoing:
+			err := sock.WriteJSON(msg)
+			if err != nil {
+				l.Info("socket write error", "error", err)
+				return
+			}
 		}
 	}
 }
