@@ -318,10 +318,21 @@ export class EditorEngine {
 
   deleteSelected(): void {
     this._store.change({ fdelete: [...this._selectedByMe] });
+    this._maybeUpdateSelectionForDelete();
   }
 
   delete(fid: string): void {
     this._store.change({ fdelete: [fid] });
+    this._maybeUpdateSelectionForDelete();
+  }
+
+  private _maybeUpdateSelectionForDelete(): void {
+    if (this._selectedByMe.size === 0) return;
+    for (const fid of this._selectedByMe) {
+      if (!this._store.has(fid)) {
+        this._selectedByMe.delete(fid);
+      }
+    }
   }
 
   changeLayer(change: LayerChange) {

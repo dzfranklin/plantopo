@@ -38,6 +38,10 @@ export class EditorStore {
       .map(([, layer]) => layer);
   }
 
+  has(fid: string): boolean {
+    return this._features.has(fid);
+  }
+
   /** Make a local change */
   change(change: Changeset) {
     if (!this.mayEdit) throw new Error('may not edit');
