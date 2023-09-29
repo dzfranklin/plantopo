@@ -274,7 +274,10 @@ export class FNode {
   readonly id: string;
   children = new Map<string, FNode>(); // by idx
 
-  constructor(public parent: FNode | null, public value: FeatureChange) {
+  constructor(
+    public parent: FNode | null,
+    public value: FeatureChange,
+  ) {
     this.id = value.id;
   }
 

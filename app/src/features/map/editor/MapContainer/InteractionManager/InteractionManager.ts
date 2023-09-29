@@ -66,7 +66,10 @@ export interface FeatureHit {
 }
 
 class FeatureHitImpl implements FeatureHit {
-  constructor(private scope: InteractionEvent, public feature: SceneFeature) {}
+  constructor(
+    private scope: InteractionEvent,
+    public feature: SceneFeature,
+  ) {}
 
   minPixelsTo(): number {
     const cam = this.scope.camera;

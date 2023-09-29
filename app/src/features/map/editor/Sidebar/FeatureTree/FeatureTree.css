@@ -17,5 +17,7 @@
 }
 
 .drag-at-marker.animate {
-  transition: width 0.05s ease-in, transform 0.05s ease-in;
+  transition:
+    width 0.05s ease-in,
+    transform 0.05s ease-in;
 }

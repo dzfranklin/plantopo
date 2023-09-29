@@ -5,7 +5,10 @@ export type ApiError<TDetails = unknown> = TransportError | AppError<TDetails>;
 export class TransportError extends Error {
   readonly name = 'TransportError';
 
-  constructor(public requestId: string, public cause: unknown) {
+  constructor(
+    public requestId: string,
+    public cause: unknown,
+  ) {
     const errCause = cause instanceof Error ? cause : new Error(`${cause}`);
     super(`${errCause.message} (requestId: ${requestId})`);
   }
@@ -22,7 +25,10 @@ export class AppError<TDetails> extends Error {
   readonly reason?: string;
   readonly details?: TDetails;
 
-  constructor(public requestId: string, public cause: ErrorReply<TDetails>) {
+  constructor(
+    public requestId: string,
+    public cause: ErrorReply<TDetails>,
+  ) {
     const msg = cause.error.message || `Error ${cause.error.code}`;
     super(`${msg} (requestId: ${requestId})`);
     this.code = cause.error.code;
