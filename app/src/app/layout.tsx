@@ -8,6 +8,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { SessionProvider } from '@/features/account/session';
+import { AppErrorBoundary } from '@/features/error/AppErrorBoundary';
 
 export default function RootLayout({
   children,
@@ -22,20 +23,22 @@ export default function RootLayout({
         <title>PlanTopo</title>
       </head>
       <body className="min-h-full">
-        <QueryClientProvider client={queryClient}>
-          <SpectrumProvider
-            theme={defaultSpectrumTheme}
-            // Set render consistently on the server so Next.js can
-            // rehydrate. Is there a better way to do this?
-            locale="en-US"
-            scale="medium"
-            minHeight="100vh"
-          >
-            <SessionProvider>{children}</SessionProvider>
-            <div id="portal-container" className="z-[60]"></div>
-            <ReactQueryDevtools initialIsOpen={false} />
-          </SpectrumProvider>
-        </QueryClientProvider>
+        <AppErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <SpectrumProvider
+              theme={defaultSpectrumTheme}
+              // Set render consistently on the server so Next.js can
+              // rehydrate. Is there a better way to do this?
+              locale="en-US"
+              scale="medium"
+              minHeight="100vh"
+            >
+              <SessionProvider>{children}</SessionProvider>
+              <div id="portal-container" className="z-[60]"></div>
+              <ReactQueryDevtools initialIsOpen={false} />
+            </SpectrumProvider>
+          </QueryClientProvider>
+        </AppErrorBoundary>
       </body>
     </html>
   );

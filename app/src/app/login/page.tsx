@@ -5,7 +5,7 @@ import { AccountInput } from '@/features/account/AccountInput';
 import { useCreateSessionMutation } from '@/features/account/api/useSessionMutation';
 import { useSession } from '@/features/account/session';
 import { Layout } from '@/features/layout';
-import { InlineErrorComponent } from '@/generic/InlineErrorComponent';
+import { InlineErrorComponent } from '@/features/error/InlineErrorComponent';
 import cls from '@/generic/cls';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';

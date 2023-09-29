@@ -15,7 +15,7 @@ import { useMapSources } from '@/features/map/api/useMapSources';
 import { EditorEngine } from '@/features/map/editor/engine/EditorEngine';
 import { EditorEngineProvider } from '@/features/map/editor/engine/useEngine';
 import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
-import ErrorTechInfo from '@/generic/ErrorTechInfo';
+import ErrorTechInfo from '@/features/error/ErrorTechInfo';
 import { useTokensQuery } from '@/features/map/api/useTokens';
 import { CommandProvider } from '@/features/commands/commands';
 import { GetStaticPaths, GetStaticProps } from 'next';
@@ -31,6 +31,7 @@ import {
   serializeCameraURLParam,
 } from '@/features/map/editor/cameraURLParam';
 import { useRouter } from 'next/router';
+import { AppErrorBoundary } from '@/features/error/AppErrorBoundary';
 
 export default function MapPageShell() {
   const queryClient = new QueryClient();
@@ -39,20 +40,24 @@ export default function MapPageShell() {
   const mapId = useMemo(() => pathParts(router.asPath).at(-1), [router.asPath]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SpectrumProvider
-        theme={defaultSpectrumTheme}
-        // Set render consistently on the server so Next.js can
-        // rehydrate. Is there a better way to do this?
-        locale="en-US"
-        scale="medium"
-        minHeight="100vh"
-      >
-        <SessionProvider>{mapId && <MapPage mapId={mapId} />}</SessionProvider>
-        <div id="portal-container" className="z-[60]"></div>
-        <ReactQueryDevtools initialIsOpen={false} />
-      </SpectrumProvider>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <SpectrumProvider
+          theme={defaultSpectrumTheme}
+          // Set render consistently on the server so Next.js can
+          // rehydrate. Is there a better way to do this?
+          locale="en-US"
+          scale="medium"
+          minHeight="100vh"
+        >
+          <SessionProvider>
+            {mapId && <MapPage mapId={mapId} />}
+          </SessionProvider>
+          <div id="portal-container" className="z-[60]"></div>
+          <ReactQueryDevtools initialIsOpen={false} />
+        </SpectrumProvider>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   );
 }
 

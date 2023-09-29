@@ -7,7 +7,7 @@ import {
   Heading,
   ProgressCircle,
 } from '@adobe/react-spectrum';
-import { InlineErrorComponent } from '@/generic/InlineErrorComponent';
+import { InlineErrorComponent } from '@/features/error/InlineErrorComponent';
 import { useMapAccess } from '../api/mapMeta';
 import { PutMapAccessRequest } from '../api/MapAccess';
 import { useState } from 'react';

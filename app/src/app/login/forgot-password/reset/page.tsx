@@ -8,7 +8,7 @@ import {
   usePasswordResetCompleteMutation,
 } from '@/features/account/api/passwordReset';
 import { Layout } from '@/features/layout';
-import { InlineErrorComponent } from '@/generic/InlineErrorComponent';
+import { InlineErrorComponent } from '@/features/error/InlineErrorComponent';
 import cls from '@/generic/cls';
 import { Button, ProgressCircle } from '@adobe/react-spectrum';
 import { useSearchParams } from 'next/navigation';

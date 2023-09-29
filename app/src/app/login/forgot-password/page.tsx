@@ -4,7 +4,7 @@ import { AppError, TransportError } from '@/api/errors';
 import { AccountInput } from '@/features/account/AccountInput';
 import { usePasswordResetRequestMutation } from '@/features/account/api/passwordReset';
 import { Layout } from '@/features/layout';
-import { InlineErrorComponent } from '@/generic/InlineErrorComponent';
+import { InlineErrorComponent } from '@/features/error/InlineErrorComponent';
 import { Button } from '@adobe/react-spectrum';
 import { useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';

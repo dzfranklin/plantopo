@@ -3,7 +3,7 @@ import { Button, Checkbox, Item, Picker } from '@adobe/react-spectrum';
 import { useCallback, useState } from 'react';
 import { usePutMapAccessMutation } from '../api/mapMeta';
 import { UserAccessRole } from '../api/MapAccess';
-import { InlineErrorComponent } from '@/generic/InlineErrorComponent';
+import { InlineErrorComponent } from '@/features/error/InlineErrorComponent';
 
 const DEFAULT_ROLE = 'editor';
 const DEFAULT_NOTIFY = true;

@@ -5,7 +5,7 @@ import { User } from '@/features/account/api/User';
 import { useRerequestConfirmationMutation } from '@/features/account/api/useRerequestConfirmationMutation';
 import { useSession } from '@/features/account/session';
 import { Layout } from '@/features/layout';
-import { InlineErrorComponent } from '@/generic/InlineErrorComponent';
+import { InlineErrorComponent } from '@/features/error/InlineErrorComponent';
 import cls from '@/generic/cls';
 
 export default function AccountPage() {

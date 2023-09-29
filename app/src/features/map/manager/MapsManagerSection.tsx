@@ -20,7 +20,7 @@ import EditIcon from '@spectrum-icons/workflow/Edit';
 import ShareIcon from '@spectrum-icons/workflow/UserShare';
 import { useRouter } from 'next/navigation';
 import { UseQueryResult } from '@tanstack/react-query';
-import { InlineErrorComponent } from '@/generic/InlineErrorComponent';
+import { InlineErrorComponent } from '@/features/error/InlineErrorComponent';
 import { RenamePopover } from './RenamePopover';
 import { useMapDeleteMutation } from '@/features/map/api/useMapDeleteMutation';
 import { MapShareDialog } from '@/features/map/MapShareDialog/MapShareDialog';

@@ -2,7 +2,7 @@
 
 import { AppError, TransportError } from '@/api/errors';
 import { useConfirmCompleteMutation } from '@/features/account/api/useConfirmMutation';
-import { InlineErrorComponent } from '@/generic/InlineErrorComponent';
+import { InlineErrorComponent } from '@/features/error/InlineErrorComponent';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ReactNode } from 'react';
