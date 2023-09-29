@@ -135,10 +135,16 @@ func matchmaker(
 		locksHeld := lockKeys(localSessions)
 		l.Debug("Waiting for sessions to close")
 		closeSessions()
+		timeout := time.After(time.Second * 5)
+	outer:
 		for len(localSessions) != 0 {
-			mapId := <-closeNotifies
-			delete(localSessions, mapId)
-
+			select {
+			case mapId := <-closeNotifies:
+				delete(localSessions, mapId)
+			case <-timeout:
+				l.Error("timed out waiting for sessions to close")
+				break outer
+			}
 		}
 
 		l.Debug("Releasing locks")
