@@ -4,19 +4,32 @@ import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
 import { ErrorBoundary as ReactErrorBoundary } from 'react-error-boundary';
 import ErrorTechInfo from './ErrorTechInfo';
 import { ErrorInfo } from 'react';
+import {
+  defaultTheme as defaultSpectrumTheme,
+  Provider as SpectrumProvider,
+} from '@adobe/react-spectrum';
 
 function fallbackRender({ error }: { error: unknown }) {
   return (
-    <DialogContainer isDismissable={false} onDismiss={() => {}}>
-      <AlertDialog
-        title="Error"
-        variant="error"
-        primaryActionLabel="Reload"
-        onPrimaryAction={() => document.location.reload()}
-      >
-        <ErrorTechInfo error={error} />
-      </AlertDialog>
-    </DialogContainer>
+    <SpectrumProvider
+      theme={defaultSpectrumTheme}
+      // Set render consistently on the server so Next.js can
+      // rehydrate. Is there a better way to do this?
+      locale="en-US"
+      scale="medium"
+      minHeight="100vh"
+    >
+      <DialogContainer isDismissable={false} onDismiss={() => {}}>
+        <AlertDialog
+          title="Error"
+          variant="error"
+          primaryActionLabel="Reload"
+          onPrimaryAction={() => document.location.reload()}
+        >
+          <ErrorTechInfo error={error} />
+        </AlertDialog>
+      </DialogContainer>
+    </SpectrumProvider>
   );
 }
 
