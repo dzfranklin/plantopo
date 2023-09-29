@@ -151,7 +151,7 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 	l.Info("accepted")
 
 	// Note gorilla supports one concurrent reader and one concurrent writer
-	writerCtx, cancelWriter := context.WithCancel(r.Context())
+	writerCtx, cancelWriter := context.WithCancel(context.Background())
 	go socketReader(l, sync, sock, trustedAware, cancelWriter)
 	go socketWriter(writerCtx, l, outgoing, sock)
 }
@@ -201,6 +201,7 @@ func socketWriter(
 	for {
 		select {
 		case <-ctx.Done():
+			l.Debugw("context done", zap.Error(ctx.Err()))
 			return
 		case msg := <-outgoing:
 			err := sock.WriteJSON(msg)
