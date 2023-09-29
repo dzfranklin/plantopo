@@ -45,8 +45,6 @@ export function RenderStack({
     if (!canvas || !container) return;
     if (!map || !engine) return;
 
-    engine.setCameraGetter(() => CurrentCameraPosition.fromMap(map).toAware());
-
     let canvasCtx;
     if (canvasCtxRef.current) {
       canvasCtx = canvasCtxRef.current;
@@ -59,6 +57,8 @@ export function RenderStack({
     syncSize(map, canvas, container.getBoundingClientRect());
 
     map.on('data', () => setIsLoadingContent(!map.areTilesLoaded()));
+
+    map.jumpTo(engine.initialCamera);
 
     const initialCamera = CurrentCameraPosition.fromMap(map);
 
@@ -81,8 +81,13 @@ export function RenderStack({
     });
 
     let lastSelection: SceneFeature[] = [];
+    let lastCamera: CurrentCameraPosition | undefined;
     const renderScene = (scene: Scene) => {
       const camera = CurrentCameraPosition.fromMap(map);
+      if (!lastCamera?.equals(camera)) {
+        engine.notifyCameraUpdated(camera);
+      }
+      lastCamera = camera;
 
       if (map.isStyleLoaded()) {
         layerRenderer.render(scene);

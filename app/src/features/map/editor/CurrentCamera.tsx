@@ -37,6 +37,16 @@ export class CurrentCameraPosition {
     );
   }
 
+  equals(other: CurrentCameraPosition): boolean {
+    return (
+      Math.abs(this.center[0] - other.center[0]) < Number.EPSILON &&
+      Math.abs(this.center[1] - other.center[1]) < Number.EPSILON &&
+      Math.abs(this.zoom - other.zoom) < Number.EPSILON &&
+      Math.abs(this.bearing - other.bearing) < Number.EPSILON &&
+      Math.abs(this.pitch - other.pitch) < Number.EPSILON
+    );
+  }
+
   bboxPolygon(): BBoxPolygon {
     // TODO: This should take into account sidebarWidth
     return bboxPolygon([

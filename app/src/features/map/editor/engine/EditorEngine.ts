@@ -19,6 +19,7 @@ import fracIdxBetween from './fracIdxBetween';
 import { Changeset } from '../api/Changeset';
 import { deepEq } from '@/generic/equality';
 import stringOrd from '@/generic/stringOrd';
+import { CurrentCameraPosition } from '../CurrentCamera';
 
 const ROOT_FID = '';
 const SEND_INTERVAL = 15; // ms
@@ -29,18 +30,37 @@ export type LayerInsertPlace =
   | { at: 'before'; target: string }
   | { at: 'after'; target: string };
 
+type CameraListener = (
+  _: Readonly<{
+    center: [number, number];
+    zoom: number;
+    bearing: number;
+    pitch: number;
+  }>,
+) => any;
+
+interface InitialCamera {
+  center: [number, number];
+  zoom: number;
+  bearing: number;
+  pitch: number;
+}
+
 export class EditorEngine {
   public readonly mapId: string;
   public readonly clientId: string;
   public readonly mayEdit: boolean;
   public readonly sources: MapSources;
+  public readonly initialCamera: InitialCamera;
 
   private _seq = 0;
   private _transport: SyncTransport;
   private _store: EditorStore;
   private _prefs: EditorPrefStore;
   private _sendInterval: number;
-  private _getCamera: () => AwareCamera | undefined = () => undefined;
+
+  private _cam: CurrentCameraPosition | undefined;
+  private _camListeners = new Set<CameraListener>();
 
   private _awareMap: Readonly<Record<string, AwareEntry>> = {};
 
@@ -59,11 +79,13 @@ export class EditorEngine {
     mayEdit,
     mapSources,
     prefs,
+    initialCamera,
   }: {
     mapId: string;
     mayEdit: boolean;
     mapSources: MapSources;
     prefs?: EditorPrefStore;
+    initialCamera: InitialCamera;
   }) {
     // Note that the clientId cannot be reused for another `EditorStore`
     const clientId = uuidv4();
@@ -72,6 +94,7 @@ export class EditorEngine {
     this.mapId = mapId;
     this.mayEdit = mayEdit;
     this.sources = mapSources;
+    this.initialCamera = initialCamera;
     this._store = new EditorStore({
       clientId,
       mayEdit,
@@ -104,8 +127,18 @@ export class EditorEngine {
   }
 
   private _makeSetAwareRequest(): SetAwareRequest {
+    let camera: AwareCamera | undefined;
+    if (this._cam) {
+      camera = {
+        lng: this._cam.center[0],
+        lat: this._cam.center[1],
+        zoom: this._cam.zoom,
+        bearing: this._cam.bearing,
+        pitch: this._cam.pitch,
+      };
+    }
     return {
-      camera: this._getCamera(),
+      camera,
       selectedFeatures: [...this._selectedByMe],
     };
   }
@@ -118,8 +151,18 @@ export class EditorEngine {
     this._transport.onStatus = cb;
   }
 
-  setCameraGetter(getCamera: () => AwareCamera | undefined): void {
-    this._getCamera = getCamera;
+  addCameraListener(cb: CameraListener): () => void {
+    this._camListeners.add(cb);
+    return () => this._camListeners.delete(cb);
+  }
+
+  notifyCameraUpdated(cam: CurrentCameraPosition): void {
+    this._cam = cam;
+    if (cam) {
+      for (const cb of this._camListeners) {
+        cb(cam);
+      }
+    }
   }
 
   get scene(): Readonly<Scene> {
