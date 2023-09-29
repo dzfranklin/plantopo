@@ -85,7 +85,7 @@ export class EditorEngine {
     mayEdit: boolean;
     mapSources: MapSources;
     prefs?: EditorPrefStore;
-    initialCamera: InitialCamera;
+    initialCamera: Readonly<InitialCamera>;
   }) {
     // Note that the clientId cannot be reused for another `EditorStore`
     const clientId = uuidv4();

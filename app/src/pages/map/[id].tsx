@@ -26,6 +26,7 @@ import {
   Provider as SpectrumProvider,
 } from '@adobe/react-spectrum';
 import {
+  CameraURLParam,
   parseCameraURLParam,
   serializeCameraURLParam,
 } from '@/features/map/editor/cameraURLParam';
@@ -55,7 +56,7 @@ export default function MapPageShell() {
   );
 }
 
-const defaultInitialCamera = {
+const defaultInitialCamera: CameraURLParam = {
   center: [-55.6923608, 42.4948239],
   zoom: 2,
   bearing: 0,
@@ -69,7 +70,8 @@ function MapPage({ mapId }: { mapId: string }) {
 
   const [initialCamera] = useState(() => {
     const query = new URL(router.asPath, 'https://plantopo.com').searchParams;
-    return parseCameraURLParam(query.get('c') ?? '') ?? defaultInitialCamera;
+    const raw = query.get('c') ?? '';
+    return parseCameraURLParam(raw) ?? defaultInitialCamera;
   });
 
   const meta = useMapMeta(mapId);
