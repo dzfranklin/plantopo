@@ -50,6 +50,8 @@ func New(s *Services) http.Handler {
 
 	r.HandleFunc("/api/v1/healthz", s.healthzHandler).Methods("GET")
 
+	r.HandleFunc("/api/dev/httpbin", s.devHttpbinHandler)
+
 	r.HandleFunc("/api/v1/session", s.sessionHandler)
 
 	r.HandleFunc("/api/v1/account/confirm/complete", s.accountConfirmCompleteHandler)
