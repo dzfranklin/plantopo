@@ -149,6 +149,10 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 		Code:    http.StatusNotFound,
 		Reason:  "notFound",
 		Message: "no handler",
+		Details: map[string]interface{}{
+			"path":   r.URL.Path,
+			"method": r.Method,
+		},
 	})
 }
 
