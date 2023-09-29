@@ -1,3 +1,1 @@
 nodejs 18.14.2 # maplibre-gl requires ^18
-elixir 1.14.5-otp-25
-erlang 25.2
