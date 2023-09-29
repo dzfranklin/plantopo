@@ -1,9 +1,9 @@
 import { ActionButton, Item, Menu, MenuTrigger } from '@adobe/react-spectrum';
 import DebugMenuIcon from '@spectrum-icons/workflow/Bug';
-import { useCallback } from 'react';
+import { Key, useCallback } from 'react';
 
 export default function DebugMenu() {
-  const onAction = useCallback((key: string | number) => {
+  const onAction = useCallback((key: Key) => {
     switch (key) {
       default:
         return;
