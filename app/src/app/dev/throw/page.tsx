@@ -1,3 +1,7 @@
+import { useEffect } from 'react';
+
 export default function ThrowPage() {
-  throw new Error('This is a test error');
+  useEffect(() => {
+    throw new Error('This is a test error');
+  }, []);
 }
