@@ -6,7 +6,7 @@ export class LayerRenderer {
   private _pendingTilesets = new Set<string>();
   private _addedSprites = new Set<string>();
   private _currentSublayers = new Set<string>();
-  private _map: ml.Map;
+  private _map: ml.Map | null = null;
   private _sources: MapSources;
   private _scene: Scene | null = null;
   private _boundOnPotentialLoad = this._onPotentialLoad.bind(this);
@@ -18,12 +18,12 @@ export class LayerRenderer {
   }
 
   remove() {
-    this._map.off('data', this._boundOnPotentialLoad);
+    this._map?.off('data', this._boundOnPotentialLoad);
     for (const sublayer of this._currentSublayers) {
-      this._map.removeLayer(sublayer);
+      this._map?.removeLayer(sublayer);
     }
     for (const sprite of this._addedSprites) {
-      this._map.removeSprite(sprite);
+      this._map?.removeSprite(sprite);
     }
   }
 
@@ -32,6 +32,7 @@ export class LayerRenderer {
   }
 
   private _render(scene: Scene, hasNewTilesetsLoaded = false) {
+    if (!this._map) return;
     const active = scene.layers.active;
     const prevActive = this._scene?.layers.active;
 
@@ -117,6 +118,7 @@ export class LayerRenderer {
   }
 
   private _onPotentialLoad() {
+    if (!this._map) return;
     const newTilesets = new Set<string>();
     for (const tileset of this._pendingTilesets) {
       if (this._map.isSourceLoaded(tileset)) {
