@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sync-backend
+  namespace: pt
+  labels:
+      app: sync-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: sync-backend
+  ports:
+    - name: grpc
+      port: 5050
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sync-backend
+  namespace: pt
+  labels:
+    app: sync-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sync-backend
+  template:
+    metadata:
+      labels:
+        app: sync-backend
+        ver: v0.4
+    spec:
+      containers:
+        - name: sync-backend
+          image: registry.digitalocean.com/dzfranklin/pt-sync-backend:v0.4
+          env:
+            - name: PORT
+              value: "5050"
+            - name: __POD_IP # For SELF_EXTERNAL_ADDR
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: SELF_EXTERNAL_ADDR
+              value: "$(__POD_IP):5050"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: db
+                  key: DATABASE_URL
+          ports:
+            - containerPort: 5050
+              name: grpc
+          livenessProbe:
+            tcpSocket:
+              port: grpc
+            periodSeconds: 5

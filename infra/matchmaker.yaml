@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: matchmaker
+  namespace: pt
+  labels:
+    app: matchmaker
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+      app: matchmaker
+  ports:
+    - name: grpc
+      port: 5050
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: matchmaker
+  namespace: pt
+  labels:
+      app: matchmaker
+spec:
+  serviceName: matchmaker
+  replicas: 1
+  selector:
+    matchLabels:
+      app: matchmaker
+  template:
+    metadata:
+      labels:
+        app: matchmaker
+        ver: v0.2
+    spec:
+      containers:
+        - name: matchmaker
+          image: registry.digitalocean.com/dzfranklin/pt-matchmaker:v0.2
+          env:
+            - name: PORT
+              value: "5050"
+          ports:
+            - containerPort: 5050
+              name: grpc
+          livenessProbe:
+            tcpSocket:
+              port: 5050
+            periodSeconds: 5

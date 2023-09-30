@@ -63,9 +63,27 @@ const config = {
   ],
 };
 
+/** @type {import('next').NextConfig} */
+const devConfig = {
+  ...config,
+  output: undefined,
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: '/map/:id*',
+          destination: '/map/__id__/',
+        }
+      ],
+      afterFiles: [],
+      fallback: [],
+    }
+  }
+}
+
 module.exports = (phase) => {
   if (phase === 'phase-development-server') {
-    return config;
+    return devConfig;
   } else {
     return config;
   }

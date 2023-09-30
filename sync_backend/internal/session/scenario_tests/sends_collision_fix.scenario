@@ -1,0 +1,18 @@
+< CONNECT c1
+> c1
+< c1
+  seq: 1
+  change:
+    lset:
+      l1:
+        id: "l1"
+        idx: "O"
+      l2:
+        id: "l2"
+        idx: "O"
+> c1
+  change:
+    lset:
+      l2:
+        id: "l2"
+        idx: "g)"

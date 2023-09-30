@@ -1,2 +1,0 @@
-#!/usr/bin/env bash
-cd web && mix dialyzer --halt-exit-status

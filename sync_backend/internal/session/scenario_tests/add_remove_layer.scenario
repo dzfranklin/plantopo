@@ -1,0 +1,13 @@
+< CONNECT c1
+< c1
+  seq: 1
+  change:
+    lset: {"l1": {"id": "l1", "idx": "O"}}
+=
+  lset: {"l1": {"id": "l1", "idx": "O"}}
+< c1
+  seq: 2
+  change:
+    lset: {"l1": {"id": "l1", "idx": null}}
+=
+  lset: {"l1": {"id": "l1", "idx": null}}

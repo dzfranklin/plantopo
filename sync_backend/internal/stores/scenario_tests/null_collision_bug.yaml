@@ -1,0 +1,22 @@
+GIVEN:
+  lset:
+    l1:
+      id: l1
+      idx: O
+    l2:
+      id: l2
+      idx: null
+WHEN:
+  lset:
+    l1:
+      id: l1
+      idx: null
+THEN:
+  SNAPSHOT:
+    lset:
+      l1:
+        id: l1
+        idx: null
+      l2:
+        id: l2
+        idx: null

@@ -10,7 +10,7 @@ ti: test-integration
 tp: test-build-prod
 
 test-integration:
-  ./api/server/tests/integration_test.sh
+  ./api_server/tests/integration_test.sh
 
 test-build-prod:
   docker build -t plantopo:latest .
@@ -37,6 +37,13 @@ gen:
   go run ./sources
   mkdir -p app/src/gen && cp sources/out/mapSources.json app/src/gen
 
+  protoc api/v1/*.proto \
+    --go_out . \
+    --go-grpc_out . \
+    --go_opt paths=source_relative \
+    --go-grpc_opt paths=source_relative \
+    --proto_path=.
+
 app:
   cd app && npm run dev
 
@@ -46,7 +53,7 @@ test-app:
   cd app && npm run test
 
 migrate *ARGS:
-  docker run -v ./api/migrations:/migrations --network host migrate/migrate \
+  docker run -v ./migrations:/migrations --network host migrate/migrate \
     -path=/migrations/ \
     -database postgres://postgres:postgres@localhost:5432/pt \
     {{ ARGS }}
@@ -59,13 +66,15 @@ migrate *ARGS:
 # > just migrate-prod-up $PROD_URL
 
 migrate-prod-up url:
-  docker run -v ./api/migrations:/migrations --network host migrate/migrate \
+  docker run -v ./migrations:/migrations --network host migrate/migrate \
+    -verbose \
     -path=/migrations/ \
     -database {{url}} \
     up
 
 migrate-prod-down url:
-    docker run -v ./api/migrations:/migrations --network host migrate/migrate \
+    docker run -v ./migrations:/migrations --network host migrate/migrate \
+    -verbose \
     -path=/migrations/ \
     -database {{url}} \
     down 1
@@ -73,9 +82,12 @@ migrate-prod-down url:
 recreatedb:
   dropdb --if-exists pt
   createdb pt
-  docker run -v ./api/migrations:/migrations --network host migrate/migrate \
+  docker run -v ./migrations:/migrations --network host migrate/migrate \
     -path=/migrations/ \
     -database postgres://postgres:postgres@localhost:5432/pt \
     up
   psql -d pt \
-    -f api/migrations/test_seed.sql
+    -f migrations/test_seed.sql
+
+loc:
+  tokei . -e '*.{json,xml,svg,txt,pb.go}'

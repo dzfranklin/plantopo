@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="api_server.Dockerfile" type="docker-deploy" factoryName="dockerfile">
+    <deployment type="dockerfile">
+      <settings>
+        <option name="containerName" value="" />
+        <option name="sourceFilePath" value="api_server.Dockerfile" />
+      </settings>
+    </deployment>
+    <method v="2" />
+  </configuration>
+</component>

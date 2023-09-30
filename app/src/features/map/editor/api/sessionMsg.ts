@@ -12,8 +12,8 @@ export interface SetAwareRequest {
 }
 
 export interface IncomingSessionMsg {
-  acks?: Record<string, number>;
-  aware: Record<string, AwareEntry>;
+  ack?: number;
+  aware?: Record<string, AwareEntry>;
   change?: Changeset;
   error?: string;
 }

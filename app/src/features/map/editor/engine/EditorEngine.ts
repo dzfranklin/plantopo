@@ -114,7 +114,7 @@ export class EditorEngine {
     this._sendInterval = window.setInterval(() => {
       const change = this.mayEdit ? this._store.takeUnsent() : undefined;
       this._transport.send({
-        seq: this._seq++,
+        seq: ++this._seq,
         aware: this._makeSetAwareRequest(),
         change,
       });
