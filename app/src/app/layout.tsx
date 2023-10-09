@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { SessionProvider } from '@/features/account/session';
 import { AppErrorBoundary } from '@/features/error/AppErrorBoundary';
+import { FaroSDK } from '@/features/FaroSDK';
 
 export default function RootLayout({
   children,
@@ -21,6 +22,7 @@ export default function RootLayout({
     <html lang="en" className="min-h-full">
       <head>
         <title>PlanTopo</title>
+        <FaroSDK />
       </head>
       <body className="min-h-full">
         <AppErrorBoundary>

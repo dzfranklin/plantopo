@@ -32,6 +32,7 @@ import {
 } from '@/features/map/editor/cameraURLParam';
 import { useRouter } from 'next/router';
 import { AppErrorBoundary } from '@/features/error/AppErrorBoundary';
+import { FaroSDK } from '@/features/FaroSDK';
 
 export default function MapPageShell() {
   const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ export default function MapPageShell() {
 
   return (
     <AppErrorBoundary>
+      <FaroSDK />
       <QueryClientProvider client={queryClient}>
         <SpectrumProvider
           theme={defaultSpectrumTheme}
