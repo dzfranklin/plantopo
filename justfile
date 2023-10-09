@@ -43,6 +43,9 @@ gen:
 app:
   cd app && npm run dev
 
+invalidate-app-distribution-prod:
+  aws cloudfront create-invalidation --distribution-id E1T20T38SLR087 --paths "/*"
+
 test-app:
   cd app && tsc --noEmit
   cd app && npm run lint
