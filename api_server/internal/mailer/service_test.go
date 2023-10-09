@@ -114,7 +114,7 @@ Alice Smith shared "Trip to Alaska" with you on PlanTopo.
 
 You can view the map here:
 
-https://plantopo.com/map/?id=dddddddd-0000-0000-0000-000000000001
+https://plantopo.com/map/dddddddd-0000-0000-0000-000000000001/
 
 Alice Smith says:
 
@@ -160,7 +160,7 @@ Alice Smith shared "Trip to Alaska" with you on PlanTopo.
 
 You can view the map here:
 
-https://plantopo.com/map/?id=dddddddd-0000-0000-0000-000000000001
+https://plantopo.com/map/dddddddd-0000-0000-0000-000000000001/
 
 `,
 	}).Return(nil)
@@ -199,7 +199,7 @@ PlanTopo is a tool for editing maps collaboratively.
 
 You can sign up for an account here:
 
-https://plantopo.com/signup/?returnTo=%2Fmap%3Fid%3Ddddddddd-0000-0000-0000-000000000001&email=bob%40example.com
+https://plantopo.com/signup/?returnTo=%2Fmap%2Fdddddddd-0000-0000-0000-000000000001%2F&email=bob%40example.com
 
 Alice Smith says:
 
@@ -242,7 +242,7 @@ PlanTopo is a tool for editing maps collaboratively.
 
 You can sign up for an account here:
 
-https://plantopo.com/signup/?returnTo=%2Fmap%3Fid%3Ddddddddd-0000-0000-0000-000000000001&email=bob%40example.com
+https://plantopo.com/signup/?returnTo=%2Fmap%2Fdddddddd-0000-0000-0000-000000000001%2F&email=bob%40example.com
 
 `,
 	}).Return(nil)

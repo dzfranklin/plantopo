@@ -164,7 +164,7 @@ func (m *impl) SendShareNotification(req ShareNotificationRequest) error {
 	if mapName == "" {
 		mapName = "Untitled"
 	}
-	mapUrl := "https://plantopo.com/map/?id=" + req.Map.Id.String()
+	mapUrl := fmt.Sprintf("https://plantopo.com/map/%s/", req.Map.Id.String())
 	tdata := shareContext{
 		FromFullName: req.From.FullName,
 		ToFullName:   req.To.FullName,
@@ -211,7 +211,7 @@ func (m *impl) SendInvite(req InviteRequest) error {
 	}
 	signupUrl := fmt.Sprintf(
 		"https://plantopo.com/signup/?returnTo=%s&email=%s",
-		url.QueryEscape(fmt.Sprintf("/map?id=%s", req.Map.Id)),
+		url.QueryEscape(fmt.Sprintf("/map/%s/", req.Map.Id)),
 		url.QueryEscape(req.ToEmail),
 	)
 	tdata := inviteContext{
