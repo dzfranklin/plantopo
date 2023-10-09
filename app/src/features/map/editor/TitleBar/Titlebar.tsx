@@ -10,7 +10,7 @@ export function Titlebar() {
   // TODO:
   return (
     <div className="flex gap-2 px-1.5 items-center overflow-hidden h-[30px] text-sm border-b border-neutral-300 bg-neutral-100">
-      <Link href="/" className="text-blue-700">
+      <Link href="/dashboard" className="text-blue-700">
         <MapIcon />
       </Link>
     </div>
