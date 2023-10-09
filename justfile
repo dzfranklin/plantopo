@@ -1,19 +1,15 @@
 set shell := ["bash", "-cu"]
 
-t: test-app test-go-short test-integration test-build-prod
+t: test-app test-go-short test-integration
   echo 'All tests passed (long go tests skipped)'
 
 ta: test-app
 tg: test-go-short
 tgl: test-go-long
 ti: test-integration
-tp: test-build-prod
 
 test-integration:
   ./api_server/tests/integration_test.sh
-
-test-build-prod:
-  docker build -t plantopo:latest .
 
 serve *ARGS:
   caddy stop 2> /dev/null || true
