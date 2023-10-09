@@ -1,5 +1,4 @@
 {
-    "elixirLS.projectDir": "./web",
     "go.testFlags": [
         "-race"
     ],
@@ -7,53 +6,10 @@
         "APP_ENV": "test"
     },
     "files.exclude": {
-        "/web/_build/**": true,
-        "/web/.elixir_ls/**": true,
         "/maplibre-gl-js/**": true,
     },
     "editor.tabSize": 2,
     "eslint.workingDirectories": [
         "app/"
     ],
-    "rust-analyzer.linkedProjects": [],
-    "cmake.buildDirectory": "${workspaceFolder}/sync/inspector/build",
-    "cmake.sourceDirectory": "/home/daniel/projects/plantopo/sync",
-    "files.associations": {
-        "*.leex": "html-eex",
-        "*.eex": "html-eex",
-        "*.sql": "sql",
-        "*.heex": "phoenix-heex",
-        "iosfwd": "cpp",
-        "optional": "cpp",
-        "iostream": "cpp",
-        "string_view": "cpp",
-        "atomic": "cpp",
-        "*.tcc": "cpp",
-        "cctype": "cpp",
-        "clocale": "cpp",
-        "cmath": "cpp",
-        "compare": "cpp",
-        "concepts": "cpp",
-        "coroutine": "cpp",
-        "cstdint": "cpp",
-        "cstdio": "cpp",
-        "cstdlib": "cpp",
-        "cstring": "cpp",
-        "cwchar": "cpp",
-        "cwctype": "cpp",
-        "exception": "cpp",
-        "initializer_list": "cpp",
-        "istream": "cpp",
-        "limits": "cpp",
-        "new": "cpp",
-        "numbers": "cpp",
-        "ostream": "cpp",
-        "stdexcept": "cpp",
-        "streambuf": "cpp",
-        "string": "cpp",
-        "system_error": "cpp",
-        "type_traits": "cpp",
-        "typeinfo": "cpp",
-        "utility": "cpp"
-    },
 }
