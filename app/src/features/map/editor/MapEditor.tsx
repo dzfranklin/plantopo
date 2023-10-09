@@ -3,6 +3,7 @@ import Sidebar from './Sidebar/Sidebar';
 import { Titlebar } from './TitleBar/Titlebar';
 import { useKeyboardShortcut } from '../../commands/commands';
 import { useEngine } from './engine/useEngine';
+import { ToolControl } from '@/features/map/editor/ToolControl/ToolControl';
 
 export function MapEditor() {
   const engine = useEngine();
@@ -14,6 +15,7 @@ export function MapEditor() {
       <Titlebar />
       <div className="relative">
         <MapContainer />
+        <ToolControl />
         <Sidebar />
       </div>
     </div>

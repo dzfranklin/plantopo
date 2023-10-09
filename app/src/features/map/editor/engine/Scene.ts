@@ -7,6 +7,7 @@ export type Scene = {
     end: number;
   };
   sidebarWidth: number;
+  activeTool: 'createPoint' | 'createLine';
   layers: {
     active: SceneLayer[];
     /** Ordered by name */
@@ -81,6 +82,7 @@ export const EMPTY_SCENE: Scene = {
     end: 0,
   },
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
+  activeTool: 'createPoint',
   layers: {
     active: [],
     inactive: [],
@@ -96,5 +98,9 @@ export const EMPTY_SCENE: Scene = {
 };
 
 export function nameForUnnamedFeature(feature: SceneFeature): string {
-  return `Unnamed ${feature.geometry?.type ?? 'Feature'}`;
+  if (!feature.geometry) {
+    return 'Unnamed Folder';
+  } else {
+    return `Unnamed ${feature.geometry.type}`;
+  }
 }
