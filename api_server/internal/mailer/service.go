@@ -90,7 +90,7 @@ type confirmContext struct {
 func (m *impl) SendConfirmation(to *types.User, token string) error {
 	tdata := confirmContext{
 		FullName:   to.FullName,
-		ConfirmUrl: "https://plantopo.com/confirm?token=" + token,
+		ConfirmUrl: "https://plantopo.com/confirm/?token=" + token,
 	}
 	var subject strings.Builder
 	err := text_templates.ExecuteTemplate(&subject, "confirmation.subject.tmpl", tdata)
@@ -118,7 +118,7 @@ func (m *impl) SendConfirmation(to *types.User, token string) error {
 func (m *impl) SendPasswordReset(to *types.User, token string) error {
 	tdata := confirmContext{
 		FullName:   to.FullName,
-		ConfirmUrl: "https://plantopo.com/login/forgot-password/reset?token=" + token,
+		ConfirmUrl: "https://plantopo.com/login/forgot-password/reset/?token=" + token,
 	}
 	var subject strings.Builder
 	err := text_templates.ExecuteTemplate(&subject, "password_reset.subject.tmpl", tdata)
@@ -164,7 +164,7 @@ func (m *impl) SendShareNotification(req ShareNotificationRequest) error {
 	if mapName == "" {
 		mapName = "Untitled"
 	}
-	mapUrl := "https://plantopo.com/map?id=" + req.Map.Id.String()
+	mapUrl := "https://plantopo.com/map/?id=" + req.Map.Id.String()
 	tdata := shareContext{
 		FromFullName: req.From.FullName,
 		ToFullName:   req.To.FullName,
@@ -210,7 +210,7 @@ func (m *impl) SendInvite(req InviteRequest) error {
 		mapName = "Untitled"
 	}
 	signupUrl := fmt.Sprintf(
-		"https://plantopo.com/signup?returnTo=%s&email=%s",
+		"https://plantopo.com/signup/?returnTo=%s&email=%s",
 		url.QueryEscape(fmt.Sprintf("/map?id=%s", req.Map.Id)),
 		url.QueryEscape(req.ToEmail),
 	)
