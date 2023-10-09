@@ -63,6 +63,24 @@ func (t *Feature) Merge(other Feature) {
 	}
 }
 
+func (t Feature) ShallowClone() Feature {
+	out := Feature{}
+	out.Id = t.Id
+	out.ParentState = t.ParentState
+	out.Parent = t.Parent
+	out.IdxState = t.IdxState
+	out.Idx = t.Idx
+	out.GeometryState = t.GeometryState
+	out.Geometry = t.Geometry
+	out.NameState = t.NameState
+	out.Name = t.Name
+	out.ColorState = t.ColorState
+	out.Color = t.Color
+	out.HiddenState = t.HiddenState
+	out.Hidden = t.Hidden
+	return out
+}
+
 func (t *Feature) UnmarshalJSON(data []byte) error {
 	dec := json.NewDecoder(bytes.NewReader(data))
 	tok, err := dec.Token()
@@ -282,6 +300,16 @@ func (t *Layer) Merge(other Layer) {
 		t.OpacityState = other.OpacityState
 		t.Opacity = other.Opacity
 	}
+}
+
+func (t Layer) ShallowClone() Layer {
+	out := Layer{}
+	out.Id = t.Id
+	out.IdxState = t.IdxState
+	out.Idx = t.Idx
+	out.OpacityState = t.OpacityState
+	out.Opacity = t.Opacity
+	return out
 }
 
 func (t *Layer) UnmarshalJSON(data []byte) error {

@@ -193,6 +193,17 @@ func genGoType(ty typeIR) []byte {
 	}
 	sb.WriteString("}\n\n")
 
+	// ShallowClone
+	sb.WriteString(fmt.Sprintf("func (t %s) ShallowClone() %s {\n", ty.name, ty.name))
+	sb.WriteString(fmt.Sprintf("out := %s{}\n", ty.name))
+	sb.WriteString(fmt.Sprintf("out.%s = t.%s\n", ty.id.goName, ty.id.goName))
+	for _, field := range ty.fields {
+		sb.WriteString(fmt.Sprintf("out.%sState = t.%sState\n", field.goName, field.goName))
+		sb.WriteString(fmt.Sprintf("out.%s = t.%s\n", field.goName, field.goName))
+	}
+	sb.WriteString("return out\n")
+	sb.WriteString("}\n\n")
+
 	// unmarshal
 	sb.WriteString(fmt.Sprintf("func (t *%s) UnmarshalJSON(data []byte) error {\n", ty.name))
 	sb.WriteString("\tdec := json.NewDecoder(bytes.NewReader(data))\n")

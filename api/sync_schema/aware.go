@@ -9,7 +9,7 @@ type Aware struct {
 }
 
 type TrustedAware struct {
-	ClientId uuid.UUID  `json:"clientId"` // changes every session
+	ClientId string     `json:"clientId"` // changes every session
 	UserId   *uuid.UUID `json:"userId"`   // nil for anonymous
 	Name     string     `json:"name"`
 }

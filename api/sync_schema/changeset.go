@@ -14,6 +14,44 @@ type Changeset struct {
 	LSet map[string]Layer
 }
 
+func (c *Changeset) IsNil() bool {
+	return c == nil || (c.FDelete == nil && c.FAdd == nil && c.FSet == nil && c.LSet == nil)
+}
+
+/*
+ShallowClone copies the changeset down to the values of individual features
+and layers
+*/
+func (c *Changeset) ShallowClone() *Changeset {
+	if c == nil {
+		return nil
+	}
+	out := &Changeset{}
+	if c.FDelete != nil {
+		out.FDelete = make(map[string]struct{}, len(c.FDelete))
+		for k := range c.FDelete {
+			out.FDelete[k] = struct{}{}
+		}
+	}
+	if c.FAdd != nil {
+		out.FAdd = make([]string, len(c.FAdd))
+		copy(out.FAdd, c.FAdd)
+	}
+	if c.FSet != nil {
+		out.FSet = make(map[string]Feature, len(c.FSet))
+		for k, v := range c.FSet {
+			out.FSet[k] = v.ShallowClone()
+		}
+	}
+	if c.LSet != nil {
+		out.LSet = make(map[string]Layer, len(c.LSet))
+		for k, v := range c.LSet {
+			out.LSet[k] = v.ShallowClone()
+		}
+	}
+	return out
+}
+
 func (c *Changeset) Merge(incoming *Changeset) {
 	if incoming == nil {
 		return
