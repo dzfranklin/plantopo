@@ -13,8 +13,11 @@ export class TransportError extends Error {
     super(`${errCause.message} (requestId: ${requestId})`);
   }
 
-  static notJson(requestId: string, status: number, body: string) {
-    return new TransportError(requestId, `not json: ${status}\n\n${body}`);
+  static notJson(requestId: string, status: number, _body: string) {
+    return new TransportError(
+      requestId,
+      new Error(`not json (status ${status}`),
+    );
   }
 }
 
