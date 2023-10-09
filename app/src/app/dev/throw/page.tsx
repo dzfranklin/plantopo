@@ -1,11 +1,19 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function ThrowPage() {
+  const [doThrow, setDoThrow] = useState(false);
   useEffect(() => {
-    throw new Error('This is a test error');
+    const t = setTimeout(() => {
+      setDoThrow(true);
+    }, 1000);
+    return () => clearTimeout(t);
   }, []);
+
+  if (doThrow) {
+    throw new Error('test error');
+  }
 
   return <p>This page throws a test error</p>;
 }

@@ -27,8 +27,17 @@ export default function fallbackRender({ error }: { error: unknown }) {
   );
 }
 
-function onError(error: unknown, info: ErrorInfo) {
-  console.error('error boundary caught', error, info);
+function onError(error: unknown, _info: ErrorInfo) {
+  if ('faro' in window) {
+    console.log('pushing error to faro');
+    try {
+      (window.faro as any).api.pushError(error);
+    } catch (e) {
+      console.error('error boundary failed to push error to faro', e);
+    }
+  } else {
+    console.error('error boundary cannot push error to faro as not loaded');
+  }
 }
 
 export function AppErrorBoundary({ children }: { children: React.ReactNode }) {
