@@ -1,0 +1,5 @@
+dev-local.plantopo.com
+
+tls internal
+
+reverse_proxy /* localhost:3000

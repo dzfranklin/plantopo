@@ -32,11 +32,11 @@ spec:
       name: api-server
       labels:
         app: api-server
-        ver: v0.8
+        ver: v0.9
     spec:
       containers:
         - name: api-server
-          image: registry.digitalocean.com/dzfranklin/pt-api-server:v0.8
+          image: registry.digitalocean.com/dzfranklin/pt-api-server:v0.9
           env:
             - name: PORT
               value: "8080"
