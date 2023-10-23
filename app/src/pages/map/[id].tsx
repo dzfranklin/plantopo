@@ -6,11 +6,7 @@ import { useMapMeta } from '@/features/map/api/mapMeta';
 import { useEffect, useMemo, useState } from 'react';
 import { AppError } from '@/api/errors';
 import { MapEditor } from '@/features/map/editor/MapEditor';
-import {
-  SessionProvider,
-  useSession,
-  useSessionRedirector,
-} from '@/features/account/session';
+import { useSession, useSessionRedirector } from '@/features/account/session';
 import { useMapSources } from '@/features/map/api/useMapSources';
 import { EditorEngine } from '@/features/map/editor/engine/EditorEngine';
 import { EditorEngineProvider } from '@/features/map/editor/engine/useEngine';
@@ -19,12 +15,6 @@ import ErrorTechInfo from '@/features/error/ErrorTechInfo';
 import { useTokensQuery } from '@/features/map/api/useTokens';
 import { CommandProvider } from '@/features/commands/commands';
 import { GetStaticPaths, GetStaticProps } from 'next';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import {
-  defaultTheme as defaultSpectrumTheme,
-  Provider as SpectrumProvider,
-} from '@adobe/react-spectrum';
 import {
   CameraURLParam,
   parseCameraURLParam,
