@@ -5,6 +5,7 @@ export function FaroSDK() {
     if (typeof window === 'undefined') return;
     if (process.env.NODE_ENV !== 'production') {
       console.info('Faro SDK not loaded as not production');
+      return;
     }
 
     if (document.getElementById('faro-web-sdk')) {
