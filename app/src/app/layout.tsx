@@ -33,6 +33,7 @@ export default function RootLayout({
               // rehydrate. Is there a better way to do this?
               locale="en-US"
               scale="medium"
+              colorScheme="light"
               minHeight="100vh"
             >
               <SessionProvider>{children}</SessionProvider>
