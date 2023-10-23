@@ -31,35 +31,13 @@ import {
   serializeCameraURLParam,
 } from '@/features/map/editor/cameraURLParam';
 import { useRouter } from 'next/router';
-import { AppErrorBoundary } from '@/features/error/AppErrorBoundary';
-import { FaroSDK } from '@/features/FaroSDK';
+import RootLayout from '@/app/layout';
 
 export default function MapPageShell() {
-  const queryClient = new QueryClient();
-  const router = useRouter();
-
-  const mapId = useMemo(() => pathParts(router.asPath).at(-1), [router.asPath]);
-
   return (
-    <AppErrorBoundary>
-      <FaroSDK />
-      <QueryClientProvider client={queryClient}>
-        <SpectrumProvider
-          theme={defaultSpectrumTheme}
-          // Set render consistently on the server so Next.js can
-          // rehydrate. Is there a better way to do this?
-          locale="en-US"
-          scale="medium"
-          minHeight="100vh"
-        >
-          <SessionProvider>
-            {mapId && <MapPage mapId={mapId} />}
-          </SessionProvider>
-          <div id="portal-container" className="z-[60]"></div>
-          <ReactQueryDevtools initialIsOpen={false} />
-        </SpectrumProvider>
-      </QueryClientProvider>
-    </AppErrorBoundary>
+    <RootLayout>
+      <MapPage />
+    </RootLayout>
   );
 }
 
@@ -70,10 +48,13 @@ const defaultInitialCamera: CameraURLParam = {
   pitch: 0,
 };
 
-function MapPage({ mapId }: { mapId: string }) {
+function MapPage() {
   const router = useRouter();
   const session = useSession();
   const sessionRedirector = useSessionRedirector();
+
+  const mapId = useMemo(() => pathParts(router.asPath).at(-1), [router.asPath]);
+  if (!mapId) notFound();
 
   const [initialCamera] = useState(() => {
     const query = new URL(router.asPath, 'https://plantopo.com').searchParams;
