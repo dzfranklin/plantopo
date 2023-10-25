@@ -15,6 +15,13 @@ jobs:
       with:
         go-version: '1.21'
 
+    - name: Set up kubectl
+      env:
+        KUBECONFIG: ${{ secrets.KUBECONFIG }}
+      run: |
+        mkdir -p "$HOME/.kube/config"
+        echo $KUBECONFIG | base64 --decode > "$HOME/.kube/config"
+
     - name: Build deploy tool
       run: go build -v -o ./out/deploy ./deploy
 
