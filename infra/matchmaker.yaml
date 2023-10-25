@@ -31,11 +31,11 @@ spec:
     metadata:
       labels:
         app: matchmaker
-        ver: v0.2
+        ver: {{ .Values.ver }}
     spec:
       containers:
         - name: matchmaker
-          image: registry.digitalocean.com/dzfranklin/pt-matchmaker:v0.2
+          image: {{ .Values.image }}
           env:
             - name: PORT
               value: "5050"

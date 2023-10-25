@@ -13,6 +13,8 @@ COPY db db
 RUN go build -race -o api_server/api_server ./api_server
 
 FROM debian:bookworm
+LABEL org.opencontainers.image.source="https://github.com/dzfranklin/plantopo"
+
 RUN mkdir -p /app
 COPY --from=build /build/api_server/api_server /app/api_server
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/

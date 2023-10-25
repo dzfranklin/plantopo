@@ -11,6 +11,8 @@ COPY api/v1 api/v1
 RUN go build -o ./matchmaker/matchmaker -race ./matchmaker
 
 FROM debian:bookworm
+LABEL org.opencontainers.image.source="https://github.com/dzfranklin/plantopo"
+
 RUN mkdir -p /app
 COPY --from=build /build/matchmaker/matchmaker /app/matchmaker
 

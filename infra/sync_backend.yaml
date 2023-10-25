@@ -29,11 +29,11 @@ spec:
     metadata:
       labels:
         app: sync-backend
-        ver: v0.4
+        ver: {{ .Values.ver }}
     spec:
       containers:
         - name: sync-backend
-          image: registry.digitalocean.com/dzfranklin/pt-sync-backend:v0.4
+          image: {{ .Values.image }}
           env:
             - name: PORT
               value: "5050"

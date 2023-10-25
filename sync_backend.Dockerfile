@@ -13,6 +13,8 @@ COPY db db
 RUN go build -o ./sync_backend/sync_backend -race ./sync_backend
 
 FROM debian:bookworm
+LABEL org.opencontainers.image.source="https://github.com/dzfranklin/plantopo"
+
 RUN mkdir -p /app
 COPY --from=build /build/sync_backend/sync_backend /app/sync_backend
 
