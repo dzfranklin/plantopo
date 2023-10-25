@@ -19,7 +19,7 @@ jobs:
       env:
         KUBECONFIG: ${{ secrets.KUBECONFIG }}
       run: |
-        mkdir -p "$HOME/.kube/config"
+        mkdir -p "$HOME/.kube"
         echo $KUBECONFIG | base64 --decode > "$HOME/.kube/config"
 
     - name: Build deploy tool
