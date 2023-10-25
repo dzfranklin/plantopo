@@ -1,0 +1,22 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Build deploy tool
+      run: go build -v -o ./out/deploy ./deploy
+
+    - name: Run deploy
+      run: ./out/deploy --all
