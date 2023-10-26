@@ -22,7 +22,17 @@ func (d *Deployment) Run(baseDir string) error {
 
 	// Build image
 
+	cacheTo := "type=local,dest=/tmp/deploy-docker-cache"
+	cacheFrom := "type=local,src=/tmp/deploy-docker-cache"
+	if os.Getenv("GITHUB_ACTIONS") != "" {
+		fmt.Println("Using GitHub Actions cache")
+		cacheTo = "type=gha,mode=max"
+		cacheFrom = "type=gha"
+	}
+
 	cmd := exec.Command("docker", "build",
+		"--cache-to", cacheTo,
+		"--cache-from", cacheFrom,
 		"--file", fmt.Sprintf("%s.Dockerfile", d.Name),
 		"--tag", imageTag,
 		".",
@@ -40,13 +50,6 @@ func (d *Deployment) Run(baseDir string) error {
 				cmd.Args = append(cmd.Args, arg)
 			}
 		}
-	}
-
-	// Cache layers
-	if os.Getenv("GITHUB_ACTIONS") != "" {
-		cmd.Args = append(cmd.Args,
-			"--cache-to", "type=gha,mode=max",
-			"--cache-from", "type=gha")
 	}
 
 	cmd.Dir = baseDir

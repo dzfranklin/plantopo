@@ -35,18 +35,21 @@ func DeployApp(ver string, baseDir string, bucket string, distribution string) {
 
 	// Build
 
+	cacheTo := "type=local,dest=/tmp/deploy-docker-cache"
+	cacheFrom := "type=local,src=/tmp/deploy-docker-cache"
+	if os.Getenv("GITHUB_ACTIONS") != "" {
+		fmt.Println("Using GitHub Actions cache")
+		cacheTo = "type=gha,mode=max"
+		cacheFrom = "type=gha"
+	}
+
 	cmd := exec.Command("docker", "build",
+		"--cache-to", cacheTo,
+		"--cache-from", cacheFrom,
 		"--file", "app.Dockerfile",
 		"--tag", imageTag,
 		".",
 	)
-
-	// Cache layers
-	if os.Getenv("GITHUB_ACTIONS") != "" {
-		cmd.Args = append(cmd.Args,
-			"--cache-to", "type=gha,mode=max",
-			"--cache-from", "type=gha")
-	}
 
 	cmd.Dir = baseDir
 	cmd.Stdout = os.Stdout
