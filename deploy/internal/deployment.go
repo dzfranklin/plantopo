@@ -42,6 +42,13 @@ func (d *Deployment) Run(baseDir string) error {
 		}
 	}
 
+	// Cache layers
+	if os.Getenv("GITHUB_ACTIONS") != "" {
+		cmd.Args = append(cmd.Args,
+			"--cache-to", "type=gha,mode=max",
+			"--cache-from", "type=gha")
+	}
+
 	cmd.Dir = baseDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

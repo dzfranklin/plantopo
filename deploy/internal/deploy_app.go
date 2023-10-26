@@ -40,6 +40,14 @@ func DeployApp(ver string, baseDir string, bucket string, distribution string) {
 		"--tag", imageTag,
 		".",
 	)
+
+	// Cache layers
+	if os.Getenv("GITHUB_ACTIONS") != "" {
+		cmd.Args = append(cmd.Args,
+			"--cache-to", "type=gha,mode=max",
+			"--cache-from", "type=gha")
+	}
+
 	cmd.Dir = baseDir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
