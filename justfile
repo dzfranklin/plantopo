@@ -41,7 +41,7 @@ gen:
     --proto_path=.
 
 app:
-  cd app && npm run dev
+  cd app && npm run dev -- --experimental-https
 
 invalidate-app-distribution-prod:
   aws cloudfront create-invalidation --distribution-id E1T20T38SLR087 --paths "/*"

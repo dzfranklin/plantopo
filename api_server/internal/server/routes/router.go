@@ -98,6 +98,7 @@ var (
 		"http://localhost:3000",
 		"https://geder.reindeer-neon.ts.net",
 		"http://dev-local.plantopo.com:3000",
+		"https://dev-local.plantopo.com:3000",
 		"https://dev-local.plantopo.com",
 	}
 	allowedMethods = "GET, PUT, POST, DELETE, HEAD, OPTIONS"
