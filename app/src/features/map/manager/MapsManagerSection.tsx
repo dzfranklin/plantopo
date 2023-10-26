@@ -36,7 +36,6 @@ export function MapsManagerSection({
   renderEmptyState?: () => ReactElement;
   query: UseQueryResult<MapMeta[]>;
 }) {
-  const router = useRouter();
   const [selectedKeys, setSelectedKeys] = useState<Selection>(new Set([]));
   const selectedIds = () => {
     if (selectedKeys === 'all') {
