@@ -30,7 +30,6 @@ export default function LoginPage() {
       );
     }
   }, [session, router, returnToEncoded]);
-  console.log('TODO: session is', session);
 
   const mutation = useCreateSessionMutation();
   const methods = useForm<LoginFormValues>({
