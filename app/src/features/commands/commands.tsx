@@ -45,11 +45,11 @@ export function useKeyboardShortcut(
   useEffect(() => {
     const cleanup = context.register({
       key,
-      label: label,
+      label,
       action: () => savedAction.current(),
     });
     return cleanup;
-  }, [context, key]);
+  }, [context, key, label]);
 }
 
 /** Returned in order of insertion */
