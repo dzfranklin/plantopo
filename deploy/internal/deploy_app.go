@@ -63,7 +63,7 @@ func DeployApp(ver string, baseDir string, bucket string, distribution string) {
 		log.Fatal(err)
 	}
 
-	cmd = exec.Command("docker", "cp", fmt.Sprintf("%s:/build/out", containerName), outDir)
+	cmd = exec.Command("docker", "cp", fmt.Sprintf("%s:/build/out/.", containerName), outDir)
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		log.Fatal(fmt.Errorf("copy out: %w", err))
