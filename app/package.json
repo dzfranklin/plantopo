@@ -10,7 +10,7 @@
     "jest-preview": "jest-preview"
   },
   "dependencies": {
-    "@adobe/react-spectrum": "^3.30.0",
+    "@adobe/react-spectrum": "^3.31.0",
     "@headlessui/react": "^1.7.17",
     "@heroicons/react": "^2.0.18",
     "@hookform/error-message": "^2.0.1",
