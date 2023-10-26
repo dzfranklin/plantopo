@@ -5,20 +5,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "dev",
-      "request": "launch",
-      "runtimeArgs": [
-        "run",
-        "dev",
-      ],
-      "runtimeExecutable": "npm",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
-      "type": "node"
-    },
-    {
-      "name": "Next.js: debug client-side",
+      "name": "Chrome",
       "type": "chrome",
       "request": "launch",
       "url": "https://dev-local.plantopo.com:3000"
