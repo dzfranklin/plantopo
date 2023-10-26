@@ -17,7 +17,7 @@ export function ResizeHandle() {
   const animateStep = useCallback(() => {
     if (dragAnimNext.current === null) return;
     if (dragAnimPrev.current !== dragAnimNext.current) {
-      engine.setSidebarWidth(dragAnimNext.current);
+      engine?.setSidebarWidth(dragAnimNext.current);
       dragAnimPrev.current = dragAnimNext.current;
     }
     requestAnimationFrame(animateStep);
@@ -44,6 +44,7 @@ export function ResizeHandle() {
   );
   const startDrag = useCallback(
     (evt: PointerEvent<HTMLDivElement>) => {
+      if (!engine) return;
       addEventListener('pointermove', onPointerMove, { capture: true });
       for (const evt of END_EVENTS) {
         addEventListener(evt, onEnd, { capture: true });
@@ -54,7 +55,7 @@ export function ResizeHandle() {
       evt.stopPropagation();
       requestAnimationFrame(animateStep);
     },
-    [animateStep, onPointerMove, onEnd],
+    [engine, onPointerMove, animateStep, onEnd],
   );
 
   return (

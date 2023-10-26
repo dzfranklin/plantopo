@@ -19,9 +19,10 @@ export function EntryActionButtons({ fid }: { fid: string }) {
 export function EntryEditButton({ fid }: { fid: string }) {
   const engine = useEngine();
   const ref = useRef<HTMLButtonElement>(null);
+  if (!engine) return null;
   return (
     <DialogTrigger type="popover" targetRef={ref}>
-      <EntryButton icon={EditIcon} ref={ref} />
+      <EntryButton icon={EditIcon} ref={ref} isDisabled={!engine.mayEdit} />
       <FeatureEditPopover key={fid} fid={fid} engine={engine} />
     </DialogTrigger>
   );
@@ -29,6 +30,7 @@ export function EntryEditButton({ fid }: { fid: string }) {
 
 export function EntryDeleteButton({ fid }: { fid: string }) {
   const engine = useEngine();
+  if (!engine) return null;
   return (
     <EntryButton
       onPress={() => engine.delete(fid)}

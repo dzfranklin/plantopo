@@ -18,6 +18,7 @@ export function TreeEntry({ fid }: { fid: string }) {
   const engine = useEngine();
   const selectedByMe = useSceneFeature(fid, (f) => f?.selectedByMe);
   const ref = useRef<HTMLLIElement>(null);
+  if (!engine) return null;
   return (
     <li
       ref={ref}

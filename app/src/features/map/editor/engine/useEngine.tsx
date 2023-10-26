@@ -16,7 +16,7 @@ export function EditorEngineProvider({
   engine,
   children,
 }: {
-  engine: EditorEngine;
+  engine: EditorEngine | null;
   children: ReactNode;
 }) {
   return (
@@ -24,12 +24,8 @@ export function EditorEngineProvider({
   );
 }
 
-export function useEngine(): EditorEngine {
-  const engine = useContext(EngineContext);
-  if (!engine) {
-    throw new Error('useEngine must be used within an EditorEngineProvider');
-  }
-  return engine;
+export function useEngine(): EditorEngine | null {
+  return useContext(EngineContext);
 }
 
 export function useSceneSelector<T>(

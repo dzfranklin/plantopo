@@ -14,7 +14,7 @@ export function AttributionControl() {
   const sidebarWidth = useSceneSelector((s) => s.sidebarWidth);
   const activeLayers = useSceneSelector((s) => s.layers.active);
   const engine = useEngine();
-  const sources = engine.sources;
+  const sources = engine?.sources;
 
   const value = useMemo(() => {
     const attribs = toAttribHtml(activeLayers, sources);
@@ -90,7 +90,7 @@ function AttribFull({ attribs }: { attribs: Attribs }) {
 
 function toAttribHtml(
   layers: SceneLayer[],
-  sources: MapSources,
+  sources?: MapSources,
 ): { id: string; html: string }[] {
   const attribs = [];
   const tilesets = new Set<string>();
@@ -104,7 +104,7 @@ function toAttribHtml(
     }
   }
   for (const tid of tilesets) {
-    const tdata = sources.tilesets[tid];
+    const tdata = sources?.tilesets[tid];
     if (!tdata) continue;
     if ('attribution' in tdata && tdata.attribution !== undefined) {
       const html = rewriteHtml(tdata.attribution);

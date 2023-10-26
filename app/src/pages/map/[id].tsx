@@ -106,13 +106,11 @@ export default function MapPage() {
         )}
       </DialogContainer>
 
-      {engine && (
-        <EditorEngineProvider engine={engine}>
-          <CommandProvider>
-            <MapEditor />
-          </CommandProvider>
-        </EditorEngineProvider>
-      )}
+      <EditorEngineProvider engine={engine}>
+        <CommandProvider>
+          <MapEditor />
+        </CommandProvider>
+      </EditorEngineProvider>
     </div>
   );
 }
