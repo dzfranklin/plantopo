@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AppErrorBoundary } from '@/features/error/AppErrorBoundary';
 import { FaroSDK } from '@/features/FaroSDK';
+import { useRouter } from 'next/navigation';
 
 export default function RootLayout({
   children,
@@ -16,6 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const queryClient = new QueryClient();
+  const router = useRouter();
 
   return (
     <html lang="en" className="min-h-full">
@@ -28,6 +30,7 @@ export default function RootLayout({
           <QueryClientProvider client={queryClient}>
             <SpectrumProvider
               theme={defaultSpectrumTheme}
+              router={{ navigate: router.push }}
               // Set render consistently on the server so Next.js can
               // rehydrate. Is there a better way to do this?
               locale="en-US"
