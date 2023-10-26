@@ -8,7 +8,10 @@ import { AppError } from '@/api/errors';
 import { MapEditor } from '@/features/map/editor/MapEditor';
 import { useSession, useSessionRedirector } from '@/features/account/session';
 import { useMapSources } from '@/features/map/api/useMapSources';
-import { EditorEngine } from '@/features/map/editor/engine/EditorEngine';
+import {
+  EditorEngine,
+  InitialCamera,
+} from '@/features/map/editor/engine/EditorEngine';
 import { EditorEngineProvider } from '@/features/map/editor/engine/useEngine';
 import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
 import ErrorTechInfo from '@/features/error/ErrorTechInfo';
@@ -16,18 +19,14 @@ import { useTokensQuery } from '@/features/map/api/useTokens';
 import { CommandProvider } from '@/features/commands/commands';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import {
-  CameraURLParam,
   parseCameraURLParam,
   serializeCameraURLParam,
 } from '@/features/map/editor/cameraURLParam';
 import { useRouter } from 'next/router';
-
-const defaultInitialCamera: CameraURLParam = {
-  center: [-55.6923608, 42.4948239],
-  zoom: 2,
-  bearing: 0,
-  pitch: 0,
-};
+import {
+  MyGeolocation,
+  useMyGeolocation,
+} from '@/features/map/api/useMyGeolocation';
 
 export default function MapPage() {
   const router = useRouter();
@@ -37,11 +36,13 @@ export default function MapPage() {
   const mapId = useMemo(() => pathParts(router.asPath).at(-1), [router.asPath]);
   if (!mapId) notFound();
 
-  const [initialCamera] = useState(() => {
+  const [initialCameraURLParam] = useState(() => {
     const query = new URL(router.asPath, 'https://plantopo.com').searchParams;
     const raw = query.get('c') ?? '';
-    return parseCameraURLParam(raw) ?? defaultInitialCamera;
+    return parseCameraURLParam(raw);
   });
+
+  const myGeolocation = useMyGeolocation();
 
   const meta = useMapMeta(mapId);
   const isRedirectedError =
@@ -59,6 +60,12 @@ export default function MapPage() {
   const [engine, setEngine] = useState<EditorEngine | null>(null);
   useEffect(() => {
     if (!meta.data) return;
+
+    let initialCamera: InitialCamera | undefined = initialCameraURLParam;
+    if (initialCamera === undefined && myGeolocation.data) {
+      initialCamera = initialCameraFromMyGeolocation(myGeolocation.data);
+    }
+
     const engine = new EditorEngine({
       mapId,
       // NOTE: We shouldn't need to wait for meta to load to initialize the engine
@@ -82,7 +89,22 @@ export default function MapPage() {
       setEngine(null);
       engine.destroy();
     };
-  }, [mapSources, mapId, meta.data, router, initialCamera]);
+  }, [
+    mapSources,
+    mapId,
+    meta.data,
+    router,
+    initialCameraURLParam,
+    myGeolocation.data,
+  ]);
+
+  useEffect(() => {
+    if (engine && myGeolocation.data) {
+      engine.updateInitialCamera(
+        initialCameraFromMyGeolocation(myGeolocation.data),
+      );
+    }
+  }, [engine, myGeolocation.data]);
 
   // Avoid starting this blocker after the metadata is loaded.
   // NOTE: If we fix waiting for meta to load the engine we don't need this
@@ -154,4 +176,14 @@ function pathParts(pathname: string): string[] {
   }
 
   return pathname.split('/');
+}
+function initialCameraFromMyGeolocation(
+  data: MyGeolocation,
+): InitialCamera | undefined {
+  return {
+    center: [data.longitude, data.latitude],
+    zoom: 10,
+    bearing: 0,
+    pitch: 0,
+  };
 }

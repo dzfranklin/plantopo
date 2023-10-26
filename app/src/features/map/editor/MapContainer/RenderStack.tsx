@@ -15,6 +15,7 @@ import { FeaturePainter } from './FeaturePainter';
 import { Scene, SceneFeature } from '../engine/Scene';
 import { nearestPointInGeometry } from '../nearestPointInFeature';
 import booleanIntersects from '@turf/boolean-intersects';
+import { InitialCamera } from '../engine/EditorEngine';
 
 // Instruct nextjs to remout this component on every edit
 // @refresh reset
@@ -45,6 +46,9 @@ export function RenderStack({
     if (!canvas || !container) return;
     if (!map || !engine) return;
 
+    let suppressNotifyForNextMove = true;
+    let cameraDirty = false;
+
     let canvasCtx;
     if (canvasCtxRef.current) {
       canvasCtx = canvasCtxRef.current;
@@ -58,15 +62,15 @@ export function RenderStack({
 
     map.on('data', () => setIsLoadingContent(!map.areTilesLoaded()));
 
-    map.jumpTo(engine.initialCamera);
-
-    const initialCamera = CurrentCameraPosition.fromMap(map);
+    if (engine.initialCamera) {
+      map.jumpTo(engine.initialCamera);
+    }
 
     const featureRenderer = new FeatureRenderer();
     const featurePainter = new FeaturePainter(canvas, canvasCtx);
     const interactionManager = new InteractionManager({
       engine,
-      initialCamera,
+      initialCamera: CurrentCameraPosition.fromMap(map),
       container,
       map,
     });
@@ -124,14 +128,36 @@ export function RenderStack({
     const onMapRender = () => renderScene(engine.scene);
     map.on('render', onMapRender);
 
-    const onMoveEnd = () => engine.notifyCameraMoveEnd();
+    const onMoveStart = () => {
+      cameraDirty = true;
+    };
+    map.on('movestart', onMoveStart);
+
+    const onMoveEnd = () => {
+      if (suppressNotifyForNextMove) {
+        suppressNotifyForNextMove = false;
+      } else {
+        engine.notifyCameraMoveEnd();
+      }
+    };
     map.on('moveend', onMoveEnd);
+
+    const removeOnInitialCameraUpdate = engine.addInitialCameraUpdateListener(
+      (cam) => {
+        if (cam && !cameraDirty) {
+          suppressNotifyForNextMove = true;
+          map.jumpTo(cam);
+        }
+      },
+    );
 
     return () => {
       interactionManager.remove();
       layerRenderer.remove();
       removeOnRender();
+      removeOnInitialCameraUpdate();
       map.off('render', onMapRender);
+      map.off('movestart', onMoveStart);
       map.off('moveend', onMoveEnd);
     };
   }, [engine, containerRef, map]);

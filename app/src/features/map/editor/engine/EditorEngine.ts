@@ -39,7 +39,7 @@ type CameraListener = (
   }>,
 ) => any;
 
-interface InitialCamera {
+export interface InitialCamera {
   center: [number, number];
   zoom: number;
   bearing: number;
@@ -51,7 +51,6 @@ export class EditorEngine {
   public readonly clientId: string;
   public readonly mayEdit: boolean;
   public readonly sources: MapSources;
-  public readonly initialCamera: InitialCamera;
 
   private _seq = 0;
   private _transport: SyncTransport;
@@ -60,6 +59,7 @@ export class EditorEngine {
   private _sendInterval: number;
 
   private _cam: CurrentCameraPosition | undefined;
+  private _initialCam: InitialCamera | undefined;
   private _camMoveEndListeners = new Set<CameraListener>();
 
   private _awareMap: Readonly<Record<string, AwareEntry>> = {};
@@ -85,7 +85,7 @@ export class EditorEngine {
     mayEdit: boolean;
     mapSources: MapSources;
     prefs?: EditorPrefStore;
-    initialCamera: Readonly<InitialCamera>;
+    initialCamera?: Readonly<InitialCamera>;
   }) {
     // Note that the clientId cannot be reused for another `EditorStore`
     const clientId = uuidv4();
@@ -94,7 +94,7 @@ export class EditorEngine {
     this.mapId = mapId;
     this.mayEdit = mayEdit;
     this.sources = mapSources;
-    this.initialCamera = initialCamera;
+    this._initialCam = initialCamera;
     this._store = new EditorStore({
       clientId,
       mayEdit,
@@ -145,6 +145,28 @@ export class EditorEngine {
 
   get transportStatus(): SyncTransportStatus {
     return this._transport.status;
+  }
+
+  get initialCamera(): Readonly<InitialCamera | undefined> {
+    return this._initialCam;
+  }
+
+  private _initialCamUpdateListeners = new Set<
+    (_: InitialCamera | undefined) => any
+  >();
+
+  updateInitialCamera(cam: Readonly<InitialCamera | undefined>): void {
+    this._initialCam = cam;
+    for (const cb of this._initialCamUpdateListeners) {
+      cb(cam);
+    }
+  }
+
+  addInitialCameraUpdateListener(
+    cb: (_: InitialCamera | undefined) => any,
+  ): () => void {
+    this._initialCamUpdateListeners.add(cb);
+    return () => this._initialCamUpdateListeners.delete(cb);
   }
 
   set onTransportStatus(cb: (status: SyncTransportStatus) => any) {
