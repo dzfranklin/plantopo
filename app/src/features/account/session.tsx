@@ -28,6 +28,7 @@ export function useSession({
     }
   }, [require, redirector, query.data]);
 
+  console.log('session', JSON.parse(JSON.stringify(query)));
   if (query.isSuccess && query.data.user) {
     return query.data;
   } else {
