@@ -320,16 +320,26 @@ export class EditorEngine {
   }
 
   deleteSelected(): void {
+    let next: string | undefined = undefined;
+    if (this._selectedByMe.size === 1) {
+      const fid = [...this._selectedByMe][0]!;
+      const node = this._store.get(fid);
+      if (node) {
+        next =
+          node.nextSibling()?.id ?? node.prevSibling()?.id ?? node.parent?.id;
+      }
+    }
     this._store.change({ fdelete: [...this._selectedByMe] });
-    this._maybeUpdateSelectionForDelete();
+    this._removeDeletedFromSelection();
+    if (next) this.toggleSelection(next, 'single');
   }
 
   delete(fid: string): void {
     this._store.change({ fdelete: [fid] });
-    this._maybeUpdateSelectionForDelete();
+    this._removeDeletedFromSelection();
   }
 
-  private _maybeUpdateSelectionForDelete(): void {
+  private _removeDeletedFromSelection(): void {
     if (this._selectedByMe.size === 0) return;
     for (const fid of this._selectedByMe) {
       if (!this._store.has(fid)) {

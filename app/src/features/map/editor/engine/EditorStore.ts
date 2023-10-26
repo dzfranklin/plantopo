@@ -42,6 +42,10 @@ export class EditorStore {
     return this._features.has(fid);
   }
 
+  get(fid: string): FNode | undefined {
+    return this._features.get(fid);
+  }
+
   /** Make a local change */
   change(change: Changeset) {
     if (!this.mayEdit) throw new Error('may not edit');
@@ -293,6 +297,20 @@ export class FNode {
 
   idxBeforeFirstChild(): string {
     return fracIdxBetween('', this.childOrder()[0]?.value.idx ?? '');
+  }
+
+  nextSibling(): FNode | undefined {
+    if (this.parent === null) return;
+    const sibs = this.parent.childOrder();
+    const idx = sibs.findIndex((sib) => sib === this);
+    return sibs[idx + 1];
+  }
+
+  prevSibling(): FNode | undefined {
+    if (this.parent === null) return;
+    const sibs = this.parent.childOrder();
+    const idx = sibs.findIndex((sib) => sib === this);
+    return sibs[idx - 1];
   }
 }
 
