@@ -2,12 +2,7 @@ import { useCallback, useRef, PointerEvent } from 'react';
 import { useEngine } from '../engine/useEngine';
 
 const WIDTH_MIN = 60;
-
-const END_EVENTS: Array<'pointerup' | 'pointercancel' | 'pointerleave'> = [
-  'pointerup',
-  'pointercancel',
-  'pointerleave',
-];
+const END_EVENTS = ['pointerup', 'pointercancel'] as const;
 
 export function ResizeHandle() {
   const engine = useEngine();
@@ -24,11 +19,13 @@ export function ResizeHandle() {
   }, [engine]);
   const onPointerMove = useCallback((evt: globalThis.PointerEvent) => {
     dragAnimNext.current = Math.max(WIDTH_MIN, evt.clientX);
+    console.log('opm');
     evt.preventDefault();
     evt.stopPropagation();
   }, []);
   const onEnd = useCallback(
     (evt: globalThis.PointerEvent) => {
+      console.log('oe', evt.type);
       window.removeEventListener('pointermove', onPointerMove, {
         capture: true,
       });
