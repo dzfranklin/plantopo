@@ -77,7 +77,8 @@ export function MapsManagerSection({
           aria-label="maps"
           renderEmptyState={renderEmptyState}
           selectionMode="multiple"
-          onAction={(key) => router.push(`/map/${key}/`)}
+          // Ordinary navigation avoids bugs around apps router -> pages router
+          onAction={(key) => (location.href = `/map/${key}/`)}
           selectedKeys={selectedKeys}
           onSelectionChange={setSelectedKeys}
           flexGrow={1}

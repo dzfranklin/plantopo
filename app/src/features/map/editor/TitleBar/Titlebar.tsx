@@ -1,6 +1,5 @@
 import { MapIcon } from '@/generic/MapIcon';
 // import { useMapMeta } from '../../api/useMapMeta';
-import Link from 'next/link';
 // import { useEngine } from '../api/useEngine';
 // import { ArrowPathIcon as SyncingChangesIcon } from '@heroicons/react/24/outline';
 // import DisconnectedIcon from '@spectrum-icons/workflow/CloudDisconnected';
@@ -10,9 +9,10 @@ export function Titlebar() {
   // TODO:
   return (
     <div className="flex gap-2 px-1.5 items-center overflow-hidden h-[30px] text-sm border-b border-neutral-300 bg-neutral-100">
-      <Link href="/dashboard" className="text-blue-700">
+      {/* Ordinary navigation avoids bugs around pages router -> app router  */}
+      <a href="/dashboard" className="text-blue-700">
         <MapIcon />
-      </Link>
+      </a>
     </div>
   );
   // const sync = useEngine();
