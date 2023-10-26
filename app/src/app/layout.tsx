@@ -7,7 +7,6 @@ import {
 } from '@adobe/react-spectrum';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { SessionProvider } from '@/features/account/session';
 import { AppErrorBoundary } from '@/features/error/AppErrorBoundary';
 import { FaroSDK } from '@/features/FaroSDK';
 
@@ -36,7 +35,7 @@ export default function RootLayout({
               colorScheme="light"
               minHeight="100vh"
             >
-              <SessionProvider>{children}</SessionProvider>
+              {children}
               <div id="portal-container" className="z-[60]"></div>
               <ReactQueryDevtools initialIsOpen={false} />
             </SpectrumProvider>

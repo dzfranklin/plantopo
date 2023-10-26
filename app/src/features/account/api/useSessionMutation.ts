@@ -1,4 +1,4 @@
-import { Session, clearCachedSession, overrideSession } from '../session';
+import { Session, overrideSession } from '../session';
 import { useApiMutation } from '@/api/useApiMutation';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -8,7 +8,6 @@ export const useLogoutMutation = () =>
     path: ['session'],
     onSuccess: () => {
       // Do a clean redirect so we can't accidentally preserve any state.
-      clearCachedSession();
       location.href = '/';
     },
   });
