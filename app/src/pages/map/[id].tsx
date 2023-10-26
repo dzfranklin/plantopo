@@ -44,6 +44,9 @@ export default function MapPage() {
   });
 
   const meta = useMapMeta(mapId);
+  const isRedirectedError =
+    meta.error instanceof AppError &&
+    (meta.error.code === 404 || (meta.error.code === 401 && !session));
   useEffect(() => {
     if (meta.error instanceof AppError) {
       if (meta.error.code === 404) notFound();
@@ -90,7 +93,7 @@ export default function MapPage() {
       />
 
       <DialogContainer isDismissable={false} onDismiss={() => {}}>
-        {meta.error && (
+        {meta.error && !isRedirectedError && (
           <AlertDialog
             title={'Error opening map'}
             variant="error"
