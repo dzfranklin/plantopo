@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { apiQueryKey, useApiQuery } from '@/api/useApiQuery';
 import { MapAccess, PutMapAccessRequest } from './MapAccess';
 import { useApiMutation } from '@/api/useApiMutation';
+import { mapsOwnedByMeKey, mapsSharedWithMeKey } from './mapList';
 
 export interface MapMeta {
   id: string;
@@ -32,6 +33,12 @@ export function usePutMapMetaMutation(
     onSuccess: (data) => {
       const key = mapKey(id);
       client.setQueryData(key, data);
+      for (const listKey of [mapsOwnedByMeKey, mapsSharedWithMeKey]) {
+        client.setQueryData(
+          listKey,
+          (old?: MapMeta[]) => old?.map((m) => (m.id === id ? data : m)),
+        );
+      }
       onSuccess?.(data);
     },
   });
