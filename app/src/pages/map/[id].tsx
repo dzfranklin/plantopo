@@ -21,15 +21,6 @@ import {
   serializeCameraURLParam,
 } from '@/features/map/editor/cameraURLParam';
 import { useRouter } from 'next/router';
-import RootLayout from '@/app/layout';
-
-export default function MapPageShell() {
-  return (
-    <RootLayout>
-      <MapPage />
-    </RootLayout>
-  );
-}
 
 const defaultInitialCamera: CameraURLParam = {
   center: [-55.6923608, 42.4948239],
@@ -38,7 +29,7 @@ const defaultInitialCamera: CameraURLParam = {
   pitch: 0,
 };
 
-function MapPage() {
+export default function MapPage() {
   const router = useRouter();
   const session = useSession();
   const sessionRedirector = useSessionRedirector();
