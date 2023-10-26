@@ -20,6 +20,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-server
+  namespace: pt
   labels:
     app: api-server
 spec:
