@@ -67,15 +67,17 @@ export default function MapPage() {
       initialCamera,
     });
 
-    let updateCameraTick: number | undefined;
-    engine.addCameraListener((cam) => {
-      updateCameraTick && cancelIdleCallback(updateCameraTick);
-      updateCameraTick = requestIdleCallback(() => {
+    let updateHistoryCameraTick: number | undefined;
+    engine.addCameraMoveEndListener((cam) => {
+      updateHistoryCameraTick && cancelIdleCallback(updateHistoryCameraTick);
+      updateHistoryCameraTick = requestIdleCallback(() => {
         history.replaceState(null, '', `?c=${serializeCameraURLParam(cam)}`);
-        updateCameraTick = undefined;
+        updateHistoryCameraTick = undefined;
       });
     });
+
     setEngine(engine);
+
     return () => {
       setEngine(null);
       engine.destroy();

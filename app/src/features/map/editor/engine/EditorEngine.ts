@@ -60,7 +60,7 @@ export class EditorEngine {
   private _sendInterval: number;
 
   private _cam: CurrentCameraPosition | undefined;
-  private _camListeners = new Set<CameraListener>();
+  private _camMoveEndListeners = new Set<CameraListener>();
 
   private _awareMap: Readonly<Record<string, AwareEntry>> = {};
 
@@ -151,16 +151,19 @@ export class EditorEngine {
     this._transport.onStatus = cb;
   }
 
-  addCameraListener(cb: CameraListener): () => void {
-    this._camListeners.add(cb);
-    return () => this._camListeners.delete(cb);
+  addCameraMoveEndListener(cb: CameraListener): () => void {
+    this._camMoveEndListeners.add(cb);
+    return () => this._camMoveEndListeners.delete(cb);
   }
 
   notifyCameraUpdated(cam: CurrentCameraPosition): void {
     this._cam = cam;
-    if (cam) {
-      for (const cb of this._camListeners) {
-        cb(cam);
+  }
+
+  notifyCameraMoveEnd(): void {
+    if (this._cam) {
+      for (const cb of this._camMoveEndListeners) {
+        cb(this._cam);
       }
     }
   }

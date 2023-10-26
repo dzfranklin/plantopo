@@ -124,11 +124,15 @@ export function RenderStack({
     const onMapRender = () => renderScene(engine.scene);
     map.on('render', onMapRender);
 
+    const onMoveEnd = () => engine.notifyCameraMoveEnd();
+    map.on('moveend', onMoveEnd);
+
     return () => {
       interactionManager.remove();
       layerRenderer.remove();
       removeOnRender();
       map.off('render', onMapRender);
+      map.off('moveend', onMoveEnd);
     };
   }, [engine, containerRef, map]);
 
