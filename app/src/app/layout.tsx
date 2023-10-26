@@ -10,12 +10,21 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AppErrorBoundary } from '@/features/error/AppErrorBoundary';
 import { FaroSDK } from '@/features/FaroSDK';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  useEffect(() => {
+    console.log(
+      `Running PlanTopo version ${
+        process.env.NEXT_PUBLIC_PT_VER ?? '<unspecified>'
+      }`,
+    );
+  });
+
   const queryClient = new QueryClient();
   const router = useRouter();
 

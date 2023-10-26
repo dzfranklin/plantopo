@@ -38,6 +38,7 @@ func DeployApp(ver string, baseDir string, bucket string, distribution string) {
 	cmd := exec.Command("docker", "build",
 		"--file", "app.Dockerfile",
 		"--tag", imageTag,
+		"--build-arg", "VER="+ver,
 		".",
 	)
 
