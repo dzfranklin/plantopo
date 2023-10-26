@@ -30,6 +30,10 @@ export default function ErrorTechInfo({ error }: { error: unknown }) {
       <summary className="text-sm">Technical Information</summary>
 
       <pre>
+        <code>Version {process.env.NEXT_PUBLIC_PT_VER}</code>
+      </pre>
+
+      <pre>
         <code>{json}</code>
       </pre>
 

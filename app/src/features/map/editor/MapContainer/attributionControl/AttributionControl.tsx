@@ -64,14 +64,19 @@ function AttribPreview({
   return (
     <button
       onClick={() => setOpenFull(true)}
-      className="px-[5px] h-min truncate bg-white bg-opacity-50 rounded-sm"
+      className="flex gap-2 h-min px-[5px] bg-white bg-opacity-50 rounded-sm"
     >
-      {attribs.map(({ id, html }, i) => (
-        <span key={id} className="prose-sm">
-          {i > 0 && <span>, </span>}
-          <span dangerouslySetInnerHTML={{ __html: html }} />
-        </span>
-      ))}
+      <div className="truncate">
+        {attribs.map(({ id, html }, i) => (
+          <span key={id} className="prose-sm">
+            {i > 0 && <span>, </span>}
+            <span dangerouslySetInnerHTML={{ __html: html }} />
+          </span>
+        ))}
+      </div>
+      <div className="prose-sm">
+        PlanTopo version {process.env.NEXT_PUBLIC_PT_VER || '<unspecified>'}
+      </div>
     </button>
   );
 }

@@ -24,7 +24,7 @@ export function FaroSDK() {
         url: 'https://faro-collector-prod-eu-west-2.grafana.net/collect/348cd06d590b255eee8d4ed366bb0604',
         app: {
           name: 'pt-app',
-          version: '1.0.0',
+          version: process.env.NEXT_PUBLIC_PT_VER ?? '<unspecified>',
           environment: 'production',
         },
       });

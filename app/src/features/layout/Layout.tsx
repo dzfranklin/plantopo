@@ -15,7 +15,7 @@ export const Layout = forwardRef(
     ref: React.ForwardedRef<HTMLDivElement>,
   ) => {
     return (
-      <div className="min-h-screen bg-gray-100">
+      <div className="grid min-h-screen grid-cols-1 grid-rows-[min-content_1fr_min-content] bg-gray-100">
         {pageTitle && <PageTitle title={pageTitle} />}
         <div className="pb-32 bg-gray-800">
           <Nav />
@@ -36,6 +36,11 @@ export const Layout = forwardRef(
             </div>
           </div>
         </main>
+        <div className="flex p-1">
+          <div className="text-xs text-gray-500">
+            PlanTopo version {process.env.NEXT_PUBLIC_PT_VER || '<unspecified>'}
+          </div>
+        </div>
       </div>
     );
   },
