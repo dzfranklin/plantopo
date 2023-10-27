@@ -30,7 +30,20 @@ func validateIdxDigits(value string) error {
 	return nil
 }
 
+// IdxBetweenStatic is like IdxBetween except it panics if inputs are invalid and doesn't add jitter.
+func IdxBetweenStatic(before string, after string) string {
+	res, err := idxBetween(nil, before, after, false)
+	if err != nil {
+		panic(fmt.Errorf("IdxBetweenStatic got invalid input(s): %w", err))
+	}
+	return res
+}
+
 func IdxBetween(rng *rand.Rand, before string, after string) (string, error) {
+	return idxBetween(rng, before, after, true)
+}
+
+func idxBetween(rng *rand.Rand, before string, after string, addJitter bool) (string, error) {
 	if err := validateIdxDigits(before); err != nil {
 		return "", err
 	}
@@ -107,13 +120,16 @@ func IdxBetween(rng *rand.Rand, before string, after string) (string, error) {
 		// number will bias the result slightly. This doesn't matter when we
 		// use a large base so the bias is small. The bias only really matters
 		// for smaller bases such as base 2.
-		jitter := uint(rng.Intn(maxJitter))
-		for jitter > 0 {
-			base := maxDigit - minDigit + 1
-			mod := jitter % base
-			jitter = (jitter - mod) / base
-			result = append(result, byte(minDigit+mod))
+		if addJitter {
+			jitter := uint(rng.Intn(maxJitter))
+			for jitter > 0 {
+				base := maxDigit - minDigit + 1
+				mod := jitter % base
+				jitter = (jitter - mod) / base
+				result = append(result, byte(minDigit+mod))
+			}
 		}
+
 		return string(result), nil
 	}
 }

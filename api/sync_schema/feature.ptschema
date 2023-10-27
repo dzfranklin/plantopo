@@ -6,3 +6,4 @@ Geometry Geometry
 Name string
 Color string
 Hidden bool
+ImportedFromFile string
