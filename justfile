@@ -11,12 +11,6 @@ ti: test-integration
 test-integration:
   ./api_server/tests/integration_test.sh
 
-serve *ARGS:
-  caddy stop 2> /dev/null || true
-  caddy start --adapter caddyfile  --config  ./dev.Caddyfile
-  HOST=localhost PORT=3001 go run ./api/server {{ ARGS }}
-  caddy stop
-
 test-go-short:
   go test ./... -race -short -timeout 30s
 
@@ -42,9 +36,6 @@ gen:
 
 app:
   cd app && npm run dev -- --experimental-https
-
-invalidate-app-distribution-prod:
-  aws cloudfront create-invalidation --distribution-id E1T20T38SLR087 --paths "/*"
 
 test-app:
   cd app && tsc --noEmit
