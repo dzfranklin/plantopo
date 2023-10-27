@@ -70,6 +70,7 @@ export class EditorEngine {
   private _hoveredByMe: string | null = null; // fid
   private _selectedByMe = new Set<string>(); // fid
   private _layerSelectedByMe: string | null = null; // lid
+  private _activeTool: Scene['activeTool'] = EMPTY_SCENE['activeTool'];
 
   private _sceneSelectorId = 0;
   private _sceneSelectors = new Map<number, SceneSelectorEntry>();
@@ -212,6 +213,11 @@ export class EditorEngine {
   setSidebarWidth(width: number): void {
     this._sidebarWidth = width;
     this._prefs.setSidebarWidth(width);
+    this._renderScene();
+  }
+
+  setActiveTool(tool: Scene['activeTool']): void {
+    this._activeTool = tool;
     this._renderScene();
   }
 
@@ -432,6 +438,7 @@ export class EditorEngine {
     this._scene = {
       timing: { start, end },
       sidebarWidth: this._sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH,
+      activeTool: this._activeTool,
       layers,
       features,
     };

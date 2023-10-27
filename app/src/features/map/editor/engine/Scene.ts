@@ -7,6 +7,7 @@ export type Scene = {
     end: number;
   };
   sidebarWidth: number;
+  activeTool: 'point' | 'line';
   layers: {
     active: SceneLayer[];
     /** Ordered by name */
@@ -81,6 +82,7 @@ export const EMPTY_SCENE: Scene = {
     end: 0,
   },
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
+  activeTool: 'line',
   layers: {
     active: [],
     inactive: [],

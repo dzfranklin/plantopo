@@ -2,7 +2,7 @@ import { ActionButton } from '@adobe/react-spectrum';
 import FolderAddIcon from '@spectrum-icons/workflow/FolderAdd';
 import { useEngine } from '../engine/useEngine';
 
-export function Toolbar() {
+export function TreeToolbar() {
   const engine = useEngine();
 
   return (
