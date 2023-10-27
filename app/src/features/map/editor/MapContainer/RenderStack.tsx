@@ -15,6 +15,7 @@ import { FeaturePainter } from './FeaturePainter';
 import { Scene, SceneFeature } from '../engine/Scene';
 import { nearestPointInGeometry } from '../nearestPointInFeature';
 import booleanIntersects from '@turf/boolean-intersects';
+import { MapToolbar } from './MapToolbar/MapToolbar';
 
 // Instruct nextjs to remout this component on every edit
 // @refresh reset
@@ -188,6 +189,8 @@ export function RenderStack({
           aria-label="map content loading"
         />
       </div>
+
+      <MapToolbar />
 
       {engine && (
         <>
