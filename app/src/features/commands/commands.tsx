@@ -29,11 +29,15 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
   return <Context.Provider value={registry}>{children}</Context.Provider>;
 }
 
-export function useKeyboardShortcut(
-  key: string,
-  label: string,
-  action: () => any,
-): void {
+export function useCommand({
+  key,
+  label,
+  action,
+}: {
+  key: string;
+  label: string;
+  action: () => any;
+}): void {
   const context = useContext(Context);
   if (!context) throw new Error('ShortcutProvider not found');
 
