@@ -144,6 +144,10 @@ export class EditorEngine {
     };
   }
 
+  get selectedByMeSize(): number {
+    return this._selectedByMe.size;
+  }
+
   get transportStatus(): SyncTransportStatus {
     return this._transport.status;
   }
