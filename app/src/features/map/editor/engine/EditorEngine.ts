@@ -69,6 +69,7 @@ export class EditorEngine {
   private _sidebarWidth: number | undefined;
   private _hoveredByMe: string | null = null; // fid
   private _selectedByMe = new Set<string>(); // fid
+  private _active: string | null = null; // fid
   private _layerSelectedByMe: string | null = null; // lid
   private _activeTool: Scene['activeTool'] = EMPTY_SCENE['activeTool'];
 
@@ -142,10 +143,6 @@ export class EditorEngine {
       camera,
       selectedFeatures: [...this._selectedByMe],
     };
-  }
-
-  get selectedByMeSize(): number {
-    return this._selectedByMe.size;
   }
 
   get transportStatus(): SyncTransportStatus {
@@ -293,21 +290,42 @@ export class EditorEngine {
     this._renderScene();
   }
 
+  setActiveFeature(fid: string | null): void {
+    this._active = fid;
+    this._selectedByMe.clear();
+    if (fid) {
+      this._selectedByMe.add(fid);
+    }
+    this._renderScene();
+  }
+
   toggleSelection(fid: string, mode: 'single' | 'multi'): void {
-    const wasSelected = this._selectedByMe.has(fid);
+    this._active = null;
     if (mode === 'single') {
-      this._selectedByMe.clear();
-      if (!wasSelected) {
+      if (this._selectedByMe.size > 1) {
+        this._selectedByMe.clear();
         this._selectedByMe.add(fid);
+      } else {
+        if (this._selectedByMe.has(fid)) {
+          this._selectedByMe.delete(fid);
+        } else {
+          this._selectedByMe.clear();
+          this._selectedByMe.add(fid);
+          this._active = fid;
+        }
       }
     } else {
-      if (wasSelected) {
+      if (this._selectedByMe.has(fid)) {
         this._selectedByMe.delete(fid);
       } else {
         this._selectedByMe.add(fid);
       }
     }
     this._renderScene();
+  }
+
+  finishAction(): void {
+    this._active = null;
   }
 
   clearSelection(): void {
@@ -372,7 +390,9 @@ export class EditorEngine {
   }
 
   private _removeDeletedFromSelection(): void {
-    if (this._selectedByMe.size === 0) return;
+    if (this._active && !this._store.has(this._active)) {
+      this._active = null;
+    }
     for (const fid of this._selectedByMe) {
       if (!this._store.has(fid)) {
         this._selectedByMe.delete(fid);
@@ -444,6 +464,9 @@ export class EditorEngine {
       sidebarWidth: this._sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH,
       activeTool: this._activeTool,
       layers,
+      activeFeature: this._active
+        ? this._sceneNodes.get(this._active) ?? null
+        : null,
       features,
     };
 
@@ -560,6 +583,7 @@ export class EditorEngine {
       geometry: value.geometry ?? null,
       name: value.name ?? null,
       color: value.color ?? null,
+      active: node.id === this._active,
       selectedByMe,
       selectedByPeers: ctx.peerSelection.get(node.id) ?? null,
       hoveredByMe: this._hoveredByMe === node.id,

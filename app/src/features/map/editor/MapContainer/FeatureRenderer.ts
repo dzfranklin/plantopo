@@ -2,7 +2,7 @@ import { BBoxPolygon, CurrentCameraPosition } from '../CurrentCamera';
 import { Scene, SceneFeature, SceneRootFeature } from '../engine/Scene';
 import { bboxClip, booleanContains } from '@turf/turf';
 import booleanIntersects from '@turf/boolean-intersects';
-import { LineStringSyncGeometry, SyncGeometry } from '@/gen/sync_schema';
+import { SyncGeometry } from '@/gen/sync_schema';
 
 export interface RenderFeatureList {
   timing: {
@@ -97,10 +97,8 @@ export class FeatureRenderer {
       if (!booleanIntersects(feature.geometry, clipBox)) {
         return [newInherited, null];
       }
-      const clipped = bboxClip(feature.geometry, clipBox.bbox);
-      geometry = clipped.geometry as LineStringSyncGeometry;
+      geometry = feature.geometry;
     } else {
-      console.log('Unknown geometry type', feature.geometry['type']);
       return [newInherited, null];
     }
 
