@@ -237,9 +237,20 @@ func (s *Store) finsert(l *zap.Logger, isAdd bool, incoming schema.Feature, fixe
 	if incoming.Id == "" {
 		return fmt.Errorf("cannot change root feature")
 	}
-	if incoming.ParentState == schema.Unset || incoming.IdxState == schema.Unset {
-		return fmt.Errorf("cannot change parent or idx to unset")
+	if incoming.ParentState == schema.Unset {
+		return fmt.Errorf("cannot change parent to unset")
 	}
+
+	// If the idx is unset make it the first child of the specified parent
+	if incoming.IdxState == schema.Unset {
+		parent, ok := s.features[incoming.Parent]
+		if !ok {
+			return fmt.Errorf("parent not in store")
+		}
+		incoming.Idx = parent.idxBeforeFirstChild(s.rng)
+		incoming.IdxState = schema.Set
+	}
+
 	id := incoming.Id
 	feature := s.features[id]
 	prevParent := ""
