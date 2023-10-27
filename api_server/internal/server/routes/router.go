@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/danielzfranklin/plantopo/api_server/internal/sync_backends"
 	"net/http"
+	"os"
 
 	api "github.com/danielzfranklin/plantopo/api/v1"
 	"github.com/danielzfranklin/plantopo/api_server/internal/frontend_map_tokens"
@@ -61,9 +62,13 @@ func New(s *Services) http.Handler {
 	r.HandleFunc("/api/v1/map/{id}/sync-socket", s.mapSyncSocketHandler)
 	r.HandleFunc("/api/v1/map/{id}/access", s.mapAccessHandler)
 
-	return gorillahandlers.RecoveryHandler(
-		gorillahandlers.RecoveryLogger(recoveryLogger{}),
-	)(r)
+	if os.Getenv("APP_ENV") == "development" {
+		return r
+	} else {
+		return gorillahandlers.RecoveryHandler(
+			gorillahandlers.RecoveryLogger(recoveryLogger{}),
+		)(r)
+	}
 }
 
 type recoveryLogger struct{}
