@@ -17,6 +17,11 @@ export function MapEditor() {
     label: 'Delete selected feature',
     action: () => engine?.deleteSelected(),
   });
+  useCommand({
+    key: 'Enter',
+    label: 'Finish action',
+    action: () => engine?.finishAction(),
+  });
 
   return (
     <div className="grid grid-cols-1 grid-rows-[min-content_minmax(0,1fr)] w-full h-full overflow-hidden">

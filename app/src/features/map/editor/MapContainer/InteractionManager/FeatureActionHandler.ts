@@ -18,6 +18,23 @@ export class FeatureHoverHandler implements InteractionHandler {
   }
 
   onPress(evt: InteractionEvent, engine: EditorEngine): boolean {
+    const activeTool = engine.scene.activeTool;
+    const activeFeature = engine.scene.activeFeature;
+    if (
+      activeTool === 'line' &&
+      activeFeature?.geometry?.type === 'LineString'
+    ) {
+      const coordinates = [
+        ...activeFeature.geometry.coordinates,
+        evt.unproject(),
+      ];
+      engine.changeFeature({
+        id: activeFeature.id,
+        geometry: { type: 'LineString', coordinates },
+      });
+      return true;
+    }
+
     for (const hit of evt.queryHits()) {
       if (hit.minPixelsTo() < 0.5) {
         engine.toggleSelection(
@@ -35,9 +52,8 @@ export class FeatureHoverHandler implements InteractionHandler {
   private dragging: string | null = null;
 
   onDragStart(evt: InteractionEvent, engine: EditorEngine): boolean {
-    if (engine.selectedByMeSize !== 1) return false;
     for (const hit of evt.queryHits()) {
-      if (!hit.feature.selectedByMe) continue;
+      if (!hit.feature.active) continue;
       if (hit.feature.geometry?.type === 'Point' && hit.minPixelsTo() < 0.5) {
         this.dragging = hit.feature.id;
 
