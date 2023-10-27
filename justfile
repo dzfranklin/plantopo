@@ -35,7 +35,7 @@ gen:
     --proto_path=.
 
 app:
-  cd app && npm run dev -- --experimental-https
+  cd app && npm run dev -- --port 443 --experimental-https
 
 test-app:
   cd app && tsc --noEmit
