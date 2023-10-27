@@ -21,20 +21,27 @@ export class InteractionEvent {
   private _scope: InteractionManager;
   readonly screenXY: ScreenXY;
   public firedAt: number | null = null;
+  private _native: PointerEvent | WheelEvent;
 
   constructor(
     scope: InteractionManager,
     pt: ScreenXY,
     public receivedAt: number,
+    native: PointerEvent | WheelEvent,
   ) {
     this._scope = scope;
     this.screenXY = pt;
+    this._native = native;
   }
 
   private _cachedLngLat: LngLat | null = null;
 
   get camera(): CurrentCameraPosition {
     return this._scope.cam;
+  }
+
+  get shiftKey(): boolean {
+    return this._native.shiftKey;
   }
 
   unproject(): LngLat {
@@ -306,7 +313,7 @@ export class InteractionManager {
         // Fired when a pointer changes coordinates. This event is also used if
         // the change in pointer state cannot be reported by other events.
         if (p.inDrag) {
-          const ievt = new InteractionEvent(this, pt, start);
+          const ievt = new InteractionEvent(this, pt, start, evt);
           const delta = sub2(pt, p.last!);
           this._fire(evt, 'onDrag', ievt, delta, this._engine);
         } else if (p.down) {
@@ -330,7 +337,7 @@ export class InteractionManager {
             // IS PINCH
             p.couldBePress = false;
             if (this._lastPinchGap !== null) {
-              const ievt = new InteractionEvent(this, pt, start);
+              const ievt = new InteractionEvent(this, pt, start, evt);
               this._fire(evt, 'onPress', ievt, this._engine);
             }
             this._lastPinchGap = pinchGap;
@@ -338,13 +345,13 @@ export class InteractionManager {
             // IS DRAG
             p.couldBePress = false;
             p.inDrag = true;
-            const ievt = new InteractionEvent(this, p.down, start);
+            const ievt = new InteractionEvent(this, p.down, start, evt);
             this._fire(evt, 'onDragStart', ievt, this._engine);
             p.last = pt;
           }
         } else {
           // IS HOVER
-          const ievt = new InteractionEvent(this, pt, start);
+          const ievt = new InteractionEvent(this, pt, start, evt);
           this._fire(evt, 'onHover', ievt, this._engine);
         }
         break;
@@ -352,10 +359,10 @@ export class InteractionManager {
       case 'pointerup': {
         // Fired when a pointer is no longer active buttons state.
         if (p.inDrag) {
-          const ievt = new InteractionEvent(this, pt, start);
+          const ievt = new InteractionEvent(this, pt, start, evt);
           this._fire(evt, 'onDragEnd', ievt, this._engine);
         } else if (!p.outside && p.couldBePress) {
-          const ievt = new InteractionEvent(this, pt, start);
+          const ievt = new InteractionEvent(this, pt, start, evt);
           this._fire(evt, 'onPress', ievt, this._engine);
         }
         p.down = null;
@@ -394,7 +401,7 @@ export class InteractionManager {
   private _onWheel(evt: WheelEvent): void {
     const start = performance.now();
     const pt: ScreenXY = [evt.offsetX, evt.offsetY];
-    const ievt = new InteractionEvent(this, pt, start);
+    const ievt = new InteractionEvent(this, pt, start, evt);
     const delta = evt.deltaY;
     this._fire(evt, 'onZoom', ievt, delta, this._engine);
   }

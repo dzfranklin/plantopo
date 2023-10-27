@@ -20,7 +20,10 @@ export class FeatureHoverHandler implements InteractionHandler {
   onPress(evt: InteractionEvent, engine: EditorEngine): boolean {
     for (const hit of evt.queryHits()) {
       if (hit.minPixelsTo() < 0.5) {
-        engine.toggleSelection(hit.feature.id, 'single');
+        engine.toggleSelection(
+          hit.feature.id,
+          evt.shiftKey ? 'multi' : 'single',
+        );
         this.cursor = 'pointer';
         return true;
       }
