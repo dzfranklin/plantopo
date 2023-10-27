@@ -102,10 +102,6 @@ func main() {
 	if err != nil {
 		l.Fatalw("error creating postgres pool", zap.Error(err))
 	}
-	l.Infow("checking postgres")
-	if err := pg.Ping(ctx); err != nil {
-		l.Fatalw("error pinging postgres", zap.Error(err))
-	}
 
 	usersService := users.NewService(ctx, pg, mailerService)
 	mapsService := maps.NewService(l.Desugar(), pg, usersService, mailerService)
