@@ -35,6 +35,7 @@ export class FeatureHoverHandler implements InteractionHandler {
   private dragging: string | null = null;
 
   onDragStart(evt: InteractionEvent, engine: EditorEngine): boolean {
+    if (engine.selectedByMeSize !== 1) return false;
     for (const hit of evt.queryHits()) {
       if (!hit.feature.selectedByMe) continue;
       if (hit.feature.geometry?.type === 'Point' && hit.minPixelsTo() < 0.5) {
