@@ -43,9 +43,9 @@ test-app:
   cd app && npm run test
 
 migrate *ARGS:
-  docker run -v ./migrations:/migrations --network host migrate/migrate \
-    -path=/migrations/ \
-    -database postgres://postgres:postgres@localhost:5432/pt \
+  migrate \
+    -path=./migrations/ \
+    -database postgres://postgres:postgres@localhost:5432/pt?sslmode=disable \
     {{ ARGS }}
 
 # Usage
@@ -56,25 +56,26 @@ migrate *ARGS:
 # > just migrate-prod-up $PROD_URL
 
 migrate-prod-up url:
-  docker run -v ./migrations:/migrations --network host migrate/migrate \
+  migrate \
     -verbose \
-    -path=/migrations/ \
+    -path=./migrations/ \
     -database {{url}} \
     up
 
 migrate-prod-down url:
-    docker run -v ./migrations:/migrations --network host migrate/migrate \
+    migrate \
     -verbose \
-    -path=/migrations/ \
+    -path=./migrations/ \
     -database {{url}} \
     down 1
 
 recreatedb:
   dropdb --if-exists pt
   createdb pt
-  docker run -v ./migrations:/migrations --network host migrate/migrate \
-    -path=/migrations/ \
-    -database postgres://postgres:postgres@localhost:5432/pt \
+  psql -c "DROP ROLE pt; CREATE ROLE pt WITH LOGIN PASSWORD 'postgres'"
+  migrate \
+    -path=./migrations/ \
+    -database postgres://postgres:postgres@localhost:5432/pt?sslmode=disable \
     up
   psql -d pt \
     -f migrations/test_seed.sql
