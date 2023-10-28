@@ -43,7 +43,7 @@ func (s *Services) postMapsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type deleteRequest struct {
-	List []uuid.UUID `json:"list"`
+	List []string `json:"list"`
 }
 
 func (s *Services) deleteMapsHandler(w http.ResponseWriter, r *http.Request) {
@@ -105,11 +105,7 @@ func (s *Services) getMapHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mapId, err := uuid.Parse(mux.Vars(r)["id"])
-	if err != nil {
-		writeBadRequest(w)
-		return
-	}
+	mapId := mux.Vars(r)["id"]
 
 	// Fetch before authorizing so we can return a 404 if the map doesn't exist.
 	data, err := s.Maps.Get(r.Context(), mapId)
@@ -155,11 +151,7 @@ func (s *Services) putMapHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mapId, err := uuid.Parse(mux.Vars(r)["id"])
-	if err != nil {
-		writeBadRequest(w)
-		return
-	}
+	mapId := mux.Vars(r)["id"]
 
 	var req maps.MetaUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -214,11 +206,7 @@ func (s *Services) getMapAccessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mapId, err := uuid.Parse(mux.Vars(r)["id"])
-	if err != nil {
-		writeBadRequest(w)
-		return
-	}
+	mapId := mux.Vars(r)["id"]
 
 	if !s.Maps.IsAuthorized(r.Context(),
 		maps.AuthzRequest{UserId: sess.UserId, MapId: mapId},
@@ -253,11 +241,7 @@ func (s *Services) putMapAccessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mapId, err := uuid.Parse(mux.Vars(r)["id"])
-	if err != nil {
-		writeBadRequest(w)
-		return
-	}
+	mapId := mux.Vars(r)["id"]
 
 	var req maps.PutAccessRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

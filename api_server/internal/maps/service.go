@@ -16,15 +16,15 @@ import (
 )
 
 type Service interface {
-	Get(ctx context.Context, id uuid.UUID) (types.MapMeta, error)
+	Get(ctx context.Context, id string) (types.MapMeta, error)
 	Create(ctx context.Context, owner uuid.UUID) (types.MapMeta, error)
 	Put(ctx context.Context, update MetaUpdateRequest) (types.MapMeta, error)
-	Delete(ctx context.Context, ids []uuid.UUID) error
+	Delete(ctx context.Context, ids []string) error
 	ListOwnedBy(ctx context.Context, userId uuid.UUID) ([]types.MapMeta, error)
 	ListSharedWith(ctx context.Context, userId uuid.UUID) ([]types.MapMeta, error)
 	IsAuthorized(ctx context.Context, req AuthzRequest, action Action) bool
 	CheckOpen(ctx context.Context, req AuthzRequest) (*OpenAuthz, error)
-	Access(ctx context.Context, mapId uuid.UUID) (*Access, error)
+	Access(ctx context.Context, mapId string) (*Access, error)
 	PutAccess(ctx context.Context, from *types.User, req PutAccessRequest) error
 	Invite(ctx context.Context, from *types.User, req InviteRequest) error
 }
@@ -54,8 +54,8 @@ func NewService(
 	return s
 }
 
-func (s *impl) Get(ctx context.Context, id uuid.UUID) (types.MapMeta, error) {
-	if id == uuid.Nil {
+func (s *impl) Get(ctx context.Context, id string) (types.MapMeta, error) {
+	if id == "" {
 		return types.MapMeta{}, errors.New("id is required")
 	}
 	var meta types.MapMeta
@@ -109,7 +109,7 @@ func (s *impl) Create(ctx context.Context, owner uuid.UUID) (types.MapMeta, erro
 }
 
 func (s *impl) Put(ctx context.Context, update MetaUpdateRequest) (types.MapMeta, error) {
-	if update.Id == uuid.Nil {
+	if update.Id == "" {
 		return types.MapMeta{}, errors.New("id is required")
 	}
 	var meta types.MapMeta
@@ -129,7 +129,7 @@ func (s *impl) Put(ctx context.Context, update MetaUpdateRequest) (types.MapMeta
 	return meta, nil
 }
 
-func (s *impl) Delete(ctx context.Context, ids []uuid.UUID) error {
+func (s *impl) Delete(ctx context.Context, ids []string) error {
 	rows, err := s.pg.Query(ctx,
 		`UPDATE maps SET deleted_at = NOW()
 			WHERE id = ANY($1) AND deleted_at IS NULL`,
@@ -214,7 +214,7 @@ func (s *impl) IsAuthorized(
 	}
 	if role == "" {
 		s.l.Debug("no role",
-			zap.String("mapId", req.MapId.String()),
+			zap.String("mapId", req.MapId),
 			zap.String("userId", req.UserId.String()))
 		return false
 	}
@@ -266,9 +266,8 @@ func (s *impl) CheckOpen(ctx context.Context, req AuthzRequest) (*OpenAuthz, err
 }
 
 func (s *impl) getRole(ctx context.Context, req AuthzRequest) (Role, error) {
-	if req.MapId == uuid.Nil {
-		s.l.Info("IsAuthorized called with null mapId")
-		return "", nil
+	if req.MapId == "" {
+		return "", errors.New("mapId is required")
 	}
 
 	var row pgx.Row
@@ -302,7 +301,7 @@ func (s *impl) getRole(ctx context.Context, req AuthzRequest) (Role, error) {
 	return role, nil
 }
 
-func (s *impl) Access(ctx context.Context, mapId uuid.UUID) (*Access, error) {
+func (s *impl) Access(ctx context.Context, mapId string) (*Access, error) {
 	out := &Access{
 		MapId:          mapId,
 		UserAccess:     make([]UserAccessEntry, 0),
@@ -376,7 +375,7 @@ func (s *impl) Access(ctx context.Context, mapId uuid.UUID) (*Access, error) {
 }
 
 func (s *impl) PutAccess(ctx context.Context, from *types.User, req PutAccessRequest) error {
-	if req.MapId == uuid.Nil {
+	if req.MapId == "" {
 		return errors.New("mapId is required")
 	}
 
@@ -488,7 +487,7 @@ type roleEntry struct {
 	role   Role
 }
 
-func (s *impl) listRoles(ctx context.Context, mapId uuid.UUID) ([]roleEntry, error) {
+func (s *impl) listRoles(ctx context.Context, mapId string) ([]roleEntry, error) {
 	rows, err := s.pg.Query(ctx,
 		`SELECT user_id, my_role FROM map_roles
 					WHERE map_id = $1
@@ -551,7 +550,7 @@ func (s *impl) invite(
 
 	if errors.Is(err, users.ErrNotFound) {
 		s.l.Info("inviting new user to map",
-			zap.String("mapId", req.MapId.String()))
+			zap.String("mapId", req.MapId))
 
 		// Always notify new users
 		err := s.mailer.SendInvite(mailer.InviteRequest{
@@ -577,7 +576,7 @@ func (s *impl) invite(
 		return nil
 	} else {
 		s.l.Info("inviting existing user to map",
-			zap.String("mapId", req.MapId.String()))
+			zap.String("mapId", req.MapId))
 
 		err := grant(ctx, s.pg, req.MapId, to.Id, req.Role)
 		if err != nil {
@@ -601,7 +600,7 @@ func (s *impl) invite(
 
 func grant(
 	ctx context.Context, db db.Querier,
-	mapId uuid.UUID, userId uuid.UUID, role Role,
+	mapId string, userId uuid.UUID, role Role,
 ) error {
 	_, err := db.Exec(ctx,
 		`INSERT INTO map_roles (map_id, user_id, my_role)

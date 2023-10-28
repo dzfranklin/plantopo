@@ -10,7 +10,7 @@ import (
 
 type AuthzRequest struct {
 	UserId uuid.UUID // uuid.Nil for anonymous
-	MapId  uuid.UUID
+	MapId  string
 }
 
 type OpenAuthz struct {
@@ -44,7 +44,7 @@ const (
 )
 
 type PutAccessRequest struct {
-	MapId              uuid.UUID                        `json:"mapId"`
+	MapId              string                           `json:"mapId"`
 	Owner              *uuid.UUID                       `json:"owner"`
 	GeneralAccessLevel GeneralAccessLevel               `json:"generalAccessLevel"`
 	GeneralAccessRole  GeneralAccessRole                `json:"generalAccessRole"`
@@ -58,7 +58,7 @@ type PutUserAccessEntry struct {
 }
 
 type Access struct {
-	MapId              uuid.UUID          `json:"mapId"`
+	MapId              string             `json:"mapId"`
 	Owner              *types.User        `json:"owner"`
 	GeneralAccessLevel GeneralAccessLevel `json:"generalAccessLevel"`
 	GeneralAccessRole  GeneralAccessRole  `json:"generalAccessRole"`
@@ -77,15 +77,15 @@ type PendingInvite struct {
 }
 
 type InviteRequest struct {
-	MapId         uuid.UUID `json:"mapId"`
-	Email         string    `json:"email"`
-	Role          Role      `json:"role"`
-	Notify        bool      `json:"notify"`
-	NotifyMessage string    `json:"notifyMessage"`
+	MapId         string `json:"mapId"`
+	Email         string `json:"email"`
+	Role          Role   `json:"role"`
+	Notify        bool   `json:"notify"`
+	NotifyMessage string `json:"notifyMessage"`
 }
 
 func (r *InviteRequest) Validate() error {
-	if r.MapId == uuid.Nil {
+	if r.MapId == "" {
 		return fmt.Errorf("missing mapId")
 	}
 	if r.Email == "" {
