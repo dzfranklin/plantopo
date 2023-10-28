@@ -24,10 +24,11 @@ func New(db db.Querier) *Repo {
 func (r *Repo) GetMapSnapshot(
 	ctx context.Context, mapId string,
 ) (schema.Changeset, error) {
-	var bytes []byte
-	err := r.db.QueryRow(ctx,
-		`SELECT value FROM map_snapshots WHERE map_id = $1`, mapId,
-	).Scan(&bytes)
+	var snapshotBytes []byte
+	err := r.db.QueryRow(ctx, `
+		SELECT value FROM map_snapshots
+		JOIN maps ON maps.internal_id = map_snapshots.map_id
+		WHERE maps.external_id = $1`, mapId).Scan(&snapshotBytes)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return schema.Changeset{}, nil
@@ -36,7 +37,7 @@ func (r *Repo) GetMapSnapshot(
 		return schema.Changeset{}, err
 	}
 
-	value, err := unmarshalSnapshot(bytes)
+	value, err := unmarshalSnapshot(snapshotBytes)
 	if err != nil {
 		err := fmt.Errorf("error unmarshalling map snapshot (mapId is %s): %w", mapId, err)
 		return schema.Changeset{}, err
@@ -48,16 +49,22 @@ func (r *Repo) GetMapSnapshot(
 func (r *Repo) SetMapSnapshot(
 	ctx context.Context, mapId string, value schema.Changeset,
 ) error {
-	bytes, err := marshalSnapshot(value)
+	snapshotBytes, err := marshalSnapshot(value)
 	if err != nil {
 		return fmt.Errorf("error marshalling map snapshot: %w", err)
+	}
+
+	var internalId int64
+	err = r.db.QueryRow(ctx, `SELECT internal_id FROM maps WHERE external_id = $1`, mapId).Scan(&internalId)
+	if err != nil {
+		return fmt.Errorf("error getting map internal id: %w", err)
 	}
 
 	_, err = r.db.Exec(ctx,
 		`INSERT INTO map_snapshots (map_id, value)
 			VALUES ($1, $2)
 			ON CONFLICT (map_id) DO UPDATE SET value = $2`,
-		mapId, bytes,
+		internalId, snapshotBytes,
 	)
 	if err != nil {
 		return fmt.Errorf("error setting map snapshot: %w", err)
