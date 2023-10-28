@@ -13,8 +13,10 @@ require (
 	github.com/gorilla/securecookie v1.1.1
 	github.com/gorilla/sessions v1.2.1
 	github.com/iancoleman/strcase v0.3.0
+	github.com/oklog/ulid/v2 v2.1.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.1
+	github.com/tkrajina/gpxgo v1.3.1
 	go.uber.org/zap v1.25.0
 	golang.org/x/crypto v0.13.0
 	google.golang.org/grpc v1.51.0

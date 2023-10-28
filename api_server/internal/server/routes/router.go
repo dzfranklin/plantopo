@@ -1,8 +1,12 @@
 package routes
 
 import (
+	"context"
 	"fmt"
+	"github.com/danielzfranklin/plantopo/api_server/internal/importers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/sync_backends"
+	"github.com/google/uuid"
+	gorillahandlers "github.com/gorilla/handlers"
 	"net/http"
 	"os"
 
@@ -15,7 +19,6 @@ import (
 	"github.com/danielzfranklin/plantopo/api_server/internal/server/session"
 	"github.com/danielzfranklin/plantopo/api_server/internal/users"
 	"github.com/danielzfranklin/plantopo/db"
-	gorillahandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
@@ -29,6 +32,13 @@ type Services struct {
 	FrontendMapTokens *frontend_map_tokens.Tokens
 	Matchmaker        api.MatchmakerClient
 	SyncBackends      *sync_backends.Provider
+	MapImporter       MapImporter
+}
+
+type MapImporter interface {
+	CreateImport(ctx context.Context, mapId uuid.UUID, format string) (*importers.Import, error)
+	StartImport(importId string) (*importers.Import, error)
+	CheckImport(ctx context.Context, importId string) (*importers.Import, error)
 }
 
 func New(s *Services) http.Handler {
@@ -61,6 +71,10 @@ func New(s *Services) http.Handler {
 	r.HandleFunc("/api/v1/map/{id}", s.mapHandler)
 	r.HandleFunc("/api/v1/map/{id}/sync-socket", s.mapSyncSocketHandler)
 	r.HandleFunc("/api/v1/map/{id}/access", s.mapAccessHandler)
+
+	r.HandleFunc("/api/v1/map/{mapId}/import", s.uploadImportHandler)
+	r.HandleFunc("/api/v1/map/{mapId}/import/{importId}/start", s.startImportHandler)
+	r.HandleFunc("/api/v1/map/{mapId}/import/{importId}", s.checkImportHandler)
 
 	if os.Getenv("APP_ENV") == "development" {
 		return r

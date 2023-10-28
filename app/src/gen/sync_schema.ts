@@ -17,6 +17,7 @@ export interface FeatureChange {
   name?: string | null;
   color?: string | null;
   hidden?: boolean | null;
+  importedFromFile?: string | null;
 }
 
 export function mergeFeature(target: FeatureChange, incoming: FeatureChange) {
@@ -40,6 +41,9 @@ export function mergeFeature(target: FeatureChange, incoming: FeatureChange) {
   }
   if (incoming.hidden !== undefined) {
     target.hidden = incoming.hidden;
+  }
+  if (incoming.importedFromFile !== undefined) {
+    target.importedFromFile = incoming.importedFromFile;
   }
 }
 export interface LayerChange {
