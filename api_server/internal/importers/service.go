@@ -37,7 +37,7 @@ func New(config *Config) (*Service, error) {
 	return &Service{config}, nil
 }
 
-func (s *Service) CreateImport(ctx context.Context, mapId uuid.UUID, format string) (*Import, error) {
+func (s *Service) CreateImport(ctx context.Context, mapId string, format string) (*Import, error) {
 	externalId := ulid.Make().String()
 	uploadURL, err := s.ObjectStore.CreatePresignedUploadURL(ctx, externalId)
 	if err != nil {

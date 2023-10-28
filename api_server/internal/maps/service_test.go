@@ -61,17 +61,17 @@ func (s *S) TestBasic() {
 	subject := makeSubject(s)
 	owner := makeUser(s)
 
-	_, err := subject.Get(s.ctx, uuid.MustParse("dddddddd-0000-0000-0000-000000000001"))
+	_, err := subject.Get(s.ctx, "d1")
 	require.ErrorIs(s.T(), err, ErrMapNotFound)
 
 	_, err = subject.Put(s.ctx, MetaUpdateRequest{
-		Id:   uuid.MustParse("dddddddd-0000-0000-0000-000000000001"),
+		Id:   "d1",
 		Name: "My New Map",
 	})
 	require.ErrorIs(s.T(), err, ErrMapNotFound)
 
 	err = subject.Delete(s.ctx,
-		[]uuid.UUID{uuid.MustParse("dddddddd-0000-0000-0000-000000000001")})
+		[]string{"d1"})
 	require.NoError(s.T(), err)
 
 	resp, err := subject.Create(s.ctx, owner.Id)
@@ -100,7 +100,7 @@ func (s *S) TestBasic() {
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), updateResp, getAfterUpdateResp)
 
-	err = subject.Delete(s.ctx, []uuid.UUID{id})
+	err = subject.Delete(s.ctx, []string{id})
 	require.NoError(s.T(), err)
 
 	_, err = subject.Get(s.ctx, id)
@@ -113,7 +113,7 @@ func (s *S) TestBasic() {
 	require.ErrorIs(s.T(), err, ErrMapNotFound)
 
 	// deletion is idempotent
-	err = subject.Delete(s.ctx, []uuid.UUID{id})
+	err = subject.Delete(s.ctx, []string{id})
 	require.NoError(s.T(), err)
 }
 
@@ -127,7 +127,7 @@ func (s *S) TestList() {
 
 	aDeleted, err := subject.Create(s.ctx, alice.Id)
 	require.NoError(s.T(), err)
-	err = subject.Delete(s.ctx, []uuid.UUID{aDeleted.Id})
+	err = subject.Delete(s.ctx, []string{aDeleted.Id})
 	require.NoError(s.T(), err)
 
 	b1, err := subject.Create(s.ctx, bob.Id)
@@ -135,7 +135,7 @@ func (s *S) TestList() {
 
 	bDeleted, err := subject.Create(s.ctx, bob.Id)
 	require.NoError(s.T(), err)
-	err = subject.Delete(s.ctx, []uuid.UUID{bDeleted.Id})
+	err = subject.Delete(s.ctx, []string{bDeleted.Id})
 	require.NoError(s.T(), err)
 
 	err = subject.Invite(s.ctx, bob, InviteRequest{
@@ -159,16 +159,16 @@ func (s *S) TestDeleteIdempotent() {
 	subject := makeSubject(s)
 	alice := makeUser(s)
 
-	err := subject.Delete(s.ctx, []uuid.UUID{uuid.New()})
+	err := subject.Delete(s.ctx, []string{"nonexistent"})
 	require.NoError(s.T(), err)
 
 	m1, err := subject.Create(s.ctx, alice.Id)
 	require.NoError(s.T(), err)
 
-	err = subject.Delete(s.ctx, []uuid.UUID{m1.Id})
+	err = subject.Delete(s.ctx, []string{m1.Id})
 	require.NoError(s.T(), err)
 
-	err = subject.Delete(s.ctx, []uuid.UUID{m1.Id})
+	err = subject.Delete(s.ctx, []string{m1.Id})
 	require.NoError(s.T(), err)
 }
 
@@ -183,11 +183,12 @@ func (s *S) TestCannotAccessDeleted() {
 	m1, err := subject.Create(s.ctx, alice.Id)
 	require.NoError(s.T(), err)
 
-	subject.Invite(s.ctx, bob, InviteRequest{
+	err = subject.Invite(s.ctx, bob, InviteRequest{
 		MapId: m1.Id,
 		Email: bob.Email,
 		Role:  "editor",
 	})
+	require.NoError(s.T(), err)
 
 	publicMap, err := subject.Create(s.ctx, john.Id)
 	require.NoError(s.T(), err)
@@ -199,7 +200,7 @@ func (s *S) TestCannotAccessDeleted() {
 	})
 	require.NoError(s.T(), err)
 
-	err = subject.Delete(s.ctx, []uuid.UUID{m1.Id, publicMap.Id})
+	err = subject.Delete(s.ctx, []string{m1.Id, publicMap.Id})
 	require.NoError(s.T(), err)
 
 	// TEST

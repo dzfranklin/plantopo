@@ -19,7 +19,9 @@ func (s *Services) uploadImportHandler(w http.ResponseWriter, r *http.Request) {
 		writeMethodNotAllowed(w)
 		return
 	}
-	mapId, err := uuid.Parse(mux.Vars(r)["mapId"])
+
+	mapId := mux.Vars(r)["mapId"]
+
 	sess, err := s.SessionManager.Get(r)
 	if err != nil {
 		writeError(w, err)
@@ -29,6 +31,7 @@ func (s *Services) uploadImportHandler(w http.ResponseWriter, r *http.Request) {
 	if sess != nil {
 		userId = sess.UserId
 	}
+
 	if !s.Maps.IsAuthorized(r.Context(),
 		maps.AuthzRequest{UserId: userId, MapId: mapId},
 		maps.ActionEdit,

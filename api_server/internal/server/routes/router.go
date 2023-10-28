@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/danielzfranklin/plantopo/api_server/internal/importers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/sync_backends"
-	"github.com/google/uuid"
 	gorillahandlers "github.com/gorilla/handlers"
 	"net/http"
 	"os"
@@ -36,7 +35,7 @@ type Services struct {
 }
 
 type MapImporter interface {
-	CreateImport(ctx context.Context, mapId uuid.UUID, format string) (*importers.Import, error)
+	CreateImport(ctx context.Context, mapId string, format string) (*importers.Import, error)
 	StartImport(importId string) (*importers.Import, error)
 	CheckImport(ctx context.Context, importId string) (*importers.Import, error)
 }

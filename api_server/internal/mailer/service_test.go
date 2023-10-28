@@ -101,7 +101,7 @@ func TestSendShareNotificationWithMessage(t *testing.T) {
 		FullName: "Bob Jones",
 	}
 	meta := types.MapMeta{
-		Id:   uuid.MustParse("dddddddd-0000-0000-0000-000000000001"),
+		Id:   "d1",
 		Name: "Trip to Alaska",
 	}
 
@@ -114,7 +114,7 @@ Alice Smith shared "Trip to Alaska" with you on PlanTopo.
 
 You can view the map here:
 
-https://plantopo.com/map/dddddddd-0000-0000-0000-000000000001/
+https://plantopo.com/map/d1/
 
 Alice Smith says:
 
@@ -147,7 +147,7 @@ func TestSendShareNotificationWithoutMessage(t *testing.T) {
 		FullName: "Bob Jones",
 	}
 	meta := types.MapMeta{
-		Id:   uuid.MustParse("dddddddd-0000-0000-0000-000000000001"),
+		Id:   "d1",
 		Name: "Trip to Alaska",
 	}
 
@@ -160,7 +160,7 @@ Alice Smith shared "Trip to Alaska" with you on PlanTopo.
 
 You can view the map here:
 
-https://plantopo.com/map/dddddddd-0000-0000-0000-000000000001/
+https://plantopo.com/map/d1/
 
 `,
 	}).Return(nil)
@@ -184,7 +184,7 @@ func TestSendInvitationWithMessage(t *testing.T) {
 		FullName: "Alice Smith",
 	}
 	meta := types.MapMeta{
-		Id:   uuid.MustParse("dddddddd-0000-0000-0000-000000000001"),
+		Id:   "d1",
 		Name: "Trip to Alaska",
 	}
 
@@ -199,7 +199,7 @@ PlanTopo is a tool for editing maps collaboratively.
 
 You can sign up for an account here:
 
-https://plantopo.com/signup/?returnTo=%2Fmap%2Fdddddddd-0000-0000-0000-000000000001%2F&email=bob%40example.com
+https://plantopo.com/signup/?returnTo=%2Fmap%2Fd1%2F&email=bob%40example.com
 
 Alice Smith says:
 
@@ -227,7 +227,7 @@ func TestSendInviteWithoutMessage(t *testing.T) {
 		FullName: "Alice Smith",
 	}
 	meta := types.MapMeta{
-		Id:   uuid.MustParse("dddddddd-0000-0000-0000-000000000001"),
+		Id:   "d1",
 		Name: "Trip to Alaska",
 	}
 
@@ -242,7 +242,7 @@ PlanTopo is a tool for editing maps collaboratively.
 
 You can sign up for an account here:
 
-https://plantopo.com/signup/?returnTo=%2Fmap%2Fdddddddd-0000-0000-0000-000000000001%2F&email=bob%40example.com
+https://plantopo.com/signup/?returnTo=%2Fmap%2Fd1%2F&email=bob%40example.com
 
 `,
 	}).Return(nil)
