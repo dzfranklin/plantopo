@@ -164,7 +164,7 @@ func (m *impl) SendShareNotification(req ShareNotificationRequest) error {
 	if mapName == "" {
 		mapName = "Untitled"
 	}
-	mapUrl := fmt.Sprintf("https://plantopo.com/map/%s/", req.Map.Id.String())
+	mapUrl := fmt.Sprintf("https://plantopo.com/map/%s/", req.Map.Id)
 	tdata := shareContext{
 		FromFullName: req.From.FullName,
 		ToFullName:   req.To.FullName,

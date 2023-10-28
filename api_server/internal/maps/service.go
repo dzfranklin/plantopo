@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/oklog/ulid/v2"
 
 	"github.com/danielzfranklin/plantopo/api_server/internal/mailer"
 	"github.com/danielzfranklin/plantopo/api_server/internal/types"
@@ -58,13 +59,13 @@ func (s *impl) Get(ctx context.Context, id string) (types.MapMeta, error) {
 	if id == "" {
 		return types.MapMeta{}, errors.New("id is required")
 	}
-	var meta types.MapMeta
+	meta := types.MapMeta{Id: id}
 	err := s.pg.QueryRow(ctx,
-		`SELECT id, name, created_at
+		`SELECT name, created_at
 			FROM maps
-			WHERE id = $1 AND deleted_at IS NULL`,
+			WHERE external_id = $1 AND deleted_at IS NULL`,
 		id,
-	).Scan(&meta.Id, &meta.Name, &meta.CreatedAt)
+	).Scan(&meta.Name, &meta.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return types.MapMeta{}, ErrMapNotFound
@@ -80,17 +81,15 @@ func (s *impl) Create(ctx context.Context, owner uuid.UUID) (types.MapMeta, erro
 		s.l.DPanic("failed to begin transaction", zap.Error(err))
 		return types.MapMeta{}, err
 	}
-	defer func(tx pgx.Tx, ctx context.Context) {
-		err := tx.Rollback(ctx)
-		if err != nil {
-			s.l.DPanic("failed to rollback transaction", zap.Error(err))
-		}
-	}(tx, ctx)
+	defer tx.Rollback(ctx)
 
-	var meta types.MapMeta
+	id := ulid.Make().String()
+
+	meta := types.MapMeta{Id: id}
 	err = s.pg.QueryRow(ctx,
-		`INSERT INTO maps DEFAULT VALUES RETURNING id, name, created_at`,
-	).Scan(&meta.Id, &meta.Name, &meta.CreatedAt)
+		`INSERT INTO maps (external_id) VALUES ($1) RETURNING name, created_at`,
+		id,
+	).Scan(&meta.Name, &meta.CreatedAt)
 	if err != nil {
 		return types.MapMeta{}, err
 	}
@@ -112,14 +111,14 @@ func (s *impl) Put(ctx context.Context, update MetaUpdateRequest) (types.MapMeta
 	if update.Id == "" {
 		return types.MapMeta{}, errors.New("id is required")
 	}
-	var meta types.MapMeta
+	meta := types.MapMeta{Id: update.Id}
 	err := s.pg.QueryRow(ctx,
 		`UPDATE maps
 			SET name = $2
-			WHERE id = $1 AND deleted_at IS NULL
-			RETURNING id, name, created_at`,
+			WHERE external_id = $1 AND deleted_at IS NULL
+			RETURNING name, created_at`,
 		update.Id, update.Name,
-	).Scan(&meta.Id, &meta.Name, &meta.CreatedAt)
+	).Scan(&meta.Name, &meta.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return types.MapMeta{}, ErrMapNotFound
@@ -132,7 +131,7 @@ func (s *impl) Put(ctx context.Context, update MetaUpdateRequest) (types.MapMeta
 func (s *impl) Delete(ctx context.Context, ids []string) error {
 	rows, err := s.pg.Query(ctx,
 		`UPDATE maps SET deleted_at = NOW()
-			WHERE id = ANY($1) AND deleted_at IS NULL`,
+			WHERE external_id = ANY($1) AND deleted_at IS NULL`,
 		ids,
 	)
 	if err != nil {
@@ -147,9 +146,9 @@ func (s *impl) ListOwnedBy(ctx context.Context, userId uuid.UUID) ([]types.MapMe
 		return nil, errors.New("userId is required")
 	}
 	rows, err := s.pg.Query(ctx,
-		`SELECT id, name, created_at FROM maps
+		`SELECT external_id, name, created_at FROM maps
 			WHERE
-				id IN (SELECT map_id FROM map_roles
+				internal_id IN (SELECT map_id FROM map_roles
 					WHERE user_id = $1 AND my_role = 'owner')
 				AND deleted_at IS NULL
 			ORDER BY created_at DESC`,
@@ -178,9 +177,9 @@ func (s *impl) ListSharedWith(ctx context.Context, userId uuid.UUID) ([]types.Ma
 		return nil, errors.New("userId is required")
 	}
 	rows, err := s.pg.Query(ctx,
-		`SELECT id, name, created_at FROM maps
+		`SELECT external_id, name, created_at FROM maps
 			WHERE
-				id IN (SELECT map_id FROM map_roles
+				maps.internal_id IN (SELECT map_id FROM map_roles
 					WHERE user_id = $1 AND my_role != 'owner')
 				AND deleted_at IS NULL
 			ORDER BY created_at DESC`,
@@ -244,7 +243,7 @@ func (s *impl) CheckOpen(ctx context.Context, req AuthzRequest) (*OpenAuthz, err
 		err := s.pg.QueryRow(ctx,
 			`SELECT EXISTS(
 				SELECT 1 FROM maps
-					WHERE id = $1 AND deleted_at IS NULL)`,
+					WHERE external_id = $1 AND deleted_at IS NULL)`,
 			req.MapId,
 		).Scan(&exists)
 		if err != nil {
@@ -274,7 +273,7 @@ func (s *impl) getRole(ctx context.Context, req AuthzRequest) (Role, error) {
 	if req.UserId == uuid.Nil {
 		row = s.pg.QueryRow(ctx,
 			`SELECT general_access_role FROM maps
-				WHERE id = $1
+				WHERE external_id = $1
 					AND general_access_level = 'public'
 					AND deleted_at IS NULL`,
 			req.MapId,
@@ -282,8 +281,8 @@ func (s *impl) getRole(ctx context.Context, req AuthzRequest) (Role, error) {
 	} else {
 		row = s.pg.QueryRow(ctx,
 			`SELECT map_roles.my_role FROM map_roles
-				INNER JOIN maps ON maps.id = map_roles.map_id
-				WHERE map_roles.map_id = $1 AND map_roles.user_id = $2
+				INNER JOIN maps ON maps.internal_id = map_roles.map_id
+				WHERE maps.external_id = $1 AND map_roles.user_id = $2
 					AND maps.deleted_at IS NULL
 			`,
 			req.MapId, req.UserId,
@@ -308,12 +307,13 @@ func (s *impl) Access(ctx context.Context, mapId string) (*Access, error) {
 		PendingInvites: make([]PendingInvite, 0),
 	}
 
+	var internalId int64
 	var deletedAt null.Time
 	err := s.pg.QueryRow(ctx,
-		`SELECT deleted_at, general_access_level, general_access_role FROM maps
-			WHERE id = $1`,
+		`SELECT internal_id, deleted_at, general_access_level, general_access_role FROM maps
+			WHERE external_id = $1`,
 		mapId,
-	).Scan(&deletedAt, &out.GeneralAccessLevel, &out.GeneralAccessRole)
+	).Scan(&internalId, &deletedAt, &out.GeneralAccessLevel, &out.GeneralAccessRole)
 	if err != nil {
 		return nil, err
 	}
@@ -357,7 +357,7 @@ func (s *impl) Access(ctx context.Context, mapId string) (*Access, error) {
 		`SELECT email, my_role FROM pending_map_invites
 					WHERE map_id = $1
 					ORDER BY created_at`,
-		mapId)
+		internalId)
 	if err != nil {
 		return nil, err
 	}
@@ -383,17 +383,13 @@ func (s *impl) PutAccess(ctx context.Context, from *types.User, req PutAccessReq
 	if err != nil {
 		return err
 	}
-	defer func(tx pgx.Tx, ctx context.Context) {
-		err := tx.Rollback(ctx)
-		if err != nil {
-			s.l.DPanic("failed to rollback transaction", zap.Error(err))
-		}
-	}(tx, ctx)
+	defer tx.Rollback(ctx)
 
+	var internalId int64
 	var deletedAt null.Time
-	err = tx.QueryRow(ctx, `SELECT deleted_at FROM maps
-		WHERE id = $1
-		FOR UPDATE`, req.MapId).Scan(&deletedAt)
+	err = tx.QueryRow(ctx, `SELECT internal_id, deleted_at FROM maps
+		WHERE external_id = $1
+		FOR UPDATE`, req.MapId).Scan(&internalId, &deletedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrMapNotFound
@@ -406,7 +402,7 @@ func (s *impl) PutAccess(ctx context.Context, from *types.User, req PutAccessReq
 	if req.Owner != nil {
 		_, err = tx.Exec(ctx,
 			`DELETE FROM map_roles WHERE map_id = $1 AND my_role = 'owner'`,
-			req.MapId)
+			internalId)
 		if err != nil {
 			return err
 		}
@@ -420,7 +416,7 @@ func (s *impl) PutAccess(ctx context.Context, from *types.User, req PutAccessReq
 	if req.GeneralAccessLevel != "" {
 		_, err = tx.Exec(ctx,
 			`UPDATE maps SET general_access_level = $2
-				WHERE id = $1`,
+				WHERE external_id = $1`,
 			req.MapId, req.GeneralAccessLevel)
 		if err != nil {
 			return err
@@ -430,7 +426,7 @@ func (s *impl) PutAccess(ctx context.Context, from *types.User, req PutAccessReq
 	if req.GeneralAccessRole != "" {
 		_, err = tx.Exec(ctx,
 			`UPDATE maps SET general_access_role = $2
-				WHERE id = $1`,
+				WHERE external_id = $1`,
 			req.MapId, req.GeneralAccessRole)
 		if err != nil {
 			return err
@@ -442,7 +438,7 @@ func (s *impl) PutAccess(ctx context.Context, from *types.User, req PutAccessReq
 			_, err = tx.Exec(ctx,
 				`DELETE FROM map_roles
 					WHERE map_id = $1 AND user_id = $2`,
-				req.MapId, userId)
+				internalId, userId)
 			if err != nil {
 				return err
 			}
@@ -490,8 +486,9 @@ type roleEntry struct {
 func (s *impl) listRoles(ctx context.Context, mapId string) ([]roleEntry, error) {
 	rows, err := s.pg.Query(ctx,
 		`SELECT user_id, my_role FROM map_roles
-					WHERE map_id = $1
-					ORDER BY created_at`,
+					JOIN maps on map_roles.map_id = maps.internal_id
+					WHERE maps.external_id = $1
+					ORDER BY map_roles.created_at`,
 		mapId,
 	)
 	if err != nil {
@@ -533,7 +530,7 @@ func (s *impl) invite(
 
 	var deletedAt null.Time
 	err := s.pg.QueryRow(ctx, `SELECT deleted_at FROM maps
-		WHERE id = $1`, req.MapId).Scan(&deletedAt)
+		WHERE external_id = $1`, req.MapId).Scan(&deletedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrMapNotFound
@@ -563,12 +560,18 @@ func (s *impl) invite(
 			return err
 		}
 
+		var internalId int64
+		err = s.pg.QueryRow(ctx, `SELECT internal_id FROM maps WHERE external_id = $1`, req.MapId).Scan(&internalId)
+		if err != nil {
+			return err
+		}
+
 		_, err = s.pg.Exec(ctx,
 			`INSERT INTO pending_map_invites (map_id, email, my_role)
 				VALUES ($1, $2, $3)
 				ON CONFLICT (map_id, email)
 					DO UPDATE SET my_role = $3`,
-			req.MapId, req.Email, req.Role)
+			internalId, req.Email, req.Role)
 		if err != nil {
 			return err
 		}
@@ -602,12 +605,17 @@ func grant(
 	ctx context.Context, db db.Querier,
 	mapId string, userId uuid.UUID, role Role,
 ) error {
-	_, err := db.Exec(ctx,
+	var internalId int64
+	err := db.QueryRow(ctx, `SELECT internal_id FROM maps WHERE external_id = $1`, mapId).Scan(&internalId)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(ctx,
 		`INSERT INTO map_roles (map_id, user_id, my_role)
 			VALUES ($1, $2, $3)
 			ON CONFLICT (map_id, user_id)
 				DO UPDATE SET my_role = $3`,
-		mapId, userId, role,
+		internalId, userId, role,
 	)
 	if err != nil {
 		return err

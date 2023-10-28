@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/danielzfranklin/plantopo/api_server/internal/maps"
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -92,7 +91,7 @@ func (s *Services) mapHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type mapMetaDto struct {
-	Id                    uuid.UUID `json:"id"`
+	Id                    string    `json:"id"`
 	Name                  string    `json:"name"`
 	CreatedAt             time.Time `json:"createdAt"`
 	CurrentSessionMayEdit bool      `json:"currentSessionMayEdit"`
