@@ -66,7 +66,7 @@ func (s *impl) Get(ctx context.Context, id uuid.UUID) (types.MapMeta, error) {
 		id,
 	).Scan(&meta.Id, &meta.Name, &meta.CreatedAt)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return types.MapMeta{}, ErrMapNotFound
 		}
 		return types.MapMeta{}, err
@@ -80,7 +80,12 @@ func (s *impl) Create(ctx context.Context, owner uuid.UUID) (types.MapMeta, erro
 		s.l.DPanic("failed to begin transaction", zap.Error(err))
 		return types.MapMeta{}, err
 	}
-	defer tx.Rollback(ctx)
+	defer func(tx pgx.Tx, ctx context.Context) {
+		err := tx.Rollback(ctx)
+		if err != nil {
+			s.l.DPanic("failed to rollback transaction", zap.Error(err))
+		}
+	}(tx, ctx)
 
 	var meta types.MapMeta
 	err = s.pg.QueryRow(ctx,
@@ -116,7 +121,7 @@ func (s *impl) Put(ctx context.Context, update MetaUpdateRequest) (types.MapMeta
 		update.Id, update.Name,
 	).Scan(&meta.Id, &meta.Name, &meta.CreatedAt)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return types.MapMeta{}, ErrMapNotFound
 		}
 		return types.MapMeta{}, err
@@ -199,16 +204,16 @@ func (s *impl) ListSharedWith(ctx context.Context, userId uuid.UUID) ([]types.Ma
 	return list, nil
 }
 
-func (r *impl) IsAuthorized(
+func (s *impl) IsAuthorized(
 	ctx context.Context, req AuthzRequest, action Action,
 ) bool {
-	role, err := r.getRole(ctx, req)
+	role, err := s.getRole(ctx, req)
 	if err != nil {
-		r.l.DPanic("failed to get role", zap.Error(err))
+		s.l.DPanic("failed to get role", zap.Error(err))
 		return false
 	}
 	if role == "" {
-		r.l.Debug("no role",
+		s.l.Debug("no role",
 			zap.String("mapId", req.MapId.String()),
 			zap.String("userId", req.UserId.String()))
 		return false
@@ -225,18 +230,18 @@ func (r *impl) IsAuthorized(
 	case ActionDelete:
 		return role == RoleOwner
 	default:
-		r.l.Info("unknown action", zap.String("action", string(action)))
+		s.l.Info("unknown action", zap.String("action", string(action)))
 		return false
 	}
 }
 
-func (r *impl) CheckOpen(ctx context.Context, req AuthzRequest) (*OpenAuthz, error) {
-	role, err := r.getRole(ctx, req)
+func (s *impl) CheckOpen(ctx context.Context, req AuthzRequest) (*OpenAuthz, error) {
+	role, err := s.getRole(ctx, req)
 	if err != nil {
 		return nil, err
 	} else if role == "" {
 		var exists bool
-		err := r.pg.QueryRow(ctx,
+		err := s.pg.QueryRow(ctx,
 			`SELECT EXISTS(
 				SELECT 1 FROM maps
 					WHERE id = $1 AND deleted_at IS NULL)`,
@@ -260,15 +265,15 @@ func (r *impl) CheckOpen(ctx context.Context, req AuthzRequest) (*OpenAuthz, err
 	return authz, nil
 }
 
-func (r *impl) getRole(ctx context.Context, req AuthzRequest) (Role, error) {
+func (s *impl) getRole(ctx context.Context, req AuthzRequest) (Role, error) {
 	if req.MapId == uuid.Nil {
-		r.l.Info("IsAuthorized called with null mapId")
+		s.l.Info("IsAuthorized called with null mapId")
 		return "", nil
 	}
 
 	var row pgx.Row
 	if req.UserId == uuid.Nil {
-		row = r.pg.QueryRow(ctx,
+		row = s.pg.QueryRow(ctx,
 			`SELECT general_access_role FROM maps
 				WHERE id = $1
 					AND general_access_level = 'public'
@@ -276,7 +281,7 @@ func (r *impl) getRole(ctx context.Context, req AuthzRequest) (Role, error) {
 			req.MapId,
 		)
 	} else {
-		row = r.pg.QueryRow(ctx,
+		row = s.pg.QueryRow(ctx,
 			`SELECT map_roles.my_role FROM map_roles
 				INNER JOIN maps ON maps.id = map_roles.map_id
 				WHERE map_roles.map_id = $1 AND map_roles.user_id = $2
@@ -288,7 +293,7 @@ func (r *impl) getRole(ctx context.Context, req AuthzRequest) (Role, error) {
 	var role Role
 	err := row.Scan(&role)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return "", nil
 		} else {
 			return "", err
@@ -297,7 +302,7 @@ func (r *impl) getRole(ctx context.Context, req AuthzRequest) (Role, error) {
 	return role, nil
 }
 
-func (r *impl) Access(ctx context.Context, mapId uuid.UUID) (*Access, error) {
+func (s *impl) Access(ctx context.Context, mapId uuid.UUID) (*Access, error) {
 	out := &Access{
 		MapId:          mapId,
 		UserAccess:     make([]UserAccessEntry, 0),
@@ -305,7 +310,7 @@ func (r *impl) Access(ctx context.Context, mapId uuid.UUID) (*Access, error) {
 	}
 
 	var deletedAt null.Time
-	err := r.pg.QueryRow(ctx,
+	err := s.pg.QueryRow(ctx,
 		`SELECT deleted_at, general_access_level, general_access_role FROM maps
 			WHERE id = $1`,
 		mapId,
@@ -317,7 +322,7 @@ func (r *impl) Access(ctx context.Context, mapId uuid.UUID) (*Access, error) {
 		return nil, ErrMapNotFound
 	}
 
-	roles, err := r.listRoles(ctx, mapId)
+	roles, err := s.listRoles(ctx, mapId)
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +331,7 @@ func (r *impl) Access(ctx context.Context, mapId uuid.UUID) (*Access, error) {
 	for _, role := range roles {
 		roleUsersIds = append(roleUsersIds, role.userId)
 	}
-	roleUsers, err := r.users.GetEach(ctx, roleUsersIds)
+	roleUsers, err := s.users.GetEach(ctx, roleUsersIds)
 	if err != nil {
 		return nil, err
 	}
@@ -334,11 +339,11 @@ func (r *impl) Access(ctx context.Context, mapId uuid.UUID) (*Access, error) {
 	for _, roleEntry := range roles {
 		user := roleUsers[roleEntry.userId]
 		if roleEntry.userId != user.Id {
-			r.l.Panic("roleEntry.userId != user.Id")
+			s.l.Panic("roleEntry.userId != user.Id")
 		}
 		if roleEntry.role == RoleOwner {
 			if out.Owner != nil {
-				r.l.Panic("multiple owners")
+				s.l.Panic("multiple owners")
 			}
 			out.Owner = &user
 		} else {
@@ -349,10 +354,10 @@ func (r *impl) Access(ctx context.Context, mapId uuid.UUID) (*Access, error) {
 		}
 	}
 
-	rows, err := r.pg.Query(ctx,
+	rows, err := s.pg.Query(ctx,
 		`SELECT email, my_role FROM pending_map_invites
-			WHERE map_id = $1
-			ORDER BY created_at ASC`,
+					WHERE map_id = $1
+					ORDER BY created_at`,
 		mapId)
 	if err != nil {
 		return nil, err
@@ -360,30 +365,38 @@ func (r *impl) Access(ctx context.Context, mapId uuid.UUID) (*Access, error) {
 	defer rows.Close()
 	for rows.Next() {
 		invite := PendingInvite{}
-		rows.Scan(&invite.Email, &invite.Role)
+		err := rows.Scan(&invite.Email, &invite.Role)
+		if err != nil {
+			return nil, err
+		}
 		out.PendingInvites = append(out.PendingInvites, invite)
 	}
 
 	return out, nil
 }
 
-func (r *impl) PutAccess(ctx context.Context, from *types.User, req PutAccessRequest) error {
+func (s *impl) PutAccess(ctx context.Context, from *types.User, req PutAccessRequest) error {
 	if req.MapId == uuid.Nil {
 		return errors.New("mapId is required")
 	}
 
-	tx, err := r.pg.Begin(ctx)
+	tx, err := s.pg.Begin(ctx)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func(tx pgx.Tx, ctx context.Context) {
+		err := tx.Rollback(ctx)
+		if err != nil {
+			s.l.DPanic("failed to rollback transaction", zap.Error(err))
+		}
+	}(tx, ctx)
 
 	var deletedAt null.Time
 	err = tx.QueryRow(ctx, `SELECT deleted_at FROM maps
 		WHERE id = $1
 		FOR UPDATE`, req.MapId).Scan(&deletedAt)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrMapNotFound
 		}
 		return err
@@ -399,7 +412,7 @@ func (r *impl) PutAccess(ctx context.Context, from *types.User, req PutAccessReq
 			return err
 		}
 
-		grant(ctx, tx, req.MapId, *req.Owner, RoleOwner)
+		err = grant(ctx, tx, req.MapId, *req.Owner, RoleOwner)
 		if err != nil {
 			return err
 		}
@@ -453,14 +466,14 @@ func (r *impl) PutAccess(ctx context.Context, from *types.User, req PutAccessReq
 	}
 
 	if len(req.Invite) > 0 {
-		meta, err := r.Get(ctx, req.MapId)
+		meta, err := s.Get(ctx, req.MapId)
 		if err != nil {
 			return err
 		}
 
 		for _, invite := range req.Invite {
 			invite.MapId = req.MapId
-			err := r.invite(ctx, from, meta, invite)
+			err := s.invite(ctx, from, meta, invite)
 			if err != nil {
 				return fmt.Errorf("failed to invite: %w", err)
 			}
@@ -475,11 +488,11 @@ type roleEntry struct {
 	role   Role
 }
 
-func (r *impl) listRoles(ctx context.Context, mapId uuid.UUID) ([]roleEntry, error) {
-	rows, err := r.pg.Query(ctx,
+func (s *impl) listRoles(ctx context.Context, mapId uuid.UUID) ([]roleEntry, error) {
+	rows, err := s.pg.Query(ctx,
 		`SELECT user_id, my_role FROM map_roles
-			WHERE map_id = $1
-			ORDER BY created_at ASC`,
+					WHERE map_id = $1
+					ORDER BY created_at`,
 		mapId,
 	)
 	if err != nil {
@@ -500,30 +513,30 @@ func (r *impl) listRoles(ctx context.Context, mapId uuid.UUID) ([]roleEntry, err
 	return roles, nil
 }
 
-func (r *impl) Invite(ctx context.Context, from *types.User, req InviteRequest) error {
-	meta, err := r.Get(ctx, req.MapId)
+func (s *impl) Invite(ctx context.Context, from *types.User, req InviteRequest) error {
+	meta, err := s.Get(ctx, req.MapId)
 	if err != nil {
 		return err
 	}
-	return r.invite(ctx, from, meta, req)
+	return s.invite(ctx, from, meta, req)
 }
 
-func (r *impl) invite(
+func (s *impl) invite(
 	ctx context.Context,
 	from *types.User,
 	meta types.MapMeta,
 	req InviteRequest,
 ) error {
 	if err := req.Validate(); err != nil {
-		r.l.Info("invalid invite request", zap.Error(err))
+		s.l.Info("invalid invite request", zap.Error(err))
 		return err
 	}
 
 	var deletedAt null.Time
-	err := r.pg.QueryRow(ctx, `SELECT deleted_at FROM maps
+	err := s.pg.QueryRow(ctx, `SELECT deleted_at FROM maps
 		WHERE id = $1`, req.MapId).Scan(&deletedAt)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return ErrMapNotFound
 		}
 		return err
@@ -531,24 +544,27 @@ func (r *impl) invite(
 		return ErrMapNotFound
 	}
 
-	to, err := r.users.GetByEmail(ctx, req.Email)
-	if err != nil && err != users.ErrNotFound {
+	to, err := s.users.GetByEmail(ctx, req.Email)
+	if err != nil && !errors.Is(err, users.ErrNotFound) {
 		return err
 	}
 
-	if err == users.ErrNotFound {
-		r.l.Info("inviting new user to map",
+	if errors.Is(err, users.ErrNotFound) {
+		s.l.Info("inviting new user to map",
 			zap.String("mapId", req.MapId.String()))
 
 		// Always notify new users
-		r.mailer.SendInvite(mailer.InviteRequest{
+		err := s.mailer.SendInvite(mailer.InviteRequest{
 			From:    from,
 			ToEmail: req.Email,
 			Map:     &meta,
 			Message: req.NotifyMessage,
 		})
+		if err != nil {
+			return err
+		}
 
-		_, err = r.pg.Exec(ctx,
+		_, err = s.pg.Exec(ctx,
 			`INSERT INTO pending_map_invites (map_id, email, my_role)
 				VALUES ($1, $2, $3)
 				ON CONFLICT (map_id, email)
@@ -560,21 +576,24 @@ func (r *impl) invite(
 
 		return nil
 	} else {
-		r.l.Info("inviting existing user to map",
+		s.l.Info("inviting existing user to map",
 			zap.String("mapId", req.MapId.String()))
 
-		err := grant(ctx, r.pg, req.MapId, to.Id, req.Role)
+		err := grant(ctx, s.pg, req.MapId, to.Id, req.Role)
 		if err != nil {
 			return err
 		}
 
 		if req.Notify {
-			r.mailer.SendShareNotification(mailer.ShareNotificationRequest{
+			err := s.mailer.SendShareNotification(mailer.ShareNotificationRequest{
 				From:    from,
 				To:      to,
 				Map:     &meta,
 				Message: req.NotifyMessage,
 			})
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	}
