@@ -6,21 +6,17 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/danielzfranklin/plantopo/api_server/internal/frontend_map_tokens"
-	"github.com/danielzfranklin/plantopo/api_server/internal/server/session"
-	"github.com/danielzfranklin/plantopo/api_server/internal/sync_backends"
-	"net/http"
-	"os"
-	"os/signal"
-	"runtime"
-	"syscall"
-	"time"
-
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	api "github.com/danielzfranklin/plantopo/api/v1"
+	"github.com/danielzfranklin/plantopo/api_server/internal/frontend_map_tokens"
+	"github.com/danielzfranklin/plantopo/api_server/internal/importers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
 	"github.com/danielzfranklin/plantopo/api_server/internal/mailer"
 	"github.com/danielzfranklin/plantopo/api_server/internal/maps"
 	"github.com/danielzfranklin/plantopo/api_server/internal/server/routes"
+	"github.com/danielzfranklin/plantopo/api_server/internal/server/session"
+	"github.com/danielzfranklin/plantopo/api_server/internal/sync_backends"
 	"github.com/danielzfranklin/plantopo/api_server/internal/users"
 	"github.com/danielzfranklin/plantopo/db"
 	"github.com/google/uuid"
@@ -29,6 +25,12 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"net/http"
+	"os"
+	"os/signal"
+	"runtime"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -79,6 +81,11 @@ func main() {
 	l = l.With(zap.String("host", host), zap.String("port", port))
 	l.Infow("starting")
 
+	awsConfig, err := awsconfig.LoadDefaultConfig(ctx)
+	if err != nil {
+		l.Fatalw("error loading aws config", zap.Error(err))
+	}
+
 	mailerConfig := mailer.Config{
 		Sender:                &mailer.LogSender{Logger: l},
 		DeliverabilityChecker: &mailer.NoopDeliverabilityChecker{},
@@ -126,20 +133,35 @@ func main() {
 	}
 	matchmaker := api.NewMatchmakerClient(matchCC)
 
+	syncBackends := sync_backends.NewProvider(&sync_backends.Config{
+		DialOpts: dialOpts,
+	})
+
+	s3Client := s3.NewFromConfig(awsConfig)
+
+	importer, err := importers.New(&importers.Config{
+		ObjectStore:  importers.NewS3ObjectStore(s3Client),
+		Matchmaker:   matchmaker,
+		SyncBackends: syncBackends,
+		Db:           pg,
+	})
+	if err != nil {
+		l.Fatalw("error creating importer", zap.Error(err))
+	}
+
 	router := routes.New(&routes.Services{
-		Pg:         pg,
-		Users:      usersService,
-		Maps:       mapsService,
-		Mailer:     mailerService,
-		Matchmaker: matchmaker,
-		SyncBackends: sync_backends.NewProvider(&sync_backends.Config{
-			DialOpts: dialOpts,
-		}),
+		Pg:           pg,
+		Users:        usersService,
+		Maps:         mapsService,
+		Mailer:       mailerService,
+		Matchmaker:   matchmaker,
+		SyncBackends: syncBackends,
 		SessionManager: session.NewManager(&session.Config{
 			Users:   usersService,
 			AuthKey: sessionAuthKey,
 		}),
 		FrontendMapTokens: frontend_map_tokens.MustFromRaw(frontendMapTokens),
+		MapImporter:       importer,
 	})
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),

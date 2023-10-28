@@ -18,19 +18,21 @@ const (
 )
 
 type Feature struct {
-	Id            string
-	ParentState   State
-	Parent        string
-	IdxState      State
-	Idx           string
-	GeometryState State
-	Geometry      Geometry
-	NameState     State
-	Name          string
-	ColorState    State
-	Color         string
-	HiddenState   State
-	Hidden        bool
+	Id                    string
+	ParentState           State
+	Parent                string
+	IdxState              State
+	Idx                   string
+	GeometryState         State
+	Geometry              Geometry
+	NameState             State
+	Name                  string
+	ColorState            State
+	Color                 string
+	HiddenState           State
+	Hidden                bool
+	ImportedFromFileState State
+	ImportedFromFile      string
 }
 
 func (t *Feature) Merge(other Feature) {
@@ -61,6 +63,10 @@ func (t *Feature) Merge(other Feature) {
 		t.HiddenState = other.HiddenState
 		t.Hidden = other.Hidden
 	}
+	if other.ImportedFromFileState != Unspecified {
+		t.ImportedFromFileState = other.ImportedFromFileState
+		t.ImportedFromFile = other.ImportedFromFile
+	}
 }
 
 func (t Feature) ShallowClone() Feature {
@@ -78,6 +84,8 @@ func (t Feature) ShallowClone() Feature {
 	out.Color = t.Color
 	out.HiddenState = t.HiddenState
 	out.Hidden = t.Hidden
+	out.ImportedFromFileState = t.ImportedFromFileState
+	out.ImportedFromFile = t.ImportedFromFile
 	return out
 }
 
@@ -182,6 +190,19 @@ func (t *Feature) UnmarshalJSON(data []byte) error {
 						return err
 					}
 				}
+			case "importedFromFile":
+				var raw json.RawMessage
+				if err := dec.Decode(&raw); err != nil {
+					return err
+				}
+				if bytes.Equal(raw, []byte("null")) {
+					t.ImportedFromFileState = Unset
+				} else {
+					t.ImportedFromFileState = Set
+					if err := json.Unmarshal(raw, &t.ImportedFromFile); err != nil {
+						return err
+					}
+				}
 			}
 		}
 	}
@@ -272,6 +293,19 @@ func (t Feature) MarshalJSON() ([]byte, error) {
 			return nil, err
 		}
 		sb.WriteString(",\"hidden\":")
+		sb.Write(value)
+	case Unspecified:
+	}
+
+	switch t.ImportedFromFileState {
+	case Unset:
+		sb.WriteString(",\"importedFromFile\":null")
+	case Set:
+		value, err := json.Marshal(t.ImportedFromFile)
+		if err != nil {
+			return nil, err
+		}
+		sb.WriteString(",\"importedFromFile\":")
 		sb.Write(value)
 	case Unspecified:
 	}
