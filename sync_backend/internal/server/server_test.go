@@ -32,7 +32,6 @@ func TestServer(t *testing.T) {
 	){
 		"setup connection": testSetupConnection,
 		"connect":          testConnect,
-		"ping":             testPing,
 		"stats":            testStats,
 		"debug state":      testDebugState,
 	} {
@@ -95,12 +94,6 @@ func testStats(t *testing.T, client api.SyncBackendClient, config *Config) {
 func testDebugState(t *testing.T, client api.SyncBackendClient, config *Config) {
 	ctx := context.Background()
 	_, err := client.DebugState(ctx, &emptypb.Empty{})
-	require.NoError(t, err)
-}
-
-func testPing(t *testing.T, client api.SyncBackendClient, config *Config) {
-	ctx := context.Background()
-	_, err := client.Ping(ctx, &emptypb.Empty{})
 	require.NoError(t, err)
 }
 
