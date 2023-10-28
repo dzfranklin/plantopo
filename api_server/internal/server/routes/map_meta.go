@@ -18,23 +18,23 @@ func (s *Services) mapsHandler(w http.ResponseWriter, r *http.Request) {
 	case "DELETE":
 		s.deleteMapsHandler(w, r)
 	default:
-		writeMethodNotAllowed(w)
+		writeMethodNotAllowed(r, w)
 	}
 }
 
 func (s *Services) postMapsHandler(w http.ResponseWriter, r *http.Request) {
 	sess, err := s.SessionManager.Get(r)
 	if err != nil {
-		writeError(w, err)
+		writeError(r, w, err)
 		return
 	} else if sess == nil {
-		writeUnauthorized(w)
+		writeBadRequest(r, w)
 		return
 	}
 
 	meta, err := s.Maps.Create(r.Context(), sess.UserId)
 	if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 
@@ -48,16 +48,16 @@ type deleteRequest struct {
 func (s *Services) deleteMapsHandler(w http.ResponseWriter, r *http.Request) {
 	sess, err := s.SessionManager.Get(r)
 	if err != nil {
-		writeError(w, err)
+		writeError(r, w, err)
 		return
 	} else if sess == nil {
-		writeUnauthorized(w)
+		writeBadRequest(r, w)
 		return
 	}
 
 	var req deleteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 
@@ -66,13 +66,13 @@ func (s *Services) deleteMapsHandler(w http.ResponseWriter, r *http.Request) {
 			maps.AuthzRequest{UserId: sess.UserId, MapId: id},
 			maps.ActionDelete,
 		) {
-			writeForbidden(w)
+			writeForbidden(r, w)
 			return
 		}
 	}
 
 	if err := s.Maps.Delete(r.Context(), req.List); err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 
@@ -86,7 +86,7 @@ func (s *Services) mapHandler(w http.ResponseWriter, r *http.Request) {
 	case "PUT":
 		s.putMapHandler(w, r)
 	default:
-		writeMethodNotAllowed(w)
+		writeMethodNotAllowed(r, w)
 	}
 }
 
@@ -100,7 +100,7 @@ type mapMetaDto struct {
 func (s *Services) getMapHandler(w http.ResponseWriter, r *http.Request) {
 	sess, err := s.SessionManager.Get(r)
 	if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 
@@ -109,10 +109,10 @@ func (s *Services) getMapHandler(w http.ResponseWriter, r *http.Request) {
 	// Fetch before authorizing so we can return a 404 if the map doesn't exist.
 	data, err := s.Maps.Get(r.Context(), mapId)
 	if errors.Is(err, maps.ErrMapNotFound) {
-		writeNotFound(w)
+		writeNotFound(r, w)
 		return
 	} else if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 
@@ -122,10 +122,10 @@ func (s *Services) getMapHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !s.Maps.IsAuthorized(r.Context(), authzReq, maps.ActionView) {
 		if sess == nil {
-			writeUnauthorized(w)
+			writeBadRequest(r, w)
 			return
 		} else {
-			writeForbidden(w)
+			writeForbidden(r, w)
 			return
 		}
 	}
@@ -143,10 +143,10 @@ func (s *Services) getMapHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Services) putMapHandler(w http.ResponseWriter, r *http.Request) {
 	sess, err := s.SessionManager.Get(r)
 	if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	} else if sess == nil {
-		writeUnauthorized(w)
+		writeBadRequest(r, w)
 		return
 	}
 
@@ -154,7 +154,7 @@ func (s *Services) putMapHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req maps.MetaUpdateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 	req.Id = mapId
@@ -163,16 +163,16 @@ func (s *Services) putMapHandler(w http.ResponseWriter, r *http.Request) {
 		maps.AuthzRequest{UserId: sess.UserId, MapId: mapId},
 		maps.ActionEdit,
 	) {
-		writeForbidden(w)
+		writeForbidden(r, w)
 		return
 	}
 
 	data, err := s.Maps.Put(r.Context(), req)
 	if errors.Is(err, maps.ErrMapNotFound) {
-		writeNotFound(w)
+		writeNotFound(r, w)
 		return
 	} else if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 
@@ -191,17 +191,17 @@ func (s *Services) mapAccessHandler(w http.ResponseWriter, r *http.Request) {
 	case "PUT":
 		s.putMapAccessHandler(w, r)
 	default:
-		writeMethodNotAllowed(w)
+		writeMethodNotAllowed(r, w)
 	}
 }
 
 func (s *Services) getMapAccessHandler(w http.ResponseWriter, r *http.Request) {
 	sess, err := s.SessionManager.Get(r)
 	if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	} else if sess == nil {
-		writeUnauthorized(w)
+		writeBadRequest(r, w)
 		return
 	}
 
@@ -211,13 +211,13 @@ func (s *Services) getMapAccessHandler(w http.ResponseWriter, r *http.Request) {
 		maps.AuthzRequest{UserId: sess.UserId, MapId: mapId},
 		maps.ActionViewAccess,
 	) {
-		writeForbidden(w)
+		writeForbidden(r, w)
 		return
 	}
 
 	value, err := s.Maps.Access(r.Context(), mapId)
 	if errors.Is(err, maps.ErrMapNotFound) {
-		writeNotFound(w)
+		writeNotFound(r, w)
 		return
 	}
 
@@ -227,16 +227,16 @@ func (s *Services) getMapAccessHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Services) putMapAccessHandler(w http.ResponseWriter, r *http.Request) {
 	sess, err := s.SessionManager.Get(r)
 	if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	} else if sess == nil {
-		writeUnauthorized(w)
+		writeBadRequest(r, w)
 		return
 	}
 
 	user, err := sess.GetUser()
 	if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 
@@ -244,7 +244,7 @@ func (s *Services) putMapAccessHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req maps.PutAccessRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 	req.MapId = mapId
@@ -253,19 +253,19 @@ func (s *Services) putMapAccessHandler(w http.ResponseWriter, r *http.Request) {
 		maps.AuthzRequest{UserId: sess.UserId, MapId: mapId},
 		maps.ActionShare,
 	) {
-		writeForbidden(w)
+		writeForbidden(r, w)
 		return
 	}
 
 	if err := s.Maps.PutAccess(r.Context(), user, req); err != nil {
 		if errors.Is(err, maps.ErrMapNotFound) {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusNotFound,
 				Message: "map not found",
 			})
 			return
 		} else {
-			writeInternalError(w, err)
+			writeInternalError(r, w, err)
 			return
 		}
 	}
@@ -274,10 +274,10 @@ func (s *Services) putMapAccessHandler(w http.ResponseWriter, r *http.Request) {
 	updatedValue, err := s.Maps.Access(r.Context(), mapId)
 	fmt.Println("called access")
 	if errors.Is(err, maps.ErrMapNotFound) {
-		writeNotFound(w)
+		writeNotFound(r, w)
 		return
 	} else if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 

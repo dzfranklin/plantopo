@@ -11,12 +11,12 @@ import (
 
 func (s *Services) accountImageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		writeMethodNotAllowed(w)
+		writeMethodNotAllowed(r, w)
 		return
 	}
 	id := mux.Vars(r)["id"]
 	if id == "" {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 
