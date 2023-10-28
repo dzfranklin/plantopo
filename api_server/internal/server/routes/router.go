@@ -60,7 +60,7 @@ func New(s *Services) http.Handler {
 	r.HandleFunc("/api/v1/account/password-reset/request", s.requestPasswordResetHandler)
 	r.HandleFunc("/api/v1/account/password-reset/check", s.checkPasswordResetHandler)
 	r.HandleFunc("/api/v1/account/password-reset/complete", s.completePasswordResetHandler)
-	r.HandleFunc("/api/v1/account/{id:[a-z0-9-]+}.png", s.accountImageHandler)
+	r.HandleFunc("/api/v1/account/profile-png/{id:[a-z0-9-]+}.png", s.accountImageHandler)
 
 	r.HandleFunc("/api/v1/map/tokens", s.mapTokensHandler)
 
