@@ -40,12 +40,7 @@ var upgrader = websocket.Upgrader{
 }
 
 func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) {
-	mapId, err := uuid.Parse(mux.Vars(r)["id"])
-	if err != nil {
-		writeBadRequest(w)
-		return
-	}
-
+	mapId := mux.Vars(r)["id"]
 	clientId := r.URL.Query().Get("clientId")
 	if clientId == "" {
 		writeBadRequest(w)
@@ -120,7 +115,7 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 
 	l.Info("setting up connection with matchmaker")
 	resp, err := s.Matchmaker.SetupConnection(r.Context(), &api.MatchmakerSetupConnectionRequest{
-		MapId: mapId.String(),
+		MapId: mapId,
 	})
 	if err != nil {
 		writeInternalError(w, err)
@@ -147,7 +142,7 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 	err = b.Send(&api.SyncBackendIncomingMessage{
 		Msg: &api.SyncBackendIncomingMessage_Connect{
 			Connect: &api.SyncBackendConnectRequest{
-				MapId:        mapId.String(),
+				MapId:        mapId,
 				Token:        resp.Token,
 				ConnectionId: clientId,
 			},
