@@ -42,5 +42,5 @@ func (s *Services) accountRegisterHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 	logger.FromR(r).Sugar().Info("created session for newly registered user", "userId", user.Id)
-	writeData(w, sessionReply{user})
+	writeData(r, w, sessionReply{user})
 }

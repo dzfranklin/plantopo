@@ -56,7 +56,7 @@ func (s *Services) uploadImportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeData(w, status)
+	writeData(r, w, status)
 }
 
 func (s *Services) startImportHandler(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +100,7 @@ func (s *Services) startImportHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	writeData(w, status)
+	writeData(r, w, status)
 }
 
 func (s *Services) checkImportHandler(w http.ResponseWriter, r *http.Request) {
@@ -134,5 +134,5 @@ func (s *Services) checkImportHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeData(w, status)
+	writeData(r, w, status)
 }

@@ -41,7 +41,7 @@ func (s *Services) requestPasswordResetHandler(w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	writeData(w, nil)
+	writeData(r, w, nil)
 }
 
 type checkPasswordResetRequest struct {
@@ -94,7 +94,7 @@ func (s *Services) checkPasswordResetHandler(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	writeData(w, checkPasswordResetReply{User: user})
+	writeData(r, w, checkPasswordResetReply{User: user})
 }
 
 type completePasswordResetRequest struct {
@@ -157,5 +157,5 @@ func (s *Services) completePasswordResetHandler(w http.ResponseWriter, r *http.R
 		writeInternalError(r, w, err)
 		return
 	}
-	writeData(w, sessionReply{user})
+	writeData(r, w, sessionReply{user})
 }

@@ -32,7 +32,7 @@ func (s *Services) mapListOwnedByMeHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	writeData(w, listReply{list})
+	writeData(r, w, listReply{list})
 }
 
 func (s *Services) mapListSharedWithMeHandler(w http.ResponseWriter, r *http.Request) {
@@ -57,5 +57,5 @@ func (s *Services) mapListSharedWithMeHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	writeData(w, listReply{list})
+	writeData(r, w, listReply{list})
 }
