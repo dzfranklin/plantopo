@@ -6,7 +6,7 @@ import (
 
 func (s *Services) mapTokensHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		writeMethodNotAllowed(w)
+		writeMethodNotAllowed(r, w)
 		return
 	}
 	writeData(w, s.FrontendMapTokens)

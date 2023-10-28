@@ -15,28 +15,28 @@ type requestPasswordResetRequest struct {
 
 func (s *Services) requestPasswordResetHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		writeMethodNotAllowed(w)
+		writeMethodNotAllowed(r, w)
 		return
 	}
 
 	var req requestPasswordResetRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 
 	err = s.Users.RequestPasswordReset(req.Email)
 	if err != nil {
 		if errors.Is(err, users.ErrNotFound) {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusBadRequest,
 				Reason:  "emailInvalid",
 				Message: "not found",
 			})
 			return
 		} else {
-			writeInternalError(w, err)
+			writeInternalError(r, w, err)
 			return
 		}
 	}
@@ -54,42 +54,42 @@ type checkPasswordResetReply struct {
 
 func (s *Services) checkPasswordResetHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		writeMethodNotAllowed(w)
+		writeMethodNotAllowed(r, w)
 		return
 	}
 
 	var req checkPasswordResetRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 
 	user, err := s.Users.CheckPasswordReset(r.Context(), req.Token)
 	if err != nil {
 		if errors.Is(err, users.ErrNotFound) {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusBadRequest,
 				Reason:  "tokenInvalid",
 				Message: "url invalid",
 			})
 			return
 		} else if errors.Is(err, users.ErrTokenUsed) {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusBadRequest,
 				Reason:  "tokenUsed",
 				Message: "url already used",
 			})
 			return
 		} else if errors.Is(err, users.ErrTokenExpired) {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusBadRequest,
 				Reason:  "tokenExpired",
 				Message: "url expired",
 			})
 			return
 		} else {
-			writeInternalError(w, err)
+			writeInternalError(r, w, err)
 			return
 		}
 	}
@@ -104,14 +104,14 @@ type completePasswordResetRequest struct {
 
 func (s *Services) completePasswordResetHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		writeMethodNotAllowed(w)
+		writeMethodNotAllowed(r, w)
 		return
 	}
 
 	var req completePasswordResetRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 
@@ -119,42 +119,42 @@ func (s *Services) completePasswordResetHandler(w http.ResponseWriter, r *http.R
 	if err != nil {
 		var errPasswordResetIssue *users.ErrPasswordResetIssue
 		if errors.As(err, &errPasswordResetIssue) {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusBadRequest,
 				Reason:  "fieldError",
 				Details: errPasswordResetIssue,
 			})
 			return
 		} else if errors.Is(err, users.ErrNotFound) {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusBadRequest,
 				Reason:  "tokenInvalid",
 				Message: "url invalid",
 			})
 			return
 		} else if errors.Is(err, users.ErrTokenUsed) {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusBadRequest,
 				Reason:  "tokenUsed",
 				Message: "url already used",
 			})
 			return
 		} else if errors.Is(err, users.ErrTokenExpired) {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusBadRequest,
 				Reason:  "tokenExpired",
 				Message: "url expired",
 			})
 			return
 		} else {
-			writeInternalError(w, err)
+			writeInternalError(r, w, err)
 			return
 		}
 	}
 
 	err = s.SessionManager.Create(r, w, user.Id)
 	if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 	writeData(w, sessionReply{user})

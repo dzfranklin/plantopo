@@ -16,7 +16,7 @@ type importRequest struct {
 
 func (s *Services) uploadImportHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		writeMethodNotAllowed(w)
+		writeMethodNotAllowed(r, w)
 		return
 	}
 
@@ -24,7 +24,7 @@ func (s *Services) uploadImportHandler(w http.ResponseWriter, r *http.Request) {
 
 	sess, err := s.SessionManager.Get(r)
 	if err != nil {
-		writeError(w, err)
+		writeError(r, w, err)
 		return
 	}
 	var userId uuid.UUID
@@ -36,23 +36,23 @@ func (s *Services) uploadImportHandler(w http.ResponseWriter, r *http.Request) {
 		maps.AuthzRequest{UserId: userId, MapId: mapId},
 		maps.ActionEdit,
 	) {
-		writeForbidden(w)
+		writeForbidden(r, w)
 		return
 	}
 	var req importRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 
 	if req.Format != "gpx" {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 
 	status, err := s.MapImporter.CreateImport(r.Context(), mapId, req.Format)
 	if err != nil {
-		writeError(w, err)
+		writeError(r, w, err)
 		return
 	}
 
@@ -61,42 +61,42 @@ func (s *Services) uploadImportHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Services) startImportHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		writeMethodNotAllowed(w)
+		writeMethodNotAllowed(r, w)
 		return
 	}
 
 	vars := mux.Vars(r)
 	mapId, err := uuid.Parse(vars["mapId"])
 	if err != nil {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 	importId, ok := vars["importId"]
 	if !ok {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 
 	status, err := s.MapImporter.CheckImport(r.Context(), importId)
 	if err != nil {
 		if errors.Is(err, importers.ErrNotFound) {
-			writeNotFound(w)
+			writeNotFound(r, w)
 		} else {
-			writeError(w, err)
+			writeError(r, w, err)
 		}
 		return
 	}
 	if status.MapId != mapId {
-		writeNotFound(w)
+		writeNotFound(r, w)
 		return
 	}
 
 	status, err = s.MapImporter.StartImport(importId)
 	if err != nil {
 		if errors.Is(err, importers.ErrNotFound) {
-			writeNotFound(w)
+			writeNotFound(r, w)
 		} else {
-			writeError(w, err)
+			writeError(r, w, err)
 		}
 		return
 	}
@@ -105,32 +105,32 @@ func (s *Services) startImportHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Services) checkImportHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		writeMethodNotAllowed(w)
+		writeMethodNotAllowed(r, w)
 		return
 	}
 	vars := mux.Vars(r)
 	mapId, err := uuid.Parse(vars["mapId"])
 	if err != nil {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 	importId, ok := vars["importId"]
 	if !ok {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 
 	status, err := s.MapImporter.CheckImport(r.Context(), importId)
 	if err != nil {
 		if errors.Is(err, importers.ErrNotFound) {
-			writeNotFound(w)
+			writeNotFound(r, w)
 		} else {
-			writeError(w, err)
+			writeError(r, w, err)
 		}
 		return
 	}
 	if status.MapId != mapId {
-		writeNotFound(w)
+		writeNotFound(r, w)
 		return
 	}
 

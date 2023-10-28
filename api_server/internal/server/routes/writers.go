@@ -3,6 +3,7 @@ package routes
 import (
 	"encoding/json"
 	"errors"
+	"github.com/danielzfranklin/plantopo/api_server/internal/rid"
 	"net/http"
 
 	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
@@ -38,7 +39,7 @@ func writeData(w http.ResponseWriter, value interface{}) {
 	}
 }
 
-func writeError(w http.ResponseWriter, err error) {
+func writeError(r *http.Request, w http.ResponseWriter, err error) {
 	var errReply *ErrorReply
 	if !errors.As(err, &errReply) {
 		errReply = &ErrorReply{
@@ -46,7 +47,9 @@ func writeError(w http.ResponseWriter, err error) {
 			Message: "internal server error",
 		}
 	}
+	requestId := rid.FromCtx(r.Context())
 	logger.Get().Info("writing error response",
+		zap.String("rid", requestId.String()),
 		zap.Int("code", errReply.Code),
 		zap.String("reason", errReply.Reason),
 		zap.Any("error", err),
@@ -60,44 +63,45 @@ func writeError(w http.ResponseWriter, err error) {
 	}
 }
 
-func writeMethodNotAllowed(w http.ResponseWriter) {
-	writeError(w, &ErrorReply{
+func writeMethodNotAllowed(r *http.Request, w http.ResponseWriter) {
+	writeError(r, w, &ErrorReply{
 		Code:    http.StatusMethodNotAllowed,
 		Message: "method not allowed",
 	})
 }
 
-func writeBadRequest(w http.ResponseWriter) {
-	writeError(w, &ErrorReply{
+func writeBadRequest(r *http.Request, w http.ResponseWriter) {
+	writeError(r, w, &ErrorReply{
 		Code:    http.StatusBadRequest,
 		Message: "bad request",
 	})
 }
 
-func writeUnauthorized(w http.ResponseWriter) {
-	writeError(w, &ErrorReply{
+func writeUnauthorized(r *http.Request, w http.ResponseWriter) {
+	writeError(r, w, &ErrorReply{
 		Code:    http.StatusUnauthorized,
 		Message: "unauthorized",
 	})
 }
 
-func writeForbidden(w http.ResponseWriter) {
-	writeError(w, &ErrorReply{
+func writeForbidden(r *http.Request, w http.ResponseWriter) {
+	writeError(r, w, &ErrorReply{
 		Code:    http.StatusForbidden,
 		Message: "forbidden",
 	})
 }
 
-func writeNotFound(w http.ResponseWriter) {
-	writeError(w, &ErrorReply{
+func writeNotFound(r *http.Request, w http.ResponseWriter) {
+	writeError(r, w, &ErrorReply{
 		Code:    http.StatusNotFound,
 		Message: "not found",
 	})
 }
 
-func writeInternalError(w http.ResponseWriter, err error) {
-	logger.Get().Warn("writing internal server error", zap.Error(err))
-	writeError(w, &ErrorReply{
+func writeInternalError(r *http.Request, w http.ResponseWriter, err error) {
+	requestId := rid.FromCtx(r.Context())
+	logger.Get().Warn("writing internal server error", zap.Error(err), zap.String("rid", requestId.String()))
+	writeError(r, w, &ErrorReply{
 		Code:    http.StatusInternalServerError,
 		Message: "internal server error",
 	})

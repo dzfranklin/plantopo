@@ -11,13 +11,13 @@ import (
 
 func (s *Services) accountRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
-		writeMethodNotAllowed(w)
+		writeMethodNotAllowed(r, w)
 		return
 	}
 	var req users.RegisterRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 
@@ -25,20 +25,20 @@ func (s *Services) accountRegisterHandler(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		var errRegistrationIssue *users.ErrRegistrationIssue
 		if errors.As(err, &errRegistrationIssue) {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusBadRequest,
 				Reason:  "badField",
 				Details: errRegistrationIssue,
 			})
 			return
 		} else {
-			writeInternalError(w, err)
+			writeInternalError(r, w, err)
 			return
 		}
 	}
 
 	if err := s.SessionManager.Create(r, w, user.Id); err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 	logger.FromR(r).Sugar().Info("created session for newly registered user", "userId", user.Id)

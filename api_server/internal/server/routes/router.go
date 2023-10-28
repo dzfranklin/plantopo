@@ -146,7 +146,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 			}
 		} else {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusForbidden,
 				Message: "origin not allowed",
 			})
@@ -156,7 +156,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	logger.FromCtx(r.Context()).Info("no handler", zap.String("path", r.URL.Path))
-	writeError(w, &ErrorReply{
+	writeError(r, w, &ErrorReply{
 		Code:    http.StatusNotFound,
 		Reason:  "notFound",
 		Message: "no handler",
@@ -168,7 +168,7 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func notAllowedHandler(w http.ResponseWriter, r *http.Request) {
-	writeError(w, &ErrorReply{
+	writeError(r, w, &ErrorReply{
 		Code:    http.StatusMethodNotAllowed,
 		Reason:  "methodNotAllowed",
 		Message: fmt.Sprintf("resource does not permit method %s", r.Method),

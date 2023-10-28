@@ -31,7 +31,7 @@ var upgrader = websocket.Upgrader{
 		return false
 	},
 	Error: func(w http.ResponseWriter, r *http.Request, status int, reason error) {
-		writeError(w, &ErrorReply{
+		writeError(r, w, &ErrorReply{
 			Code:    status,
 			Reason:  "websocketError",
 			Message: reason.Error(),
@@ -43,7 +43,7 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 	mapId := mux.Vars(r)["id"]
 	clientId := r.URL.Query().Get("clientId")
 	if clientId == "" {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 
@@ -56,7 +56,7 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 	// that we couldn't rely on cookies for authentication.
 	sess, err := s.SessionManager.Get(r)
 	if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 	userId := uuid.Nil
@@ -70,28 +70,28 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 	)
 	if err != nil {
 		if errors.Is(err, maps.ErrMapNotFound) {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusNotFound,
 				Reason:  "notFound",
 				Message: "Map does not exist",
 			})
 			return
 		} else {
-			writeInternalError(w, err)
+			writeInternalError(r, w, err)
 			return
 		}
 	}
 
 	if !authz.CanView {
 		if userId == uuid.Nil {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusUnauthorized,
 				Reason:  "unauthorized",
 				Message: "You must be logged in to view this map",
 			})
 			return
 		} else {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusForbidden,
 				Reason:  "forbidden",
 				Message: "You do not have permission to view this map",
@@ -107,7 +107,7 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 		trustedAware.UserId = &userId
 		user, err := s.Users.Get(r.Context(), userId)
 		if err != nil {
-			writeInternalError(w, err)
+			writeInternalError(r, w, err)
 			return
 		}
 		trustedAware.Name = user.FullName
@@ -118,7 +118,7 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 		MapId: mapId,
 	})
 	if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 	l = l.With("backend", resp.Backend)
@@ -126,14 +126,14 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 	l.Info("connecting to backend")
 	bClient, err := s.SyncBackends.Dial(resp.Backend)
 	if err != nil {
-		writeInternalError(w,
+		writeInternalError(r, w,
 			fmt.Errorf("failed to dial backend (%s): %w", resp.Backend, err))
 		return
 	}
 	bCtx, cancelB := context.WithCancel(context.Background())
 	b, err := bClient.Connect(bCtx)
 	if err != nil {
-		writeInternalError(w,
+		writeInternalError(r, w,
 			fmt.Errorf("failed to connect to backend %s: %s", resp.Backend, err))
 		cancelB()
 		return
@@ -149,7 +149,7 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 		},
 	})
 	if err != nil {
-		writeInternalError(w,
+		writeInternalError(r, w,
 			fmt.Errorf("failed to send connect to backend %s: %s", resp.Backend, err))
 		cancelB()
 		return

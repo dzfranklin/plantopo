@@ -20,7 +20,7 @@ func (s *Services) sessionHandler(w http.ResponseWriter, r *http.Request) {
 	case "DELETE":
 		s.deleteSessionHandler(w, r)
 	default:
-		writeMethodNotAllowed(w)
+		writeMethodNotAllowed(r, w)
 	}
 }
 
@@ -32,7 +32,7 @@ func (s *Services) getSessionHandler(w http.ResponseWriter, r *http.Request) {
 	l := logger.FromR(r)
 	session, err := s.SessionManager.Get(r)
 	if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 
@@ -50,7 +50,7 @@ func (s *Services) getSessionHandler(w http.ResponseWriter, r *http.Request) {
 			writeData(w, sessionReply{})
 			return
 		} else {
-			writeInternalError(w, err)
+			writeInternalError(r, w, err)
 			return
 		}
 	}
@@ -68,7 +68,7 @@ func (s *Services) postSessionHandler(w http.ResponseWriter, r *http.Request) {
 	var req createSessionRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		writeBadRequest(w)
+		writeBadRequest(r, w)
 		return
 	}
 
@@ -80,21 +80,21 @@ func (s *Services) postSessionHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var errLoginIssue *users.ErrLoginIssue
 		if errors.As(err, &errLoginIssue) {
-			writeError(w, &ErrorReply{
+			writeError(r, w, &ErrorReply{
 				Code:    http.StatusUnauthorized,
 				Reason:  "badField",
 				Details: errLoginIssue,
 			})
 			return
 		} else {
-			writeInternalError(w, err)
+			writeInternalError(r, w, err)
 			return
 		}
 	}
 
 	err = s.SessionManager.Create(r, w, user.Id)
 	if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 
@@ -105,7 +105,7 @@ func (s *Services) postSessionHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Services) deleteSessionHandler(w http.ResponseWriter, r *http.Request) {
 	sess, err := s.SessionManager.Delete(r, w)
 	if err != nil {
-		writeInternalError(w, err)
+		writeInternalError(r, w, err)
 		return
 	}
 	if sess != nil {
