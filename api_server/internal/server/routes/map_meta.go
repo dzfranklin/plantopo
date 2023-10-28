@@ -38,7 +38,7 @@ func (s *Services) postMapsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeData(w, meta)
+	writeData(r, w, meta)
 }
 
 type deleteRequest struct {
@@ -76,7 +76,7 @@ func (s *Services) deleteMapsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeData(w, nil)
+	writeData(r, w, nil)
 }
 
 func (s *Services) mapHandler(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +132,7 @@ func (s *Services) getMapHandler(w http.ResponseWriter, r *http.Request) {
 
 	sessionMayEdit := s.Maps.IsAuthorized(r.Context(), authzReq, maps.ActionEdit)
 
-	writeData(w, mapMetaDto{
+	writeData(r, w, mapMetaDto{
 		Id:                    data.Id,
 		Name:                  data.Name,
 		CreatedAt:             data.CreatedAt,
@@ -176,7 +176,7 @@ func (s *Services) putMapHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeData(w, mapMetaDto{
+	writeData(r, w, mapMetaDto{
 		Id:                    data.Id,
 		Name:                  data.Name,
 		CreatedAt:             data.CreatedAt,
@@ -221,7 +221,7 @@ func (s *Services) getMapAccessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeData(w, value)
+	writeData(r, w, value)
 }
 
 func (s *Services) putMapAccessHandler(w http.ResponseWriter, r *http.Request) {
@@ -281,5 +281,5 @@ func (s *Services) putMapAccessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeData(w, updatedValue)
+	writeData(r, w, updatedValue)
 }

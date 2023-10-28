@@ -38,7 +38,7 @@ func (s *Services) getSessionHandler(w http.ResponseWriter, r *http.Request) {
 
 	if session == nil {
 		l.Info("no session")
-		writeData(w, sessionReply{})
+		writeData(r, w, sessionReply{})
 		return
 	}
 
@@ -47,7 +47,7 @@ func (s *Services) getSessionHandler(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, users.ErrNotFound) {
 			l.Info("session user not found ", zap.String("userId", user.Id.String()))
 			s.SessionManager.Delete(r, w)
-			writeData(w, sessionReply{})
+			writeData(r, w, sessionReply{})
 			return
 		} else {
 			writeInternalError(r, w, err)
@@ -56,7 +56,7 @@ func (s *Services) getSessionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	l.Info("got session", zap.String("userId", user.Id.String()))
-	writeData(w, sessionReply{user})
+	writeData(r, w, sessionReply{user})
 }
 
 type createSessionRequest struct {
@@ -99,7 +99,7 @@ func (s *Services) postSessionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.FromR(r).Sugar().Info("created session", "userId", user.Id)
-	writeData(w, sessionReply{user})
+	writeData(r, w, sessionReply{user})
 }
 
 func (s *Services) deleteSessionHandler(w http.ResponseWriter, r *http.Request) {
@@ -111,5 +111,5 @@ func (s *Services) deleteSessionHandler(w http.ResponseWriter, r *http.Request) 
 	if sess != nil {
 		logger.FromR(r).Sugar().Info("deleted session", "userId", sess.UserId)
 	}
-	writeData(w, nil)
+	writeData(r, w, nil)
 }

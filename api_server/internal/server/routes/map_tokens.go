@@ -9,5 +9,5 @@ func (s *Services) mapTokensHandler(w http.ResponseWriter, r *http.Request) {
 		writeMethodNotAllowed(r, w)
 		return
 	}
-	writeData(w, s.FrontendMapTokens)
+	writeData(r, w, s.FrontendMapTokens)
 }

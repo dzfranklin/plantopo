@@ -30,8 +30,10 @@ func (e *ErrorReply) Error() string {
 	return e.Message
 }
 
-func writeData(w http.ResponseWriter, value interface{}) {
+func writeData(r *http.Request, w http.ResponseWriter, value interface{}) {
+	requestId := rid.FromCtx(r.Context())
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Request-Id", requestId.String())
 	w.WriteHeader(http.StatusOK)
 	err := json.NewEncoder(w).Encode(replyContainer{Data: value})
 	if err != nil {
@@ -56,6 +58,7 @@ func writeError(r *http.Request, w http.ResponseWriter, err error) {
 	)
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Request-Id", requestId.String())
 	w.WriteHeader(errReply.Code)
 	err = json.NewEncoder(w).Encode(replyContainer{Error: errReply})
 	if err != nil {

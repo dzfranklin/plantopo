@@ -63,7 +63,7 @@ func (s *Services) accountConfirmCompleteHandler(w http.ResponseWriter, r *http.
 		return
 	}
 	logger.FromR(r).Sugar().Info("created session for confirmed user", "userId", user.Id)
-	writeData(w, sessionReply{user})
+	writeData(r, w, sessionReply{user})
 }
 
 type accountConfirmRerequestRequest struct {
@@ -98,5 +98,5 @@ func (s *Services) accountConfirmRerequestHandler(w http.ResponseWriter, r *http
 		}
 	}
 
-	writeData(w, nil)
+	writeData(r, w, nil)
 }
