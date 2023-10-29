@@ -74,7 +74,7 @@ function AttribPreview({
           </span>
         ))}
       </div>
-      <div className="prose-sm">
+      <div className="prose-sm truncate">
         PlanTopo version {process.env.NEXT_PUBLIC_PT_VER || '<unspecified>'}
       </div>
     </button>
