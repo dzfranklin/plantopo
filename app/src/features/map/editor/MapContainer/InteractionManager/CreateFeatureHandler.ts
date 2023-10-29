@@ -5,13 +5,31 @@ export class CreateFeatureHandler implements InteractionHandler {
   cursor = 'crosshair';
 
   onPress(evt: InteractionEvent, engine: EditorEngine): boolean {
-    const fid = engine.createFeature({
-      geometry: {
-        type: 'Point',
-        coordinates: evt.unproject(),
-      },
-    });
-    engine.toggleSelection(fid, 'single');
-    return true;
+    switch (engine.scene.activeTool) {
+      case 'point': {
+        const fid = engine.createFeature({
+          geometry: {
+            type: 'Point',
+            coordinates: evt.unproject(),
+          },
+        });
+        engine.setActiveFeature(fid);
+        return true;
+      }
+      case 'line': {
+        if (engine.scene.activeFeature?.geometry?.type === 'LineString') {
+          // Edit instead
+          return false;
+        }
+        const fid = engine.createFeature({
+          geometry: {
+            type: 'LineString',
+            coordinates: [evt.unproject()],
+          },
+        });
+        engine.setActiveFeature(fid);
+        return true;
+      }
+    }
   }
 }

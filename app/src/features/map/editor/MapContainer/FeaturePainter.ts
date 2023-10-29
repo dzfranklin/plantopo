@@ -1,6 +1,6 @@
-import * as GeoJSON from 'geojson';
 import { CurrentCameraPosition as CurrentCamera } from '../CurrentCamera';
 import { RenderFeature, RenderFeatureList } from './FeatureRenderer';
+import { LineStringSyncGeometry, PointSyncGeometry } from '@/gen/sync_schema';
 
 const { PI } = Math;
 
@@ -15,8 +15,6 @@ export class FeaturePainter {
     this.dpi = window.devicePixelRatio || 1;
     this.c = canvas.getContext('2d')!;
   }
-
-  private _lastPreScene = 0;
 
   paint(camera: CurrentCamera, render: RenderFeatureList): void {
     const start = performance.now();
@@ -64,19 +62,21 @@ export class FeaturePainter {
     this.c.save();
     switch (feature.geometry.type) {
       case 'Point':
-        this._paintPoint(camera, feature);
+        this._paintPoint(camera, feature.geometry, feature);
         break;
       case 'LineString':
-        this._paintLineString(camera, feature);
+        this._paintLineString(camera, feature.geometry, feature);
         break;
     }
     this.c.restore();
   }
 
-  private _paintPoint(camera: CurrentCamera, feature: RenderFeature): void {
-    const geo = feature.geometry as GeoJSON.Point;
-    const [lng, lat] = geo.coordinates as [number, number];
-    const center = camera.project([lng, lat]);
+  private _paintPoint(
+    camera: CurrentCamera,
+    geo: PointSyncGeometry,
+    feature: RenderFeature,
+  ): void {
+    const center = camera.project(geo.coordinates);
     this.c.translate(center[0], center[1]);
 
     const dotR = 5;
@@ -113,7 +113,42 @@ export class FeaturePainter {
     }
   }
 
-  private _paintLineString(_camera: CurrentCamera, _feature: RenderFeature) {
-    // TODO:
+  private _paintLineString(
+    camera: CurrentCamera,
+    geo: LineStringSyncGeometry,
+    feature: RenderFeature,
+  ) {
+    if (geo.coordinates.length === 0) return;
+
+    this.c.save();
+
+    this.c.lineWidth = 3;
+    this.c.strokeStyle = feature.color;
+    this.c.lineCap = 'round';
+    this.c.lineJoin = 'round';
+
+    if (feature.selectedByMe) {
+      this.c.save();
+      this.c.lineWidth += 6;
+      this.c.strokeStyle = '#e5f0ff';
+      this.c.beginPath();
+      for (const [i, coord] of geo.coordinates.entries()) {
+        const p = camera.project(coord);
+        if (i === 0) this.c.moveTo(p[0] + 0.5, p[1] + 0.5);
+        else this.c.lineTo(p[0], p[1]);
+      }
+      this.c.stroke();
+      this.c.restore();
+    }
+
+    this.c.beginPath();
+    for (const [i, coord] of geo.coordinates.entries()) {
+      const p = camera.project(coord);
+      if (i === 0) this.c.moveTo(p[0] + 0.5, p[1] + 0.5);
+      else this.c.lineTo(p[0], p[1]);
+    }
+    this.c.stroke();
+
+    this.c.restore();
   }
 }

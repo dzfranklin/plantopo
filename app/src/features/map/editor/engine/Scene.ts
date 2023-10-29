@@ -7,11 +7,13 @@ export type Scene = {
     end: number;
   };
   sidebarWidth: number;
+  activeTool: 'point' | 'line';
   layers: {
     active: SceneLayer[];
     /** Ordered by name */
     inactive: InactiveSceneLayer[];
   };
+  activeFeature: SceneFeature | null;
   features: {
     root: SceneRootFeature;
     /** Ordered by dfs of scene tree */
@@ -53,6 +55,7 @@ export type SceneFeature = {
   children: SceneFeature[];
   hidden: boolean;
 
+  active: boolean;
   selectedByMe: boolean;
   selectedByPeers: string[] | null;
   hoveredByMe: boolean;
@@ -81,10 +84,12 @@ export const EMPTY_SCENE: Scene = {
     end: 0,
   },
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
+  activeTool: 'line',
   layers: {
     active: [],
     inactive: [],
   },
+  activeFeature: null,
   features: {
     root: EMPTY_FEATURE_ROOT,
     insertPlace: {
@@ -96,5 +101,13 @@ export const EMPTY_SCENE: Scene = {
 };
 
 export function nameForUnnamedFeature(feature: SceneFeature): string {
-  return `Unnamed ${feature.geometry?.type ?? 'Feature'}`;
+  if (!feature.geometry) {
+    return 'Unnamed folder';
+  }
+  switch (feature.geometry.type) {
+    case 'Point':
+      return 'Unnamed point';
+    case 'LineString':
+      return 'Unnamed line';
+  }
 }

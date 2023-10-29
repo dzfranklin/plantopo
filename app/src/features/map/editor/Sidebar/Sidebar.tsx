@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { FeatureTree } from './FeatureTree';
-import { Toolbar } from './Toolbar';
+import { TreeToolbar } from './TreeToolbar';
 import { ResizeHandle } from './ResizeHandle';
 import cls from '@/generic/cls';
 import { useEngine, useSceneSelector } from '../engine/useEngine';
@@ -27,7 +27,7 @@ export default function Sidebar() {
             'border-r border-neutral-300',
           )}
         >
-          <Toolbar />
+          <TreeToolbar />
 
           {engine && <FeatureTree engine={engine} />}
         </div>
