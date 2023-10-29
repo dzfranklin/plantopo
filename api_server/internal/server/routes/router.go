@@ -35,7 +35,7 @@ type Services struct {
 }
 
 type MapImporter interface {
-	CreateImport(ctx context.Context, mapId string, format string) (*importers.Import, error)
+	CreateImport(ctx context.Context, req *importers.CreateImportRequest) (*importers.Import, error)
 	StartImport(importId string) (*importers.Import, error)
 	CheckImport(ctx context.Context, importId string) (*importers.Import, error)
 }

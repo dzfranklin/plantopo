@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-var s3Bucket = "plantopo-import-uploads"
+var s3Bucket = "pt-import-uploads"
 
 type S3ObjectStore struct {
 	client        *s3.Client
@@ -21,12 +21,13 @@ func NewS3ObjectStore(client *s3.Client) *S3ObjectStore {
 	}
 }
 
-func (s *S3ObjectStore) CreatePresignedUploadURL(ctx context.Context, id string) (string, error) {
+func (s *S3ObjectStore) CreatePresignedUploadURL(ctx context.Context, id string, contentMd5 string) (string, error) {
 	req, err := s.presignClient.PresignPutObject(
 		ctx,
 		&s3.PutObjectInput{
-			Bucket: &s3Bucket,
-			Key:    &id,
+			Bucket:     &s3Bucket,
+			Key:        &id,
+			ContentMD5: &contentMd5,
 		},
 		func(options *s3.PresignOptions) {
 			options.Expires = 1 * time.Hour
