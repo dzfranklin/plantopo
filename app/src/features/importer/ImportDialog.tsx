@@ -141,7 +141,6 @@ async function doImport(
   onProgress('preparing');
   const data = await readFile(file);
   const contentMD5 = computeContentMD5(data);
-  console.log(contentMD5);
 
   onProgress('setting-up-upload');
   const uploadInfo = await createImport(mapId, 'gpx', contentMD5);
