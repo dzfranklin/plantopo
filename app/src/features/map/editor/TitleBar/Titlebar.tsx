@@ -1,4 +1,5 @@
 import { MapIcon } from '@/generic/MapIcon';
+import { TitlebarMenu } from './TitlebarMenu';
 // import { useMapMeta } from '../../api/useMapMeta';
 // import { useEngine } from '../api/useEngine';
 // import { ArrowPathIcon as SyncingChangesIcon } from '@heroicons/react/24/outline';
@@ -8,11 +9,12 @@ import { MapIcon } from '@/generic/MapIcon';
 export function Titlebar() {
   // TODO:
   return (
-    <div className="flex gap-2 px-1.5 items-center overflow-hidden h-[30px] text-sm border-b border-neutral-300 bg-neutral-100">
+    <div className="flex gap-2 px-1.5 pt-2 pb-1 items-center text-sm border-b border-neutral-300 bg-neutral-100">
       {/* Ordinary navigation avoids bugs around pages router -> app router  */}
       <a href="/dashboard" className="text-blue-700">
         <MapIcon />
       </a>
+      <TitlebarMenu />
     </div>
   );
   // const sync = useEngine();
