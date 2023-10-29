@@ -7,7 +7,7 @@ export type SyncTransportStatus =
   | { type: 'connected' }
   | { type: 'disconnected'; reconnectingAt: number; reconnectNow: () => void };
 
-const HEALTHCHECK_INTERVAL = 1000 * 30;
+const HEALTHCHECK_INTERVAL = 1000 * 15;
 
 export class SyncTransport {
   public readonly mapId: string;
@@ -19,7 +19,7 @@ export class SyncTransport {
   private _status: SyncTransportStatus = { type: 'connecting' };
 
   private _receivesSinceLastHealthcheck = 0;
-  private _healthCheckInterval: number | null = null;
+  private _healthCheckInterval: number;
 
   onMessage: (msg: IncomingSessionMsg) => any = () => {};
   onStatus: (status: SyncTransportStatus) => any = () => {};
@@ -36,6 +36,7 @@ export class SyncTransport {
         this._sock.close();
         return;
       }
+      this._receivesSinceLastHealthcheck = 0;
     }, HEALTHCHECK_INTERVAL);
     this._open();
   }
@@ -43,6 +44,7 @@ export class SyncTransport {
   destroy() {
     this._destroyed = true;
     this._sock?.close();
+    window.clearInterval(this._healthCheckInterval);
   }
 
   get status(): SyncTransportStatus {
