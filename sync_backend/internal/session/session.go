@@ -374,8 +374,9 @@ func (s *Session) run(c *Config) {
 				l.Panic("failed to marshal unsent", zap.Error(err))
 			}
 			for _, conn := range conns {
+				ack := conn.seq
 				msg := Outgoing{
-					Ack:    &conn.seq,
+					Ack:    &ack,
 					Change: change,
 				}
 				select {
@@ -390,8 +391,9 @@ func (s *Session) run(c *Config) {
 				aware[conn.id] = conn.aware
 			}
 			for _, conn := range conns {
+				ack := conn.seq
 				msg := Outgoing{
-					Ack:   &conn.seq,
+					Ack:   &ack,
 					Aware: &aware,
 				}
 				select {
