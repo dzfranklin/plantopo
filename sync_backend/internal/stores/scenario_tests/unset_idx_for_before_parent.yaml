@@ -17,6 +17,11 @@ WHEN:
       parent: f1
       idx: null
 THEN:
+  FIXES:
+    fset:
+      f3:
+        id: f3
+        idx: 7)
   SNAPSHOT:
     fadd: [f1, f3, f2]
     fset:

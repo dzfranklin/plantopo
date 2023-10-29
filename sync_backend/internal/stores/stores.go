@@ -249,6 +249,15 @@ func (s *Store) finsert(l *zap.Logger, isAdd bool, incoming schema.Feature, fixe
 		}
 		incoming.Idx = parent.idxBeforeFirstChild(s.rng)
 		incoming.IdxState = schema.Set
+		addFix(fixes, schema.Changeset{
+			FSet: map[string]schema.Feature{
+				incoming.Id: {
+					Id:       incoming.Id,
+					IdxState: schema.Set,
+					Idx:      incoming.Idx,
+				},
+			},
+		})
 	}
 
 	id := incoming.Id
