@@ -94,7 +94,7 @@ type connectRequest struct {
 }
 
 /*
-* New creates a New session.
+New creates a New session.
 
 Does not block.
 */
@@ -176,8 +176,8 @@ func (s *Session) IsFailed() bool {
 	return s.failed.Load()
 }
 
-func (sess *Session) run(c *Config) {
-	mapId := sess.mapId
+func (s *Session) run(c *Config) {
+	mapId := s.mapId
 	l := zap.S().Named("sessionHandle.run").With("mapId", mapId)
 
 	// fallible setup
@@ -200,7 +200,7 @@ func (sess *Session) run(c *Config) {
 	}()
 	if err != nil {
 		l.Errorw("failed to setup session", zap.Error(err))
-		sess.failed.Store(true)
+		s.failed.Store(true)
 		return
 	}
 	l.Infow("set up session")
@@ -223,7 +223,7 @@ func (sess *Session) run(c *Config) {
 			close(conn.outgoing)
 		}
 
-		connectedV := int(sess.connected.Load())
+		connectedV := int(s.connected.Load())
 		if connectedV != len(conns) {
 			l.DPanic("connected count mismatch",
 				"connected", connectedV, "conns", len(conns))
@@ -233,7 +233,7 @@ func (sess *Session) run(c *Config) {
 			l.Infow("doing final save")
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 			defer cancel()
-			err := c.Repo.SetMapSnapshot(ctx, sess.mapId, st.Snapshot())
+			err := c.Repo.SetMapSnapshot(ctx, s.mapId, st.Snapshot())
 			if err != nil {
 				l.Errorw("final save failed", zap.Error(err))
 			}
@@ -244,7 +244,7 @@ func (sess *Session) run(c *Config) {
 
 	for {
 		select {
-		case <-sess.closeChan:
+		case <-s.closeChan:
 			return
 		case <-saveTicker.Chan():
 			if !hasUnsaved {
@@ -254,20 +254,20 @@ func (sess *Session) run(c *Config) {
 			snapshot := st.Snapshot()
 			hasUnsaved = false
 			go func(snapshot schema.Changeset) {
-				err := c.Repo.SetMapSnapshot(context.Background(), sess.mapId, snapshot)
+				err := c.Repo.SetMapSnapshot(context.Background(), s.mapId, snapshot)
 				if err != nil {
 					l.Errorw("save failed", zap.Error(err))
 					savedFailed <- struct{}{}
 				}
 			}(snapshot)
 		case <-savedFailed:
-			sess.failed.Store(true)
+			s.failed.Store(true)
 			return
-		case req := <-sess.connectChan:
+		case req := <-s.connectChan:
 			l.Infow("connecting", "id", req.id)
 			conn := &Connection{
 				id:       req.id,
-				sess:     sess,
+				sess:     s,
 				outgoing: make(chan Outgoing, 8),
 			}
 			if prev, ok := conns[req.id]; ok {
@@ -277,7 +277,7 @@ func (sess *Session) run(c *Config) {
 				conns[req.id] = conn
 			} else {
 				conns[req.id] = conn
-				sess.connected.Add(1)
+				s.connected.Add(1)
 			}
 			snapshot := st.Snapshot()
 			req.out <- conn
@@ -290,7 +290,7 @@ func (sess *Session) run(c *Config) {
 				close(conn.outgoing)
 				delete(conns, conn.id)
 			}
-		case input := <-sess.receiveChan:
+		case input := <-s.receiveChan:
 			conn, ok := conns[input.connId]
 			if !ok {
 				l.Infow("receiveChan: unknown id", "unknownId", input.connId)
@@ -337,12 +337,12 @@ func (sess *Session) run(c *Config) {
 					}
 				}
 			}
-		case id := <-sess.closeConnChan:
+		case id := <-s.closeConnChan:
 			if conn, ok := conns[id]; ok {
 				l.Infow("closing conn", "id", id)
 				close(conn.outgoing)
 				delete(conns, id)
-				sess.connected.Add(-1)
+				s.connected.Add(-1)
 			} else {
 				l.Infow("closeConnChan: unknown id")
 			}
