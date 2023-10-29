@@ -122,7 +122,6 @@ func (s *grpcServer) Connect(stream api.SyncBackend_ConnectServer) error {
 		switch msg := msg.Msg.(type) {
 		case *api.SyncBackendIncomingMessage_Update:
 			req := msg.Update
-			l.Infow("received update", "seq", req.Seq)
 
 			var aware schema.Aware
 			if req.Aware != nil {
