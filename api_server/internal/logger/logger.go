@@ -2,10 +2,12 @@ package logger
 
 import (
 	"context"
+	"go.uber.org/zap/zapcore"
 	"net/http"
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest"
@@ -25,6 +27,8 @@ func Get() *zap.Logger {
 				config.Level = zap.NewAtomicLevelAt(zap.WarnLevel)
 			}
 		}
+
+		config.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
 
 		var err error
 		logger, err = config.Build()

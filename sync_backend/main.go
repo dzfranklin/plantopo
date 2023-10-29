@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.uber.org/zap/zapcore"
 	"log"
 	"net"
 	"net/http"
@@ -52,13 +53,12 @@ func main() {
 		}
 	}
 
-	var logger *zap.Logger
-	var err error
+	zapConfig := zap.NewProductionConfig()
+	zapConfig.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
 	if appEnv == "development" {
-		logger, err = zap.NewDevelopment()
-	} else {
-		logger, err = zap.NewProduction()
+		zapConfig = zap.NewDevelopmentConfig()
 	}
+	logger, err := zapConfig.Build()
 	if err != nil {
 		log.Fatal(err)
 	}

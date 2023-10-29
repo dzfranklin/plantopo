@@ -3,11 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"go.uber.org/zap/zapcore"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/danielzfranklin/plantopo/matchmaker/internal"
 	"github.com/danielzfranklin/plantopo/matchmaker/internal/server"
@@ -28,13 +30,12 @@ func main() {
 	}
 	addr := fmt.Sprintf("%s:%s", host, port)
 
-	var logger *zap.Logger
-	var err error
+	zapConfig := zap.NewProductionConfig()
+	zapConfig.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
 	if os.Getenv("APP_ENV") == "development" {
-		logger, err = zap.NewDevelopment()
-	} else {
-		logger, err = zap.NewProduction()
+		zapConfig = zap.NewDevelopmentConfig()
 	}
+	logger, err := zapConfig.Build()
 	if err != nil {
 		panic(err)
 	}
