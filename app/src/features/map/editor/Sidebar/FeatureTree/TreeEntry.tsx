@@ -55,9 +55,11 @@ export function TreeEntry({ fid }: { fid: string }) {
 function EntryItself({ fid }: { fid: string }) {
   const ref = useRef<HTMLDivElement>(null);
 
-  const name = useSceneFeature(fid, (f) =>
-    f ? f.name ?? nameForUnnamedFeature(f) : null,
-  );
+  const name = useSceneFeature(fid, (f) => {
+    if (!f) return null;
+    if (f.name?.trim() === '') return nameForUnnamedFeature(f);
+    return f.name;
+  });
   const selectedByMe = useSceneFeature(fid, (f) => f?.selectedByMe);
 
   useEffect(() => {
