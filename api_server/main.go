@@ -81,7 +81,7 @@ func main() {
 	l = l.With(zap.String("host", host), zap.String("port", port))
 	l.Infow("starting")
 
-	awsConfig, err := awsconfig.LoadDefaultConfig(ctx)
+	awsConfig, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("eu-west-2"))
 	if err != nil {
 		l.Fatalw("error loading aws config", zap.Error(err))
 	}

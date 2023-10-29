@@ -9,7 +9,6 @@ import (
 	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
 	"github.com/danielzfranklin/plantopo/api_server/internal/sync_backends"
 	"github.com/danielzfranklin/plantopo/db"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/oklog/ulid/v2"
 	"go.uber.org/zap"
@@ -29,7 +28,7 @@ type Service struct {
 }
 
 type ObjectStore interface {
-	CreatePresignedUploadURL(ctx context.Context, id string) (string, error)
+	CreatePresignedUploadURL(ctx context.Context, id string, contentMd5 string) (string, error)
 	GetUpload(ctx context.Context, id string) (io.ReadCloser, error)
 }
 
@@ -37,16 +36,22 @@ func New(config *Config) (*Service, error) {
 	return &Service{config}, nil
 }
 
-func (s *Service) CreateImport(ctx context.Context, mapId string, format string) (*Import, error) {
+type CreateImportRequest struct {
+	MapId      string `json:"mapId"`
+	Format     string `json:"format"`
+	ContentMD5 string `json:"contentMD5"`
+}
+
+func (s *Service) CreateImport(ctx context.Context, req *CreateImportRequest) (*Import, error) {
 	externalId := ulid.Make().String()
-	uploadURL, err := s.ObjectStore.CreatePresignedUploadURL(ctx, externalId)
+	uploadURL, err := s.ObjectStore.CreatePresignedUploadURL(ctx, externalId, req.ContentMD5)
 	if err != nil {
 		return nil, fmt.Errorf("create presigned upload url: %w", err)
 	}
 
 	_, err = s.Db.Exec(ctx, `INSERT INTO map_imports
     	(external_id, map_id, format) VALUES ($1, $2, $3)
-		`, externalId, mapId, format)
+		`, externalId, req.MapId, req.Format)
 	if err != nil {
 		return nil, fmt.Errorf("insert row: %w", err)
 	}
@@ -74,10 +79,10 @@ func (s *Service) CheckImport(ctx context.Context, externalId string) (*Import, 
 	status := &Import{
 		Id: externalId,
 	}
-	var failureMessage string
+	var failureMessage *string
 	err := s.Db.QueryRow(ctx, `
 		SELECT
-			map_id,
+		    map_id,
 			CASE
 				WHEN failed_at IS NOT NULL THEN 'failed'
 				WHEN completed_at IS NOT NULL THEN 'complete'
@@ -94,8 +99,8 @@ func (s *Service) CheckImport(ctx context.Context, externalId string) (*Import, 
 		}
 		return status, fmt.Errorf("query row: %w", err)
 	}
-	if status.Status == "failed" {
-		status.StatusMessage = failureMessage
+	if status.Status == "failed" && failureMessage != nil {
+		status.StatusMessage = *failureMessage
 	}
 	return status, nil
 }
@@ -107,22 +112,22 @@ func (s *Service) doImport(externalId string) {
 	l := logger.Get().Sugar().Named("importer").With(zap.String("externalId", externalId))
 
 	var internalId int64
-	var mapId uuid.UUID
+	var mapId string
 	var format string
 	err := s.Db.QueryRow(ctx, `
 		UPDATE map_imports
 		SET started_at = NOW()
 		WHERE external_id = $1 AND started_at IS NULL
-		RETURNING internal_id, map_id, format`).Scan(&internalId, &mapId, &format)
+		RETURNING internal_id, map_id, format`, externalId).Scan(&internalId, &mapId, &format)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			l.Info("import already started")
 			return
 		}
-		s.markFailed(externalId, fmt.Errorf("update row: %w", err), "internal error")
+		s.markFailed(externalId, fmt.Errorf("mark row started: %w", err), "internal error")
 		return
 	}
-	l = l.With("internalId", internalId, "mapId", mapId.String())
+	l = l.With("internalId", internalId, "mapId", mapId)
 
 	upload, err := s.ObjectStore.GetUpload(ctx, externalId)
 	if err != nil {
@@ -143,7 +148,7 @@ func (s *Service) doImport(externalId string) {
 	}
 
 	resp, err := s.Matchmaker.SetupConnection(ctx, &api.MatchmakerSetupConnectionRequest{
-		MapId: mapId.String(),
+		MapId: mapId,
 	})
 	if err != nil {
 		s.markFailed(externalId, fmt.Errorf("setup connection: %w", err), "internal error")
@@ -165,7 +170,7 @@ func (s *Service) doImport(externalId string) {
 	err = b.Send(&api.SyncBackendIncomingMessage{
 		Msg: &api.SyncBackendIncomingMessage_Connect{
 			Connect: &api.SyncBackendConnectRequest{
-				MapId:        mapId.String(),
+				MapId:        mapId,
 				Token:        resp.Token,
 				ConnectionId: fmt.Sprintf("internal-importer-%d", internalId),
 			},
@@ -220,7 +225,7 @@ func (s *Service) doImport(externalId string) {
 				WHERE external_id = $1
 			`, externalId)
 	if err != nil {
-		s.markFailed(externalId, fmt.Errorf("update row: %w", err), "internal error")
+		s.markFailed(externalId, fmt.Errorf("mark row completed: %w", err), "internal error")
 		return
 	}
 }
