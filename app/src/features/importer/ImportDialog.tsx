@@ -1,4 +1,3 @@
-import { performApi } from '@/api/support';
 import cls from '@/generic/cls';
 import {
   Button,
@@ -51,7 +50,7 @@ export function ImportDialog({ mapId }: { mapId: string }) {
         <label
           className={cls(
             'block mb-2 text-sm font-medium',
-            stage === null ? 'text-gray-900' : 'text-gray-500',
+            stage === 'pre' ? 'text-gray-900' : 'text-gray-500',
           )}
           htmlFor={inputId}
         >
