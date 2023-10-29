@@ -92,5 +92,5 @@ func TestSingleSegmentTrackIsFlattened(t *testing.T) {
 </gpx>`)
 	cset, err := convertGpx("testid", "test-single-segment-track.gpx", input)
 	require.NoError(t, err)
-	require.Equal(t, 2, len(cset.FAdd))
+	require.Equal(t, 1, len(cset.FAdd))
 }
