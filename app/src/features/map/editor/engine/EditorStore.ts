@@ -169,6 +169,9 @@ export class EditorStore {
       if (incoming.parent === undefined || incoming.idx === undefined) {
         throw new Error('new feature must have parent and idx');
       }
+      if (!this._features.has(incoming.parent)) {
+        throw new Error('cannot add feature: parent id not in store');
+      }
       feature = new FNode(
         null, // parent filled in below
         incoming,

@@ -262,6 +262,9 @@ func (s *Store) finsert(l *zap.Logger, isAdd bool, incoming schema.Feature, fixe
 		if incoming.ParentState == schema.Unspecified || incoming.IdxState == schema.Unspecified {
 			return fmt.Errorf("new feature must have parent and idx")
 		}
+		if _, ok := s.features[incoming.Parent]; !ok {
+			return fmt.Errorf("cannot change parent: parent id not in store")
+		}
 
 		feature = &fnode{
 			id:       id,
