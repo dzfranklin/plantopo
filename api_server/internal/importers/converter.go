@@ -48,6 +48,11 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 	parent := fmt.Sprintf("import-%s-%d", idBase, idOffset)
 	l = l.With("parentId", parent)
 
+	importName := data.Name
+	if importName == "" {
+		importName = "Import"
+	}
+
 	cset.FAdd = append(cset.FAdd, parent)
 	cset.FSet[parent] = sync_schema.Feature{
 		Id:                    parent,
@@ -55,12 +60,13 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 		Parent:                "",
 		IdxState:              sync_schema.Unset, // first child
 		NameState:             sync_schema.Set,
-		Name:                  data.Name,
+		Name:                  importName,
 		ImportedFromFileState: sync_schema.Set,
 		ImportedFromFile:      externalId,
 	}
 
-	for _, wpt := range data.Waypoints {
+	for i, wpt := range data.Waypoints {
+		l.Infof("converting waypoint %d", i)
 		idOffset++
 		fid := fmt.Sprintf("import-%s-%d", idBase, idOffset)
 		idxInParent = sync_schema.IdxBetweenStatic(idxInParent, "")
@@ -90,7 +96,8 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 		cset.FSet[fid] = f
 	}
 
-	for _, route := range data.Routes {
+	for i, route := range data.Routes {
+		l.Infof("converting route %d", i)
 		idOffset++
 		fid := fmt.Sprintf("import-%s-%d", idBase, idOffset)
 		idxInParent = sync_schema.IdxBetweenStatic(idxInParent, "")
@@ -113,6 +120,7 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 		for _, p := range route.Points {
 			coords = append(coords, [2]float64{p.Longitude, p.Latitude})
 		}
+		l.Infof("route has %d coords", len(coords))
 		f.GeometryState = sync_schema.Set
 		f.Geometry = sync_schema.Geometry{
 			LineString: &sync_schema.LineStringGeometry{
@@ -124,7 +132,8 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 		cset.FSet[fid] = f
 	}
 
-	for _, trk := range data.Tracks {
+	for i, trk := range data.Tracks {
+		l.Infof("converting track %d", i)
 		idOffset++
 		trkFid := fmt.Sprintf("import-%s-%d", idBase, idOffset)
 		idxInParent = sync_schema.IdxBetweenStatic(idxInParent, "")
@@ -146,10 +155,12 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 
 		idxInTrk := ""
 		for i, seg := range trk.Segments {
+			l.Infof("converting track segment %d", i)
 			coords := make([][2]float64, 0, len(seg.Points))
 			for _, p := range seg.Points {
 				coords = append(coords, [2]float64{p.Longitude, p.Latitude})
 			}
+			l.Infof("segment has %d coords", len(coords))
 			geom := sync_schema.Geometry{
 				LineString: &sync_schema.LineStringGeometry{
 					Coordinates: coords,
@@ -176,10 +187,29 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 				cset.FAdd = append(cset.FAdd, segFid)
 				cset.FSet[segFid] = segF
 			} else {
+				l.Info("trk has only one segment, promoting")
 				trkF.GeometryState = sync_schema.Set
 				trkF.Geometry = geom
+				cset.FSet[trkFid] = trkF
 			}
 		}
+	}
+
+	if len(cset.FAdd) == 2 {
+		l.Info("only one top-level feature, promoting")
+
+		parentFid := cset.FAdd[0]
+		childFid := cset.FAdd[1]
+		parentF := cset.FSet[parentFid]
+		childF := cset.FSet[childFid]
+
+		cset.FAdd = []string{childFid}
+		delete(cset.FSet, parentFid)
+
+		childF.ParentState = parentF.ParentState
+		childF.Parent = parentF.Parent
+		childF.IdxState = parentF.IdxState
+		childF.Idx = parentF.Idx
 	}
 
 	l.Info("converted gpx")

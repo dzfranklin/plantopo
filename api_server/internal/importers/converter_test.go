@@ -1,10 +1,31 @@
 package importers
 
 import (
+	"embed"
 	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 )
+
+//go:embed testdata/*
+var testdata embed.FS
+
+func TestConvertSample(t *testing.T) {
+	input, err := testdata.Open("testdata/fife_coastal_path.gpx")
+	require.NoError(t, err)
+
+	got, err := convertGpx("test-sample", input)
+	require.NoError(t, err)
+
+	require.Equal(t, 1, len(got.FAdd))
+	require.Equal(t, 1, len(got.FSet))
+	gotF := got.FSet[got.FAdd[0]]
+	require.Equal(t, "test-sample", gotF.ImportedFromFile)
+	require.Equal(t, "Fife Coastal Path", gotF.Name)
+	gotGeom := gotF.Geometry.LineString
+	require.NotNil(t, gotGeom)
+	require.Equal(t, 1526, len(gotGeom.Coordinates))
+}
 
 func TestConvertGpxBasic(t *testing.T) {
 	input := strings.NewReader(`
