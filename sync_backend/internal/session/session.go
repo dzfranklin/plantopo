@@ -291,10 +291,9 @@ func (sess *Session) run(c *Config) {
 				delete(conns, conn.id)
 			}
 		case input := <-sess.receiveChan:
-			l.Infow("received", "connectionId", input.connId, "seq", input.Seq)
 			conn, ok := conns[input.connId]
 			if !ok {
-				l.Infow("receiveChan: unknown id")
+				l.Infow("receiveChan: unknown id", "unknownId", input.connId)
 				continue
 			}
 			if input.Seq <= conn.seq {
