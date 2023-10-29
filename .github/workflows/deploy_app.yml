@@ -1,8 +1,13 @@
-name: Deploy
+name: Deploy app
 
 on:
   push:
     branches: [ "main" ]
+    paths:
+      - 'deploy/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'app/**'
 
 concurrency:
   group: ${{ github.workflow }}
@@ -20,13 +25,6 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: '1.21'
-
-    - name: Set up kubectl
-      env:
-        KUBECONFIG: ${{ secrets.KUBECONFIG }}
-      run: |
-        mkdir -p "$HOME/.kube"
-        echo $KUBECONFIG | base64 --decode > "$HOME/.kube/config"
 
     - name: Setup Docker buildx
       uses: docker/setup-buildx-action@v2
@@ -46,4 +44,4 @@ jobs:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         AWS_DEFAULT_REGION: eu-west-2
-      run: ./out/deploy --all --exclude-system matchmaker
+      run: ./out/deploy --system app
