@@ -57,7 +57,7 @@ function EntryItself({ fid }: { fid: string }) {
 
   const name = useSceneFeature(fid, (f) => {
     if (!f) return null;
-    if (f.name?.trim() === '') return nameForUnnamedFeature(f);
+    if (!f.name || f.name.trim() === '') return nameForUnnamedFeature(f);
     return f.name;
   });
   const selectedByMe = useSceneFeature(fid, (f) => f?.selectedByMe);
