@@ -29,11 +29,12 @@ type Matchmaker interface {
 }
 
 type Config struct {
-	ExternalAddr  string
-	Matchmaker    Matchmaker
-	Session       *session.Config
-	sweepInterval time.Duration
-	pendingTTL    time.Duration
+	ExternalAddr    string
+	Matchmaker      Matchmaker
+	Session         *session.Config
+	sweepInterval   time.Duration
+	pendingTTL      time.Duration
+	emptySessionTTL time.Duration
 }
 
 func New(config *Config) *Backend {
@@ -54,6 +55,9 @@ func New(config *Config) *Backend {
 	}
 	if config.pendingTTL == 0 {
 		config.pendingTTL = 5 * time.Minute
+	}
+	if config.emptySessionTTL == 0 {
+		config.emptySessionTTL = 1 * time.Minute
 	}
 
 	b := &Backend{
@@ -216,11 +220,11 @@ func (b *Backend) sweepPendingTokens() {
 func (b *Backend) sweepSessions() {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-
+	threshold := time.Now().Add(-b.emptySessionTTL)
 	for mapId, sess := range b.sessions {
 		// note that we don't see all failed sessions here as Connect replaces
 		// failed sessions.
-		isEmpty := sess.Connected() == 0
+		isEmpty := sess.Connected() == 0 && sess.IsReady() && sess.LastDisconnect().Before(threshold)
 		if sess.IsFailed() || isEmpty {
 			delete(b.sessions, mapId)
 			if isEmpty {

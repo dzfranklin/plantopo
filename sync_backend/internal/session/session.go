@@ -72,13 +72,15 @@ func (c *Connection) Outgoing() chan Outgoing {
 }
 
 type Session struct {
-	mapId         string
-	failed        atomic.Bool
-	connected     atomic.Int32
-	connectChan   chan connectRequest
-	receiveChan   chan Incoming
-	closeConnChan chan string
-	closeChan     chan struct{}
+	mapId          string
+	failed         atomic.Bool
+	ready          atomic.Bool
+	connected      atomic.Int32
+	lastDisconnect atomic.Int64
+	connectChan    chan connectRequest
+	receiveChan    chan Incoming
+	closeConnChan  chan string
+	closeChan      chan struct{}
 }
 
 type Config struct {
@@ -176,6 +178,16 @@ func (s *Session) IsFailed() bool {
 	return s.failed.Load()
 }
 
+// IsReady must not block
+func (s *Session) IsReady() bool {
+	return s.ready.Load()
+}
+
+// LastDisconnect must not block
+func (s *Session) LastDisconnect() time.Time {
+	return time.UnixMilli(s.lastDisconnect.Load())
+}
+
 func (s *Session) run(c *Config) {
 	mapId := s.mapId
 	l := zap.S().Named("sessionHandle.run").With("mapId", mapId)
@@ -192,6 +204,7 @@ func (s *Session) run(c *Config) {
 		if snapshot.IsNil() {
 			snapshot = schema.Changeset{}
 		}
+		l.Infow("creating store")
 		st, err := stores.New(mapId, snapshot)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create store: %w", err)
@@ -242,6 +255,19 @@ func (s *Session) run(c *Config) {
 		}
 	}()
 
+	closeClient := func(conn *Connection) {
+		close(conn.outgoing)
+		delete(conns, conn.id)
+		s.connected.Add(-1)
+		now := time.Now().UnixMilli()
+		s.lastDisconnect.Store(now)
+	}
+
+	dropClient := func(conn *Connection) {
+		l.Infow("dropping client", "clientId", conn.id)
+		closeClient(conn)
+	}
+
 	for {
 		select {
 		case <-s.closeChan:
@@ -286,9 +312,7 @@ func (s *Session) run(c *Config) {
 			select {
 			case conn.outgoing <- msg:
 			default:
-				l.Infow("client fell behind, dropping")
-				close(conn.outgoing)
-				delete(conns, conn.id)
+				dropClient(conn)
 			}
 		case input := <-s.receiveChan:
 			conn, ok := conns[input.connId]
@@ -315,9 +339,7 @@ func (s *Session) run(c *Config) {
 					select {
 					case conn.outgoing <- msg:
 					default:
-						l.Infow("client fell behind, dropping")
-						close(conn.outgoing)
-						delete(conns, conn.id)
+						dropClient(conn)
 					}
 					continue
 				}
@@ -331,18 +353,14 @@ func (s *Session) run(c *Config) {
 					select {
 					case conn.outgoing <- msg:
 					default:
-						l.Infow("client fell behind, dropping")
-						close(conn.outgoing)
-						delete(conns, conn.id)
+						dropClient(conn)
 					}
 				}
 			}
 		case id := <-s.closeConnChan:
 			if conn, ok := conns[id]; ok {
 				l.Infow("closing conn", "id", id)
-				close(conn.outgoing)
-				delete(conns, id)
-				s.connected.Add(-1)
+				closeClient(conn)
 			} else {
 				l.Infow("closeConnChan: unknown id")
 			}
@@ -363,9 +381,7 @@ func (s *Session) run(c *Config) {
 				select {
 				case conn.outgoing <- msg:
 				default:
-					l.Infow("client fell behind, dropping")
-					close(conn.outgoing)
-					delete(conns, conn.id)
+					dropClient(conn)
 				}
 			}
 		case <-bcastAwareTicker.Chan():
@@ -381,9 +397,7 @@ func (s *Session) run(c *Config) {
 				select {
 				case conn.outgoing <- msg:
 				default:
-					l.Infow("client fell behind, dropping")
-					close(conn.outgoing)
-					delete(conns, conn.id)
+					dropClient(conn)
 				}
 			}
 		}
