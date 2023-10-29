@@ -93,4 +93,6 @@ func TestSingleSegmentTrackIsFlattened(t *testing.T) {
 	cset, err := convertGpx("testid", "test-single-segment-track.gpx", input)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(cset.FAdd))
+	feat := cset.FSet[cset.FAdd[0]]
+	require.Equal(t, "", feat.Parent)
 }

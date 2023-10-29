@@ -210,6 +210,7 @@ func convertGpx(id string, filename string, reader io.Reader) (*sync_schema.Chan
 		childF.Parent = parentF.Parent
 		childF.IdxState = parentF.IdxState
 		childF.Idx = parentF.Idx
+		cset.FSet[childFid] = childF
 	}
 
 	l.Info("converted gpx")
