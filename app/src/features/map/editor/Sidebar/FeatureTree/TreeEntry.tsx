@@ -75,7 +75,7 @@ function EntryItself({ fid }: { fid: string }) {
         borderLeft: `${INDICATOR_BORDER_PX}px`,
       }}
     >
-      <span className="flex-grow select-none text-start">{name}</span>
+      <span className="flex-grow truncate select-none text-start">{name}</span>
       {selectedByMe && <EntryActionButtons fid={fid} />}
     </div>
   );
