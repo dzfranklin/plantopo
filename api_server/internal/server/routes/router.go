@@ -155,6 +155,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
+	r = rid.RequestWithContext(r)
 	logger.FromCtx(r.Context()).Info("no handler", zap.String("path", r.URL.Path))
 	writeError(r, w, &ErrorReply{
 		Code:    http.StatusNotFound,
@@ -168,6 +169,7 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func notAllowedHandler(w http.ResponseWriter, r *http.Request) {
+	r = rid.RequestWithContext(r)
 	writeError(r, w, &ErrorReply{
 		Code:    http.StatusMethodNotAllowed,
 		Reason:  "methodNotAllowed",
