@@ -30,6 +30,7 @@ type Service struct {
 type ObjectStore interface {
 	CreatePresignedUploadURL(ctx context.Context, id string, contentMd5 string) (string, error)
 	GetUpload(ctx context.Context, id string) (io.ReadCloser, error)
+	PutConversion(ctx context.Context, id string, content []byte) error
 }
 
 func New(config *Config) (*Service, error) {
@@ -148,6 +149,11 @@ func (s *Service) doImport(externalId string) {
 	if err != nil {
 		s.markFailed(externalId, fmt.Errorf("marshal changeset: %w", err), "internal error")
 		return
+	}
+
+	err = s.ObjectStore.PutConversion(ctx, externalId, changesetJson)
+	if err != nil {
+		l.Error("failed to put conversion", zap.Error(err))
 	}
 
 	resp, err := s.Matchmaker.SetupConnection(ctx, &api.MatchmakerSetupConnectionRequest{

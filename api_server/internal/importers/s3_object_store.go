@@ -1,6 +1,7 @@
 package importers
 
 import (
+	"bytes"
 	"context"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"io"
@@ -49,4 +50,15 @@ func (s *S3ObjectStore) GetUpload(ctx context.Context, id string) (io.ReadCloser
 		return nil, err
 	}
 	return resp.Body, nil
+}
+
+func (s *S3ObjectStore) PutConversion(ctx context.Context, id string, content []byte) error {
+	key := id + "-conversion.json"
+	req := s3.PutObjectInput{
+		Bucket: &s3Bucket,
+		Key:    &key,
+		Body:   bytes.NewReader(content),
+	}
+	_, err := s.client.PutObject(ctx, &req)
+	return err
 }
