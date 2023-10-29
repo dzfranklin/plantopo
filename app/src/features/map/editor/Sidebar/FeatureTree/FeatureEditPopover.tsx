@@ -1,4 +1,4 @@
-import { Content, Dialog, TextField } from '@adobe/react-spectrum';
+import { Content, Dialog } from '@adobe/react-spectrum';
 import { useSceneFeature } from '../../engine/useEngine';
 import { EditorEngine } from '../../engine/EditorEngine';
 import { useId } from 'react';
