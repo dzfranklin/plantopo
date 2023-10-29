@@ -10,17 +10,17 @@ import (
 	"io"
 )
 
-func convertFormat(format string, externalId string, reader io.Reader) (*sync_schema.Changeset, error) {
+func convertFormat(format string, id string, filename string, reader io.Reader) (*sync_schema.Changeset, error) {
 	switch format {
 	case "gpx":
-		return convertGpx(externalId, reader)
+		return convertGpx(id, filename, reader)
 	default:
-		logger.Get().Sugar().Warnw("unknown format", "externalId", externalId, "format", format)
+		logger.Get().Sugar().Warnw("unknown format", "id", id, "format", format)
 		return nil, fmt.Errorf("unknown format: %s", format)
 	}
 }
 
-func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, error) {
+func convertGpx(id string, filename string, reader io.Reader) (*sync_schema.Changeset, error) {
 	l := logger.Get().Sugar()
 
 	data, err := gpx.Parse(reader)
@@ -30,7 +30,7 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 	}
 
 	l = l.With(
-		"externalId", externalId,
+		"id", id,
 		"gpxCreator", data.Creator, // the name of the software used
 		"gpxVersion", data.Version,
 	)
@@ -50,7 +50,7 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 
 	importName := data.Name
 	if importName == "" {
-		importName = "Import"
+		importName = filename
 	}
 
 	cset.FAdd = append(cset.FAdd, parent)
@@ -62,7 +62,7 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 		NameState:             sync_schema.Set,
 		Name:                  importName,
 		ImportedFromFileState: sync_schema.Set,
-		ImportedFromFile:      externalId,
+		ImportedFromFile:      id,
 	}
 
 	for i, wpt := range data.Waypoints {
@@ -78,7 +78,7 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 			IdxState:              sync_schema.Set,
 			Idx:                   idxInParent,
 			ImportedFromFileState: sync_schema.Set,
-			ImportedFromFile:      externalId,
+			ImportedFromFile:      id,
 		}
 		if wpt.Name != "" {
 			f.NameState = sync_schema.Set
@@ -109,7 +109,7 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 			IdxState:              sync_schema.Set,
 			Idx:                   idxInParent,
 			ImportedFromFileState: sync_schema.Set,
-			ImportedFromFile:      externalId,
+			ImportedFromFile:      id,
 		}
 		if route.Name != "" {
 			f.NameState = sync_schema.Set
@@ -144,7 +144,7 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 			IdxState:              sync_schema.Set,
 			Idx:                   idxInParent,
 			ImportedFromFileState: sync_schema.Set,
-			ImportedFromFile:      externalId,
+			ImportedFromFile:      id,
 		}
 		if trk.Name != "" {
 			trkF.NameState = sync_schema.Set
@@ -180,7 +180,7 @@ func convertGpx(externalId string, reader io.Reader) (*sync_schema.Changeset, er
 					NameState:             sync_schema.Set,
 					Name:                  fmt.Sprintf("Segment %d", i),
 					ImportedFromFileState: sync_schema.Set,
-					ImportedFromFile:      externalId,
+					ImportedFromFile:      id,
 					GeometryState:         sync_schema.Set,
 					Geometry:              geom,
 				}

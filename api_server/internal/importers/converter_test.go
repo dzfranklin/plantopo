@@ -14,13 +14,13 @@ func TestConvertSample(t *testing.T) {
 	input, err := testdata.Open("testdata/fife_coastal_path.gpx")
 	require.NoError(t, err)
 
-	got, err := convertGpx("test-sample", input)
+	got, err := convertGpx("testid", "fife_coastal_path.gpx", input)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, len(got.FAdd))
 	require.Equal(t, 1, len(got.FSet))
 	gotF := got.FSet[got.FAdd[0]]
-	require.Equal(t, "test-sample", gotF.ImportedFromFile)
+	require.Equal(t, "testid", gotF.ImportedFromFile)
 	require.Equal(t, "Fife Coastal Path", gotF.Name)
 	gotGeom := gotF.Geometry.LineString
 	require.NotNil(t, gotGeom)
@@ -66,7 +66,7 @@ creator="Memory-Map 5.4.2.1089 http://www.memory-map.com"
 </rte>
 </gpx>
 	`)
-	cset, err := convertGpx("test-basic", input)
+	cset, err := convertGpx("testid", "test-basic.gpx", input)
 	require.NoError(t, err)
 	require.NoError(t, err)
 	require.Equal(t, 6, len(cset.FAdd))
@@ -90,7 +90,7 @@ func TestSingleSegmentTrackIsFlattened(t *testing.T) {
 	</trkseg>
 </trk>
 </gpx>`)
-	cset, err := convertGpx("test-single-segment-track", input)
+	cset, err := convertGpx("testid", "test-single-segment-track.gpx", input)
 	require.NoError(t, err)
 	require.Equal(t, 2, len(cset.FAdd))
 }

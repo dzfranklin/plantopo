@@ -38,6 +38,7 @@ func New(config *Config) (*Service, error) {
 
 type CreateImportRequest struct {
 	MapId      string `json:"mapId"`
+	Filename   string `json:"filename"`
 	Format     string `json:"format"`
 	ContentMD5 string `json:"contentMD5"`
 }
@@ -50,8 +51,8 @@ func (s *Service) CreateImport(ctx context.Context, req *CreateImportRequest) (*
 	}
 
 	_, err = s.Db.Exec(ctx, `INSERT INTO map_imports
-    	(external_id, map_id, format) VALUES ($1, $2, $3)
-		`, externalId, req.MapId, req.Format)
+    	(external_id, map_id, filename, format) VALUES ($1, $2, $3, $4)
+		`, externalId, req.MapId, req.Filename, req.Format)
 	if err != nil {
 		return nil, fmt.Errorf("insert row: %w", err)
 	}
@@ -113,12 +114,14 @@ func (s *Service) doImport(externalId string) {
 
 	var internalId int64
 	var mapId string
+	var filename string
 	var format string
 	err := s.Db.QueryRow(ctx, `
 		UPDATE map_imports
 		SET started_at = NOW()
 		WHERE external_id = $1 AND started_at IS NULL
-		RETURNING internal_id, map_id, format`, externalId).Scan(&internalId, &mapId, &format)
+		RETURNING internal_id, map_id, filename, format`,
+		externalId).Scan(&internalId, &mapId, &filename, &format)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			l.Info("import already started")
@@ -136,7 +139,7 @@ func (s *Service) doImport(externalId string) {
 	}
 	defer upload.Close()
 
-	changeset, err := convertFormat(format, externalId, upload)
+	changeset, err := convertFormat(format, externalId, filename, upload)
 	if err != nil {
 		s.markFailed(externalId, fmt.Errorf("convert format: %w", err), "bad upload")
 		return
