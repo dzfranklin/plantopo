@@ -1,6 +1,7 @@
 import { Content, Dialog, TextField } from '@adobe/react-spectrum';
 import { useSceneFeature } from '../../engine/useEngine';
 import { EditorEngine } from '../../engine/EditorEngine';
+import { useId } from 'react';
 
 export function FeatureEditPopover({
   fid,
@@ -10,14 +11,19 @@ export function FeatureEditPopover({
   engine: EditorEngine;
 }) {
   const name = useSceneFeature(fid, (f) => f?.name ?? '');
+  const nameInputId = useId();
   return (
     <Dialog height="10rem" width="20rem">
       <Content>
-        <TextField
-          label="Name"
+        <label htmlFor={nameInputId}>Name</label>
+        <input
+          id={nameInputId}
           value={name}
           width="100%"
-          onChange={(value) => engine.changeFeature({ id: fid, name: value })}
+          onChange={(evt) =>
+            engine.changeFeature({ id: fid, name: evt.target.value })
+          }
+          onKeyDown={(evt) => evt.stopPropagation()}
         />
       </Content>
     </Dialog>
