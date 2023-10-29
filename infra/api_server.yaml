@@ -61,6 +61,16 @@ spec:
                   secretKeyRef:
                     key: PT_FRONTEND_MAP_TOKENS
                     name: api-server
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                  secretKeyRef:
+                    key: AWS_ACCESS_KEY_ID
+                    name: api-server
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                  secretKeyRef:
+                    key: AWS_SECRET_ACCESS_KEY
+                    name: api-server
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
