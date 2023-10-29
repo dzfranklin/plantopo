@@ -224,7 +224,7 @@ func (b *Backend) sweepSessions() {
 		if sess.IsFailed() || isEmpty {
 			delete(b.sessions, mapId)
 			if isEmpty {
-				zap.S().Info("closing session with no connections", "mapId", mapId)
+				zap.S().Infow("closing session with no connections", "mapId", mapId)
 			}
 			go func(mapId string, sess *session.Session) {
 				err := sess.Close()
