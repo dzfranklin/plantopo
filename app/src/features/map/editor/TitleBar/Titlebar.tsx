@@ -4,7 +4,7 @@ import { useMapMeta, usePutMapMetaMutation } from '../../api/mapMeta';
 import ConnectedIcon from '@spectrum-icons/workflow/CloudOutline';
 import DisconnectedIcon from '@spectrum-icons/workflow/CloudDisconnected';
 import { useMapId } from '../useMapId';
-import { useSyncTransportStatus } from '../engine/useEngine';
+import { useEngine, useSyncTransportStatus } from '../engine/useEngine';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import cls from '@/generic/cls';
 
@@ -36,10 +36,26 @@ export function Titlebar() {
 }
 
 function StatusComponent() {
+  const engine = useEngine();
   const status = useSyncTransportStatus();
+  const [readyForCheck, setReadyForCheck] = useState(false);
+  useEffect(() => {
+    let ticker: number | null;
+    const doCheck = () => {
+      if (!engine || Date.now() - engine.createdAt < 500) {
+        ticker = window.setTimeout(doCheck, 100);
+      } else {
+        setReadyForCheck(true);
+      }
+    };
+    doCheck();
+    return () => {
+      if (ticker !== null) window.clearTimeout(ticker);
+    };
+  }, [engine]);
   return (
     <div className="pt-1 text-xs">
-      {!status ||
+      {(readyForCheck && !status) ||
         (status?.type === 'connecting' && (
           <>
             <span>Connecting...</span>
@@ -47,7 +63,7 @@ function StatusComponent() {
           </>
         ))}
       {status?.type === 'connected' && <ConnectedIcon height="20px" />}
-      {status?.type === 'disconnected' && (
+      {readyForCheck && status?.type === 'disconnected' && (
         <>
           <ReconnectingAt at={status.reconnectingAt} />
           <button

@@ -51,6 +51,7 @@ export class EditorEngine {
   public readonly clientId: string;
   public readonly mayEdit: boolean;
   public readonly sources: MapSources;
+  public readonly createdAt = Date.now();
 
   private _seq = 0;
   private _transport: SyncTransport;
