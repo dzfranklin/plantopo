@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { EMPTY_SCENE, Scene, SceneFeature } from './Scene';
 import { EditorEngine } from './EditorEngine';
+import { SyncTransportStatus } from '../api/SyncTransport';
 
 const EngineContext = createContext<EditorEngine | null>(null);
 
@@ -100,5 +101,12 @@ export function useSceneFeature<T>(
       ),
     [engine, equalityFn, sceneSel],
   );
+  return value;
+}
+
+export function useSyncTransportStatus(): SyncTransportStatus | null {
+  const engine = useEngine();
+  const [value, setValue] = useState<SyncTransportStatus | null>(null);
+  useEffect(() => engine?.addTransportStatusListener(setValue), [engine]);
   return value;
 }

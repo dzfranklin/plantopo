@@ -27,6 +27,7 @@ import {
   MyGeolocation,
   useMyGeolocation,
 } from '@/features/map/api/useMyGeolocation';
+import { MapIdProvider } from '@/features/map/editor/useMapId';
 
 export default function MapPage() {
   const router = useRouter();
@@ -113,7 +114,7 @@ export default function MapPage() {
   return (
     <div className="w-screen h-screen">
       <PageTitle
-        title={meta.data ? `${meta.data.name || 'Untitled map'}` : 'Loading...'}
+        title={meta.data ? `${meta.data.name || 'Unnamed map'}` : 'Loading...'}
       />
 
       <DialogContainer isDismissable={false} onDismiss={() => {}}>
@@ -130,11 +131,13 @@ export default function MapPage() {
         )}
       </DialogContainer>
 
-      <EditorEngineProvider engine={engine}>
-        <CommandProvider>
-          <MapEditor />
-        </CommandProvider>
-      </EditorEngineProvider>
+      <MapIdProvider mapId={mapId}>
+        <EditorEngineProvider engine={engine}>
+          <CommandProvider>
+            <MapEditor />
+          </CommandProvider>
+        </EditorEngineProvider>
+      </MapIdProvider>
     </div>
   );
 }

@@ -12,6 +12,12 @@ export function CommandProvider({ children }: { children: React.ReactNode }) {
   const registry = useRef(new Registry()).current;
   useEffect(() => {
     const handler = (evt: KeyboardEvent) => {
+      if (
+        evt.target instanceof HTMLInputElement ||
+        evt.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
       for (const entry of registry.entries()) {
         if (evt.key === entry.key) {
           if (entry.action()) {

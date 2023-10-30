@@ -30,7 +30,7 @@ export function TitlebarMenu() {
         <Button
           aria-label="Menu"
           className={cls(
-            'mx-1 inline-flex items-center justify-center px-1.5 py-1 rounded outline-none',
+            'mx-1 inline-flex items-center justify-center px-1.5 py-0.5 rounded outline-none text-sm',
             'hover:bg-gray-300 aria-expanded:bg-gray-300 focus-visible:ring-2 disabled:opacity-50 disabled:cursor-default',
           )}
           isDisabled={!engine}

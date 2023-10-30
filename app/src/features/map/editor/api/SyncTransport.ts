@@ -29,10 +29,14 @@ export class SyncTransport {
     this.clientId = props.clientId;
     this._healthCheckInterval = window.setInterval(() => {
       if (this._sock === null) return;
-      if (this._receivesSinceLastHealthcheck === 0) {
+      if (
+        this._status.type === 'connected' &&
+        this._receivesSinceLastHealthcheck === 0
+      ) {
         console.warn(
           'SyncTransport: no messages received since last healthcheck',
         );
+        this._advanceState('disconnected');
         this._sock.close();
         return;
       }
@@ -102,16 +106,29 @@ export class SyncTransport {
     };
   }
 
+  private _openTimeout: number | null = null;
+
   private _advanceState(type: SyncTransportStatus['type']) {
     let status: SyncTransportStatus;
     switch (type) {
       case 'connecting':
+        if (this._openTimeout !== null) {
+          window.clearTimeout(this._openTimeout);
+          this._openTimeout = null;
+        }
         status = { type: 'connecting' };
         break;
       case 'connected':
+        if (this._openTimeout !== null) {
+          window.clearTimeout(this._openTimeout);
+          this._openTimeout = null;
+        }
         status = { type: 'connected' };
         break;
       case 'disconnected':
+        if (this._status.type === 'disconnected') {
+          return;
+        }
         const delay = this._reconnectDelay();
         status = {
           type: 'disconnected',
@@ -119,7 +136,7 @@ export class SyncTransport {
           reconnectNow: () => this._open(),
         };
         console.log('delaying', delay / 1000, 'seconds');
-        setTimeout(() => this._open(), delay);
+        this._openTimeout = window.setTimeout(() => this._open(), delay);
         break;
     }
     this._status = status;

@@ -76,6 +76,10 @@ export class EditorEngine {
   private _sceneSelectorId = 0;
   private _sceneSelectors = new Map<number, SceneSelectorEntry>();
 
+  private _transportStatusListeners = new Set<
+    (_: SyncTransportStatus) => any
+  >();
+
   constructor({
     mapId,
     mayEdit,
@@ -112,6 +116,11 @@ export class EditorEngine {
         this._store.receive(msg.change);
       }
     };
+    this._transport.onStatus = (status) => {
+      for (const cb of this._transportStatusListeners) {
+        cb(status);
+      }
+    };
     this._sidebarWidth = this._prefs.sidebarWidth();
     this._sendInterval = window.setInterval(() => {
       const change = this.mayEdit ? this._store.takeUnsent() : undefined;
@@ -145,10 +154,6 @@ export class EditorEngine {
     };
   }
 
-  get transportStatus(): SyncTransportStatus {
-    return this._transport.status;
-  }
-
   get initialCamera(): Readonly<InitialCamera | undefined> {
     return this._initialCam;
   }
@@ -171,8 +176,9 @@ export class EditorEngine {
     return () => this._initialCamUpdateListeners.delete(cb);
   }
 
-  set onTransportStatus(cb: (status: SyncTransportStatus) => any) {
-    this._transport.onStatus = cb;
+  addTransportStatusListener(cb: (_: SyncTransportStatus) => any): () => void {
+    this._transportStatusListeners.add(cb);
+    return () => this._transportStatusListeners.delete(cb);
   }
 
   addCameraMoveEndListener(cb: CameraListener): () => void {
