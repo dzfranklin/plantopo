@@ -1,6 +1,6 @@
 import { ImportDialog } from '@/features/importer/ImportDialog';
 import cls from '@/generic/cls';
-import { Dialog, DialogContainer } from '@adobe/react-spectrum';
+import { DialogContainer } from '@adobe/react-spectrum';
 import { useState } from 'react';
 import {
   Button,

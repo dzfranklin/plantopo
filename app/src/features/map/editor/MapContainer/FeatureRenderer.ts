@@ -1,6 +1,6 @@
 import { BBoxPolygon, CurrentCameraPosition } from '../CurrentCamera';
 import { Scene, SceneFeature, SceneRootFeature } from '../engine/Scene';
-import { bboxClip, booleanContains } from '@turf/turf';
+import { booleanContains } from '@turf/turf';
 import booleanIntersects from '@turf/boolean-intersects';
 import { SyncGeometry } from '@/gen/sync_schema';
 
