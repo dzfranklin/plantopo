@@ -4,6 +4,7 @@ on:
   push:
     branches: [ "main" ]
     paths:
+      - '.github/**'
       - 'deploy/**'
       - 'go.mod'
       - 'go.sum'
