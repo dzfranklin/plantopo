@@ -24,16 +24,86 @@ const bucketRegion = "us-east-2"
 var entrypointNames = []string{"index.html", "index.txt", "404.html"}
 
 func DeployApp(ver string, baseDir string, bucket string, distribution string) {
-	imageTag := fmt.Sprintf("pt-app:%s", ver)
-
-	fmt.Println("Deploying app (" + imageTag + ")")
+	fmt.Println("Deploying app (" + ver + ")")
 
 	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(bucketRegion))
 	if err != nil {
 		log.Fatal(err)
 	}
+	s3Client := s3.NewFromConfig(cfg)
+
+	// List existing
+
+	preexistingObjects := listExisting(s3Client, bucket)
 
 	// Build
+	output := doBuild(ver, baseDir)
+
+	// Upload
+
+	// We skip uploading preexistingObjects resources because the names are unique.
+	// This mostly avoids re-uploading media like the font.
+
+	fmt.Println("Uploading app: resources")
+	doUpload(s3Client, bucket, &preexistingObjects, true, output.outDir, output.resources)
+
+	fmt.Println("Uploading app: entrypoints")
+	doUpload(s3Client, bucket, &preexistingObjects, false, output.outDir, output.entrypoints)
+
+	deleteUnusedPreexisting(s3Client, bucket, preexistingObjects)
+
+	// Invalidate
+
+	fmt.Println("Invalidating app")
+	cfClient := cloudfront.NewFromConfig(cfg)
+	callerReference := fmt.Sprintf("deploy-%s-%s", distribution, time.Now().Format("20060102150405"))
+	invalidatePaths := []string{"/*"}
+	invalidatePathsQuantity := int32(len(invalidatePaths))
+	_, err = cfClient.CreateInvalidation(context.Background(), &cloudfront.CreateInvalidationInput{
+		DistributionId: &distribution,
+		InvalidationBatch: &cfTypes.InvalidationBatch{
+			CallerReference: &callerReference,
+			Paths: &cfTypes.Paths{
+				Quantity: &invalidatePathsQuantity,
+				Items:    invalidatePaths,
+			},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	output.Cleanup()
+
+	fmt.Println("Done deploying app")
+}
+
+func listExisting(client *s3.Client, bucket string) map[string]struct{} {
+	fmt.Println("Listing existing objects")
+	set := make(map[string]struct{})
+	p := s3.NewListObjectsV2Paginator(client, &s3.ListObjectsV2Input{
+		Bucket: &bucket,
+	})
+	for p.HasMorePages() {
+		page, err := p.NextPage(context.Background())
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, obj := range page.Contents {
+			set[*obj.Key] = struct{}{}
+		}
+	}
+	return set
+}
+
+type buildOutput struct {
+	resources   []string
+	entrypoints []string
+	outDir      string
+}
+
+func doBuild(ver string, baseDir string) *buildOutput {
+	imageTag := fmt.Sprintf("pt-app:%s", ver)
 
 	cmd := exec.Command("docker", "build",
 		"--file", "app.Dockerfile",
@@ -107,47 +177,23 @@ func DeployApp(ver string, baseDir string, bucket string, distribution string) {
 		log.Fatal(err)
 	}
 
-	// Upload
-
-	s3Client := s3.NewFromConfig(cfg)
-
-	fmt.Println("Uploading app: resources")
-	doUpload(s3Client, bucket, outDir, resources)
-
-	fmt.Println("Uploading app: entrypoints")
-	doUpload(s3Client, bucket, outDir, entrypoints)
-
-	// Invalidate
-
-	fmt.Println("Invalidating app")
-	cfClient := cloudfront.NewFromConfig(cfg)
-	callerReference := fmt.Sprintf("deploy-%s-%s", distribution, time.Now().Format("20060102150405"))
-	invalidatePaths := []string{"/*"}
-	invalidatePathsQuantity := int32(len(invalidatePaths))
-	_, err = cfClient.CreateInvalidation(context.Background(), &cloudfront.CreateInvalidationInput{
-		DistributionId: &distribution,
-		InvalidationBatch: &cfTypes.InvalidationBatch{
-			CallerReference: &callerReference,
-			Paths: &cfTypes.Paths{
-				Quantity: &invalidatePathsQuantity,
-				Items:    invalidatePaths,
-			},
-		},
-	})
-	if err != nil {
-		log.Fatal(err)
+	return &buildOutput{
+		resources:   resources,
+		entrypoints: entrypoints,
+		outDir:      outDir,
 	}
-
-	// Clean up
-
-	if err := os.RemoveAll(outDir); err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("Done deploying app")
 }
 
-func doUpload(client *s3.Client, bucket string, base string, files []string) {
+func (o *buildOutput) Cleanup() {
+	if err := os.RemoveAll(o.outDir); err != nil {
+		log.Println(fmt.Errorf("failed to cleanup build outputs: %w", err))
+	}
+}
+
+func doUpload(
+	client *s3.Client, bucket string, preexisting *map[string]struct{}, skipPreexisting bool,
+	base string, files []string,
+) {
 	for _, fname := range files {
 		file, err := os.Open(fname)
 		if err != nil {
@@ -158,6 +204,14 @@ func doUpload(client *s3.Client, bucket string, base string, files []string) {
 			log.Fatalf("base must be a prefix of fname (base is %s, fname is %s)", base, fname)
 		}
 		key := fname[len(base)+1:]
+
+		if _, ok := (*preexisting)[key]; ok {
+			delete(*preexisting, key)
+			if skipPreexisting {
+				fmt.Printf("Skipping upload of %s\n", key)
+				continue
+			}
+		}
 
 		var contentType string
 		ext := path.Ext(key)
@@ -183,6 +237,19 @@ func doUpload(client *s3.Client, bucket string, base string, files []string) {
 			Key:         &key,
 			ContentType: &contentType,
 			Body:        file,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func deleteUnusedPreexisting(client *s3.Client, bucket string, objects map[string]struct{}) {
+	for key := range objects {
+		fmt.Printf("Deleting unused preexisting object %s\n", key)
+		_, err := client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
+			Bucket: &bucket,
+			Key:    &key,
 		})
 		if err != nil {
 			log.Fatal(err)
