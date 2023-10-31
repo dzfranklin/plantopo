@@ -1,3 +1,4 @@
+import { floor2 } from '@/generic/vector2';
 import { CurrentCameraPosition as CurrentCamera } from '../CurrentCamera';
 import { RenderFeature, RenderFeatureList } from './FeatureRenderer';
 import { LineStringSyncGeometry, PointSyncGeometry } from '@/gen/sync_schema';
@@ -133,8 +134,8 @@ export class FeaturePainter {
       this.c.strokeStyle = '#e5f0ff';
       this.c.beginPath();
       for (const [i, coord] of geo.coordinates.entries()) {
-        const p = camera.project(coord);
-        if (i === 0) this.c.moveTo(p[0] + 0.5, p[1] + 0.5);
+        const p = floor2(camera.project(coord));
+        if (i === 0) this.c.moveTo(p[0], p[1]);
         else this.c.lineTo(p[0], p[1]);
       }
       this.c.stroke();
@@ -143,7 +144,7 @@ export class FeaturePainter {
 
     this.c.beginPath();
     for (const [i, coord] of geo.coordinates.entries()) {
-      const p = camera.project(coord);
+      const p = floor2(camera.project(coord));
       if (i === 0) this.c.moveTo(p[0] + 0.5, p[1] + 0.5);
       else this.c.lineTo(p[0], p[1]);
     }
