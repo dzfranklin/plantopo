@@ -94,6 +94,9 @@ class FeatureHitImpl implements FeatureHit {
       const FIXME_WIDTH = 2;
       depth = Math.round(FIXME_WIDTH / 2);
     }
+    if (pM[0] === Infinity || pM[1] === Infinity) {
+      return Infinity;
+    }
     const pS = cam.project(pM);
     const pixelsToCenter = magnitude2(sub2(pS, targetS));
     return clamp(pixelsToCenter - depth, 0, Infinity);
