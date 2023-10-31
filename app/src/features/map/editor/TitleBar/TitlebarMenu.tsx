@@ -25,7 +25,7 @@ export function TitlebarMenu() {
   };
 
   return (
-    <>
+    <div className="mt-0.5">
       <MenuTrigger>
         <Button
           aria-label="Menu"
@@ -53,7 +53,7 @@ export function TitlebarMenu() {
           {dialog === 'import' && <ImportDialog mapId={engine!.mapId} />}
         </DialogContainer>
       )}
-    </>
+    </div>
   );
 }
 
