@@ -12,6 +12,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+var ErrSnapshotNotFound = errors.New("snapshot not found")
+
 type Repo struct {
 	db db.Querier
 }
@@ -23,25 +25,34 @@ func New(db db.Querier) *Repo {
 func (r *Repo) GetMapSnapshot(
 	ctx context.Context, mapId string,
 ) (schema.Changeset, error) {
-	var snapshotBytes []byte
-	err := r.db.QueryRow(ctx, `
-		SELECT value FROM map_snapshots
-		JOIN maps ON maps.internal_id = map_snapshots.map_id
-		WHERE maps.external_id = $1`, mapId).Scan(&snapshotBytes)
+	snapshotBytes, err := r.GetCompressedMapSnapshot(ctx, mapId)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return schema.Changeset{}, nil
-		}
-		err := fmt.Errorf("error getting map snapshot (mapId is %s): %w", mapId, err)
 		return schema.Changeset{}, err
 	}
-
 	value, err := unmarshalSnapshot(snapshotBytes)
 	if err != nil {
 		err := fmt.Errorf("error unmarshalling map snapshot (mapId is %s): %w", mapId, err)
 		return schema.Changeset{}, err
 	}
 
+	return value, nil
+}
+
+func (r *Repo) GetCompressedMapSnapshot(
+	ctx context.Context, mapId string,
+) ([]byte, error) {
+	var value []byte
+	err := r.db.QueryRow(ctx, `
+		SELECT value FROM map_snapshots
+		JOIN maps ON maps.internal_id = map_snapshots.map_id
+		WHERE maps.external_id = $1`, mapId).Scan(&value)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrSnapshotNotFound
+		}
+		err := fmt.Errorf("error getting map snapshot (mapId is %s): %w", mapId, err)
+		return nil, err
+	}
 	return value, nil
 }
 

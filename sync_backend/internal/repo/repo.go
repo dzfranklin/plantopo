@@ -35,6 +35,9 @@ func (r *Repo) GetMapSnapshot(
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusNotFound {
+			return schema.Changeset{}, nil
+		}
 		return schema.Changeset{}, errors.New("unexpected status code")
 	}
 	var cset schema.Changeset
