@@ -6,9 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 
 	schema "github.com/danielzfranklin/plantopo/api/sync_schema"
 )
+
+var backendToken = os.Getenv("BACKEND_TOKEN")
 
 type Repo struct {
 	client http.Client
@@ -25,6 +28,7 @@ func (r *Repo) GetMapSnapshot(
 	if err != nil {
 		return schema.Changeset{}, err
 	}
+	req.Header.Add("Authorization", "Bearer "+backendToken)
 	resp, err := r.client.Do(req)
 	if err != nil {
 		return schema.Changeset{}, err
@@ -51,6 +55,7 @@ func (r *Repo) SetMapSnapshot(
 	if err != nil {
 		return err
 	}
+	req.Header.Add("Authorization", "Bearer "+backendToken)
 	resp, err := r.client.Do(req)
 	if err != nil {
 		return err
