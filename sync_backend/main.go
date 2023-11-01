@@ -14,7 +14,6 @@ import (
 	"time"
 
 	api "github.com/danielzfranklin/plantopo/api/v1"
-	"github.com/danielzfranklin/plantopo/db"
 	"github.com/danielzfranklin/plantopo/sync_backend/internal"
 	"github.com/danielzfranklin/plantopo/sync_backend/internal/backend"
 	"github.com/danielzfranklin/plantopo/sync_backend/internal/repo"
@@ -70,15 +69,7 @@ func main() {
 	zap.ReplaceGlobals(logger)
 	l := logger.Sugar()
 
-	pg, err := db.NewPg(context.Background(), os.Getenv("DATABASE_URL"))
-	if err != nil {
-		l.Fatalw("error creating postgres pool", zap.Error(err))
-	}
-	l.Infow("checking postgres")
-	if err := pg.Ping(context.Background()); err != nil {
-		l.Fatalw("error pinging postgres", zap.Error(err))
-	}
-	r := repo.New(pg)
+	r := repo.New()
 
 	var grpcClientOptions []grpc.DialOption
 	if appEnv == "development" {

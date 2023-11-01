@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/danielzfranklin/plantopo/api_server/internal/importers"
@@ -9,6 +10,12 @@ import (
 	"github.com/gorilla/mux"
 	"net/http"
 )
+
+type MapImporter interface {
+	CreateImport(ctx context.Context, req *importers.CreateImportRequest) (*importers.Import, error)
+	StartImport(importId string) (*importers.Import, error)
+	CheckImport(ctx context.Context, importId string) (*importers.Import, error)
+}
 
 func (s *Services) uploadImportHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {

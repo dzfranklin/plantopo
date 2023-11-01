@@ -43,11 +43,11 @@ spec:
                   fieldPath: status.podIP
             - name: SELF_EXTERNAL_ADDR
               value: "$(__POD_IP):5050"
-            - name: DATABASE_URL
+            - name: BACKEND_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: db
-                  key: DATABASE_URL
+                  name: backend-token
+                  key: token
           ports:
             - containerPort: 5050
               name: grpc

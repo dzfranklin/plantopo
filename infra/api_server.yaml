@@ -76,6 +76,11 @@ spec:
                 secretKeyRef:
                   key: DATABASE_URL
                   name: db
+            - name: BACKEND_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: backend-token
+                  key: token
           ports:
             - containerPort: 8080
               name: http
