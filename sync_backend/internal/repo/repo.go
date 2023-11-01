@@ -63,5 +63,5 @@ func (r *Repo) SetMapSnapshot(
 }
 
 func snapshotUrl(mapId string) string {
-	return "http://internal-api:30001/api/v1/map/" + mapId + "/snapshot"
+	return "http://internal-api/api/v1/map/" + mapId + "/snapshot"
 }
