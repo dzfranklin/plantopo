@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"github.com/danielzfranklin/plantopo/api_server/internal/rid"
@@ -35,9 +36,19 @@ func writeData(r *http.Request, w http.ResponseWriter, value interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Request-Id", requestId.String())
 	w.WriteHeader(http.StatusOK)
-	err := json.NewEncoder(w).Encode(replyContainer{Data: value})
+
+	out, err := json.Marshal(replyContainer{Data: value})
 	if err != nil {
 		logger.Get().Panic("failed to marshal json", zap.Error(err))
+	}
+
+	if len(out) > 4096 {
+		gw := gzip.NewWriter(w)
+		defer gw.Close()
+		w.Header().Set("Content-Encoding", "gzip")
+		_, _ = gw.Write(out)
+	} else {
+		_, _ = w.Write(out)
 	}
 }
 
