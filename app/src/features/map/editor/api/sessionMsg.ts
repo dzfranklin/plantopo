@@ -2,7 +2,7 @@ import { Changeset } from './Changeset';
 
 export interface OutgoingSessionMsg {
   seq: number;
-  aware: SetAwareRequest;
+  aware?: SetAwareRequest;
   change?: Changeset;
 }
 

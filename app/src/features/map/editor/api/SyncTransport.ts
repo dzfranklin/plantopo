@@ -21,8 +21,8 @@ export class SyncTransport {
   private _receivesSinceLastHealthcheck = 0;
   private _healthCheckInterval: number;
 
-  onMessage: (msg: IncomingSessionMsg) => any = () => {};
-  onStatus: (status: SyncTransportStatus) => any = () => {};
+  private _onMessageListeners = new Set<(msg: IncomingSessionMsg) => any>();
+  private _onStatusListeners = new Set<(status: SyncTransportStatus) => any>();
 
   constructor(props: { mapId: string; clientId: string }) {
     this.mapId = props.mapId;
@@ -53,6 +53,18 @@ export class SyncTransport {
 
   get status(): SyncTransportStatus {
     return this._status;
+  }
+
+  addOnMessageListener(listener: (msg: IncomingSessionMsg) => any): () => void {
+    this._onMessageListeners.add(listener);
+    return () => this._onMessageListeners.delete(listener);
+  }
+
+  addOnStatusListener(
+    listener: (status: SyncTransportStatus) => any,
+  ): () => void {
+    this._onStatusListeners.add(listener);
+    return () => this._onStatusListeners.delete(listener);
   }
 
   send(msg: OutgoingSessionMsg): Error | null {
@@ -90,7 +102,9 @@ export class SyncTransport {
         console.warn(`SyncTransport: received error: ${msg.error}`);
       }
       this._receivesSinceLastHealthcheck++;
-      this.onMessage(msg);
+      for (const listener of this._onMessageListeners) {
+        listener(msg);
+      }
     };
     this._sock.onclose = (ev) => {
       if (ev.code === 1000) {
@@ -141,6 +155,8 @@ export class SyncTransport {
     }
     this._status = status;
     console.log(status);
-    this.onStatus(status);
+    for (const listener of this._onStatusListeners) {
+      listener(status);
+    }
   }
 }

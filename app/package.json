@@ -73,6 +73,7 @@
     "topbar": "^2.0.1",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2",
+    "ulid": "^2.3.0",
     "uuid": "^9.0.1",
     "xstate": "^4.38.2",
     "xstate-logger": "^0.0.3"

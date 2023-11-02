@@ -1,7 +1,5 @@
 import { SyncTransport, SyncTransportStatus } from '../api/SyncTransport';
 import { AwareCamera, AwareEntry, SetAwareRequest } from '../api/sessionMsg';
-import { EditorStore, FNode } from './EditorStore';
-import { v4 as uuidv4 } from 'uuid';
 import {
   DEFAULT_SIDEBAR_WIDTH,
   EMPTY_SCENE,
@@ -20,6 +18,9 @@ import { Changeset } from '../api/Changeset';
 import { deepEq } from '@/generic/equality';
 import stringOrd from '@/generic/stringOrd';
 import { CurrentCameraPosition } from '../CurrentCamera';
+import { StateManager } from './StateManager';
+import { DocFeature, DocState } from './DocStore';
+import { ulid } from 'ulid';
 
 const ROOT_FID = '';
 const SEND_INTERVAL = 15; // ms
@@ -54,10 +55,11 @@ export class EditorEngine {
   public readonly createdAt = Date.now();
 
   private _seq = 0;
+  private _stateManager: StateManager;
+  private _doc: DocState;
   private _transport: SyncTransport;
-  private _store: EditorStore;
   private _prefs: EditorPrefStore;
-  private _sendInterval: number;
+  private _awareSendInterval: number;
 
   private _cam: CurrentCameraPosition | undefined;
   private _initialCam: InitialCamera | undefined;
@@ -94,48 +96,51 @@ export class EditorEngine {
     prefs?: EditorPrefStore;
     initialCamera?: Readonly<InitialCamera>;
   }) {
-    // Note that the clientId cannot be reused for another `EditorStore`
-    const clientId = uuidv4();
+    const clientId = ulid();
 
     this.clientId = clientId;
     this.mapId = mapId;
     this.mayEdit = mayEdit;
     this.sources = mapSources;
     this._initialCam = initialCamera;
-    this._store = new EditorStore({
-      clientId,
-      mayEdit,
-      onChange: () => this._renderScene(),
-    });
-    this._prefs = prefs ?? new EditorPrefStore();
+
     this._transport = new SyncTransport({ mapId, clientId });
-    this._transport.onMessage = (msg) => {
+    this._transport.addOnMessageListener((msg) => {
       if (msg.aware) {
         this._awareMap = msg.aware;
       }
-      if (msg.change) {
-        this._store.receive(msg.change);
-      }
-    };
-    this._transport.onStatus = (status) => {
+    });
+    this._transport.addOnStatusListener((status) => {
       for (const cb of this._transportStatusListeners) {
         cb(status);
       }
-    };
+    });
+
+    this._stateManager = new StateManager({
+      clientId,
+      transport: this._transport,
+      onChange: (doc) => {
+        this._doc = doc;
+        this._renderScene();
+      },
+    });
+    this._doc = this._stateManager.toState();
+
+    this._prefs = prefs ?? new EditorPrefStore();
+
     this._sidebarWidth = this._prefs.sidebarWidth();
-    this._sendInterval = window.setInterval(() => {
-      const change = this.mayEdit ? this._store.takeUnsent() : undefined;
+
+    this._awareSendInterval = window.setInterval(() => {
       this._transport.send({
         seq: ++this._seq,
         aware: this._makeSetAwareRequest(),
-        change,
       });
     }, SEND_INTERVAL);
   }
 
   destroy(): void {
     this._transport.destroy();
-    window.clearInterval(this._sendInterval);
+    window.clearInterval(this._awareSendInterval);
   }
 
   private _makeSetAwareRequest(): SetAwareRequest {
@@ -236,7 +241,7 @@ export class EditorEngine {
   createFeature(value: Omit<FeatureChange, 'id'> = {}): string {
     const resolved = this._resolveFeaturePlace(this.scene.features.insertPlace);
     const idx = fracIdxBetween(resolved.before, resolved.after);
-    const fid = this._store.createFeature({
+    const fid = this._stateManager.createFeature({
       ...value,
       parent: resolved.parent,
       idx,
@@ -251,7 +256,7 @@ export class EditorEngine {
     if (change.id === ROOT_FID) {
       throw new Error('Cannot update root feature');
     }
-    this._store.change({ fset: { [change.id]: change } });
+    this._stateManager.update({ fset: { [change.id]: change } });
   }
 
   private _resolveFeaturePlace(place: SceneFeatureInsertPlace): {
@@ -352,7 +357,7 @@ export class EditorEngine {
       fset[fid] = { id: fid, parent, idx };
       before = idx;
     }
-    this._store.change({ fset });
+    this._stateManager.update({ fset });
   }
 
   private _computeSelectionForMove(
@@ -380,28 +385,30 @@ export class EditorEngine {
     let next: string | undefined = undefined;
     if (this._selectedByMe.size === 1) {
       const fid = [...this._selectedByMe][0]!;
-      const node = this._store.get(fid);
-      if (node) {
+      const parent = this._doc.byFeature.get(fid)?.parent;
+      if (parent) {
+        const peers = parent.children;
+        const i = peers.findIndex((p) => p.value.id === fid);
         next =
-          node.nextSibling()?.id ?? node.prevSibling()?.id ?? node.parent?.id;
+          peers[i + 1]?.value.id ?? peers[i - 1]?.value.id ?? parent.value.id;
       }
     }
-    this._store.change({ fdelete: [...this._selectedByMe] });
+    this._stateManager.update({ fdelete: [...this._selectedByMe] });
     this._removeDeletedFromSelection();
     if (next) this.toggleSelection(next, 'single');
   }
 
   delete(fid: string): void {
-    this._store.change({ fdelete: [fid] });
+    this._stateManager.update({ fdelete: [fid] });
     this._removeDeletedFromSelection();
   }
 
   private _removeDeletedFromSelection(): void {
-    if (this._active && !this._store.has(this._active)) {
+    if (this._active && !this._doc.byFeature.has(this._active)) {
       this._active = null;
     }
     for (const fid of this._selectedByMe) {
-      if (!this._store.has(fid)) {
+      if (!this._doc.byFeature.has(fid)) {
         this._selectedByMe.delete(fid);
       }
     }
@@ -411,7 +418,7 @@ export class EditorEngine {
     if (change.id === undefined || change.id === null) {
       throw new Error('Cannot update layer without id');
     }
-    this._store.change({ lset: { [change.id]: change } });
+    this._stateManager.update({ lset: { [change.id]: change } });
   }
 
   setSelectedLayer(lid: string | null) {
@@ -424,7 +431,7 @@ export class EditorEngine {
     if (lid === null) return;
     const resolved = this._resolveLayerPlace(place);
     const idx = fracIdxBetween(resolved.before, resolved.after);
-    this._store.change({ lset: { [lid]: { id: lid, idx } } });
+    this._stateManager.update({ lset: { [lid]: { id: lid, idx } } });
   }
 
   private _resolveLayerPlace(place: LayerInsertPlace): {
@@ -433,27 +440,27 @@ export class EditorEngine {
   } {
     let before = '';
     let after = '';
-    const order = this._store.layerOrder();
+    const order = this._doc.layerOrder;
     if (place.at === 'first') {
-      after = order[0]?.idx || '';
+      after = order[0]?.value.idx || '';
     } else if (place.at === 'last') {
-      before = order.at(-1)?.idx || '';
+      before = order.at(-1)?.value.idx || '';
     } else {
-      const targetI = order.findIndex((p) => p.id === place.target);
+      const targetI = order.findIndex((p) => p.value.id === place.target);
       if (targetI < 0) {
         return this._resolveLayerPlace({ at: 'first' });
       }
 
       if (place.at === 'before') {
         if (targetI > 0) {
-          before = order[targetI - 1]!.idx!;
+          before = order[targetI - 1]!.value.idx!;
         }
-        after = order[targetI]!.idx!;
+        after = order[targetI]!.value.idx!;
       } else if (place.at === 'after') {
         if (targetI < order.length - 1) {
-          after = order[targetI + 1]!.idx!;
+          after = order[targetI + 1]!.value.idx!;
         }
-        before = order[targetI]!.idx!;
+        before = order[targetI]!.value.idx!;
       } else {
         throw new Error('Unreachable');
       }
@@ -496,16 +503,16 @@ export class EditorEngine {
   private _renderLayers(): Scene['layers'] {
     const active: SceneLayer[] = [];
     const activeSet = new Set<LayerSource>();
-    for (const layer of this._store.layerOrder()) {
-      const idx = layer.idx!;
-      const source = this.sources.layers[layer.id];
+    for (const { value } of this._doc.layerOrder) {
+      const idx = value.idx!;
+      const source = this.sources.layers[value.id];
       if (!source) continue;
       active.push({
-        id: layer.id,
+        id: value.id,
         idx,
         source,
-        opacity: layer.opacity ?? null,
-        selectedByMe: layer.id === this._layerSelectedByMe,
+        opacity: value.opacity ?? null,
+        selectedByMe: value.id === this._layerSelectedByMe,
       });
       activeSet.add(source);
     }
@@ -562,7 +569,7 @@ export class EditorEngine {
       peerSelection,
     };
 
-    for (const child of this._store.ftree.childOrder()) {
+    for (const child of this._doc.features.children) {
       const feature = this._renderFeature(ctx, root, child);
       root.children.push(feature);
     }
@@ -577,12 +584,12 @@ export class EditorEngine {
   private _renderFeature(
     ctx: RenderCtx,
     parent: SceneFeature | SceneRootFeature,
-    node: FNode,
+    f: DocFeature,
   ): SceneFeature {
-    const { value } = node;
-    const selectedByMe = this._selectedByMe.has(node.id);
+    const { value } = f;
+    const selectedByMe = this._selectedByMe.has(value.id);
     const feature: SceneFeature = {
-      id: node.id,
+      id: value.id,
       parent,
       idx: value.idx!,
       children: [],
@@ -590,14 +597,12 @@ export class EditorEngine {
       geometry: value.geometry ?? null,
       name: value.name ?? null,
       color: value.color ?? null,
-      active: node.id === this._active,
+      active: value.id === this._active,
       selectedByMe,
-      selectedByPeers: ctx.peerSelection.get(node.id) ?? null,
-      hoveredByMe: this._hoveredByMe === node.id,
+      selectedByPeers: ctx.peerSelection.get(value.id) ?? null,
+      hoveredByMe: this._hoveredByMe === value.id,
     };
-    this._sceneNodes.set(node.id, feature);
-
-    const children = node.childOrder();
+    this._sceneNodes.set(value.id, feature);
 
     if (selectedByMe) {
       ctx.selectedByMe.push(feature);
@@ -605,13 +610,13 @@ export class EditorEngine {
       // bottom. If anyone is below us they'll overwrite as we're doing a depth
       // first search
       ctx.insertPlace = {
-        at: children.length > 0 ? 'firstChild' : 'after',
+        at: f.children.length > 0 ? 'firstChild' : 'after',
         target: feature,
       };
     }
 
-    for (const node of children) {
-      const child = this._renderFeature(ctx, feature, node);
+    for (const childF of f.children) {
+      const child = this._renderFeature(ctx, feature, childF);
       feature.children.push(child);
     }
 
