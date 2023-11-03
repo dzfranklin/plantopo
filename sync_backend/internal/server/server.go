@@ -123,7 +123,7 @@ func (s *grpcServer) Connect(stream api.SyncBackend_ConnectServer) error {
 		case *api.SyncBackendIncomingMessage_Update:
 			req := msg.Update
 
-			var aware schema.Aware
+			var aware *schema.Aware
 			if req.Aware != nil {
 				err := json.Unmarshal(req.Aware, &aware)
 				if err != nil {

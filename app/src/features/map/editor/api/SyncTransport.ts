@@ -108,19 +108,15 @@ export class SyncTransport {
     };
     this._sock.onclose = (ev) => {
       if (ev.code === 1000) {
-        console.log(`SyncTransport: sock closed normally: ${ev.reason}`, ev);
+        console.log(`SyncTransport: sock closed normally: ${ev.reason}`);
       } else {
         console.warn(
           `SyncTransport: sock closed abnormally: ${ev.code} ${ev.reason}`,
-          ev,
         );
       }
       this._sock = null;
       this._failures++;
       this._advanceState('disconnected');
-    };
-    this._sock.onerror = (ev) => {
-      console.warn('SyncTransport: sock error', ev);
     };
   }
 
