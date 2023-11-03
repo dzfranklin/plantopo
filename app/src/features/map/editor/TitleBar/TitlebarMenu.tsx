@@ -47,7 +47,7 @@ export function TitlebarMenu() {
         >
           Edit
         </Button>
-        <Popover className="w-56 p-1 overflow-auto origin-top-left bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 entering:animate-in entering:fade-in entering:zoom-in-95 exiting:animate-out exiting:fade-out exiting:zoom-out-95 fill-mode-forwards">
+        <Popover className="w-56 p-1 overflow-auto origin-top-left bg-white rounded shadow-lg ring-1 ring-black ring-opacity-5 entering:animate-in entering:fade-in entering:zoom-in-95 exiting:animate-out exiting:fade-out exiting:zoom-out-95 fill-mode-forwards">
           <Menu
             className="outline-none"
             onAction={(key) => onAction('edit', key as string)}
@@ -73,7 +73,7 @@ function MenuItem(props: ItemProps) {
   return (
     <Item
       {...props}
-      className="box-border flex items-center w-full px-3 py-2 text-sm text-gray-900 rounded-md outline-none cursor-default group focus:bg-blue-500 focus:text-white"
+      className="box-border flex items-center w-full px-2 py-1 text-sm text-gray-900 rounded outline-none cursor-default group focus:bg-neutral-200"
     />
   );
 }
