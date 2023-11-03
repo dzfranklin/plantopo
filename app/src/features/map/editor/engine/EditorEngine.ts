@@ -54,7 +54,6 @@ export class EditorEngine {
   public readonly sources: MapSources;
   public readonly createdAt = Date.now();
 
-  private _seq = 0;
   private _stateManager: StateManager;
   private _doc: DocState;
   private _transport: SyncTransport;
@@ -132,7 +131,6 @@ export class EditorEngine {
 
     this._awareSendInterval = window.setInterval(() => {
       this._transport.send({
-        seq: ++this._seq,
         aware: this._makeSetAwareRequest(),
       });
     }, SEND_INTERVAL);
