@@ -171,7 +171,7 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 
 type Incoming struct {
 	Seq    int32                  `json:"seq"`
-	Aware  sync_schema.Aware      `json:"aware"`
+	Aware  *sync_schema.Aware     `json:"aware"`
 	Change *sync_schema.Changeset `json:"change"`
 }
 
@@ -193,7 +193,6 @@ func socketReader(
 		err := sock.ReadJSON(&msg)
 		if err != nil {
 			l.Infow("socket read error", zap.Error(err))
-			writeCloseMessage(sock, websocket.CloseNormalClosure, "failed to read from socket")
 			return
 		}
 
@@ -254,7 +253,6 @@ func socketWriter(
 		err = sock.WriteMessage(websocket.TextMessage, msg.Data)
 		if err != nil {
 			l.Infow("socket write error", zap.Error(err))
-			writeCloseMessage(sock, websocket.CloseNormalClosure, "failed to write to socket")
 			return
 		}
 	}
