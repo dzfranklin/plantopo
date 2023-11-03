@@ -1,7 +1,7 @@
 import { FeatureChange } from '@/gen/sync_schema';
 import { Changeset } from '../api/Changeset';
 import { IncomingSessionMsg, OutgoingSessionMsg } from '../api/sessionMsg';
-import { DocState, DocStore } from './DocStore';
+import { DocState, DocStore, UndoStatus } from './DocStore';
 import {
   ULID,
   factory as ulidFactory,
@@ -74,9 +74,24 @@ export class StateManager {
   update(change: Changeset) {
     this._store.localUpdate(this._generation, change);
     this._onChange?.(this._store.toState());
-
     this._hasUnsent = true;
     this._updateHasUnsynced();
+  }
+
+  undo() {
+    this._store.undo(this._generation);
+  }
+
+  redo() {
+    this._store.redo(this._generation);
+  }
+
+  undoStatus(): UndoStatus {
+    return this._store.undoStatus();
+  }
+
+  addUndoStatusListener(cb: (status: UndoStatus) => any): () => void {
+    return this._store.addUndoStatusListener(cb);
   }
 
   toState(): DocState {

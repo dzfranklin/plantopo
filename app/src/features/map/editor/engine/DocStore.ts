@@ -2,6 +2,7 @@ import { FeatureChange, LayerChange } from '@/gen/sync_schema';
 import { Changeset } from '../api/Changeset';
 import stringOrd from '@/generic/stringOrd';
 import { WorkingChangeset } from './WorkingChangeset';
+import { reverseChange } from './reverseChange';
 
 /*
 For now I hide rare issues and wait for the server to fix
@@ -35,6 +36,14 @@ export interface DocFeature {
   value: FeatureChange & { parent: string; idx: string };
 }
 
+export interface UndoStatus {
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+const MAX_UNDO_STACK = 1000;
+const MERGE_WINDOW_IDLE_MS = 1000;
+
 export class DocStore {
   private _fadds = new Map<string, number | null>();
   private _fdeletes = new Map<string, number | null>();
@@ -43,11 +52,28 @@ export class DocStore {
   /** _l is the map of layer entries */
   private _l = new Map<string, Entry>();
 
+  private _undoStack: UndoEntry[] = [];
+  private _undoCursor: number | null = null;
+
   constructor() {
     this._f.set('', new Entry(''));
   }
 
-  localUpdate(generation: number, change: Changeset) {
+  localUpdate(generation: number, change: Changeset, ts = Date.now()) {
+    this._localUpdate(generation, change, true, ts);
+  }
+
+  private _localUpdate(
+    generation: number,
+    change: Changeset,
+    pushUndoEntry: boolean,
+    ts = Date.now(),
+  ) {
+    let reverse: Changeset | null = null;
+    if (pushUndoEntry) {
+      reverse = reverseChange(this, change);
+    }
+
     if (change.fdelete) {
       const preState = this.toState();
       this._fdeleteAll(
@@ -93,6 +119,85 @@ export class DocStore {
         );
       }
     }
+
+    if (reverse !== null) {
+      if (this._undoCursor !== null) {
+        this._undoStack = this._undoStack.slice(0, this._undoCursor + 1);
+        this._undoCursor = this._undoStack.length - 1;
+      }
+      if (this._undoStack.length >= MAX_UNDO_STACK) {
+        this._undoStack.shift();
+        this._undoCursor = this._undoStack.length - 1;
+      }
+
+      const prev = this._undoStack.at(-1);
+      const entry = {
+        fwd: change,
+        rev: reverse,
+        ts,
+      };
+      if (!prev || !maybeMergeIntoUndoEntry(prev, entry)) {
+        this._undoStack.push(entry);
+        this._undoCursor = this._undoStack.length - 1;
+      }
+      this._triggerUndoStatus();
+    }
+  }
+
+  undo(generation: number) {
+    if (!this._canUndo()) return;
+    const entry = this._undoStack[this._undoCursor!]!;
+    this._localUpdate(generation, entry.rev, false);
+    this._undoCursor!--;
+    this._triggerUndoStatus();
+  }
+
+  redo(generation: number) {
+    if (!this._canRedo()) return;
+    this._undoCursor!++;
+    const entry = this._undoStack[this._undoCursor!]!;
+    this._localUpdate(generation, entry.fwd, false);
+    this._triggerUndoStatus();
+  }
+
+  undoStatus(): UndoStatus {
+    return {
+      canUndo: this._canUndo(),
+      canRedo: this._canRedo(),
+    };
+  }
+
+  private _undoStatusListeners = new Set<(_: UndoStatus) => any>();
+
+  addUndoStatusListener(cb: (status: UndoStatus) => any): () => void {
+    this._undoStatusListeners.add(cb);
+    return () => this._undoStatusListeners.delete(cb);
+  }
+
+  private _prevUndoStatus: UndoStatus | null = null;
+
+  private _triggerUndoStatus() {
+    const value = this.undoStatus();
+    if (
+      this._prevUndoStatus === null ||
+      value.canUndo !== this._prevUndoStatus.canUndo ||
+      value.canRedo !== this._prevUndoStatus.canRedo
+    ) {
+      this._prevUndoStatus = value;
+      for (const cb of this._undoStatusListeners) {
+        cb(value);
+      }
+    }
+  }
+
+  private _canUndo(): boolean {
+    return this._undoCursor !== null && this._undoCursor >= 0;
+  }
+
+  private _canRedo(): boolean {
+    return (
+      this._undoCursor !== null && this._undoCursor < this._undoStack.length - 1
+    );
   }
 
   remoteUpdate(localFixGeneration: number, change: Changeset) {
@@ -149,6 +254,31 @@ export class DocStore {
     for (const entry of this._l.values()) {
       entry.updateForAck(ack);
     }
+  }
+
+  featureRecord(fid: string): Readonly<Record<string, unknown>> | undefined {
+    return this._f.get(fid)?.toValue();
+  }
+
+  layerRecord(lid: string): Readonly<Record<string, unknown>> | undefined {
+    return this._l.get(lid)?.toValue();
+  }
+
+  toChange(): Changeset | null {
+    const out = new WorkingChangeset();
+    for (const [fid] of this._fadds) {
+      out.fadd.add(fid);
+    }
+    for (const [fid] of this._fdeletes) {
+      out.fdelete.add(fid);
+    }
+    for (const entry of this._f.values()) {
+      out.fset.set(entry.id, entry.toValue() as any as FeatureChange);
+    }
+    for (const entry of this._l.values()) {
+      out.lset.set(entry.id, entry.toValue() as any as LayerChange);
+    }
+    return out.toChangeset();
   }
 
   toState(): DocState {
@@ -466,4 +596,73 @@ class Entry {
       outEntry[k] = v;
     }
   }
+}
+
+interface UndoEntry {
+  fwd: Changeset;
+  rev: Changeset;
+  ts: number;
+}
+
+function maybeMergeIntoUndoEntry(target: UndoEntry, from: UndoEntry): boolean {
+  // CHECK
+
+  if (from.ts - target.ts > MERGE_WINDOW_IDLE_MS) return false;
+
+  // if fadd/fdelete then ineligable
+  if (from.fwd.fdelete && from.fwd.fdelete.length > 0) return false;
+  if (target.fwd.fdelete && target.fwd.fdelete.length > 0) return false;
+  if (from.fwd.fadd && from.fwd.fadd.length > 0) return false;
+  if (target.fwd.fadd && target.fwd.fadd.length > 0) return false;
+
+  // if fset then keys must be equal
+  if (from.fwd.fset) {
+    if (!target.fwd.fset) return false;
+    const currKeys = new Set(Object.keys(from.fwd.fset));
+    currKeys.delete('id');
+    const prevKeys = new Set(Object.keys(target.fwd.fset));
+    prevKeys.delete('id');
+    if (currKeys.size !== prevKeys.size) return false;
+    for (const k of currKeys) {
+      if (!prevKeys.has(k)) return false;
+    }
+  }
+
+  // if lset then keys must be equal
+  if (from.fwd.lset) {
+    if (!target.fwd.lset) return false;
+    const currKeys = new Set(Object.keys(from.fwd.lset));
+    currKeys.delete('id');
+    const prevKeys = new Set(Object.keys(target.fwd.lset));
+    prevKeys.delete('id');
+    if (currKeys.size !== prevKeys.size) return false;
+    for (const k of currKeys) {
+      if (!prevKeys.has(k)) return false;
+    }
+  }
+
+  // MERGE
+
+  // We can keep rev the same because we want to reverse to the earliest values
+  // and we enforce no new keys above
+
+  if (from.fwd.fset) {
+    for (const [k, v] of Object.entries(from.fwd.fset)) {
+      if (k === 'id') continue;
+      if (v !== undefined) {
+        target.fwd.fset![k] = v;
+      }
+    }
+  }
+
+  if (from.fwd.lset) {
+    for (const [k, v] of Object.entries(from.fwd.lset)) {
+      if (k === 'id') continue;
+      if (v !== undefined) {
+        target.fwd.lset![k] = v;
+      }
+    }
+  }
+
+  return true;
 }
