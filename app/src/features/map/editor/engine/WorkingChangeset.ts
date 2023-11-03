@@ -56,11 +56,20 @@ export class WorkingChangeset {
 
   toChangeset(): Changeset | null {
     if (this.isEmpty()) return null;
-    const fdelete = [...this.fdelete];
-    const fadd = [...this.fadd];
-    const fset = Object.fromEntries(this.fset);
-    const lset = Object.fromEntries(this.lset);
-    return { fdelete, fadd, fset, lset };
+    const out: Changeset = {};
+    if (this.fdelete.size > 0) {
+      out.fdelete = [...this.fdelete];
+    }
+    if (this.fadd.size > 0) {
+      out.fadd = [...this.fadd];
+    }
+    if (this.fset.size > 0) {
+      out.fset = Object.fromEntries(this.fset);
+    }
+    if (this.lset.size > 0) {
+      out.lset = Object.fromEntries(this.lset);
+    }
+    return out;
   }
 
   clear() {
