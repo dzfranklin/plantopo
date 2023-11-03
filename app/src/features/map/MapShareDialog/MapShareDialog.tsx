@@ -6,6 +6,7 @@ import {
   Dialog,
   Heading,
   ProgressCircle,
+  useDialogContainer,
 } from '@adobe/react-spectrum';
 import { InlineErrorComponent } from '@/features/error/InlineErrorComponent';
 import { useMapAccess } from '../api/mapMeta';
@@ -15,16 +16,12 @@ import { GeneralAccessPicker } from '../GeneralAccessPicker';
 import { UserAccessControl } from './UserAccessControl';
 import { UserInviteControl } from './UserInviteControl';
 
-export function MapShareDialog({
-  item,
-  close,
-}: {
-  item: MapMeta;
-  close: () => void;
-}) {
+export function MapShareDialog({ item }: { item: MapMeta }) {
+  const dialog = useDialogContainer();
+
   const query = useMapAccess(item.id);
   const mutation = usePutMapAccessMutation(item.id, {
-    onSuccess: close,
+    onSuccess: () => dialog.dismiss(),
   });
 
   const [changes, setChanges] = useState<PutMapAccessRequest>({});
