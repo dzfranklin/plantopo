@@ -35,7 +35,6 @@ func writeData(r *http.Request, w http.ResponseWriter, value interface{}) {
 	requestId := rid.FromCtx(r.Context())
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Request-Id", requestId.String())
-	w.WriteHeader(http.StatusOK)
 
 	out, err := json.Marshal(replyContainer{Data: value})
 	if err != nil {
@@ -43,11 +42,13 @@ func writeData(r *http.Request, w http.ResponseWriter, value interface{}) {
 	}
 
 	if len(out) > 4096 {
+		w.Header().Set("Content-Encoding", "gzip")
+		w.WriteHeader(http.StatusOK)
 		gw := gzip.NewWriter(w)
 		defer gw.Close()
-		w.Header().Set("Content-Encoding", "gzip")
 		_, _ = gw.Write(out)
 	} else {
+		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(out)
 	}
 }
