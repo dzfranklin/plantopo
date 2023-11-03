@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/danielzfranklin/plantopo/api/sync_schema"
 	api "github.com/danielzfranklin/plantopo/api/v1"
@@ -192,6 +193,7 @@ func socketReader(
 		err := sock.ReadJSON(&msg)
 		if err != nil {
 			l.Infow("socket read error", zap.Error(err))
+			writeCloseMessage(sock, websocket.CloseNormalClosure, "failed to read from socket")
 			return
 		}
 
@@ -219,6 +221,7 @@ func socketReader(
 		})
 		if err != nil {
 			l.Infow("backend send error", zap.Error(err))
+			writeCloseMessage(sock, websocket.CloseInternalServerErr, "failed to send to backend")
 			return
 		}
 	}
@@ -238,9 +241,12 @@ func socketWriter(
 		msg, err := b.Recv()
 		if err != nil {
 			if errors.Is(err, context.Canceled) {
+				l.Info("cancelled")
+				writeCloseMessage(sock, websocket.CloseNormalClosure, "cancelled")
 				return
 			} else {
 				l.Infow("backend recv error", zap.Error(err))
+				writeCloseMessage(sock, websocket.CloseInternalServerErr, "failed to receive from backend")
 				return
 			}
 		}
@@ -248,7 +254,12 @@ func socketWriter(
 		err = sock.WriteMessage(websocket.TextMessage, msg.Data)
 		if err != nil {
 			l.Infow("socket write error", zap.Error(err))
+			writeCloseMessage(sock, websocket.CloseNormalClosure, "failed to write to socket")
 			return
 		}
 	}
+}
+
+func writeCloseMessage(sock *websocket.Conn, code int, reason string) {
+	_ = sock.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, reason), time.Now().Add(time.Second))
 }

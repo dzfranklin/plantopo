@@ -357,7 +357,7 @@ func (s *Session) run(c *Config) {
 			}
 		case id := <-s.closeConnChan:
 			if conn, ok := conns[id]; ok {
-				l.Infow("closing conn", "id", id)
+				l.Infow("closing conn", "clientId", id)
 				closeClient(conn)
 			} else {
 				l.Infow("closeConnChan: unknown id")
