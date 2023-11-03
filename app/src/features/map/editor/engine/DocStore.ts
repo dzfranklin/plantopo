@@ -111,9 +111,6 @@ export class DocStore {
     for (const id of added) {
       const incoming = change.fset![id]!;
       const entry = this._getOrInsertF(id);
-      if (this._fadds.has(id)) {
-        console.warn('remote fadd for existing feature', id);
-      }
       this._fadds.set(id, null);
       entry.mergeRemote(incoming as any as Record<string, unknown>);
     }
