@@ -106,7 +106,7 @@ export class StateManager {
       throw new Error('new feature must have parent and idx');
     }
     const id = this._generateFid();
-    this._store.localUpdate(this._generation, {
+    this.update({
       fadd: [id],
       fset: { [id]: { ...value, id } },
     });
