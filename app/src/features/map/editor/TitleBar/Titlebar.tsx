@@ -4,7 +4,11 @@ import { useMapMeta, usePutMapMetaMutation } from '../../api/mapMeta';
 import ConnectedIcon from '@spectrum-icons/workflow/CloudOutline';
 import DisconnectedIcon from '@spectrum-icons/workflow/CloudDisconnected';
 import { useMapId } from '../useMapId';
-import { useEngine, useSyncTransportStatus } from '../engine/useEngine';
+import {
+  useEngine,
+  useHasUnsyncedChanges,
+  useSyncTransportStatus,
+} from '../engine/useEngine';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import cls from '@/generic/cls';
 
@@ -38,6 +42,7 @@ export function Titlebar() {
 function StatusComponent() {
   const engine = useEngine();
   const status = useSyncTransportStatus();
+  const hasUnsyncedChanges = useHasUnsyncedChanges();
   const [readyForCheck, setReadyForCheck] = useState(false);
   useEffect(() => {
     let ticker: number | null;
@@ -54,7 +59,7 @@ function StatusComponent() {
     };
   }, [engine]);
   return (
-    <div className="pt-1 text-xs">
+    <div className="flex items-center gap-2 pt-1 text-xs">
       {(readyForCheck && !status) ||
         (status?.type === 'connecting' && (
           <>
@@ -62,16 +67,25 @@ function StatusComponent() {
             <DisconnectedIcon height="20px" />
           </>
         ))}
-      {status?.type === 'connected' && <ConnectedIcon height="20px" />}
+      {status?.type === 'connected' && (
+        <>
+          {hasUnsyncedChanges && (
+            <span className="text-neutral-500">Syncing...</span>
+          )}
+          <ConnectedIcon height="20px" />
+        </>
+      )}
       {readyForCheck && status?.type === 'disconnected' && (
         <>
-          <ReconnectingAt at={status.reconnectingAt} />
-          <button
-            onClick={() => status.reconnectNow()}
-            className="px-1 underline"
-          >
-            Reconnect now
-          </button>
+          <div>
+            <ReconnectingAt at={status.reconnectingAt} />
+            <button
+              onClick={() => status.reconnectNow()}
+              className="px-1 underline"
+            >
+              Reconnect now
+            </button>
+          </div>
           <DisconnectedIcon height="20px" />
         </>
       )}
@@ -96,7 +110,7 @@ function ReconnectingAt({ at }: { at: number }) {
       pending.current && window.clearTimeout(pending.current);
     };
   }, [tick]);
-  return <>Reconnecting in {`${secondsLeft} seconds`}</>;
+  return <span>Reconnecting in {`${secondsLeft} seconds`}</span>;
 }
 
 function TitleEditComponent() {
