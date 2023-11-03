@@ -25,7 +25,7 @@ func New(db db.Querier) *Repo {
 func (r *Repo) GetMapSnapshot(
 	ctx context.Context, mapId string,
 ) (schema.Changeset, error) {
-	snapshotBytes, err := r.getCompressedSnapshot(ctx, mapId)
+	snapshotBytes, err := r.GetMapSnapshotGzipped(ctx, mapId)
 	if err != nil {
 		return schema.Changeset{}, err
 	}
@@ -38,7 +38,7 @@ func (r *Repo) GetMapSnapshot(
 	return value, nil
 }
 
-func (r *Repo) getCompressedSnapshot(
+func (r *Repo) GetMapSnapshotGzipped(
 	ctx context.Context, mapId string,
 ) ([]byte, error) {
 	var value []byte

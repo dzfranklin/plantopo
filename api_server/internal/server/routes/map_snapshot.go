@@ -16,7 +16,7 @@ import (
 var backendToken = os.Getenv("BACKEND_TOKEN")
 
 type SnapshotRepo interface {
-	GetMapSnapshot(ctx context.Context, mapId string) (schema.Changeset, error)
+	GetMapSnapshotGzipped(ctx context.Context, mapId string) ([]byte, error)
 	SetMapSnapshot(ctx context.Context, mapId string, value schema.Changeset) error
 }
 
@@ -59,7 +59,7 @@ func (s *Services) getMapSnapshotHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	snapshot, err := s.SnapshotRepo.GetMapSnapshot(r.Context(), mapId)
+	snapshot, err := s.SnapshotRepo.GetMapSnapshotGzipped(r.Context(), mapId)
 	if err != nil {
 		if errors.Is(err, snapshot_repo.ErrSnapshotNotFound) {
 			writeNotFound(r, w)
@@ -68,7 +68,8 @@ func (s *Services) getMapSnapshotHandler(w http.ResponseWriter, r *http.Request)
 		writeError(r, w, err)
 		return
 	}
-	writeData(r, w, snapshot)
+
+	_, _ = w.Write(snapshot)
 }
 
 func (s *Services) putMapSnapshotHandler(w http.ResponseWriter, r *http.Request) {
