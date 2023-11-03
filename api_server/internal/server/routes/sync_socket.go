@@ -196,11 +196,14 @@ func socketReader(
 			return
 		}
 
-		msg.Aware.Trusted = trustedAware
-		aware, err := json.Marshal(msg.Aware)
-		if err != nil {
-			l.DPanicw("failed to marshal aware", zap.Error(err))
-			return
+		var aware []byte
+		if msg.Aware != nil {
+			msg.Aware.Trusted = trustedAware
+			aware, err = json.Marshal(msg.Aware)
+			if err != nil {
+				l.DPanicw("failed to marshal aware", zap.Error(err))
+				return
+			}
 		}
 
 		change, err := json.Marshal(msg.Change)
