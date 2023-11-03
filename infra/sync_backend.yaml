@@ -29,11 +29,11 @@ spec:
     metadata:
       labels:
         app: sync-backend
-        ver: {{ .Values.ver }}
+        ver: "{{ .Values.ver }}"
     spec:
       containers:
         - name: sync-backend
-          image: {{ .Values.image }}
+          image: "{{ .Values.image }}"
           env:
             - name: PORT
               value: "5050"

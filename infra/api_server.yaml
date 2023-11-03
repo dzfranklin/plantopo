@@ -50,11 +50,11 @@ spec:
       name: api-server
       labels:
         app: api-server
-        ver: {{ .Values.ver }}
+        ver: "{{ .Values.ver }}"
     spec:
       containers:
         - name: api-server
-          image: {{ .Values.image}}
+          image: "{{ .Values.image}}"
           env:
             - name: PORT
               value: "8080"
