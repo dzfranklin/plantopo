@@ -347,14 +347,7 @@ func (s *Session) run(c *Config) {
 				hasUnsaved = true
 				unsent.Merge(input.Change)
 				if fixes != nil {
-					l.Debugw("sending fixes", "fixes", fixes)
 					unsent.Merge(fixes)
-					msg := Outgoing{Change: fixes}
-					select {
-					case conn.outgoing <- msg:
-					default:
-						dropClient(conn)
-					}
 				}
 			}
 		case id := <-s.closeConnChan:
