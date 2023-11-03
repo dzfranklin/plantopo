@@ -350,10 +350,8 @@ func (s *Session) run(c *Config) {
 					}
 				}
 				conn.seq = input.Seq
-			} else {
-				if !input.Change.IsNil() {
-					l.Infof("ignoring outdated receive (%d <= %d)", input.Seq, conn.seq)
-				}
+			} else if input.Seq > 0 {
+				l.Infof("ignoring outdated receive (%d <= %d)", input.Seq, conn.seq)
 			}
 		case id := <-s.closeConnChan:
 			if conn, ok := conns[id]; ok {
