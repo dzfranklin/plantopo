@@ -134,7 +134,7 @@ function ShareButton({ item }: { item: MapMeta }) {
       <ActionButton aria-label="share" isQuiet>
         <ShareIcon />
       </ActionButton>
-      {(close) => <MapShareDialog close={close} item={item} />}
+      {(close) => <MapShareDialog item={item} />}
     </DialogTrigger>
   );
 }
