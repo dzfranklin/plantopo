@@ -26,7 +26,7 @@ type Connection struct {
 type Incoming struct {
 	connId string            // overwritten by Connection.Receive
 	Seq    int32             `json:"seq"`
-	Aware  schema.Aware      `json:"aware"`
+	Aware  *schema.Aware     `json:"aware"`
 	Change *schema.Changeset `json:"change"`
 }
 
@@ -321,34 +321,38 @@ func (s *Session) run(c *Config) {
 				l.Infow("receiveChan: unknown id", "unknownId", input.connId)
 				continue
 			}
-			if input.Seq <= conn.seq {
-				l.Infof("ignoring outdated receive (%d <= %d)", input.Seq, conn.seq)
-				continue
+
+			if input.Aware != nil {
+				conn.aware = *input.Aware
 			}
 
-			conn.seq = input.Seq
-			conn.aware = input.Aware
+			if input.Seq > conn.seq {
+				if !input.Change.IsNil() {
+					fixes, err := st.Update(l.Desugar(), input.Change)
+					if err != nil {
+						l.Infow("client sent invalid changeset",
+							zap.Error(err), "value", input.Change)
+						msg := Outgoing{
+							Error: fmt.Errorf("invalid changeset: %w", err),
+						}
+						select {
+						case conn.outgoing <- msg:
+						default:
+							dropClient(conn)
+						}
+						continue
+					}
 
-			if !input.Change.IsNil() {
-				fixes, err := st.Update(l.Desugar(), input.Change)
-				if err != nil {
-					l.Infow("client sent invalid changeset",
-						zap.Error(err), "value", input.Change)
-					msg := Outgoing{
-						Error: fmt.Errorf("invalid changeset: %w", err),
+					hasUnsaved = true
+					unsent.Merge(input.Change)
+					if fixes != nil {
+						unsent.Merge(fixes)
 					}
-					select {
-					case conn.outgoing <- msg:
-					default:
-						dropClient(conn)
-					}
-					continue
 				}
-
-				hasUnsaved = true
-				unsent.Merge(input.Change)
-				if fixes != nil {
-					unsent.Merge(fixes)
+				conn.seq = input.Seq
+			} else {
+				if !input.Change.IsNil() {
+					l.Infof("ignoring outdated receive (%d <= %d)", input.Seq, conn.seq)
 				}
 			}
 		case id := <-s.closeConnChan:
