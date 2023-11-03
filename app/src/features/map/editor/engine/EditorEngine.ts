@@ -221,6 +221,14 @@ export class EditorEngine {
     return () => this._sceneSelectors.delete(id);
   }
 
+  hasUnsyncedChanges(): boolean {
+    return this._stateManager.hasUnsynced();
+  }
+
+  addHasUnsyncedListener(cb: (hasPending: boolean) => any): () => void {
+    return this._stateManager.addHasUnsyncedListener(cb);
+  }
+
   setSidebarWidth(width: number): void {
     this._sidebarWidth = width;
     this._prefs.setSidebarWidth(width);

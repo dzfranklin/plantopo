@@ -110,3 +110,10 @@ export function useSyncTransportStatus(): SyncTransportStatus | null {
   useEffect(() => engine?.addTransportStatusListener(setValue), [engine]);
   return value;
 }
+
+export function useHasUnsyncedChanges(): boolean {
+  const engine = useEngine();
+  const [value, setValue] = useState(engine?.hasUnsyncedChanges() ?? false);
+  useEffect(() => engine?.addHasUnsyncedListener(setValue), [engine]);
+  return value;
+}

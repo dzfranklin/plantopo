@@ -16,12 +16,14 @@ export class StateManager {
   public readonly clientId: string;
 
   private _ulidFactory: ULID;
+  private _hasUnsent = false;
   private _generation = 1;
   private _latestSend = 0;
   private _latestAck = 0;
   private _store: DocStore;
   private _transport: ITransport;
   private _onChange?: (state: DocState) => any;
+  private _hasUnsyncedListeners = new Set<(hasUnsynced: boolean) => any>();
   private _destroy: Array<() => void> = [];
 
   constructor(config: {
@@ -53,9 +55,28 @@ export class StateManager {
     this._destroy.forEach((fn) => fn());
   }
 
+  hasUnsynced(): boolean {
+    return this._hasUnsent || this._latestSend > this._latestAck;
+  }
+
+  addHasUnsyncedListener(cb: (hasPending: boolean) => any): () => void {
+    this._hasUnsyncedListeners.add(cb);
+    return () => this._hasUnsyncedListeners.delete(cb);
+  }
+
+  _updateHasUnsynced() {
+    const value = this.hasUnsynced();
+    for (const cb of this._hasUnsyncedListeners) {
+      cb(value);
+    }
+  }
+
   update(change: Changeset) {
     this._store.localUpdate(this._generation, change);
     this._onChange?.(this._store.toState());
+
+    this._hasUnsent = true;
+    this._updateHasUnsynced();
   }
 
   toState(): DocState {
@@ -72,6 +93,7 @@ export class StateManager {
   private _onMessage(msg: IncomingSessionMsg) {
     if (msg.ack !== undefined) {
       this._latestAck = Math.max(this._latestAck, msg.ack);
+      this._updateHasUnsynced();
       this._store.remoteAck(msg.ack);
     }
     if (msg.change !== undefined) {
@@ -91,6 +113,7 @@ export class StateManager {
         console.error('failed to send change', err);
         return;
       }
+      this._hasUnsent = false;
       this._latestSend = this._generation;
       this._generation++;
     }
