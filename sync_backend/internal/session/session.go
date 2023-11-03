@@ -315,13 +315,14 @@ func (s *Session) run(c *Config) {
 				dropClient(conn)
 			}
 		case input := <-s.receiveChan:
+			l := l.With("clientId", input.connId)
 			conn, ok := conns[input.connId]
 			if !ok {
 				l.Infow("receiveChan: unknown id", "unknownId", input.connId)
 				continue
 			}
 			if input.Seq <= conn.seq {
-				l.Infow("ignoring outdated receive", "seq", input.Seq)
+				l.Infof("ignoring outdated receive (%d <= %d)", input.Seq, conn.seq)
 				continue
 			}
 
@@ -347,14 +348,7 @@ func (s *Session) run(c *Config) {
 				hasUnsaved = true
 				unsent.Merge(input.Change)
 				if fixes != nil {
-					l.Debugw("sending fixes", "fixes", fixes)
 					unsent.Merge(fixes)
-					msg := Outgoing{Change: fixes}
-					select {
-					case conn.outgoing <- msg:
-					default:
-						dropClient(conn)
-					}
 				}
 			}
 		case id := <-s.closeConnChan:
