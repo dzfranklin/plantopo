@@ -12,14 +12,24 @@ import {
 } from 'react-aria-components';
 import type { ItemProps } from 'react-aria-components';
 import { useEngine } from '../engine/useEngine';
+import { MapShareDialog } from '../../MapShareDialog/MapShareDialog';
+import { useMapMeta } from '../../api/mapMeta';
+import { useMapId } from '../useMapId';
 
 export function TitlebarMenu() {
   const engine = useEngine();
-  const [dialog, setDialog] = useState<'import' | null>(null);
+  const mapId = useMapId();
+  const meta = useMapMeta(mapId);
+  const [dialog, setDialog] = useState<'import' | 'share' | null>(null);
   const onAction = (menu: string, key: string) => {
     if (menu === 'edit') {
-      if (key === 'new') {
-        setDialog('import');
+      switch (key) {
+        case 'import':
+          setDialog('import');
+          break;
+        case 'share':
+          setDialog('share');
+          break;
       }
     }
   };
@@ -33,7 +43,7 @@ export function TitlebarMenu() {
             'mx-1 inline-flex items-center justify-center px-1.5 py-0.5 rounded outline-none text-sm',
             'hover:bg-gray-300 aria-expanded:bg-gray-300 focus-visible:ring-2 disabled:opacity-50 disabled:cursor-default',
           )}
-          isDisabled={!engine}
+          isDisabled={!(engine && meta.data)}
         >
           Edit
         </Button>
@@ -42,7 +52,8 @@ export function TitlebarMenu() {
             className="outline-none"
             onAction={(key) => onAction('edit', key as string)}
           >
-            <MenuItem id="new">Import</MenuItem>
+            <MenuItem id="share">Share</MenuItem>
+            <MenuItem id="import">Import</MenuItem>
             {/* <Separator className="bg-gray-300 h-[1px] mx-3 my-1" /> */}
           </Menu>
         </Popover>
@@ -50,6 +61,7 @@ export function TitlebarMenu() {
 
       {dialog !== null && (
         <DialogContainer onDismiss={() => setDialog(null)}>
+          {dialog === 'share' && <MapShareDialog item={meta.data!} />}
           {dialog === 'import' && <ImportDialog mapId={engine!.mapId} />}
         </DialogContainer>
       )}
