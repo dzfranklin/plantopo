@@ -19,13 +19,11 @@ export function ResizeHandle() {
   }, [engine]);
   const onPointerMove = useCallback((evt: globalThis.PointerEvent) => {
     dragAnimNext.current = Math.max(WIDTH_MIN, evt.clientX);
-    console.log('opm');
     evt.preventDefault();
     evt.stopPropagation();
   }, []);
   const onEnd = useCallback(
     (evt: globalThis.PointerEvent) => {
-      console.log('oe', evt.type);
       window.removeEventListener('pointermove', onPointerMove, {
         capture: true,
       });
