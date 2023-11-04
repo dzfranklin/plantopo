@@ -2,7 +2,6 @@ import cls from '@/generic/cls';
 import { useEngine, useSceneSelector } from '../../engine/useEngine';
 import { LineToolIcon } from './LineToolIcon';
 import { PointToolIcon } from './PointToolIcon';
-import { useCommand } from '@/features/commands/commands';
 
 const tools = [
   { id: 'line', icon: LineToolIcon },
@@ -14,16 +13,7 @@ export function MapToolbar() {
   const activeTool = useSceneSelector((s) => s.activeTool);
   const sidebarWidth = useSceneSelector((s) => s.sidebarWidth);
   const isDisabled = !engine || !engine.mayEdit;
-  useCommand({
-    key: 'l',
-    label: 'Select line tool',
-    action: () => engine?.setActiveTool('line'),
-  });
-  useCommand({
-    key: 'p',
-    label: 'Select point tool',
-    action: () => engine?.setActiveTool('point'),
-  });
+
   return (
     <div
       className="absolute top-0 z-10 pt-2 pl-1"
@@ -34,7 +24,17 @@ export function MapToolbar() {
           <button
             key={tool.id}
             disabled={isDisabled}
-            onClick={() => engine?.setActiveTool(tool.id)}
+            onClick={() => {
+              if (!engine) return;
+              switch (tool.id) {
+                case 'line':
+                  engine.execute('select-line-tool');
+                  break;
+                case 'point':
+                  engine.execute('select-point-tool');
+                  break;
+              }
+            }}
             className={cls(
               'p-1.5 rounded-md',
               isDisabled && 'opacity-50',

@@ -19,8 +19,10 @@ import { deepEq } from '@/generic/equality';
 import stringOrd from '@/generic/stringOrd';
 import { CurrentCameraPosition } from '../CurrentCamera';
 import { StateManager } from './StateManager';
-import { DocFeature, DocState } from './DocStore';
+import { DocFeature, DocState, UndoStatus } from './DocStore';
 import { ulid } from 'ulid';
+import { DEFAULT_KEYMAP, KeymapSpec, KeyBinding, Keymap } from './Keymap';
+import { isMac as platformIsMac } from '@/features/platformIsMac';
 
 const ROOT_FID = '';
 const SEND_INTERVAL = 15; // ms
@@ -47,12 +49,23 @@ export interface InitialCamera {
   pitch: number;
 }
 
+export type EngineCommand =
+  | 'undo'
+  | 'redo'
+  | 'select-line-tool'
+  | 'select-point-tool'
+  | 'delete-selected-feature'
+  | 'finish-action';
+
 export class EditorEngine {
   public readonly mapId: string;
   public readonly clientId: string;
   public readonly mayEdit: boolean;
   public readonly sources: MapSources;
   public readonly createdAt = Date.now();
+
+  private _keymap: Keymap;
+  private _keymapPlatform: 'mac' | 'pc';
 
   private _stateManager: StateManager;
   private _doc: DocState;
@@ -88,12 +101,14 @@ export class EditorEngine {
     mapSources,
     prefs,
     initialCamera,
+    platform,
   }: {
     mapId: string;
     mayEdit: boolean;
     mapSources: MapSources;
     prefs?: EditorPrefStore;
     initialCamera?: Readonly<InitialCamera>;
+    platform?: 'mac' | 'pc';
   }) {
     const clientId = ulid();
 
@@ -101,7 +116,11 @@ export class EditorEngine {
     this.mapId = mapId;
     this.mayEdit = mayEdit;
     this.sources = mapSources;
+
     this._initialCam = initialCamera;
+
+    this._keymapPlatform = platform ?? (platformIsMac() ? 'mac' : 'pc');
+    this._keymap = new Keymap(this._keymapPlatform, DEFAULT_KEYMAP);
 
     this._transport = new SyncTransport({ mapId, clientId });
     this._transport.addOnMessageListener((msg) => {
@@ -235,7 +254,7 @@ export class EditorEngine {
     this._renderScene();
   }
 
-  setActiveTool(tool: Scene['activeTool']): void {
+  _setActiveTool(tool: Scene['activeTool']): void {
     this._activeTool = tool;
     this._renderScene();
   }
@@ -342,8 +361,9 @@ export class EditorEngine {
     this._renderScene();
   }
 
-  finishAction(): void {
+  _finishAction(): void {
     this._active = null;
+    this._renderScene();
   }
 
   clearSelection(): void {
@@ -387,7 +407,7 @@ export class EditorEngine {
     return out;
   }
 
-  deleteSelected(): void {
+  _deleteSelectedFeature(): void {
     let next: string | undefined = undefined;
     if (this._selectedByMe.size === 1) {
       const fid = [...this._selectedByMe][0]!;
@@ -627,6 +647,66 @@ export class EditorEngine {
     }
 
     return feature;
+  }
+
+  private _keymapListeners = new Set<(_: Keymap) => any>();
+
+  addKeymapListener(cb: (_: Keymap) => any): () => void {
+    this._keymapListeners.add(cb);
+    return () => this._keymapListeners.delete(cb);
+  }
+
+  setKeymap(keymap: KeymapSpec): void {
+    this._keymap = new Keymap(this._keymapPlatform, keymap);
+    for (const cb of this._keymapListeners) {
+      cb(this._keymap);
+    }
+  }
+
+  keymap(): Keymap {
+    return this._keymap;
+  }
+
+  executeKeyBinding(key: KeyBinding): boolean {
+    const entry = this._keymap.lookup(key);
+    if (entry) {
+      this.execute(entry.cmd);
+      return true;
+    }
+    return false;
+  }
+
+  execute(cmd: EngineCommand): void {
+    switch (cmd) {
+      case 'undo':
+        this._stateManager.undo();
+        break;
+      case 'redo':
+        this._stateManager.redo();
+        break;
+      case 'select-line-tool':
+        this._setActiveTool('line');
+        break;
+      case 'select-point-tool':
+        this._setActiveTool('point');
+        break;
+      case 'delete-selected-feature':
+        this._deleteSelectedFeature();
+        break;
+      case 'finish-action':
+        this._finishAction();
+        break;
+      default:
+        throw new Error(`Unknown command: ${cmd}}`);
+    }
+  }
+
+  undoStatus(): UndoStatus {
+    return this._stateManager.undoStatus();
+  }
+
+  addUndoStatusListener(cb: (status: UndoStatus) => any): () => void {
+    return this._stateManager.addUndoStatusListener(cb);
   }
 }
 

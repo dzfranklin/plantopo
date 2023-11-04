@@ -16,7 +16,6 @@ import { EditorEngineProvider } from '@/features/map/editor/engine/useEngine';
 import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
 import ErrorTechInfo from '@/features/error/ErrorTechInfo';
 import { useTokensQuery } from '@/features/map/api/useTokens';
-import { CommandProvider } from '@/features/commands/commands';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import {
   parseCameraURLParam,
@@ -133,9 +132,7 @@ export default function MapPage() {
 
       <MapIdProvider mapId={mapId}>
         <EditorEngineProvider engine={engine}>
-          <CommandProvider>
-            <MapEditor />
-          </CommandProvider>
+          <MapEditor />
         </EditorEngineProvider>
       </MapIdProvider>
     </div>
