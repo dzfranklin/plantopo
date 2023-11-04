@@ -32,7 +32,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
         process.env.NEXT_PUBLIC_PT_VER ?? '<unspecified>'
       }`,
     );
-  });
+  }, []);
 
   const queryClient = new QueryClient();
   const router = useRouter();
