@@ -1,4 +1,5 @@
-This product includes GeoLite2 data created by MaxMind, available from
-<a href="https://www.maxmind.com">https://www.maxmind.com</a>.
+This product includes GeoLite2 data created by MaxMind, available from https://www.maxmind.com.
 
-OSM derived data. To reproduce see osm_import/import.lua.
+OSM derived data. To reproduce see <https://github.com/dzfranklin/plantopo/tree/main/osm_import>.
+
+---
