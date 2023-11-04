@@ -72,7 +72,9 @@ function StatusComponent() {
           {hasUnsyncedChanges && (
             <span className="text-neutral-500">Syncing...</span>
           )}
-          <ConnectedIcon height="20px" />
+          <button onClick={() => engine?.forceDisconnect()}>
+            <ConnectedIcon height="20px" />
+          </button>
         </>
       )}
       {readyForCheck && status?.type === 'disconnected' && (
@@ -98,11 +100,10 @@ function ReconnectingAt({ at }: { at: number }) {
   const pending = useRef<number | null>(null);
   const tick = useCallback(() => {
     const now = Date.now();
-    const delta = Math.max(0, at - now) / 1000;
-    const seconds = Math.ceil(delta);
+    const delta = Math.max(0, at - now);
+    const seconds = Math.ceil(delta / 1000);
     setSecondsLeft(seconds);
-    const nextTick = (Math.ceil(delta) - delta) * 1000;
-    pending.current = window.setTimeout(tick, nextTick);
+    pending.current = window.setTimeout(tick, delta % 1000);
   }, [at]);
   useEffect(() => {
     tick();

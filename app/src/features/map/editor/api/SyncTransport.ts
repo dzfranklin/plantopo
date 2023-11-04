@@ -55,6 +55,10 @@ export class SyncTransport {
     return this._status;
   }
 
+  forceDisconnect() {
+    this._sock?.close();
+  }
+
   addOnMessageListener(listener: (msg: IncomingSessionMsg) => any): () => void {
     this._onMessageListeners.add(listener);
     return () => this._onMessageListeners.delete(listener);

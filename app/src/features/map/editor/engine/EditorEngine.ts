@@ -254,6 +254,10 @@ export class EditorEngine {
     this._renderScene();
   }
 
+  forceDisconnect(): void {
+    this._transport.forceDisconnect();
+  }
+
   _setActiveTool(tool: Scene['activeTool']): void {
     this._activeTool = tool;
     this._renderScene();
