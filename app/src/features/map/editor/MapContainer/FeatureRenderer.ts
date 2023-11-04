@@ -13,7 +13,10 @@ export interface RenderFeatureList {
   list: RenderFeature[];
 }
 
+export type RenderItem = RenderFeature | RenderFeatureHandle;
+
 export interface RenderFeature {
+  type: 'feature';
   id: string;
   children: RenderFeature[];
 
@@ -26,6 +29,17 @@ export interface RenderFeature {
 
   name: string | null;
   color: string;
+}
+
+export interface RenderFeatureHandle {
+  type: 'handle';
+  id: string; // id of the handle (not the id of the feature)
+  feature: RenderFeature;
+  handleType: 'vertex' | 'midpoint';
+  geometry: {
+    type: 'Point';
+    coordinates: [number, number];
+  };
 }
 
 interface Inherited {
@@ -103,6 +117,7 @@ export class FeatureRenderer {
 
     const itself: RenderFeature = {
       ...feature,
+      type: 'feature',
       children: [],
       geometry,
       color: feature.color ?? inherited.color,

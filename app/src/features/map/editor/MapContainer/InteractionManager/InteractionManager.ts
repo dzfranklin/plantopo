@@ -1,4 +1,8 @@
-import { RenderFeature } from '../FeatureRenderer';
+import {
+  RenderFeature,
+  RenderFeatureHandle,
+  RenderItem,
+} from '../FeatureRenderer';
 import RBush from 'rbush';
 import { BBox, bbox as computeBBox } from '@turf/turf';
 import { CreateFeatureHandler } from './CreateFeatureHandler';
@@ -48,36 +52,40 @@ export class InteractionEvent {
     return this._cachedLngLat;
   }
 
-  private _cachedHits: FeatureHit[] | null = null;
+  private _cachedHits: ItemHit[] | null = null;
 
   /** The first entry in the list is the feature on top */
-  queryHits(): FeatureHit[] {
+  queryHits(): ItemHit[] {
     if (this._cachedHits === null) {
       const value = this._scope
         .queryHits(this.screenXY, this.unproject())
-        .map((f) => new FeatureHitImpl(this, f));
+        .map((f) => new ItemHitImpl(this, f));
       this._cachedHits = value;
     }
     return this._cachedHits;
   }
 }
 
-export interface FeatureHit {
-  feature: RenderFeature;
+export interface ItemHit {
+  item: RenderItem;
 
-  /** Pixel distance from the event to the nearest point on the feature */
+  /** Pixel distance from the event to:
+   *
+   * - If a feature: the nearest point in the feature
+   * - If a handle: the handle
+   */
   minPixelsTo(): number;
 }
 
-class FeatureHitImpl implements FeatureHit {
+class ItemHitImpl implements ItemHit {
   constructor(
     private scope: InteractionEvent,
-    public feature: RenderFeature,
+    public item: RenderItem,
   ) {}
 
   minPixelsTo(): number {
     const cam = this.scope.camera;
-    const g = this.feature.geometry!;
+    const g = this.item.geometry!;
     const targetS = this.scope.screenXY; // target, screen space
     let pM: GeoJSON.Position; // nearest point, map space
     let depth = 0; // pixels from pM to edge
@@ -122,7 +130,7 @@ export interface InteractionHandler {
 interface IndexEntry {
   id: string;
   linearIdx: number;
-  render: RenderFeature;
+  item: RenderFeature | RenderFeatureHandle;
   // Required by rbush
   minX: number;
   minY: number;
@@ -213,7 +221,7 @@ export class InteractionManager {
     this._elem.remove();
   }
 
-  register(render: RenderFeature[], camera: CurrentCameraPosition) {
+  register(render: RenderItem[], camera: CurrentCameraPosition) {
     this.cam = camera;
 
     const entries: IndexEntry[] = [];
@@ -223,7 +231,7 @@ export class InteractionManager {
       entries.push({
         id: f.id,
         linearIdx: i,
-        render: f,
+        item: f,
         minX,
         minY,
         maxX,
@@ -235,7 +243,7 @@ export class InteractionManager {
     this._rbush.load(entries);
   }
 
-  queryHits(screen: ScreenXY, lngLat: LngLat): RenderFeature[] {
+  queryHits(screen: ScreenXY, lngLat: LngLat): RenderItem[] {
     // Convert from centered around `screen` to crs
     const p = this.unproject(add2(screen, this.querySlop));
     const slop = sub2(p, lngLat);
@@ -254,7 +262,7 @@ export class InteractionManager {
     return this._rbush
       .search(query)
       .sort((a, b) => b.linearIdx - a.linearIdx)
-      .map((e) => e.render);
+      .map((e) => e.item);
   }
 
   private _pointers: PointerState[] = [];

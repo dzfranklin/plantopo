@@ -1,6 +1,10 @@
 import { floor2 } from '@/generic/vector2';
 import { CurrentCameraPosition as CurrentCamera } from '../CurrentCamera';
-import { RenderFeature, RenderFeatureList } from './FeatureRenderer';
+import {
+  RenderFeature,
+  RenderFeatureList,
+  RenderItem,
+} from './FeatureRenderer';
 import { LineStringSyncGeometry, PointSyncGeometry } from '@/gen/sync_schema';
 
 const { PI } = Math;
@@ -59,15 +63,23 @@ export class FeaturePainter {
     this._debugLine++;
   }
 
-  private _paint(camera: CurrentCamera, feature: RenderFeature): void {
+  private _paint(camera: CurrentCamera, item: RenderItem): void {
     this.c.save();
-    switch (feature.geometry.type) {
-      case 'Point':
-        this._paintPoint(camera, feature.geometry, feature);
+    switch (item.type) {
+      case 'feature': {
+        switch (item.geometry.type) {
+          case 'Point':
+            this._paintPoint(camera, item.geometry, item);
+            break;
+          case 'LineString':
+            this._paintLineString(camera, item.geometry, item);
+            break;
+        }
         break;
-      case 'LineString':
-        this._paintLineString(camera, feature.geometry, feature);
+      }
+      case 'handle': {
         break;
+      }
     }
     this.c.restore();
   }

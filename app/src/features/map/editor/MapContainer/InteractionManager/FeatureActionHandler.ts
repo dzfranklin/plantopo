@@ -7,7 +7,7 @@ export class FeatureHoverHandler implements InteractionHandler {
   onHover(evt: InteractionEvent, engine: EditorEngine): boolean {
     for (const hit of evt.queryHits()) {
       if (hit.minPixelsTo() < 0.5) {
-        engine.setHovered(hit.feature.id);
+        engine.setHovered(hit.item.id);
         this.cursor = 'pointer';
         return true;
       }
@@ -37,10 +37,7 @@ export class FeatureHoverHandler implements InteractionHandler {
 
     for (const hit of evt.queryHits()) {
       if (hit.minPixelsTo() < 0.5) {
-        engine.toggleSelection(
-          hit.feature.id,
-          evt.shiftKey ? 'multi' : 'single',
-        );
+        engine.toggleSelection(hit.item.id, evt.shiftKey ? 'multi' : 'single');
         this.cursor = 'pointer';
         return true;
       }
@@ -53,12 +50,12 @@ export class FeatureHoverHandler implements InteractionHandler {
 
   onDragStart(evt: InteractionEvent, engine: EditorEngine): boolean {
     for (const hit of evt.queryHits()) {
-      if (!hit.feature.active) continue;
-      if (hit.feature.geometry?.type === 'Point' && hit.minPixelsTo() < 0.5) {
-        this.dragging = hit.feature.id;
+      if (hit.item.type === 'feature' && !hit.item.active) continue;
+      if (hit.item.geometry?.type === 'Point' && hit.minPixelsTo() < 0.5) {
+        this.dragging = hit.item.id;
 
         engine.changeFeature({
-          id: hit.feature.id,
+          id: hit.item.id,
           geometry: {
             type: 'Point',
             coordinates: evt.unproject(),
