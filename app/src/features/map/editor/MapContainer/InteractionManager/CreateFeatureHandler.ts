@@ -6,6 +6,8 @@ export class CreateFeatureHandler implements InteractionHandler {
 
   onPress(evt: InteractionEvent, engine: EditorEngine): boolean {
     switch (engine.scene.activeTool) {
+      case 'select':
+        return false;
       case 'point': {
         const fid = engine.createFeature({
           geometry: {

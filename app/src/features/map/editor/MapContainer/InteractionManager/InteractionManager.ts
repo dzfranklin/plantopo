@@ -159,6 +159,7 @@ export class InteractionManager {
   cam: CurrentCameraPosition;
   private _engine: EditorEngine;
   private _map: ml.Map;
+  private _cursor: string | undefined = undefined;
 
   querySlop: [number, number] = [10, 10]; // In pixels
 
@@ -184,12 +185,17 @@ export class InteractionManager {
     const elem = document.createElement('div');
     elem.style.position = 'absolute';
     elem.style.inset = '0';
-    elem.style.cursor = 'crosshair';
     const mlElem = props.container.querySelector(
       '.maplibregl-canvas-container.maplibregl-interactive',
     )!;
     mlElem.append(elem);
     this._elem = elem;
+
+    this._updateCursor();
+    this._engine.addSceneSelector(
+      (scene) => scene.activeTool === 'select',
+      () => this._updateCursor(),
+    );
 
     elem.addEventListener('wheel', this._boundOnWheel, {
       capture: true,
@@ -429,10 +435,8 @@ export class InteractionManager {
       if (consumed) break;
     }
 
-    cursor = cursor || 'crosshair';
-    if (this._elem.style.cursor !== cursor) {
-      this._elem.style.cursor = cursor;
-    }
+    this._cursor = cursor;
+    this._updateCursor();
 
     if (consumed) {
       native.stopPropagation();
@@ -478,6 +482,12 @@ export class InteractionManager {
 
   unproject(xy: ScreenXY): LngLat {
     return this.cam.unproject(xy);
+  }
+
+  private _updateCursor() {
+    const defaultCursor =
+      this._engine.scene.activeTool === 'select' ? 'default' : 'crosshair';
+    this._elem.style.cursor = this._cursor ?? defaultCursor;
   }
 }
 
