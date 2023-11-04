@@ -96,7 +96,6 @@ export class Keymap<Command extends string = EngineCommand> {
         (cb.meta !== undefined && cb.meta !== k.meta) ||
         (cb.platform !== undefined && cb.platform !== this._platform)
       ) {
-        console.log('failed match', cb, k);
         continue;
       }
       return c;
