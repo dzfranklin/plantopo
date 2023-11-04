@@ -52,8 +52,9 @@ export interface InitialCamera {
 export type EngineCommand =
   | 'undo'
   | 'redo'
-  | 'select-line-tool'
-  | 'select-point-tool'
+  | 'use-select-tool'
+  | 'use-line-tool'
+  | 'use-point-tool'
   | 'delete-selected-feature'
   | 'finish-action';
 
@@ -688,10 +689,13 @@ export class EditorEngine {
       case 'redo':
         this._stateManager.redo();
         break;
-      case 'select-line-tool':
+      case 'use-select-tool':
+        this._setActiveTool('select');
+        break;
+      case 'use-line-tool':
         this._setActiveTool('line');
         break;
-      case 'select-point-tool':
+      case 'use-point-tool':
         this._setActiveTool('point');
         break;
       case 'delete-selected-feature':

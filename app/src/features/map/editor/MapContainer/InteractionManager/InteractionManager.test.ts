@@ -6,7 +6,7 @@ import { CurrentCameraPosition } from '../../CurrentCamera';
 import { RenderFeature } from '../FeatureRenderer';
 import { add2 } from '@/generic/vector2';
 import { EditorEngine } from '../../engine/EditorEngine';
-import { SceneFeature } from '../../engine/Scene';
+import { EMPTY_SCENE, SceneFeature } from '../../engine/Scene';
 
 const mockEngine = EditorEngine as jest.Mock<EditorEngine>;
 const mockCamera =
@@ -57,6 +57,7 @@ beforeEach(() => {
   engine.getFeature = jest.fn((id) => {
     return { id } as SceneFeature;
   });
+  (engine as any).scene = EMPTY_SCENE;
 
   mockMap.mockClear();
 

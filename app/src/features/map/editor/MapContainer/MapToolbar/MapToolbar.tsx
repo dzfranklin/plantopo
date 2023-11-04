@@ -2,8 +2,10 @@ import cls from '@/generic/cls';
 import { useEngine, useSceneSelector } from '../../engine/useEngine';
 import { LineToolIcon } from './LineToolIcon';
 import { PointToolIcon } from './PointToolIcon';
+import { SelectToolIcon } from './SelectToolIcon';
 
 const tools = [
+  { id: 'select', icon: SelectToolIcon },
   { id: 'line', icon: LineToolIcon },
   { id: 'point', icon: PointToolIcon },
 ] as const;
@@ -27,20 +29,23 @@ export function MapToolbar() {
             onClick={() => {
               if (!engine) return;
               switch (tool.id) {
+                case 'select':
+                  engine.execute('use-select-tool');
+                  break;
                 case 'line':
-                  engine.execute('select-line-tool');
+                  engine.execute('use-line-tool');
                   break;
                 case 'point':
-                  engine.execute('select-point-tool');
+                  engine.execute('use-point-tool');
                   break;
               }
             }}
             className={cls(
-              'p-1.5 rounded-md',
+              'p-1.5 rounded-md w-[40px] h-[40px] -m-[2px] border-x-2 grid place-items-center',
               isDisabled && 'opacity-50',
               !isDisabled && activeTool === tool.id
-                ? 'text-blue-100 bg-blue-100 border-blue-600 border-2 -m-[2px]'
-                : 'border-[#d8d4d2] text-white',
+                ? 'text-blue-100 bg-blue-100 border-blue-600 border-y-2'
+                : 'border-transparent text-white',
             )}
           >
             <tool.icon />

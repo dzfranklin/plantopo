@@ -2,6 +2,7 @@ import { SVGProps } from 'react';
 
 export function PointToolIcon(props: SVGProps<SVGSVGElement>) {
   return (
+    // Cursor Pointer by Florent B from Noun Project
     <svg
       width="24"
       height="24"

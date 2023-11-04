@@ -36,11 +36,15 @@ export const DEFAULT_KEYMAP: KeymapSpec<EngineCommand> = [
     binding: { key: 'z', ctrl: true, platform: 'pc', shift: true },
   },
   {
-    cmd: 'select-line-tool',
+    cmd: 'use-select-tool',
+    binding: { key: 'v', ctrl: false, alt: false, meta: false },
+  },
+  {
+    cmd: 'use-line-tool',
     binding: { key: 'l', ctrl: false, alt: false, meta: false },
   },
   {
-    cmd: 'select-point-tool',
+    cmd: 'use-point-tool',
     binding: { key: 'p', ctrl: false, alt: false, meta: false },
   },
   {

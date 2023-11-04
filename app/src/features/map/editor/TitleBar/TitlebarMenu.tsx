@@ -64,19 +64,25 @@ export function TitlebarMenu() {
         isDisabled={!engine}
         onAction={(id) => {
           switch (id) {
+            case 'select':
+              engine?.execute('use-select-tool');
+              break;
             case 'line':
-              engine?.execute('select-line-tool');
+              engine?.execute('use-line-tool');
               break;
             case 'point':
-              engine?.execute('select-point-tool');
+              engine?.execute('use-point-tool');
               break;
           }
         }}
       >
-        <MenuItem id="line" cmd="select-line-tool">
+        <MenuItem id="select" cmd="use-select-tool">
+          Select
+        </MenuItem>
+        <MenuItem id="line" cmd="use-line-tool">
           Line
         </MenuItem>
-        <MenuItem id="point" cmd="select-point-tool">
+        <MenuItem id="point" cmd="use-point-tool">
           Point
         </MenuItem>
       </Menu>
