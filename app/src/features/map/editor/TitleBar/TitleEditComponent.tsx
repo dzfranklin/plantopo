@@ -1,15 +1,16 @@
 import { useMapMeta, usePutMapMetaMutation } from '../../api/mapMeta';
 import { useMapId } from '../useMapId';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import cls from '@/generic/cls';
 
 export function TitleEditComponent() {
   const mapId = useMapId();
   const meta = useMapMeta(mapId);
-  const [value, setValue] = useState<string | null>(null);
-  const mutation = usePutMapMetaMutation(mapId, {
-    onSuccess: () => setValue(null),
-  });
+  const [value, setValue] = useState<string>('');
+  const mutation = usePutMapMetaMutation(mapId);
+  useEffect(() => {
+    if (meta.data) setValue(meta.data.name);
+  }, [meta.data]);
   return (
     <input
       className={cls(
@@ -18,10 +19,10 @@ export function TitleEditComponent() {
         'hover:border-neutral-500 active:border-neutral-500 focus:border-neutral-500 focus:ring-0',
       )}
       placeholder={meta.data ? 'Unnamed map' : 'Loading...'}
-      value={value ?? meta.data?.name ?? ''}
+      value={value}
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => {
-        if (value !== null) {
+        if (value !== meta.data?.name) {
           mutation.mutate({ name: value });
         }
       }}
