@@ -52,7 +52,7 @@ func main() {
 		verPath = "<overridden version>"
 	} else {
 		ver = getGitTag(*baseDir)
-		verPath = fmt.Sprintf("https://github.com/dzfranklin/plantopo/commit/%s\n", ver)
+		verPath = fmt.Sprintf("https://github.com/dzfranklin/plantopo/commit/%s", ver)
 	}
 
 	fmt.Printf("Deploying %s\n", strings.Join(systems, ", "))
