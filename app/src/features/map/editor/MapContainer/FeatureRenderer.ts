@@ -35,8 +35,6 @@ interface Inherited {
 const ROOT_INHERITED: Inherited = { color: '#000000' };
 
 export class FeatureRenderer {
-  // TODO: Write code to import a large gpx to test perf
-
   render(scene: Scene, camera: CurrentCameraPosition): RenderFeatureList {
     const start = performance.now();
     // TODO: Make a little bigger

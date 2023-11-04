@@ -11,8 +11,6 @@ import { nearestPointInGeometry } from '../../nearestPointInFeature';
 import { EditorEngine } from '../../engine/EditorEngine';
 import { SyncGeometry } from '@/gen/sync_schema';
 
-// TODO: Should this be a maplibre handler at the top?
-
 type ScreenXY = [number, number];
 type LngLat = [number, number];
 
