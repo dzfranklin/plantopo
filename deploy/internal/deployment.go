@@ -15,7 +15,7 @@ type Deployment struct {
 	Ver  string
 }
 
-func (d *Deployment) Run(baseDir string) error {
+func (d *Deployment) Run(dryRun bool, baseDir string) error {
 	imageTag := fmt.Sprintf("ghcr.io/dzfranklin/pt-%s:%s", d.Name, d.Ver)
 
 	fmt.Println("Deploying", d.Name, d.Ver, "("+imageTag+")")
@@ -55,9 +55,13 @@ func (d *Deployment) Run(baseDir string) error {
 	cmd = exec.Command("docker", "push", imageTag)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	fmt.Println("Pushing image")
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("push image: %w", err)
+	if dryRun {
+		fmt.Println("Would push image (dry run)")
+	} else {
+		fmt.Println("Pushing image")
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("push image: %w", err)
+		}
 	}
 
 	// Create k8s spec
@@ -88,14 +92,18 @@ func (d *Deployment) Run(baseDir string) error {
 
 	// Deploy to k8s
 
-	fmt.Println("Deploying to k8s")
+	if dryRun {
+		fmt.Println("Would deploy to k8s (dry run)")
+	} else {
+		fmt.Println("Deploying to k8s")
 
-	cmd = exec.Command("kubectl", "apply", "-f", "-")
-	cmd.Stdin = strings.NewReader(spec.String())
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run kubectl apply: %w", err)
+		cmd = exec.Command("kubectl", "apply", "-f", "-")
+		cmd.Stdin = strings.NewReader(spec.String())
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to run kubectl apply: %w", err)
+		}
 	}
 
 	return nil

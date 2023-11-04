@@ -24,6 +24,7 @@ func main() {
 	var excludeSystems = pflag.StringArray("exclude-system", []string{}, "Systems to exclude")
 	var baseDir = pflag.String("dir", ".", "Base directory")
 	var overrideVer = pflag.String("override-version", "", "Override version from git tag")
+	var dryRun = pflag.Bool("dry-run", false, "Dry run")
 	pflag.Parse()
 
 	if *baseDir == "" || (*system == "" && !*all) {
@@ -56,15 +57,18 @@ func main() {
 
 	fmt.Printf("Deploying %s\n", strings.Join(systems, ", "))
 	fmt.Println(verPath)
+	if *dryRun {
+		fmt.Println("Dry run")
+	}
 
 	for _, name := range systems {
 		fmt.Print("\n-------------------\n\n")
 
 		if name == "app" {
-			internal.DeployApp(ver, *baseDir, appBucket, appDistribution)
+			internal.DeployApp(*dryRun, ver, *baseDir, appBucket, appDistribution)
 		} else {
 			deployment := &internal.Deployment{Ver: ver, Name: name}
-			if err := deployment.Run(*baseDir); err != nil {
+			if err := deployment.Run(*dryRun, *baseDir); err != nil {
 				fmt.Println(fmt.Errorf("failed to deploy %s: %w", deployment.Name, err))
 				os.Exit(1)
 			}
