@@ -36,10 +36,13 @@ export const Layout = forwardRef(
             </div>
           </div>
         </main>
-        <div className="flex p-1">
-          <div className="text-xs text-gray-500">
-            PlanTopo version {process.env.NEXT_PUBLIC_PT_VER || '<unspecified>'}
-          </div>
+        <div className="flex gap-1 gap-2 p-1 text-xs text-gray-600">
+          <span>
+            PlanTopo version {process.env.NEXT_PUBLIC_PT_VER || '0000000'}
+          </span>
+          <a href="/third-party-attribution.txt" className="underline">
+            Third-party attribution
+          </a>
         </div>
       </div>
     );
