@@ -30,6 +30,7 @@ const makeFeature = (props: Partial<RenderFeature> = {}): RenderFeature => ({
   ...props,
   id: `fake-${nextFid++}`,
   children: [],
+  active: false,
   selectedByMe: false,
   selectedByPeers: null,
   hoveredByMe: false,

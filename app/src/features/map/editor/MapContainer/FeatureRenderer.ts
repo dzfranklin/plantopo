@@ -17,6 +17,7 @@ export interface RenderFeature {
   id: string;
   children: RenderFeature[];
 
+  active: boolean;
   selectedByMe: boolean;
   selectedByPeers: string[] | null;
   hoveredByMe: boolean;

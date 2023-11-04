@@ -8,7 +8,6 @@ import { add2, magnitude2, sub2 } from '@/generic/vector2';
 import { clamp } from '@/generic/clamp';
 import * as ml from 'maplibre-gl';
 import { nearestPointInGeometry } from '../../nearestPointInFeature';
-import { SceneFeature } from '../../engine/Scene';
 import { EditorEngine } from '../../engine/EditorEngine';
 import { SyncGeometry } from '@/gen/sync_schema';
 
@@ -66,7 +65,7 @@ export class InteractionEvent {
 }
 
 export interface FeatureHit {
-  feature: SceneFeature;
+  feature: RenderFeature;
 
   /** Pixel distance from the event to the nearest point on the feature */
   minPixelsTo(): number;
@@ -75,7 +74,7 @@ export interface FeatureHit {
 class FeatureHitImpl implements FeatureHit {
   constructor(
     private scope: InteractionEvent,
-    public feature: SceneFeature,
+    public feature: RenderFeature,
   ) {}
 
   minPixelsTo(): number {
@@ -124,7 +123,8 @@ export interface InteractionHandler {
 
 interface IndexEntry {
   id: string;
-  idx: number;
+  linearIdx: number;
+  render: RenderFeature;
   // Required by rbush
   minX: number;
   minY: number;
@@ -224,7 +224,8 @@ export class InteractionManager {
       const [minX, minY, maxX, maxY] = this._computeBboxCached(f.geometry);
       entries.push({
         id: f.id,
-        idx: i,
+        linearIdx: i,
+        render: f,
         minX,
         minY,
         maxX,
@@ -236,7 +237,7 @@ export class InteractionManager {
     this._rbush.load(entries);
   }
 
-  queryHits(screen: ScreenXY, lngLat: LngLat): SceneFeature[] {
+  queryHits(screen: ScreenXY, lngLat: LngLat): RenderFeature[] {
     // Convert from centered around `screen` to crs
     const p = this.unproject(add2(screen, this.querySlop));
     const slop = sub2(p, lngLat);
@@ -252,18 +253,10 @@ export class InteractionManager {
       maxY: latA > latB ? latA : latB,
     };
 
-    const hits = this._rbush.search(query);
-    hits.sort((a, b) => b.idx - a.idx);
-
-    const features: SceneFeature[] = [];
-    for (const hit of hits) {
-      const value = this._engine.getFeature(hit.id);
-      if (value) {
-        features.push(value);
-      }
-    }
-
-    return features;
+    return this._rbush
+      .search(query)
+      .sort((a, b) => b.linearIdx - a.linearIdx)
+      .map((e) => e.render);
   }
 
   private _pointers: PointerState[] = [];
