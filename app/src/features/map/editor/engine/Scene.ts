@@ -84,7 +84,7 @@ export const EMPTY_SCENE: Scene = {
     end: 0,
   },
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
-  activeTool: 'line',
+  activeTool: 'select',
   layers: {
     active: [],
     inactive: [],
