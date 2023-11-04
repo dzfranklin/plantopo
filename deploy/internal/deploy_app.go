@@ -23,7 +23,7 @@ const bucketRegion = "us-east-2"
 
 var entrypointNames = []string{"index.html", "index.txt", "404.html"}
 
-func DeployApp(ver string, baseDir string, bucket string, distribution string) {
+func DeployApp(dryRun bool, ver string, baseDir string, bucket string, distribution string) {
 	fmt.Println("Deploying app (" + ver + ")")
 
 	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(bucketRegion))
@@ -45,32 +45,36 @@ func DeployApp(ver string, baseDir string, bucket string, distribution string) {
 	// This mostly avoids re-uploading media like the font.
 
 	fmt.Println("Uploading app: resources")
-	doUpload(s3Client, bucket, &preexistingObjects, true, output.outDir, output.resources)
+	doUpload(dryRun, s3Client, bucket, &preexistingObjects, true, output.outDir, output.resources)
 
 	fmt.Println("Uploading app: entrypoints")
-	doUpload(s3Client, bucket, &preexistingObjects, false, output.outDir, output.entrypoints)
+	doUpload(dryRun, s3Client, bucket, &preexistingObjects, false, output.outDir, output.entrypoints)
 
-	deleteUnusedPreexisting(s3Client, bucket, preexistingObjects)
+	deleteUnusedPreexisting(dryRun, s3Client, bucket, preexistingObjects)
 
 	// Invalidate
 
-	fmt.Println("Invalidating app")
-	cfClient := cloudfront.NewFromConfig(cfg)
-	callerReference := fmt.Sprintf("deploy-%s-%s", distribution, time.Now().Format("20060102150405"))
-	invalidatePaths := []string{"/*"}
-	invalidatePathsQuantity := int32(len(invalidatePaths))
-	_, err = cfClient.CreateInvalidation(context.Background(), &cloudfront.CreateInvalidationInput{
-		DistributionId: &distribution,
-		InvalidationBatch: &cfTypes.InvalidationBatch{
-			CallerReference: &callerReference,
-			Paths: &cfTypes.Paths{
-				Quantity: &invalidatePathsQuantity,
-				Items:    invalidatePaths,
+	if dryRun {
+		fmt.Println("Would invalidate app (dry run)")
+	} else {
+		fmt.Println("Invalidating app")
+		cfClient := cloudfront.NewFromConfig(cfg)
+		callerReference := fmt.Sprintf("deploy-%s-%s", distribution, time.Now().Format("20060102150405"))
+		invalidatePaths := []string{"/*"}
+		invalidatePathsQuantity := int32(len(invalidatePaths))
+		_, err = cfClient.CreateInvalidation(context.Background(), &cloudfront.CreateInvalidationInput{
+			DistributionId: &distribution,
+			InvalidationBatch: &cfTypes.InvalidationBatch{
+				CallerReference: &callerReference,
+				Paths: &cfTypes.Paths{
+					Quantity: &invalidatePathsQuantity,
+					Items:    invalidatePaths,
+				},
 			},
-		},
-	})
-	if err != nil {
-		log.Fatal(err)
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	output.Cleanup()
@@ -191,7 +195,7 @@ func (o *buildOutput) Cleanup() {
 }
 
 func doUpload(
-	client *s3.Client, bucket string, preexisting *map[string]struct{}, skipPreexisting bool,
+	dryRun bool, client *s3.Client, bucket string, preexisting *map[string]struct{}, skipPreexisting bool,
 	base string, files []string,
 ) {
 	for _, fname := range files {
@@ -231,28 +235,36 @@ func doUpload(
 			contentType = http.DetectContentType(bytes)
 		}
 
-		fmt.Printf("Uploading %s\n", key)
-		_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
-			Bucket:      &bucket,
-			Key:         &key,
-			ContentType: &contentType,
-			Body:        file,
-		})
-		if err != nil {
-			log.Fatal(err)
+		if dryRun {
+			fmt.Printf("Would upload %s (dry run)\n", key)
+		} else {
+			fmt.Printf("Uploading %s\n", key)
+			_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
+				Bucket:      &bucket,
+				Key:         &key,
+				ContentType: &contentType,
+				Body:        file,
+			})
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 }
 
-func deleteUnusedPreexisting(client *s3.Client, bucket string, objects map[string]struct{}) {
+func deleteUnusedPreexisting(dryRun bool, client *s3.Client, bucket string, objects map[string]struct{}) {
 	for key := range objects {
-		fmt.Printf("Deleting unused preexisting object %s\n", key)
-		_, err := client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
-			Bucket: &bucket,
-			Key:    &key,
-		})
-		if err != nil {
-			log.Fatal(err)
+		if dryRun {
+			fmt.Printf("Would delete unused preexisting object %s (dry run) \n", key)
+		} else {
+			fmt.Printf("Deleting unused preexisting object %s\n", key)
+			_, err := client.DeleteObject(context.Background(), &s3.DeleteObjectInput{
+				Bucket: &bucket,
+				Key:    &key,
+			})
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 }
