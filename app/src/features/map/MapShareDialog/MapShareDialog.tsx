@@ -27,7 +27,7 @@ export function MapShareDialog({ item }: { item: MapMeta }) {
   const [changes, setChanges] = useState<PutMapAccessRequest>({});
   const hasChanges = Object.keys(changes).length > 0;
   const onSave = () => {
-    if (!hasChanges) close();
+    if (!hasChanges) dialog.dismiss();
     mutation.mutate(changes);
   };
 
@@ -87,7 +87,7 @@ export function MapShareDialog({ item }: { item: MapMeta }) {
           {hasChanges && 'Pending changes'}
         </p>
 
-        <Button variant="secondary" onPress={close}>
+        <Button variant="secondary" onPress={dialog.dismiss}>
           Cancel
         </Button>
         <Button
