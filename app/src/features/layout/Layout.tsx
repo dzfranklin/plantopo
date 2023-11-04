@@ -36,7 +36,7 @@ export const Layout = forwardRef(
             </div>
           </div>
         </main>
-        <div className="flex gap-1 gap-2 p-1 text-xs text-gray-600">
+        <div className="flex gap-2 p-1 text-xs text-gray-600">
           <span>
             PlanTopo version {process.env.NEXT_PUBLIC_PT_VER || '0000000'}
           </span>
