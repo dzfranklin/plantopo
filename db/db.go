@@ -27,6 +27,8 @@ func NewPg(ctx context.Context, url string) (*Pg, error) {
 		return nil, fmt.Errorf("invalid postgres url: %w", err)
 	}
 
+	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeExec
+
 	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
 		pgxUUID.Register(conn.TypeMap())
 		return nil
