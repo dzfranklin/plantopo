@@ -140,8 +140,12 @@ func main() {
 
 	s3Client := s3.NewFromConfig(awsConfig)
 
+	importUploadsBucket := os.Getenv("IMPORT_UPLOADS_BUCKET")
+	if importUploadsBucket == "" {
+		l.Fatalw("missing IMPORT_UPLOADS_BUCKET")
+	}
 	importer, err := importers.New(&importers.Config{
-		ObjectStore:  importers.NewS3ObjectStore(s3Client),
+		ObjectStore:  importers.NewS3ObjectStore(s3Client, importUploadsBucket),
 		Matchmaker:   matchmaker,
 		SyncBackends: syncBackends,
 		Db:           pg,

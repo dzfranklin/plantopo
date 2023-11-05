@@ -19,6 +19,7 @@ const (
 var allSystems = []string{"app", "api_server", "matchmaker", "sync_backend"}
 
 func main() {
+	var staging = pflag.String("staging", "", "Deploy to staging version")
 	var all = pflag.Bool("all", false, "Deploy all systems")
 	var system = pflag.String("system", "", fmt.Sprintf("System to deploy (%s)", strings.Join(allSystems, ", ")))
 	var excludeSystems = pflag.StringArray("exclude-system", []string{}, "Systems to exclude")
@@ -67,7 +68,11 @@ func main() {
 		if name == "app" {
 			internal.DeployApp(*dryRun, ver, *baseDir, appBucket, appDistribution)
 		} else {
-			deployment := &internal.Deployment{Ver: ver, Name: name}
+			deployment := &internal.Deployment{
+				Ver:     ver,
+				Name:    name,
+				Staging: *staging,
+			}
 			if err := deployment.Run(*dryRun, *baseDir); err != nil {
 				fmt.Println(fmt.Errorf("failed to deploy %s: %w", deployment.Name, err))
 				os.Exit(1)
