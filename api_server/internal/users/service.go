@@ -94,34 +94,15 @@ func (r *impl) GetByEmail(ctx context.Context, email string) (*types.User, error
 }
 
 func (r *impl) GetEach(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]types.User, error) {
+	// TODO: Do this in O(1) queries.
 	out := make(map[uuid.UUID]types.User)
-
-	if len(ids) == 0 {
-		return out, nil
-	}
-
-	rows, err := r.pg.Query(ctx,
-		`SELECT id, email, full_name, created_at, confirmed_at from users
-			WHERE id = ANY($1)`,
-		ids,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var user types.User
-		err := rows.Scan(
-			&user.Id, &user.Email, &user.FullName, &user.CreatedAt, &user.ConfirmedAt,
-		)
+	for _, id := range ids {
+		user, err := r.Get(ctx, id)
 		if err != nil {
 			return nil, err
 		}
-		user.ImageUrl = imageUrlFor(user.Id)
-		out[user.Id] = user
+		out[id] = *user
 	}
-
 	return out, nil
 }
 

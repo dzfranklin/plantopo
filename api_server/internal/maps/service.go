@@ -46,6 +46,27 @@ func NewService(
 	mailer mailer.Service,
 ) Service {
 	l = l.Named("map_meta")
+
+	pg.AddAfterConnectHandler(func(ctx context.Context, conn *pgx.Conn) error {
+		dataTypeNames := []string{
+			"my_role", "general_access_level", "general_access_role",
+		}
+		for _, typeName := range dataTypeNames {
+			dataType, err := conn.LoadType(ctx, typeName)
+			if err != nil {
+				return err
+			}
+			conn.TypeMap().RegisterType(dataType)
+		}
+
+		conn.TypeMap().RegisterDefaultPgType(Role(""), "my_role")
+		conn.TypeMap().RegisterDefaultPgType(GeneralAccessLevel(""), "general_access_level")
+		conn.TypeMap().RegisterDefaultPgType(GeneralAccessRole(""), "general_access_role")
+
+		return nil
+	})
+	pg.Reset()
+
 	s := &impl{
 		pg:     pg,
 		l:      l,

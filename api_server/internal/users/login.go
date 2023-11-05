@@ -1,6 +1,9 @@
 package users
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 type LoginRequest struct {
 	Email    string `json:"email"`
@@ -13,7 +16,7 @@ type ErrLoginIssue struct {
 }
 
 func (e ErrLoginIssue) Error() string {
-	return "login issue"
+	return fmt.Sprintf("login issue (emailIssue=%s, passwordIssue=%s)", e.Email, e.Password)
 }
 
 func (r LoginRequest) Validate() *ErrLoginIssue {
