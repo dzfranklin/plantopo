@@ -1,8 +1,9 @@
-import { BBoxPolygon, CurrentCameraPosition } from '../CurrentCamera';
+import { BBoxPolygon } from '../CurrentCamera';
 import { Scene, SceneFeature, SceneRootFeature } from '../engine/Scene';
 import { booleanContains } from '@turf/turf';
 import booleanIntersects from '@turf/boolean-intersects';
 import { SyncGeometry } from '@/gen/sync_schema';
+import { midpoint2 } from '@/generic/vector2';
 
 export interface RenderFeatureList {
   timing: {
@@ -10,7 +11,7 @@ export interface RenderFeatureList {
     start: number;
     end: number;
   };
-  list: RenderFeature[];
+  list: RenderItem[];
 }
 
 export type RenderItem = RenderFeature | RenderFeatureHandle;
@@ -49,10 +50,8 @@ interface Inherited {
 const ROOT_INHERITED: Inherited = { color: '#000000' };
 
 export class FeatureRenderer {
-  render(scene: Scene, camera: CurrentCameraPosition): RenderFeatureList {
+  render(scene: Scene, clipBox: BBoxPolygon): RenderFeatureList {
     const start = performance.now();
-    // TODO: Make a little bigger
-    const clipBox = camera.bboxPolygon();
 
     const list: RenderFeature[] = [];
     this._render(clipBox, ROOT_INHERITED, scene.features.root, list);
@@ -64,16 +63,15 @@ export class FeatureRenderer {
     clipBox: BBoxPolygon,
     inherited: Inherited,
     feature: SceneRootFeature | SceneFeature,
-    out: RenderFeature[],
+    out: RenderItem[],
   ) {
     const [newInherited, itself] = this._renderItself(
       clipBox,
       inherited,
       feature,
     );
-
-    if (itself) {
-      out.push(itself);
+    for (const item of itself) {
+      out.push(item);
     }
 
     for (const child of feature.children) {
@@ -85,10 +83,10 @@ export class FeatureRenderer {
     clipBox: BBoxPolygon,
     inherited: Inherited,
     feature: SceneRootFeature | SceneFeature,
-  ): [Inherited | null, RenderFeature | null] {
+  ): [Inherited | null, RenderItem[]] {
     if (!feature.parent) {
       // The root isn't rendered itself
-      return [null, null];
+      return [null, []];
     }
 
     let newInherited = null;
@@ -97,31 +95,64 @@ export class FeatureRenderer {
     }
 
     if (!feature.geometry || feature.hidden) {
-      return [newInherited, null];
+      return [newInherited, []];
     }
 
     let geometry: SyncGeometry;
     if (feature.geometry.type === 'Point') {
       if (!booleanContains(clipBox, feature.geometry)) {
-        return [newInherited, null];
+        return [newInherited, []];
       }
       geometry = feature.geometry;
     } else if (feature.geometry.type === 'LineString') {
       if (!booleanIntersects(feature.geometry, clipBox)) {
-        return [newInherited, null];
+        return [newInherited, []];
       }
       geometry = feature.geometry;
     } else {
-      return [newInherited, null];
+      return [newInherited, []];
     }
 
-    const itself: RenderFeature = {
+    const itself: RenderItem[] = [];
+
+    const rf: RenderFeature = {
       ...feature,
       type: 'feature',
       children: [],
       geometry,
       color: feature.color ?? inherited.color,
     };
+    itself.push(rf);
+
+    if (feature.geometry.type === 'LineString') {
+      const coords = geometry.coordinates as [number, number][];
+      for (const [i, coord] of coords.entries()) {
+        itself.push({
+          type: 'handle',
+          feature: rf,
+          id: `${feature.id}-handle${i}`,
+          handleType: 'vertex',
+          geometry: {
+            type: 'Point',
+            coordinates: coord,
+          },
+        });
+
+        if (i < coords.length - 1) {
+          const nextCoord = coords[i + 1]!;
+          itself.push({
+            type: 'handle',
+            feature: rf,
+            id: `${feature.id}-handle${i}-midpoint`,
+            handleType: 'midpoint',
+            geometry: {
+              type: 'Point',
+              coordinates: midpoint2(coord, nextCoord),
+            },
+          });
+        }
+      }
+    }
 
     return [newInherited, itself];
   }

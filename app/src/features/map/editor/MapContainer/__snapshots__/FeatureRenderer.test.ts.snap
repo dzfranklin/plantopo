@@ -1,0 +1,196 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`single line snapshot 1`] = `
+[
+  {
+    "active": false,
+    "children": [],
+    "color": "#000000",
+    "geometry": {
+      "coordinates": [
+        [
+          50,
+          50,
+        ],
+        [
+          60,
+          60,
+        ],
+      ],
+      "type": "LineString",
+    },
+    "hidden": false,
+    "hoveredByMe": false,
+    "id": "id1",
+    "idx": "",
+    "name": null,
+    "parent": {
+      "children": [],
+      "id": "",
+      "parent": null,
+    },
+    "selectedByMe": false,
+    "selectedByPeers": null,
+    "type": "feature",
+  },
+  {
+    "feature": {
+      "active": false,
+      "children": [],
+      "color": "#000000",
+      "geometry": {
+        "coordinates": [
+          [
+            50,
+            50,
+          ],
+          [
+            60,
+            60,
+          ],
+        ],
+        "type": "LineString",
+      },
+      "hidden": false,
+      "hoveredByMe": false,
+      "id": "id1",
+      "idx": "",
+      "name": null,
+      "parent": {
+        "children": [],
+        "id": "",
+        "parent": null,
+      },
+      "selectedByMe": false,
+      "selectedByPeers": null,
+      "type": "feature",
+    },
+    "geometry": {
+      "coordinates": [
+        50,
+        50,
+      ],
+      "type": "Point",
+    },
+    "handleType": "vertex",
+    "id": "id1-handle0",
+    "type": "handle",
+  },
+  {
+    "feature": {
+      "active": false,
+      "children": [],
+      "color": "#000000",
+      "geometry": {
+        "coordinates": [
+          [
+            50,
+            50,
+          ],
+          [
+            60,
+            60,
+          ],
+        ],
+        "type": "LineString",
+      },
+      "hidden": false,
+      "hoveredByMe": false,
+      "id": "id1",
+      "idx": "",
+      "name": null,
+      "parent": {
+        "children": [],
+        "id": "",
+        "parent": null,
+      },
+      "selectedByMe": false,
+      "selectedByPeers": null,
+      "type": "feature",
+    },
+    "geometry": {
+      "coordinates": [
+        55,
+        55,
+      ],
+      "type": "Point",
+    },
+    "handleType": "midpoint",
+    "id": "id1-handle0-midpoint",
+    "type": "handle",
+  },
+  {
+    "feature": {
+      "active": false,
+      "children": [],
+      "color": "#000000",
+      "geometry": {
+        "coordinates": [
+          [
+            50,
+            50,
+          ],
+          [
+            60,
+            60,
+          ],
+        ],
+        "type": "LineString",
+      },
+      "hidden": false,
+      "hoveredByMe": false,
+      "id": "id1",
+      "idx": "",
+      "name": null,
+      "parent": {
+        "children": [],
+        "id": "",
+        "parent": null,
+      },
+      "selectedByMe": false,
+      "selectedByPeers": null,
+      "type": "feature",
+    },
+    "geometry": {
+      "coordinates": [
+        60,
+        60,
+      ],
+      "type": "Point",
+    },
+    "handleType": "vertex",
+    "id": "id1-handle1",
+    "type": "handle",
+  },
+]
+`;
+
+exports[`single point snapshot 1`] = `
+[
+  {
+    "active": false,
+    "children": [],
+    "color": "#000000",
+    "geometry": {
+      "coordinates": [
+        50,
+        50,
+      ],
+      "type": "Point",
+    },
+    "hidden": false,
+    "hoveredByMe": false,
+    "id": "id1",
+    "idx": "",
+    "name": null,
+    "parent": {
+      "children": [],
+      "id": "",
+      "parent": null,
+    },
+    "selectedByMe": false,
+    "selectedByPeers": null,
+    "type": "feature",
+  },
+]
+`;
