@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"fmt"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -12,6 +11,7 @@ import (
 
 type Pg struct {
 	*pgxpool.Pool
+	afterConnectHandlers []func(ctx context.Context, conn *pgx.Conn) error
 }
 
 type Querier interface {
@@ -27,16 +27,32 @@ func NewPg(ctx context.Context, url string) (*Pg, error) {
 		return nil, fmt.Errorf("invalid postgres url: %w", err)
 	}
 
-	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeExec
+	instance := &Pg{}
 
-	config.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
-		pgxUUID.Register(conn.TypeMap())
-		return nil
-	}
+	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeExec
+	config.AfterConnect = instance.afterConnect
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, err
 	}
-	return &Pg{pool}, nil
+	instance.Pool = pool
+
+	return instance, nil
+}
+
+func (p *Pg) AddAfterConnectHandler(handler func(ctx context.Context, conn *pgx.Conn) error) {
+	p.afterConnectHandlers = append(p.afterConnectHandlers, handler)
+}
+
+func (p *Pg) afterConnect(ctx context.Context, conn *pgx.Conn) error {
+	pgxUUID.Register(conn.TypeMap())
+
+	for _, h := range p.afterConnectHandlers {
+		if err := h(ctx, conn); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
