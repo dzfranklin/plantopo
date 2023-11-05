@@ -18,7 +18,7 @@ export const useMyGeolocation = () =>
 
       let resp: Response;
       try {
-        resp = await fetch('https://api.plantopo.com/geolocate-me-v1', {
+        resp = await fetch('https://geolocate-me.plantopo.com/geolocate-me-v1', {
           method: 'GET',
           credentials: 'include',
           headers: {
