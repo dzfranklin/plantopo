@@ -46,6 +46,10 @@ func (p *Pg) AddAfterConnectHandler(handler func(ctx context.Context, conn *pgx.
 }
 
 func (p *Pg) afterConnect(ctx context.Context, conn *pgx.Conn) error {
+	if _, err := conn.Exec(ctx, `SET search_path TO pt`); err != nil {
+		return err
+	}
+
 	pgxUUID.Register(conn.TypeMap())
 
 	for _, h := range p.afterConnectHandlers {
