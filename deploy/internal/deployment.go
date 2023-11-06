@@ -169,6 +169,22 @@ metadata:
 	return nil
 }
 
+func DestroyStagingBackendDeployment(dryRun bool, staging string) error {
+	clusterNs := "pt-staging-" + staging
+	if dryRun {
+		fmt.Printf("Would delete namespace %s (dry run)\n", clusterNs)
+	} else {
+		fmt.Printf("Deleting namespace %s\n", clusterNs)
+		cmd := exec.Command("kubectl", "delete", "namespace", clusterNs)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to destroy deployment: %w", err)
+		}
+	}
+	return nil
+}
+
 func copyStagingSecrets(ns string) error {
 	cmd := exec.Command("kubectl", "get", "secrets",
 		"--namespace", "pt-staging",

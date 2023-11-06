@@ -35,7 +35,6 @@ type AppDeployment struct {
 
 func CreateStagingAppDeployment(dryRun bool, staging string, ver string, templateBucket string) (*AppDeployment, error) {
 	ctx := context.Background()
-
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(bucketRegion))
 	if err != nil {
 		log.Fatal(err)
@@ -120,6 +119,64 @@ func ensureBucket(
 	return nil
 }
 
+func DestroyStagingAppDeployment(dryRun bool, staging string) error {
+	log.Printf("Destroying staging app deployment %s", staging)
+	ctx := context.Background()
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(bucketRegion))
+	if err != nil {
+		log.Fatal(err)
+	}
+	s3Client := s3.NewFromConfig(cfg)
+
+	bucket := stagingBucket(staging)
+
+	if dryRun {
+		fmt.Printf("Would empty bucket %s (dry run)\n", bucket)
+	} else {
+		for {
+			lo, err := s3Client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+				Bucket: &bucket,
+			})
+			if err != nil {
+				var nsb *s3Types.NoSuchBucket
+				if errors.As(err, &nsb) {
+					log.Printf("bucket %s does not exist, skipping", bucket)
+					return nil
+				}
+				return fmt.Errorf("list` objects in %s: %w", bucket, err)
+			}
+
+			if len(lo.Contents) == 0 {
+				break
+			}
+
+			batch := make([]s3Types.ObjectIdentifier, 0, len(lo.Contents))
+			for _, obj := range lo.Contents {
+				batch = append(batch, s3Types.ObjectIdentifier{Key: obj.Key})
+			}
+			_, err = s3Client.DeleteObjects(ctx, &s3.DeleteObjectsInput{
+				Bucket: &bucket,
+				Delete: &s3Types.Delete{Objects: batch},
+			})
+			if err != nil {
+				return fmt.Errorf("delete objects in %s: %w", bucket, err)
+			}
+			log.Printf("deleted %d objects from %s", len(batch), bucket)
+		}
+	}
+
+	if dryRun {
+		fmt.Printf("Would delete bucket %s (dry run)\n", bucket)
+	} else {
+		_, err = s3Client.DeleteBucket(ctx, &s3.DeleteBucketInput{Bucket: &bucket})
+		if err != nil {
+			return fmt.Errorf("delete bucket %s: %w", bucket, err)
+		}
+	}
+
+	return nil
+}
+
 func stagingBucket(staging string) string {
 	return fmt.Sprintf("%s.app.pt-staging.dfusercontent.com", staging)
 }
@@ -185,7 +242,7 @@ func (d *AppDeployment) Run(dryRun bool, baseDir string) {
 		}
 	}
 
-	output.Cleanup()
+	output.cleanup()
 
 	fmt.Println("Done deploying app")
 }
@@ -297,7 +354,7 @@ func doBuild(ver string, baseDir string, apiEndpoint string) *buildOutput {
 	}
 }
 
-func (o *buildOutput) Cleanup() {
+func (o *buildOutput) cleanup() {
 	if err := os.RemoveAll(o.outDir); err != nil {
 		log.Println(fmt.Errorf("failed to cleanup build outputs: %w", err))
 	}

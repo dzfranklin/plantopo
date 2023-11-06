@@ -19,6 +19,7 @@ const (
 var allSystems = []string{"app", "api_server", "matchmaker", "sync_backend"}
 
 func main() {
+	var destroy = pflag.Bool("destroy", false, "Destroy resources rather than set them up")
 	var staging = pflag.String("staging", "", "Deploy to staging version")
 	var all = pflag.Bool("all", false, "Deploy all systems")
 	var system = pflag.String("system", "", fmt.Sprintf("System to deploy (%s)", strings.Join(allSystems, ", ")))
@@ -28,7 +29,7 @@ func main() {
 	var dryRun = pflag.Bool("dry-run", false, "Dry run")
 	pflag.Parse()
 
-	if *baseDir == "" || (*system == "" && !*all) {
+	if *baseDir == "" || (*system == "" && !*all && !*destroy) {
 		pflag.Usage()
 		return
 	}
@@ -41,7 +42,7 @@ func main() {
 			}
 		}
 	} else {
-		if !slices.Contains(*excludeSystems, *system) {
+		if !slices.Contains(*excludeSystems, *system) && *system != "" {
 			systems = []string{*system}
 		}
 	}
@@ -60,6 +61,27 @@ func main() {
 	fmt.Println(verPath)
 	if *dryRun {
 		fmt.Println("Dry run")
+	}
+
+	if *destroy {
+		if *staging == "" {
+			panic("--destroy only supported for staging")
+		}
+		if *all || *system != "" || len(*excludeSystems) > 0 {
+			panic("--destroy not supported with --all, --system or --exclude-system")
+		}
+
+		fmt.Printf("Destroying staging %s\n", *staging)
+		err := internal.DestroyStagingAppDeployment(*dryRun, *staging)
+		if err != nil {
+			fmt.Println(fmt.Errorf("failed to destroy staging app deployment: %w", err))
+			os.Exit(1)
+		}
+		if err := internal.DestroyStagingBackendDeployment(*dryRun, *staging); err != nil {
+			fmt.Println(fmt.Errorf("failed to destroy staging backend deployment: %w", err))
+			os.Exit(1)
+		}
+		return
 	}
 
 	for _, name := range systems {
