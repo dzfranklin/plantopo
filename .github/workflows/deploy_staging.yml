@@ -1,4 +1,4 @@
-name: Deploy PR to staging
+name: Deploy staging
 
 on:
   pull_request:
