@@ -29,7 +29,6 @@ func NewPg(ctx context.Context, url string) (*Pg, error) {
 
 	instance := &Pg{}
 
-	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeExec
 	config.AfterConnect = instance.afterConnect
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
