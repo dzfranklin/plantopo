@@ -98,12 +98,15 @@ func (d *Deployment) Run(dryRun bool, baseDir string) error {
 	}
 	var permittedOrigins string
 	if d.Staging != "" {
-		permittedOrigins = fmt.Sprintf("https://%s.app.pt-staging.dfusercontent.com", d.Staging)
+		permittedOrigins = strings.Join([]string{
+			fmt.Sprintf("https://%s.app.pt-staging.dfusercontent.com", d.Staging),
+			"https://localhost.dfusercontent.com",
+			"https://localhost.dfusercontent.com:3000",
+			"http://localhost.dfusercontent.com:3000",
+		}, ",")
 	} else {
 		permittedOrigins = "https://app.plantopo.com"
 	}
-	// permit localhost to connect to prod
-	permittedOrigins += ",http://dev-local.plantopo.com:3000,https://dev-local.plantopo.com:3000,https://dev-local.plantopo.com"
 
 	specValues := map[string]string{
 		"ver":                d.Ver,
