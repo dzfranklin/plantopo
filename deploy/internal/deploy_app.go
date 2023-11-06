@@ -2,8 +2,14 @@ package internal
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
 	cfTypes "github.com/aws/aws-sdk-go-v2/service/cloudfront/types"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3Types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"log"
 	"mime"
 	"net/http"
@@ -13,18 +19,113 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-const bucketRegion = "us-east-2"
+const bucketRegion = "eu-west-2"
 
 var entrypointNames = []string{"index.html", "index.txt", "404.html"}
 
-func DeployApp(dryRun bool, ver string, baseDir string, bucket string, distribution string) {
-	fmt.Println("Deploying app (" + ver + ")")
+type AppDeployment struct {
+	Ver          string
+	Bucket       string
+	Distribution string
+	staging      bool
+	apiDomain    string
+}
+
+func CreateStagingAppDeployment(dryRun bool, staging string, ver string, templateBucket string) (*AppDeployment, error) {
+	ctx := context.Background()
+
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(bucketRegion))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if dryRun {
+		fmt.Println("Would setup bucket (dry run)")
+	} else {
+		err = ensureBucket(ctx, cfg, staging, templateBucket)
+		if err != nil {
+			return nil, fmt.Errorf("ensure staging bucket: %w", err)
+		}
+	}
+
+	return &AppDeployment{
+		Ver:       ver,
+		Bucket:    stagingBucket(staging),
+		staging:   true,
+		apiDomain: fmt.Sprintf("%s.staging-api.plantopo.com", staging),
+	}, nil
+}
+
+func ensureBucket(
+	ctx context.Context, cfg aws.Config, staging string, templateBucket string,
+) error {
+	s3Client := s3.NewFromConfig(cfg)
+	bucket := stagingBucket(staging)
+	fmt.Printf("Setting up bucket %s\n", bucket)
+	_, err := s3Client.CreateBucket(ctx, &s3.CreateBucketInput{
+		Bucket: &bucket,
+		CreateBucketConfiguration: &s3Types.CreateBucketConfiguration{
+			LocationConstraint: bucketRegion,
+		},
+	})
+	var alreadyOwned *s3Types.BucketAlreadyOwnedByYou
+	if err != nil && !errors.As(err, &alreadyOwned) {
+		return fmt.Errorf("create staging app bucket: %w", err)
+	}
+
+	bWebsiteTmpl, err := s3Client.GetBucketWebsite(ctx, &s3.GetBucketWebsiteInput{Bucket: &templateBucket})
+	if err != nil {
+		return fmt.Errorf("get template bucket website: %w", err)
+	}
+	_, err = s3Client.PutBucketWebsite(ctx, &s3.PutBucketWebsiteInput{
+		Bucket: &bucket,
+		WebsiteConfiguration: &s3Types.WebsiteConfiguration{
+			ErrorDocument:         bWebsiteTmpl.ErrorDocument,
+			IndexDocument:         bWebsiteTmpl.IndexDocument,
+			RedirectAllRequestsTo: bWebsiteTmpl.RedirectAllRequestsTo,
+			RoutingRules:          bWebsiteTmpl.RoutingRules,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("configure staging app bucket as website: %w", err)
+	}
+
+	_, err = s3Client.DeletePublicAccessBlock(ctx, &s3.DeletePublicAccessBlockInput{Bucket: &bucket})
+	if err != nil {
+		return fmt.Errorf("delete staging app bucket public access block: %w", err)
+	}
+
+	bPolicyTmpl, err := s3Client.GetBucketPolicy(ctx, &s3.GetBucketPolicyInput{Bucket: &templateBucket})
+	if err != nil {
+		return fmt.Errorf("get template bucket policy: %w", err)
+	}
+	if bPolicyTmpl.Policy != nil {
+		policy := strings.Replace(
+			*bPolicyTmpl.Policy,
+			fmt.Sprintf("arn:aws:s3:::%s", templateBucket),
+			fmt.Sprintf("arn:aws:s3:::%s", bucket),
+			-1,
+		)
+		_, err = s3Client.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{
+			Bucket: &bucket,
+			Policy: &policy,
+		})
+		if err != nil {
+			log.Printf("bucket %s, policy: %s", bucket, policy)
+			return fmt.Errorf("configure staging app bucket policy: %w", err)
+		}
+	}
+	return nil
+}
+
+func stagingBucket(staging string) string {
+	return fmt.Sprintf("%s.staging.plantopo.com", staging)
+}
+
+func (d *AppDeployment) Run(dryRun bool, baseDir string) {
+	fmt.Println("Deploying app (" + d.Ver + ")")
 
 	cfg, err := config.LoadDefaultConfig(context.Background(), config.WithRegion(bucketRegion))
 	if err != nil {
@@ -34,10 +135,15 @@ func DeployApp(dryRun bool, ver string, baseDir string, bucket string, distribut
 
 	// List existing
 
-	preexistingObjects := listExisting(s3Client, bucket)
+	preexistingObjects := listExisting(s3Client, d.Bucket)
 
 	// Build
-	output := doBuild(ver, baseDir)
+	apiDomain := d.apiDomain
+	if apiDomain == "" {
+		apiDomain = "api.plantopo.com"
+	}
+	apiEndpoint := fmt.Sprintf("https://%s/api/v1/", apiDomain)
+	output := doBuild(d.Ver, baseDir, apiEndpoint)
 
 	// Upload
 
@@ -45,35 +151,37 @@ func DeployApp(dryRun bool, ver string, baseDir string, bucket string, distribut
 	// This mostly avoids re-uploading media like the font.
 
 	fmt.Println("Uploading app: resources")
-	doUpload(dryRun, s3Client, bucket, &preexistingObjects, true, output.outDir, output.resources)
+	doUpload(dryRun, s3Client, d.Bucket, &preexistingObjects, true, output.outDir, output.resources)
 
 	fmt.Println("Uploading app: entrypoints")
-	doUpload(dryRun, s3Client, bucket, &preexistingObjects, false, output.outDir, output.entrypoints)
+	doUpload(dryRun, s3Client, d.Bucket, &preexistingObjects, false, output.outDir, output.entrypoints)
 
-	deleteUnusedPreexisting(dryRun, s3Client, bucket, preexistingObjects)
+	deleteUnusedPreexisting(dryRun, s3Client, d.Bucket, preexistingObjects)
 
 	// Invalidate
 
-	if dryRun {
-		fmt.Println("Would invalidate app (dry run)")
-	} else {
-		fmt.Println("Invalidating app")
-		cfClient := cloudfront.NewFromConfig(cfg)
-		callerReference := fmt.Sprintf("deploy-%s-%s", distribution, time.Now().Format("20060102150405"))
-		invalidatePaths := []string{"/*"}
-		invalidatePathsQuantity := int32(len(invalidatePaths))
-		_, err = cfClient.CreateInvalidation(context.Background(), &cloudfront.CreateInvalidationInput{
-			DistributionId: &distribution,
-			InvalidationBatch: &cfTypes.InvalidationBatch{
-				CallerReference: &callerReference,
-				Paths: &cfTypes.Paths{
-					Quantity: &invalidatePathsQuantity,
-					Items:    invalidatePaths,
+	if !d.staging {
+		if dryRun {
+			fmt.Println("Would invalidate app (dry run)")
+		} else {
+			fmt.Println("Invalidating app")
+			cfClient := cloudfront.NewFromConfig(cfg)
+			callerReference := fmt.Sprintf("deploy-%s-%s", d.Distribution, time.Now().Format("20060102150405"))
+			invalidatePaths := []string{"/*"}
+			invalidatePathsQuantity := int32(len(invalidatePaths))
+			_, err = cfClient.CreateInvalidation(context.Background(), &cloudfront.CreateInvalidationInput{
+				DistributionId: &d.Distribution,
+				InvalidationBatch: &cfTypes.InvalidationBatch{
+					CallerReference: &callerReference,
+					Paths: &cfTypes.Paths{
+						Quantity: &invalidatePathsQuantity,
+						Items:    invalidatePaths,
+					},
 				},
-			},
-		})
-		if err != nil {
-			log.Fatal(err)
+			})
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 
@@ -106,13 +214,14 @@ type buildOutput struct {
 	outDir      string
 }
 
-func doBuild(ver string, baseDir string) *buildOutput {
+func doBuild(ver string, baseDir string, apiEndpoint string) *buildOutput {
 	imageTag := fmt.Sprintf("pt-app:%s", ver)
 
 	cmd := exec.Command("docker", "build",
 		"--file", "app.Dockerfile",
 		"--tag", imageTag,
 		"--build-arg", "VER="+ver,
+		"--build-arg", "API_ENDPOINT=\""+apiEndpoint+"\"",
 		".",
 	)
 

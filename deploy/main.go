@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	appBucket       = "plantopo-app"
-	appDistribution = "E1T20T38SLR087"
+	prodAppBucket       = "plantopo.com"
+	prodAppDistribution = "E1T20T38SLR087"
 )
 
 var allSystems = []string{"app", "api_server", "matchmaker", "sync_backend"}
@@ -66,7 +66,22 @@ func main() {
 		fmt.Print("\n-------------------\n\n")
 
 		if name == "app" {
-			internal.DeployApp(*dryRun, ver, *baseDir, appBucket, appDistribution)
+			var deployment *internal.AppDeployment
+			if *staging == "" {
+				deployment = &internal.AppDeployment{
+					Ver:          ver,
+					Bucket:       prodAppBucket,
+					Distribution: prodAppDistribution,
+				}
+			} else {
+				var err error
+				deployment, err = internal.CreateStagingAppDeployment(*dryRun, *staging, ver, prodAppBucket)
+				if err != nil {
+					fmt.Println(fmt.Errorf("failed to create staging app deployment: %w", err))
+					os.Exit(1)
+				}
+			}
+			deployment.Run(*dryRun, *baseDir)
 		} else {
 			deployment := &internal.Deployment{
 				Ver:     ver,
