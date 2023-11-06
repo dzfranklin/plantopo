@@ -1,0 +1,39 @@
+name: Test app
+
+on:
+  push:
+    paths:
+      - '.github/**'
+      - 'app/**'
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: cd app && npm ci
+
+      - name: Typecheck
+        run: cd app && npm run typecheck
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: cd app && npm ci
+
+      - name: Lint
+        run: cd app && npm run lint
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: cd app && npm ci
+
+      - name: Test
+        run: cd app && npm run test
