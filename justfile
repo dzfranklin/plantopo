@@ -38,7 +38,7 @@ app:
   cd app && npm run dev -- --port 443 --experimental-https
 
 test-app:
-  cd app && tsc --noEmit
+  cd app && npm run typecheck
   cd app && npm run lint
   cd app && npm run test
 
