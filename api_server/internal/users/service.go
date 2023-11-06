@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
@@ -45,6 +46,14 @@ type impl struct {
 }
 
 var hashCost = bcrypt.DefaultCost
+var apiDomain string
+
+func init() {
+	apiDomain = os.Getenv("API_DOMAIN")
+	if apiDomain == "" {
+		apiDomain = "plantopo.com"
+	}
+}
 
 func NewService(ctx context.Context, pg *db.Pg, mailer mailer.Service) Service {
 	l := logger.FromCtx(ctx).Named("users")
@@ -451,5 +460,5 @@ func createHashedPassword(password string) ([]byte, error) {
 }
 
 func imageUrlFor(userId uuid.UUID) string {
-	return fmt.Sprintf("https://api.plantopo.com/api/v1/account/profile-png/%s.png", userId)
+	return fmt.Sprintf("https://%s/api/v1/account/profile-png/%s.png", apiDomain, userId)
 }

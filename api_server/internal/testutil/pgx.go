@@ -2,9 +2,9 @@ package testutil
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
-	"regexp"
 	"time"
 
 	"github.com/bitcomplete/sqltestutil"
@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Sandboxed connection
+// Pgx wraps a sandboxed postgres container
 type Pgx struct {
 	*sqltestutil.PostgresContainer
 	*db.Pg
@@ -28,10 +28,7 @@ func PgxSandbox() *Pgx {
 	if err != nil {
 		log.Fatal(fmt.Errorf("PgxSandbox: failed to start postgres container: %w", err))
 	}
-	r := regexp.MustCompile("postgres://pgtest:.+@127.0.0.1:(.+)/pgtest")
-	matches := r.FindStringSubmatch(container.ConnectionString())
-	port := matches[1]
-	log.Printf("PgxSandbox: postgres container listening on port %s", port)
+	log.Printf("PgxSandbox: postgres container listening at %s", container.ConnectionString())
 
 	// Fixes an intermittent bug when I test the entire project without any cached
 	// results from the command line (i.e. `go clean -testcache && go test ./...`)
@@ -58,13 +55,17 @@ func PgxSandbox() *Pgx {
 		log.Fatal(fmt.Errorf("PgxSandbox: failed to create migration instance: %w", err))
 	}
 
-	url := fmt.Sprintf("postgres://pt:postgres@127.0.0.1:%s/pgtest?sslmode=disable", port)
-	pg, err := db.NewPg(context.Background(), url)
+	pg, err := db.NewPg(context.Background(), container.ConnectionString()+"?sslmode=disable")
 	if err != nil {
 		log.Fatal(fmt.Errorf("PgxSandbox: failed to create pg instance: %w", err))
 	}
 
 	c := &Pgx{container, pg, m}
+
+	_, err = c.Exec(context.Background(), migrations.SetupScript("pgtest"))
+	if err != nil {
+		log.Fatal(fmt.Errorf("failed to execute setup script: %w", err))
+	}
 
 	c.migrateUp()
 
@@ -81,19 +82,22 @@ func (c *Pgx) Reset() {
 
 func (c *Pgx) Close() {
 	c.Pool.Close()
-	c.PostgresContainer.Shutdown(context.Background())
+	if err := c.PostgresContainer.Shutdown(context.Background()); err != nil {
+		log.Fatal(fmt.Errorf("PgxSandbox: failed to shutdown postgres container: %w", err))
+	}
 }
 
 func (c *Pgx) migrateDown() {
 	log.Println("PgxSandbox: migrating down")
-	if err := c.m.Down(); err != nil && err != migrate.ErrNoChange {
+	if err := c.m.Down(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		log.Fatal(fmt.Errorf("failed to migrate down: %w", err))
 	}
 }
 
 func (c *Pgx) migrateUp() {
 	log.Println("PgxSandbox: migrating up")
-	if err := c.m.Up(); err != nil && err != migrate.ErrNoChange {
+
+	if err := c.m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		log.Fatal(fmt.Errorf("failed to migrate up: %w", err))
 	}
 }

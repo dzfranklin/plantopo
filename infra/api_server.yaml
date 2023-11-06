@@ -2,16 +2,14 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: api-server-ingress
-  namespace: pt
   labels:
     app: api-server
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     traefik.ingress.kubernetes.io/router.tls: "true"
-    cert-manager.io/cluster-issuer: letsencrypt-issuer
 spec:
   rules:
-    - host: api.plantopo.com
+    - host: "{{ .Values.apiDomain }}"
       http:
         paths:
           - path: /
@@ -21,14 +19,14 @@ spec:
                 name: internal-api
                 port: { name: http }
   tls:
-    - secretName: api-server-ingress-cert
-      hosts: [ api.plantopo.com ]
+    - secretName: api-cert
+      hosts:
+        - "{{ .Values.apiDomain }}"
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: internal-api
-  namespace: pt
   labels:
     app: api-server
 spec:
@@ -45,7 +43,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-server
-  namespace: pt
   labels:
     app: api-server
 spec:
@@ -62,10 +59,18 @@ spec:
     spec:
       containers:
         - name: api-server
-          image: "{{ .Values.image}}"
+          image: "{{ .Values.image }}"
           env:
             - name: PORT
               value: "8080"
+            - name: APP_ENV
+              value: "{{ .Values.env }}"
+            - name: IMPORT_UPLOADS_BUCKET
+              value: "{{ .Values.importUploadBucket }}"
+            - name: PERMITTED_ORIGINS
+              value: "{{ .Values.permittedOrigins }}"
+            - name: API_DOMAIN
+              value: "{{ .Values.apiDomain }}"
             - name: PT_MAILGUN_KEY
               valueFrom:
                 secretKeyRef:

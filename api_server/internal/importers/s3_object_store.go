@@ -8,17 +8,17 @@ import (
 	"time"
 )
 
-var s3Bucket = "pt-import-uploads"
-
 type S3ObjectStore struct {
 	client        *s3.Client
 	presignClient *s3.PresignClient
+	bucket        string
 }
 
-func NewS3ObjectStore(client *s3.Client) *S3ObjectStore {
+func NewS3ObjectStore(client *s3.Client, bucket string) *S3ObjectStore {
 	return &S3ObjectStore{
 		client:        client,
 		presignClient: s3.NewPresignClient(client),
+		bucket:        bucket,
 	}
 }
 
@@ -26,7 +26,7 @@ func (s *S3ObjectStore) CreatePresignedUploadURL(ctx context.Context, id string,
 	req, err := s.presignClient.PresignPutObject(
 		ctx,
 		&s3.PutObjectInput{
-			Bucket:     &s3Bucket,
+			Bucket:     &s.bucket,
 			Key:        &id,
 			ContentMD5: &contentMd5,
 		},
@@ -42,7 +42,7 @@ func (s *S3ObjectStore) CreatePresignedUploadURL(ctx context.Context, id string,
 
 func (s *S3ObjectStore) GetUpload(ctx context.Context, id string) (io.ReadCloser, error) {
 	req := s3.GetObjectInput{
-		Bucket: &s3Bucket,
+		Bucket: &s.bucket,
 		Key:    &id,
 	}
 	resp, err := s.client.GetObject(ctx, &req)
@@ -55,7 +55,7 @@ func (s *S3ObjectStore) GetUpload(ctx context.Context, id string) (io.ReadCloser
 func (s *S3ObjectStore) PutConversion(ctx context.Context, id string, content []byte) error {
 	key := id + "-conversion.json"
 	req := s3.PutObjectInput{
-		Bucket: &s3Bucket,
+		Bucket: &s.bucket,
 		Key:    &key,
 		Body:   bytes.NewReader(content),
 	}

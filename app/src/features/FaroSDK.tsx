@@ -7,6 +7,10 @@ export function FaroSDK() {
       console.info('Faro SDK not loaded as not production');
       return;
     }
+    if (window.location.hostname.endsWith("pt-staging.dfusercontent.com")) {
+      console.info('Faro SDK not loaded as staging');
+      return;
+    }
 
     if (document.getElementById('faro-web-sdk')) {
       // Already loading

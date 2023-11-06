@@ -12,13 +12,15 @@ import (
 )
 
 const (
-	appBucket       = "plantopo-app"
-	appDistribution = "E1T20T38SLR087"
+	prodAppBucket       = "plantopo.com"
+	prodAppDistribution = "E1T20T38SLR087"
 )
 
 var allSystems = []string{"app", "api_server", "matchmaker", "sync_backend"}
 
 func main() {
+	var destroy = pflag.Bool("destroy", false, "Destroy resources rather than set them up")
+	var staging = pflag.String("staging", "", "Deploy to staging version")
 	var all = pflag.Bool("all", false, "Deploy all systems")
 	var system = pflag.String("system", "", fmt.Sprintf("System to deploy (%s)", strings.Join(allSystems, ", ")))
 	var excludeSystems = pflag.StringArray("exclude-system", []string{}, "Systems to exclude")
@@ -27,7 +29,7 @@ func main() {
 	var dryRun = pflag.Bool("dry-run", false, "Dry run")
 	pflag.Parse()
 
-	if *baseDir == "" || (*system == "" && !*all) {
+	if *baseDir == "" || (*system == "" && !*all && !*destroy) {
 		pflag.Usage()
 		return
 	}
@@ -40,7 +42,7 @@ func main() {
 			}
 		}
 	} else {
-		if !slices.Contains(*excludeSystems, *system) {
+		if !slices.Contains(*excludeSystems, *system) && *system != "" {
 			systems = []string{*system}
 		}
 	}
@@ -61,13 +63,53 @@ func main() {
 		fmt.Println("Dry run")
 	}
 
+	if *destroy {
+		if *staging == "" {
+			panic("--destroy only supported for staging")
+		}
+		if *all || *system != "" || len(*excludeSystems) > 0 {
+			panic("--destroy not supported with --all, --system or --exclude-system")
+		}
+
+		fmt.Printf("Destroying staging %s\n", *staging)
+		err := internal.DestroyStagingAppDeployment(*dryRun, *staging)
+		if err != nil {
+			fmt.Println(fmt.Errorf("failed to destroy staging app deployment: %w", err))
+			os.Exit(1)
+		}
+		if err := internal.DestroyStagingBackendDeployment(*dryRun, *staging); err != nil {
+			fmt.Println(fmt.Errorf("failed to destroy staging backend deployment: %w", err))
+			os.Exit(1)
+		}
+		return
+	}
+
 	for _, name := range systems {
 		fmt.Print("\n-------------------\n\n")
 
 		if name == "app" {
-			internal.DeployApp(*dryRun, ver, *baseDir, appBucket, appDistribution)
+			var deployment *internal.AppDeployment
+			if *staging == "" {
+				deployment = &internal.AppDeployment{
+					Ver:          ver,
+					Bucket:       prodAppBucket,
+					Distribution: prodAppDistribution,
+				}
+			} else {
+				var err error
+				deployment, err = internal.CreateStagingAppDeployment(*dryRun, *staging, ver, prodAppBucket)
+				if err != nil {
+					fmt.Println(fmt.Errorf("failed to create staging app deployment: %w", err))
+					os.Exit(1)
+				}
+			}
+			deployment.Run(*dryRun, *baseDir)
 		} else {
-			deployment := &internal.Deployment{Ver: ver, Name: name}
+			deployment := &internal.Deployment{
+				Ver:     ver,
+				Name:    name,
+				Staging: *staging,
+			}
 			if err := deployment.Run(*dryRun, *baseDir); err != nil {
 				fmt.Println(fmt.Errorf("failed to deploy %s: %w", deployment.Name, err))
 				os.Exit(1)

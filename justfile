@@ -42,10 +42,12 @@ test-app:
   cd app && npm run lint
   cd app && npm run test
 
+migrationOpts := "x-migrations-table=%22pt%22.%22schema_migrations%22&x-migrations-table-quoted=true"
+
 migrate *ARGS:
   migrate \
     -path=./migrations/ \
-    -database postgres://postgres:postgres@localhost:5432/pt?sslmode=disable \
+    -database "postgres://postgres:postgres@localhost:5432/pt?sslmode=disable&{{migrationOpts}}" \
     {{ ARGS }}
 
 # Usage
@@ -59,15 +61,18 @@ migrate-prod-up url:
   migrate \
     -verbose \
     -path=./migrations/ \
-    -database {{url}} \
+    -database "{{url}}&{{migrationOpts}}" \
     up
 
 migrate-prod-down url:
     migrate \
     -verbose \
     -path=./migrations/ \
-    -database {{url}} \
+    -database "{{url}}&{{migrationOpts}}" \
     down 1
+
+setup-prod-db user url:
+   sed 's/{{{{user}}/{{user}}/' migrations/setup.sql | psql "{{url}}" -f -
 
 recreatedb:
   dropdb --if-exists pt
@@ -75,7 +80,7 @@ recreatedb:
   psql -c "DROP ROLE pt; CREATE ROLE pt WITH LOGIN PASSWORD 'postgres'"
   migrate \
     -path=./migrations/ \
-    -database postgres://postgres:postgres@localhost:5432/pt?sslmode=disable \
+    -database "postgres://postgres:postgres@localhost:5432/pt?sslmode=disable&{{migrationOpts}}" \
     up
   psql -d pt \
     -f migrations/test_seed.sql

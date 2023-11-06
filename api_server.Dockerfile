@@ -2,6 +2,9 @@
 
 FROM golang:1.21.1-bookworm as build
 WORKDIR /build
+ARG PERMITTED_ORIGINS
+ARG API_DOMAIN
+ARG APP_ENV
 
 COPY go.* ./
 RUN go mod download
@@ -20,6 +23,7 @@ COPY --from=build /build/api_server/api_server /app/api_server
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 ENV TZ=UTC
-ENV APP_ENV=production
-
+ENV APP_ENV=$APP_ENV
+ENV PERMITTED_ORIGINS=$PERMITTED_ORIGINS
+ENV API_DOMAIN=$API_DOMAIN
 ENTRYPOINT ["/app/api_server"]
