@@ -40,25 +40,6 @@ export class FeaturePainter {
     this.c.restore();
   }
 
-  private _debugTime(label: string, ms: number) {
-    if (!this.showDebug) return;
-    this._debugText(`${label}: ${ms.toFixed(1)}ms`);
-  }
-
-  private _debugLine = 0;
-  private _debugText(text: string): void {
-    if (!this.showDebug) return;
-    this.c.save();
-    this.c.translate(
-      this.canvas.width / this.dpi - 120,
-      this.canvas.height / this.dpi / 2 + this._debugLine * 10,
-    );
-    this.c.strokeStyle = 'red';
-    this.c.strokeText(text, 0, 0);
-    this.c.restore();
-    this._debugLine++;
-  }
-
   private _paint(camera: CurrentCamera, item: RenderItem): void {
     this.c.save();
     switch (item.type) {
@@ -159,5 +140,24 @@ export class FeaturePainter {
     this.c.stroke();
 
     this.c.restore();
+  }
+
+  private _debugTime(label: string, ms: number) {
+    if (!this.showDebug) return;
+    this._debugText(`${label}: ${ms.toFixed(1)}ms`);
+  }
+
+  private _debugLine = 0;
+  private _debugText(text: string): void {
+    if (!this.showDebug) return;
+    this.c.save();
+    this.c.translate(
+      this.canvas.width / this.dpi - 120,
+      this.canvas.height / this.dpi / 2 + this._debugLine * 10,
+    );
+    this.c.strokeStyle = 'red';
+    this.c.strokeText(text, 0, 0);
+    this.c.restore();
+    this._debugLine++;
   }
 }
