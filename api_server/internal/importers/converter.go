@@ -3,7 +3,7 @@ package importers
 import (
 	"fmt"
 	"github.com/danielzfranklin/plantopo/api/sync_schema"
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/oklog/ulid/v2"
 	"github.com/tkrajina/gpxgo/gpx"
 	"go.uber.org/zap"
@@ -15,13 +15,13 @@ func convertFormat(format string, id string, filename string, reader io.Reader) 
 	case "gpx":
 		return convertGpx(id, filename, reader)
 	default:
-		logger.Get().Sugar().Warnw("unknown format", "id", id, "format", format)
+		loggers.Get().Sugar().Warnw("unknown format", "id", id, "format", format)
 		return nil, fmt.Errorf("unknown format: %s", format)
 	}
 }
 
 func convertGpx(id string, filename string, reader io.Reader) (*sync_schema.Changeset, error) {
-	l := logger.Get().Sugar()
+	l := loggers.Get().Sugar()
 
 	data, err := gpx.Parse(reader)
 	if err != nil {

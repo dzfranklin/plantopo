@@ -130,7 +130,7 @@ func TestUpdateExisting(t *testing.T) {
 	require.Nil(t, fixes)
 	require.Equal(t, want, subject.Snapshot())
 
-	subject.Update(l, &schema.Changeset{
+	_, err = subject.Update(l, &schema.Changeset{
 		FSet: map[string]schema.Feature{
 			"f1": {
 				Id:        "f1",
@@ -147,6 +147,7 @@ func TestUpdateExisting(t *testing.T) {
 			},
 		},
 	})
+	require.NoError(t, err)
 	require.Equal(t, schema.Changeset{
 		FAdd: []string{"f1"},
 		FSet: map[string]schema.Feature{

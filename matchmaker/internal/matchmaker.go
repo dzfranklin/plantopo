@@ -58,7 +58,7 @@ func (m *Matchmaker) AddBackends(backends []Backend) {
 		}
 
 		state := &backendState{
-			open:   make(map[string]struct{}, 0),
+			open:   make(map[string]struct{}),
 			handle: backend,
 		}
 		m.backends = append(m.backends, state)

@@ -8,7 +8,7 @@ import (
 func (s *Services) devHttpbinHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"method": r.Method,
 		"uri":    r.RequestURI,
 		"url":    r.URL,
@@ -18,4 +18,7 @@ func (s *Services) devHttpbinHandler(w http.ResponseWriter, r *http.Request) {
 		"header": r.Header,
 		"body":   r.Body,
 	})
+	if err != nil {
+		panic(err)
+	}
 }

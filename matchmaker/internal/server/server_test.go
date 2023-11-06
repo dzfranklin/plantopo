@@ -85,15 +85,15 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	require.NoError(t, err)
 
 	go func() {
-		server.Serve(l)
+		_ = server.Serve(l)
 	}()
 
 	client = api.NewMatchmakerClient(cc)
 
 	return client, cfg, func() {
 		server.Stop()
-		cc.Close()
-		l.Close()
+		_ = cc.Close()
+		_ = l.Close()
 	}
 }
 

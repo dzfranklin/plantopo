@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/mailer"
 	"github.com/danielzfranklin/plantopo/api_server/internal/types"
 	"github.com/danielzfranklin/plantopo/db"
@@ -56,7 +56,7 @@ func init() {
 }
 
 func NewService(ctx context.Context, pg *db.Pg, mailer mailer.Service) Service {
-	l := logger.FromCtx(ctx).Named("users")
+	l := loggers.FromCtx(ctx).Named("users")
 	s := &impl{
 		pg:          pg,
 		mailer:      mailer,
@@ -75,7 +75,7 @@ func (r *impl) Get(ctx context.Context, userId uuid.UUID) (*types.User, error) {
 		userId,
 	).Scan(&user.Email, &user.FullName, &user.CreatedAt, &user.ConfirmedAt)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		} else {
 			return nil, err
@@ -92,7 +92,7 @@ func (r *impl) GetByEmail(ctx context.Context, email string) (*types.User, error
 		email,
 	).Scan(&user.Id, &user.FullName, &user.CreatedAt, &user.ConfirmedAt)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		} else {
 			return nil, err
@@ -246,7 +246,7 @@ func (r *impl) Confirm(token string) (uuid.UUID, error) {
 			WHERE token = $1`,
 		token).Scan(&userId, &issuedAt, &usedAt)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return uuid.Nil, ErrNotFound
 		} else {
 			r.l.DPanic("failed to query", zap.Error(err))
@@ -375,7 +375,7 @@ func (r *impl) ResetPassword(token string, newPassword string) (*types.User, err
 			WHERE token = $1 AND used_at IS NULL`,
 		token,
 	)
-	if err == pgx.ErrNoRows {
+	if errors.Is(err, pgx.ErrNoRows) {
 		// We already checked the token is valid, but we don't do so in the
 		// same transaction. This means there was a concurrent reset.
 		return nil, ErrTokenUsed
@@ -402,7 +402,7 @@ func (r *impl) checkPasswordReset(token string) (uuid.UUID, error) {
 			WHERE token = $1`,
 		token).Scan(&userId, &issuedAt, &usedAt)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return uuid.Nil, ErrNotFound
 		} else {
 			r.l.DPanic("failed to query", zap.Error(err))
@@ -438,7 +438,7 @@ func (r *impl) CheckLogin(ctx context.Context, req LoginRequest) (*types.User, e
 		&expectedPassword,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, &ErrLoginIssue{Email: "not found"}
 		} else {
 			r.l.DPanic("failed to query users", zap.Error(err))

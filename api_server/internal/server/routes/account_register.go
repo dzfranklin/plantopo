@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/users"
 )
 
@@ -41,6 +41,6 @@ func (s *Services) accountRegisterHandler(w http.ResponseWriter, r *http.Request
 		writeInternalError(r, w, err)
 		return
 	}
-	logger.FromR(r).Sugar().Info("created session for newly registered user", "userId", user.Id)
+	loggers.FromR(r).Sugar().Info("created session for newly registered user", "userId", user.Id)
 	writeData(r, w, sessionReply{user})
 }

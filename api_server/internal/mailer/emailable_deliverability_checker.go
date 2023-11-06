@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"go.uber.org/zap"
 )
 
@@ -25,7 +25,7 @@ type EmailableDeliverabilityChecker struct {
 func NewEmailableDeliverabilityChecker(
 	ctx context.Context, apiKey string,
 ) *EmailableDeliverabilityChecker {
-	l := logger.FromCtx(ctx).Sugar().Named("emailable_deliverability_checker")
+	l := loggers.FromCtx(ctx).Sugar().Named("emailable_deliverability_checker")
 
 	limiter := make(chan struct{}, emailableVerifyRPS)
 	go func() {

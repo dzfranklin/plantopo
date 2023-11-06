@@ -10,7 +10,7 @@ import (
 
 	api "github.com/danielzfranklin/plantopo/api/v1"
 	"github.com/danielzfranklin/plantopo/api_server/internal/frontend_map_tokens"
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/mailer"
 	"github.com/danielzfranklin/plantopo/api_server/internal/maps"
 	"github.com/danielzfranklin/plantopo/api_server/internal/rid"
@@ -52,7 +52,7 @@ func init() {
 }
 
 func New(s *Services) http.Handler {
-	logger.Get().Info("permitted origins", zap.Strings("origins", permittedOrigins))
+	loggers.Get().Info("permitted origins", zap.Strings("origins", permittedOrigins))
 
 	r := mux.NewRouter()
 	r.Use(logMiddleware)
@@ -102,14 +102,14 @@ func New(s *Services) http.Handler {
 type recoveryLogger struct{}
 
 func (l recoveryLogger) Println(v ...interface{}) {
-	logger.Get().Error("panic in handler", zap.Any("v", v))
+	loggers.Get().Error("panic in handler", zap.Any("v", v))
 }
 
 func logMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r = rid.RequestWithContext(r)
 
-		l := logger.FromCtx(r.Context()).With(
+		l := loggers.FromCtx(r.Context()).With(
 			zap.String("method", r.Method),
 			zap.String("path", r.URL.Path),
 			zap.String("query", r.URL.RawQuery),
@@ -120,7 +120,7 @@ func logMiddleware(next http.Handler) http.Handler {
 			zap.String("userAgent", r.UserAgent()),
 			zap.Bool("hasRidHeader", rid.HasHeader(r)))
 
-		next.ServeHTTP(w, r.WithContext(logger.WithCtx(r.Context(), l)))
+		next.ServeHTTP(w, r.WithContext(loggers.WithCtx(r.Context(), l)))
 	})
 }
 
@@ -157,7 +157,7 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	r = rid.RequestWithContext(r)
-	logger.FromCtx(r.Context()).Info("no handler", zap.String("path", r.URL.Path))
+	loggers.FromCtx(r.Context()).Info("no handler", zap.String("path", r.URL.Path))
 	writeError(r, w, &ErrorReply{
 		Code:    http.StatusNotFound,
 		Reason:  "notFound",

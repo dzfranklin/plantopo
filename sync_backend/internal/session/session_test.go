@@ -43,12 +43,13 @@ func TestSaveFails(t *testing.T) {
 	subject.mockRepoReturn(nil, fmt.Errorf("some error"))
 
 	// give it something to save
-	c.Receive(Incoming{
+	err = c.Receive(Incoming{
 		Seq: 1,
 		Change: &schema.Changeset{
 			LSet: map[string]schema.Layer{"l1": {Id: "l1", OpacityState: schema.Set, Opacity: 0.5}},
 		},
 	})
+	require.NoError(t, err)
 
 	subject.testTickSave()
 
@@ -110,15 +111,15 @@ func (s *subjectWrapper) testTickSave() {
 	time.Sleep(10 * time.Millisecond)
 }
 
-func (s *subjectWrapper) testTickBroadcastChanges() {
-	(s.conf.broadcastChangesInterval).(*manualInterval).tick()
-	time.Sleep(10 * time.Millisecond)
-}
-
-func (s *subjectWrapper) testTickBroadcastAware() {
-	(s.conf.broadcastAwareInterval).(*manualInterval).tick()
-	time.Sleep(10 * time.Millisecond)
-}
+//func (s *subjectWrapper) testTickBroadcastChanges() {
+//	(s.conf.broadcastChangesInterval).(*manualInterval).tick()
+//	time.Sleep(10 * time.Millisecond)
+//}
+//
+//func (s *subjectWrapper) testTickBroadcastAware() {
+//	(s.conf.broadcastAwareInterval).(*manualInterval).tick()
+//	time.Sleep(10 * time.Millisecond)
+//}
 
 type mockRepo struct {
 	mu    sync.Mutex

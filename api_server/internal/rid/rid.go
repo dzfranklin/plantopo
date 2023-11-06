@@ -5,7 +5,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
@@ -20,7 +20,7 @@ func FromCtx(ctx context.Context) uuid.UUID {
 }
 
 func RequestWithContext(r *http.Request) *http.Request {
-	l := logger.FromCtx(r.Context()).Sugar()
+	l := loggers.FromCtx(r.Context()).Sugar()
 
 	var value uuid.UUID
 	headerValue := r.Header.Get("X-Request-Id")
@@ -37,7 +37,7 @@ func RequestWithContext(r *http.Request) *http.Request {
 	}
 
 	l = l.With("rid", value)
-	ctx := logger.WithCtx(r.Context(), l.Desugar())
+	ctx := loggers.WithCtx(r.Context(), l.Desugar())
 	ctx = context.WithValue(ctx, ctxKey{}, value)
 	return r.WithContext(ctx)
 }
