@@ -86,7 +86,7 @@ func (d *Deployment) Run(dryRun bool, baseDir string) error {
 
 	apiDomain := "api.plantopo.com"
 	if d.Staging != "" {
-		apiDomain = fmt.Sprintf("%s.staging-api.plantopo.com", d.Staging)
+		apiDomain = fmt.Sprintf("%s.api.pt-staging.dfusercontent.com", d.Staging)
 	}
 	importUploadBucket := "pt-import-uploads"
 	if d.Staging != "" {

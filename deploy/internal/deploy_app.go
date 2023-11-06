@@ -54,7 +54,7 @@ func CreateStagingAppDeployment(dryRun bool, staging string, ver string, templat
 		Ver:       ver,
 		Bucket:    stagingBucket(staging),
 		staging:   true,
-		apiDomain: fmt.Sprintf("%s.staging-api.plantopo.com", staging),
+		apiDomain: fmt.Sprintf("%s.api.pt-staging.dfusercontent.com", staging),
 	}, nil
 }
 
@@ -121,7 +121,7 @@ func ensureBucket(
 }
 
 func stagingBucket(staging string) string {
-	return fmt.Sprintf("%s.staging.plantopo.com", staging)
+	return fmt.Sprintf("%s.app.pt-staging.dfusercontent.com", staging)
 }
 
 func (d *AppDeployment) Run(dryRun bool, baseDir string) {
@@ -221,7 +221,7 @@ func doBuild(ver string, baseDir string, apiEndpoint string) *buildOutput {
 		"--file", "app.Dockerfile",
 		"--tag", imageTag,
 		"--build-arg", "VER="+ver,
-		"--build-arg", "API_ENDPOINT=\""+apiEndpoint+"\"",
+		"--build-arg", "API_ENDPOINT="+apiEndpoint,
 		".",
 	)
 
