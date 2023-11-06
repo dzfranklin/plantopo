@@ -122,7 +122,7 @@ func (s *Services) getMapHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !s.Maps.IsAuthorized(r.Context(), authzReq, maps.ActionView) {
 		if sess == nil {
-			writeBadRequest(r, w)
+			writeUnauthorized(r, w)
 			return
 		} else {
 			writeForbidden(r, w)
