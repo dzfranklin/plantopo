@@ -55,12 +55,58 @@ test('single line snapshot', () => {
   expect(got.list).toMatchSnapshot();
 });
 
-test('line render has handles', () => {
+test('single active line snapshot', () => {
   const got = subject.render(
     sceneFixture({
       features: {
         children: [
           {
+            active: true,
+            geometry: {
+              type: 'LineString',
+              coordinates: [
+                [50, 50],
+                [60, 60],
+              ],
+            },
+          },
+        ],
+      },
+    }),
+    bboxPolygonOf(0, 0, 100, 100),
+  );
+  expect(got.list).toMatchSnapshot();
+});
+
+test('active line render does not have handles', () => {
+  const got = subject.render(
+    sceneFixture({
+      features: {
+        children: [
+          {
+            geometry: {
+              type: 'LineString',
+              coordinates: [
+                [50, 50],
+                [60, 60],
+              ],
+            },
+          },
+        ],
+      },
+    }),
+    bboxPolygonOf(0, 0, 100, 100),
+  ).list;
+  expect(got.filter((f) => f.type === 'handle')).toHaveLength(0);
+});
+
+test('active line render has handles', () => {
+  const got = subject.render(
+    sceneFixture({
+      features: {
+        children: [
+          {
+            active: true,
             geometry: {
               type: 'LineString',
               coordinates: [

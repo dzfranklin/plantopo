@@ -1,9 +1,9 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`single line snapshot 1`] = `
+exports[`single active line snapshot 1`] = `
 [
   {
-    "active": false,
+    "active": true,
     "children": [],
     "color": "#000000",
     "geometry": {
@@ -35,7 +35,7 @@ exports[`single line snapshot 1`] = `
   },
   {
     "feature": {
-      "active": false,
+      "active": true,
       "children": [],
       "color": "#000000",
       "geometry": {
@@ -78,7 +78,7 @@ exports[`single line snapshot 1`] = `
   },
   {
     "feature": {
-      "active": false,
+      "active": true,
       "children": [],
       "color": "#000000",
       "geometry": {
@@ -121,7 +121,7 @@ exports[`single line snapshot 1`] = `
   },
   {
     "feature": {
-      "active": false,
+      "active": true,
       "children": [],
       "color": "#000000",
       "geometry": {
@@ -161,6 +161,42 @@ exports[`single line snapshot 1`] = `
     "handleType": "vertex",
     "id": "id1-handle1",
     "type": "handle",
+  },
+]
+`;
+
+exports[`single line snapshot 1`] = `
+[
+  {
+    "active": false,
+    "children": [],
+    "color": "#000000",
+    "geometry": {
+      "coordinates": [
+        [
+          50,
+          50,
+        ],
+        [
+          60,
+          60,
+        ],
+      ],
+      "type": "LineString",
+    },
+    "hidden": false,
+    "hoveredByMe": false,
+    "id": "id1",
+    "idx": "",
+    "name": null,
+    "parent": {
+      "children": [],
+      "id": "",
+      "parent": null,
+    },
+    "selectedByMe": false,
+    "selectedByPeers": null,
+    "type": "feature",
   },
 ]
 `;

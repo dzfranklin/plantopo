@@ -124,7 +124,7 @@ export class FeatureRenderer {
     };
     itself.push(rf);
 
-    if (feature.geometry.type === 'LineString') {
+    if (feature.active && feature.geometry.type === 'LineString') {
       const coords = geometry.coordinates as [number, number][];
       for (const [i, coord] of coords.entries()) {
         itself.push({
