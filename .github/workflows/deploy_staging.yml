@@ -41,7 +41,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '### app\n\nDeployed ${{ github.sha }} to staging\n\nhttps://pr${{ github.event.pull_request.number }}.app.pt-staging.dfusercontent.com'
+              body: 'Deployed frontend ${{ github.sha }} to staging: https://pr${{ github.event.pull_request.number }}.app.pt-staging.dfusercontent.com'
             })
   api-server:
     runs-on: ubuntu-latest
@@ -80,17 +80,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: eu-west-2
         run: ./out/deploy --system api_server --staging "pr${{ github.event.pull_request.number }}"
-
-      - name: Comment
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '### api_server\n\nDeployed ${{ github.sha }} to staging'
-            })
   matchmaker:
     runs-on: ubuntu-latest
     permissions:
@@ -128,17 +117,6 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: eu-west-2
         run: ./out/deploy --system matchmaker --staging "pr${{ github.event.pull_request.number }}"
-
-      - name: Comment
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '### matchmaker\n\nDeployed ${{ github.sha }} to staging'
-            })
   sync-backend:
     runs-on: ubuntu-latest
     permissions:
@@ -176,14 +154,3 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: eu-west-2
         run: ./out/deploy --system sync_backend --staging "pr${{ github.event.pull_request.number }}"
-
-      - name: Comment
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '### sync_backend\n\nDeployed ${{ github.sha }} to staging'
-            })
