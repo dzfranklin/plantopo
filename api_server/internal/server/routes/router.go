@@ -40,6 +40,7 @@ const (
 )
 
 var permittedOrigins []string
+var appEnv = os.Getenv("APP_ENV")
 
 func init() {
 	po := os.Getenv("PERMITTED_ORIGINS")
@@ -89,7 +90,7 @@ func New(s *Services) http.Handler {
 
 	r.HandleFunc("/api/v1/map/{id}/snapshot", s.mapSnapshotHandler)
 
-	if os.Getenv("APP_ENV") == "development" {
+	if appEnv == "development" || appEnv == "staging" {
 		return r
 	} else {
 		return gorillahandlers.RecoveryHandler(

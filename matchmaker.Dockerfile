@@ -2,6 +2,7 @@
 
 FROM golang:1.21.1-bookworm as build
 WORKDIR /build
+ARG APP_ENV
 
 COPY go.* ./
 RUN go mod download
@@ -17,6 +18,6 @@ RUN mkdir -p /app
 COPY --from=build /build/matchmaker/matchmaker /app/matchmaker
 
 ENV TZ=UTC
-ENV APP_ENV=production
+ENV APP_ENV=$APP_ENV
 
 ENTRYPOINT ["/app/matchmaker"]

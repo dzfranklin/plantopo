@@ -84,6 +84,10 @@ func (d *Deployment) Run(dryRun bool, baseDir string) error {
 		return fmt.Errorf("failed to parse spec file %s as template: %w", specFile, err)
 	}
 
+	env := "prod"
+	if d.Staging != "" {
+		env = "staging"
+	}
 	apiDomain := "api.plantopo.com"
 	if d.Staging != "" {
 		apiDomain = fmt.Sprintf("%s.api.pt-staging.dfusercontent.com", d.Staging)
@@ -104,6 +108,7 @@ func (d *Deployment) Run(dryRun bool, baseDir string) error {
 	specValues := map[string]string{
 		"ver":                d.Ver,
 		"image":              imageTag,
+		"env":                env,
 		"apiDomain":          apiDomain,
 		"permittedOrigins":   permittedOrigins,
 		"importUploadBucket": importUploadBucket,
