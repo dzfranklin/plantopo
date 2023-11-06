@@ -16,7 +16,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: api-server
+                name: internal-api
                 port: { name: http }
   tls:
     - secretName: api-cert
