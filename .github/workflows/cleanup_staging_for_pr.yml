@@ -54,5 +54,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'Destroyed staging deployment of ${{ github.ref_name }}
+              body: 'Destroyed staging deployment'
             })

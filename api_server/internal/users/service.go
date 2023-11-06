@@ -51,7 +51,7 @@ var apiDomain string
 func init() {
 	apiDomain = os.Getenv("API_DOMAIN")
 	if apiDomain == "" {
-		panic("API_DOMAIN not set")
+		apiDomain = "plantopo.com"
 	}
 }
 

@@ -54,5 +54,5 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: 'Deployed ${{ github.ref_name }} at ${{ github.sha }} to staging at https://pr${{ github.event.pull_request.number }}.app.pt-staging.dfusercontent.com'
+              body: 'Deployed ${{ github.sha }} to staging at https://pr${{ github.event.pull_request.number }}.app.pt-staging.dfusercontent.com'
             })
