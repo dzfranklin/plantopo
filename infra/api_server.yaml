@@ -7,7 +7,6 @@ metadata:
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     traefik.ingress.kubernetes.io/router.tls: "true"
-    cert-manager.io/cluster-issuer: letsencrypt-issuer
 spec:
   rules:
     - host: "{{ .Values.apiDomain }}"
@@ -20,7 +19,7 @@ spec:
                 name: api-server
                 port: { name: http }
   tls:
-    - secretName: api-server-ingress-cert
+    - secretName: api-cert
       hosts:
         - "{{ .Values.apiDomain }}"
 ---

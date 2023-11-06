@@ -1,0 +1,17 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: api-cert
+  labels:
+    app: api-server
+  namespace: pt-staging
+spec:
+  secretName: api-cert
+  issuerRef:
+    name: letsencrypt-issuer
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.staging-api.plantopo.com"
+  secretTemplate:
+    labels:
+      staging-secret: "true"
