@@ -6,6 +6,7 @@ import (
 	gorillahandlers "github.com/gorilla/handlers"
 	"net/http"
 	"os"
+	"strings"
 
 	api "github.com/danielzfranklin/plantopo/api/v1"
 	"github.com/danielzfranklin/plantopo/api_server/internal/frontend_map_tokens"
@@ -33,7 +34,25 @@ type Services struct {
 	SnapshotRepo      SnapshotRepo
 }
 
+const (
+	permittedMethods = "GET, PUT, POST, DELETE, HEAD, OPTIONS"
+	permittedHeaders = "Content-Type, X-Request-Id"
+)
+
+var permittedOrigins []string
+
+func init() {
+	po := os.Getenv("PERMITTED_ORIGINS")
+	if po == "" {
+		panic("PERMITTED_ORIGINS not set")
+	}
+	permittedOrigins = strings.Split(po, ",")
+	permittedOrigins = append(permittedOrigins, "")
+}
+
 func New(s *Services) http.Handler {
+	logger.Get().Info("permitted origins", zap.Strings("origins", permittedOrigins))
+
 	r := mux.NewRouter()
 	r.Use(logMiddleware)
 	r.Use(corsMiddleware)
@@ -104,26 +123,12 @@ func logMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-var (
-	allowedOrigins = []string{
-		"https://plantopo.com",
-		"",
-		"http://localhost:3000",
-		"https://geder.reindeer-neon.ts.net",
-		"http://dev-local.plantopo.com:3000",
-		"https://dev-local.plantopo.com:3000",
-		"https://dev-local.plantopo.com",
-	}
-	allowedMethods = "GET, PUT, POST, DELETE, HEAD, OPTIONS"
-	allowedHeaders = "Content-Type, X-Request-Id"
-)
-
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 		permit := false
-		for _, allowedOrigin := range allowedOrigins {
-			if origin == allowedOrigin {
+		for _, p := range permittedOrigins {
+			if origin == p {
 				permit = true
 				break
 			}
@@ -131,8 +136,8 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 		if permit {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Methods", allowedMethods)
-			w.Header().Set("Access-Control-Allow-Headers", allowedHeaders)
+			w.Header().Set("Access-Control-Allow-Methods", permittedMethods)
+			w.Header().Set("Access-Control-Allow-Headers", permittedHeaders)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 			if r.Method == "OPTIONS" {

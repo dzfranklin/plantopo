@@ -92,11 +92,20 @@ func (d *Deployment) Run(dryRun bool, baseDir string) error {
 	if d.Staging != "" {
 		importUploadBucket = "pt-staging-import-uploads"
 	}
+	var permittedOrigins string
+	if d.Staging != "" {
+		permittedOrigins = fmt.Sprintf("https://%s.app.pt-staging.dfusercontent.com", d.Staging)
+	} else {
+		permittedOrigins = "https://app.plantopo.com"
+	}
+	// permit localhost to connect to prod
+	permittedOrigins += ",http://dev-local.plantopo.com:3000,https://dev-local.plantopo.com:3000,https://dev-local.plantopo.com"
 
 	specValues := map[string]string{
 		"ver":                d.Ver,
 		"image":              imageTag,
 		"apiDomain":          apiDomain,
+		"permittedOrigins":   permittedOrigins,
 		"importUploadBucket": importUploadBucket,
 	}
 
