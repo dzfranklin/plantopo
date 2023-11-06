@@ -7,7 +7,7 @@ import RBush from 'rbush';
 import { BBox, bbox as computeBBox } from '@turf/turf';
 import { CreateFeatureHandler } from './CreateFeatureHandler';
 import { CurrentCameraPosition } from '../../CurrentCamera';
-import { FeatureHoverHandler as FeatureActionHandler } from './FeatureActionHandler';
+import { FeatureActionHandler as FeatureActionHandler } from './FeatureActionHandler';
 import { add2, magnitude2, sub2 } from '@/generic/vector2';
 import { clamp } from '@/generic/clamp';
 import * as ml from 'maplibre-gl';

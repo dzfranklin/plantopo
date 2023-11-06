@@ -3,7 +3,7 @@ import { EditorEngine } from '../../engine/EditorEngine';
 import { InteractionEvent, InteractionHandler } from './InteractionManager';
 import { RenderFeatureHandle } from '../FeatureRenderer';
 
-export class FeatureHoverHandler implements InteractionHandler {
+export class FeatureActionHandler implements InteractionHandler {
   cursor?: string | undefined;
 
   onHover(evt: InteractionEvent, engine: EditorEngine): boolean {
