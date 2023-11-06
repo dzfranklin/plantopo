@@ -6,7 +6,7 @@ import (
 	"github.com/danielzfranklin/plantopo/api_server/internal/rid"
 	"net/http"
 
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"go.uber.org/zap"
 )
 
@@ -37,7 +37,7 @@ func writeData(r *http.Request, w http.ResponseWriter, value interface{}) {
 
 	out, err := json.Marshal(replyContainer{Data: value})
 	if err != nil {
-		logger.Get().Panic("failed to marshal json", zap.Error(err))
+		loggers.Get().Panic("failed to marshal json", zap.Error(err))
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -53,7 +53,7 @@ func writeError(r *http.Request, w http.ResponseWriter, err error) {
 		}
 	}
 	requestId := rid.FromCtx(r.Context())
-	logger.Get().Info("writing error response",
+	loggers.Get().Info("writing error response",
 		zap.String("rid", requestId.String()),
 		zap.Int("code", errReply.Code),
 		zap.String("reason", errReply.Reason),
@@ -65,7 +65,7 @@ func writeError(r *http.Request, w http.ResponseWriter, err error) {
 	w.WriteHeader(errReply.Code)
 	err = json.NewEncoder(w).Encode(replyContainer{Error: errReply})
 	if err != nil {
-		logger.Get().Panic("failed to marshal json", zap.Error(err))
+		loggers.Get().Panic("failed to marshal json", zap.Error(err))
 	}
 }
 
@@ -106,7 +106,7 @@ func writeNotFound(r *http.Request, w http.ResponseWriter) {
 
 func writeInternalError(r *http.Request, w http.ResponseWriter, err error) {
 	requestId := rid.FromCtx(r.Context())
-	logger.Get().Warn("writing internal server error", zap.Error(err), zap.String("rid", requestId.String()))
+	loggers.Get().Warn("writing internal server error", zap.Error(err), zap.String("rid", requestId.String()))
 	writeError(r, w, &ErrorReply{
 		Code:    http.StatusInternalServerError,
 		Message: "internal server error",

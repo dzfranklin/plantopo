@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/types"
 	"github.com/danielzfranklin/plantopo/api_server/internal/users"
 	"go.uber.org/zap"
@@ -29,7 +29,7 @@ type sessionReply struct {
 }
 
 func (s *Services) getSessionHandler(w http.ResponseWriter, r *http.Request) {
-	l := logger.FromR(r)
+	l := loggers.FromR(r)
 	session, err := s.SessionManager.Get(r)
 	if err != nil {
 		writeInternalError(r, w, err)
@@ -46,7 +46,7 @@ func (s *Services) getSessionHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, users.ErrNotFound) {
 			l.Info("session user not found ", zap.String("userId", user.Id.String()))
-			s.SessionManager.Delete(r, w)
+			_, _ = s.SessionManager.Delete(r, w)
 			writeData(r, w, sessionReply{})
 			return
 		} else {
@@ -98,7 +98,7 @@ func (s *Services) postSessionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	logger.FromR(r).Sugar().Info("created session", "userId", user.Id)
+	loggers.FromR(r).Sugar().Info("created session", "userId", user.Id)
 	writeData(r, w, sessionReply{user})
 }
 
@@ -109,7 +109,7 @@ func (s *Services) deleteSessionHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if sess != nil {
-		logger.FromR(r).Sugar().Info("deleted session", "userId", sess.UserId)
+		loggers.FromR(r).Sugar().Info("deleted session", "userId", sess.UserId)
 	}
 	writeData(r, w, nil)
 }

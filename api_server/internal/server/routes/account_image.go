@@ -21,7 +21,11 @@ func (s *Services) accountImageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	buf := bytes.Buffer{}
-	png.Encode(&buf, cameron.Identicon([]byte(r.RequestURI), 540, 60))
+	err := png.Encode(&buf, cameron.Identicon([]byte(r.RequestURI), 540, 60))
+	if err != nil {
+		writeError(r, w, err)
+		return
+	}
 	w.Header().Set("Content-Type", "image/png")
-	buf.WriteTo(w)
+	_, _ = buf.WriteTo(w)
 }

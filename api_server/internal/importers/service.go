@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	api "github.com/danielzfranklin/plantopo/api/v1"
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/sync_backends"
 	"github.com/danielzfranklin/plantopo/db"
 	"github.com/jackc/pgx/v5"
@@ -111,7 +111,7 @@ func (s *Service) doImport(externalId string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 
-	l := logger.Get().Sugar().Named("importer").With(zap.String("externalId", externalId))
+	l := loggers.Get().Sugar().Named("importer").With(zap.String("externalId", externalId))
 
 	var internalId int64
 	var mapId string
@@ -240,7 +240,7 @@ func (s *Service) doImport(externalId string) {
 }
 
 func (s *Service) markFailed(externalId string, err error, message string) {
-	l := logger.Get().Sugar().With(zap.String("externalId", externalId))
+	l := loggers.Get().Sugar().With(zap.String("externalId", externalId))
 	l.Errorw("import failed", zap.Error(err))
 	_, err = s.Db.Exec(context.Background(), `
 		UPDATE map_imports

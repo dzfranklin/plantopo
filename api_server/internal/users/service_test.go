@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/mailer"
 	"github.com/danielzfranklin/plantopo/api_server/internal/testutil"
 	"github.com/danielzfranklin/plantopo/api_server/internal/types"
@@ -68,8 +68,8 @@ func TestUsers(t *testing.T) {
 	}
 	sandbox := testutil.PgxSandbox()
 	defer sandbox.Close()
-	l := logger.NewTestLogger(t)
-	ctx := logger.WithCtx(context.Background(), l)
+	l := loggers.NewTestLogger(t)
+	ctx := loggers.WithCtx(context.Background(), l)
 	suite.Run(t, &S{sandbox: sandbox, pg: sandbox.Pg, l: l, ctx: ctx})
 }
 
@@ -124,28 +124,28 @@ func (s *S) TestNewlyRegisteredUserHasNullConfirmedAt() {
 func (s *S) TestMailsConfirmation() {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	mailer := &mockMailer{}
-	subject := NewService(ctx, s.pg, mailer)
+	m := &mockMailer{}
+	subject := NewService(ctx, s.pg, m)
 
 	user, err := subject.Register(s.validRegisterRequest())
 	require.NoError(s.T(), err)
 	fmt.Printf("user: %+v\n", user)
 
-	got := mailer.confirms[user.Id]
+	got := m.confirms[user.Id]
 	require.NotNil(s.T(), got)
 }
 
 func (s *S) TestConfirmExpired() {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	mailer := &mockMailer{}
-	subject := NewService(ctx, s.pg, mailer)
+	m := &mockMailer{}
+	subject := NewService(ctx, s.pg, m)
 	subject.(*impl).tokenExpiry = time.Nanosecond
 
 	user, err := subject.Register(s.validRegisterRequest())
 	require.NoError(s.T(), err)
 
-	token := mailer.confirms[user.Id]
+	token := m.confirms[user.Id]
 	_, err = subject.Confirm(token)
 	require.ErrorIs(s.T(), err, ErrTokenExpired)
 }
@@ -160,13 +160,13 @@ func (s *S) TestConfirmInvalid() {
 func (s *S) TestConfirm() {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	mailer := &mockMailer{}
-	subject := NewService(ctx, s.pg, mailer)
+	m := &mockMailer{}
+	subject := NewService(ctx, s.pg, m)
 
 	user, err := subject.Register(s.validRegisterRequest())
 	require.NoError(s.T(), err)
 
-	token := mailer.confirms[user.Id]
+	token := m.confirms[user.Id]
 	confirmed, err := subject.Confirm(token)
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), user.Id, confirmed)
@@ -183,16 +183,16 @@ func (s *S) TestConfirm() {
 func (s *S) TestRerequestConfirmation() {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	mailer := &mockMailer{}
-	subject := NewService(ctx, s.pg, mailer)
+	m := &mockMailer{}
+	subject := NewService(ctx, s.pg, m)
 
 	user, err := subject.Register(s.validRegisterRequest())
 	require.NoError(s.T(), err)
-	token1 := mailer.confirms[user.Id]
+	token1 := m.confirms[user.Id]
 
 	err = subject.RerequestConfirmation(user.Email)
 	require.NoError(s.T(), err)
-	token2 := mailer.confirms[user.Id]
+	token2 := m.confirms[user.Id]
 
 	require.NotEqual(s.T(), token1, token2)
 
@@ -226,14 +226,14 @@ func (s *S) TestRequestPasswordReset() {
 func (s *S) TestResetPasswordExpiredToken() {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	mailer := &mockMailer{}
-	subject := NewService(ctx, s.pg, mailer)
+	m := &mockMailer{}
+	subject := NewService(ctx, s.pg, m)
 	subject.(*impl).tokenExpiry = time.Nanosecond
 	user := s.validUser()
 
 	err := subject.RequestPasswordReset(user.Email)
 	require.NoError(s.T(), err)
-	token := mailer.resets[user.Id]
+	token := m.resets[user.Id]
 	require.NotEmpty(s.T(), token)
 
 	_, err = subject.ResetPassword(token, "new password")
@@ -258,13 +258,13 @@ func (s *S) TestResetPasswordInvalidToken() {
 func (s *S) TestResetPassword() {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	mailer := &mockMailer{}
-	subject := NewService(ctx, s.pg, mailer)
+	m := &mockMailer{}
+	subject := NewService(ctx, s.pg, m)
 	user := s.validUser()
 
 	err := subject.RequestPasswordReset(user.Email)
 	require.NoError(s.T(), err)
-	token := mailer.resets[user.Id]
+	token := m.resets[user.Id]
 	require.NotEmpty(s.T(), token)
 
 	checkReply, err := subject.CheckPasswordReset(s.ctx, token)

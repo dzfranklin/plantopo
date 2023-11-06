@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/users"
 )
 
@@ -62,7 +62,7 @@ func (s *Services) accountConfirmCompleteHandler(w http.ResponseWriter, r *http.
 		writeInternalError(r, w, err)
 		return
 	}
-	logger.FromR(r).Sugar().Info("created session for confirmed user", "userId", user.Id)
+	loggers.FromR(r).Sugar().Info("created session for confirmed user", "userId", user.Id)
 	writeData(r, w, sessionReply{user})
 }
 

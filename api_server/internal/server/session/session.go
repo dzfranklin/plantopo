@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/types"
 	"github.com/danielzfranklin/plantopo/api_server/internal/users"
 	"github.com/google/uuid"
@@ -38,7 +38,7 @@ func NewManager(config *Config) *Manager {
 
 	authKeyBytes, err := base64.StdEncoding.DecodeString(authKey)
 	if err != nil {
-		logger.Get().Fatal("failed to decode SESSION_AUTHENTICATION_KEY", zap.Error(err))
+		loggers.Get().Fatal("failed to decode SESSION_AUTHENTICATION_KEY", zap.Error(err))
 	}
 	store := sessions.NewCookieStore(authKeyBytes)
 	store.Options.HttpOnly = true
@@ -64,8 +64,11 @@ func (m *Manager) Create(r *http.Request, w http.ResponseWriter, user uuid.UUID)
 		return err
 	}
 	s.Values["userId"] = user.String()
-	s.Save(r, w)
-	logger.FromR(r).Sugar().Info("created session", "userId", user)
+	err = s.Save(r, w)
+	if err != nil {
+		return err
+	}
+	loggers.FromR(r).Sugar().Info("created session", "userId", user)
 	return nil
 }
 
@@ -85,7 +88,10 @@ func (m *Manager) Delete(r *http.Request, w http.ResponseWriter) (*Session, erro
 	}
 
 	s.Options.MaxAge = -1
-	s.Save(r, w)
+	err = s.Save(r, w)
+	if err != nil {
+		return nil, err
+	}
 
 	return sess, nil
 }

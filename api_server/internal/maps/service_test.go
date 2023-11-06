@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/mailer"
 	"github.com/danielzfranklin/plantopo/api_server/internal/testutil"
 	"github.com/danielzfranklin/plantopo/api_server/internal/types"
@@ -31,8 +31,8 @@ func TestMapService(t *testing.T) {
 	}
 	sandbox := testutil.PgxSandbox()
 	defer sandbox.Close()
-	l := logger.NewTestLogger(t)
-	ctx := logger.WithCtx(context.Background(), l)
+	l := loggers.NewTestLogger(t)
+	ctx := loggers.WithCtx(context.Background(), l)
 	suite.Run(t, &S{sandbox: sandbox, l: l, ctx: ctx})
 }
 

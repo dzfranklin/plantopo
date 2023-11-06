@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"path"
 	"regexp"
 	"strings"
@@ -19,7 +20,7 @@ import (
 )
 
 //go:embed scenario_tests/*.scenario
-var fs embed.FS
+var embeddedTests embed.FS
 
 func init() {
 	l, err := zap.NewDevelopment()
@@ -63,7 +64,8 @@ func runScenario(t *testing.T, s scenario) {
 		case incomingOp:
 			conn, ok := conns[op.client]
 			require.True(t, ok, "client %q not found", op.client)
-			conn.Receive(op.value)
+			err := conn.Receive(op.value)
+			require.NoError(t, err)
 		case assertOp:
 			subject.testTickSave()
 			got := *subject.testGetLastSave()
@@ -107,7 +109,7 @@ func runScenario(t *testing.T, s scenario) {
 func getScenarios(t *testing.T) []scenario {
 	t.Helper()
 
-	files, err := fs.ReadDir("scenario_tests")
+	files, err := embeddedTests.ReadDir("scenario_tests")
 	require.NoError(t, err)
 
 	scenarios := make([]scenario, 0)
@@ -119,12 +121,16 @@ func getScenarios(t *testing.T) []scenario {
 		if !strings.HasSuffix(name, ".scenario") {
 			continue
 		}
-		f, err := fs.Open(path.Join("scenario_tests", name))
-		require.NoError(t, err)
-		defer f.Close()
-		raw, err := io.ReadAll(f)
-		require.NoError(t, err)
-		scenarios = append(scenarios, parse(name, string(raw)))
+		func() {
+			f, err := embeddedTests.Open(path.Join("scenario_tests", name))
+			require.NoError(t, err)
+			defer func(f fs.File) {
+				_ = f.Close()
+			}(f)
+			raw, err := io.ReadAll(f)
+			require.NoError(t, err)
+			scenarios = append(scenarios, parse(name, string(raw)))
+		}()
 	}
 
 	slices.SortFunc(scenarios, func(i, j scenario) int {
@@ -232,7 +238,7 @@ func (r *myReader) IsEOF() bool {
 			panic(fmt.Errorf("unexpected error reading %s: %w", r.name, err))
 		}
 	}
-	r.UnreadByte()
+	_ = r.UnreadByte()
 	return false
 }
 
@@ -253,14 +259,14 @@ func (r *myReader) TryConsume(pat string) bool {
 	gotN, err := r.Read(got)
 	if err != nil {
 		if err == io.EOF {
-			r.Seek(-int64(gotN), io.SeekCurrent)
+			_, _ = r.Seek(-int64(gotN), io.SeekCurrent)
 			return false
 		} else {
 			panic(fmt.Errorf("unexpected error reading %s: %w", r.name, err))
 		}
 	}
 	if string(got) != pat {
-		r.Seek(-int64(gotN), io.SeekCurrent)
+		_, _ = r.Seek(-int64(gotN), io.SeekCurrent)
 		return false
 	}
 	return true
@@ -284,7 +290,7 @@ func (r *myReader) SkipSpace() {
 			}
 		}
 		if b != ' ' {
-			r.UnreadByte()
+			_ = r.UnreadByte()
 			return
 		}
 	}
@@ -300,8 +306,8 @@ func (r *myReader) SkipWhitespace() {
 				panic(fmt.Errorf("unexpected error reading %s: %w", r.name, err))
 			}
 		}
-		if b != ' ' || b == '\t' || b == '\n' || b == '\r' {
-			r.UnreadByte()
+		if b != ' ' {
+			_ = r.UnreadByte()
 			return
 		}
 	}
@@ -321,8 +327,8 @@ func (r *myReader) UnreadToLineStart() {
 		if b == '\n' {
 			return
 		}
-		r.UnreadByte()
-		r.UnreadByte()
+		_ = r.UnreadByte()
+		_ = r.UnreadByte()
 	}
 }
 
@@ -342,7 +348,7 @@ func (r *myReader) MustReadIdent() string {
 		if identPat.Match([]byte{b}) {
 			sb.WriteByte(b)
 		} else {
-			r.UnreadByte()
+			_ = r.UnreadByte()
 			return sb.String()
 		}
 	}
@@ -403,12 +409,12 @@ func (r *myReader) HasIndent() bool {
 			}
 		}
 		if b != ' ' {
-			r.UnreadByte()
+			_ = r.UnreadByte()
 			return false
 		}
 	}
 	for i := 0; i < indent; i++ {
-		r.UnreadByte()
+		_ = r.UnreadByte()
 	}
 	return true
 }
@@ -427,7 +433,7 @@ func (r *myReader) ReadBlock() string {
 				}
 			}
 			if b != ' ' {
-				r.UnreadByte()
+				_ = r.UnreadByte()
 				return sb.String()
 			}
 		}

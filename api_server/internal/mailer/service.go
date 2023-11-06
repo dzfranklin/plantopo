@@ -7,9 +7,9 @@ import (
 	"html/template"
 	"net/url"
 	"strings"
-	text_template "text/template"
+	texttemplate "text/template"
 
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/types"
 	"go.uber.org/zap"
 )
@@ -49,7 +49,7 @@ type Config struct {
 }
 
 func New(ctx context.Context, c Config) Service {
-	l := logger.FromCtx(ctx).Sugar().Named("mailer")
+	l := loggers.FromCtx(ctx).Sugar().Named("mailer")
 	if c.Sender == nil {
 		l.Fatal("must provide sender")
 	}
@@ -78,7 +78,7 @@ func (m *impl) CheckDeliverable(ctx context.Context, email string) (bool, error)
 
 //go:embed templates/*
 var templatesFS embed.FS
-var text_templates = text_template.Must(text_template.ParseFS(templatesFS,
+var text_templates = texttemplate.Must(texttemplate.ParseFS(templatesFS,
 	"templates/*.subject.tmpl", "templates/*.text.tmpl",
 ))
 

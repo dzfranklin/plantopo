@@ -11,7 +11,7 @@ import (
 	"github.com/danielzfranklin/plantopo/api/sync_schema"
 	api "github.com/danielzfranklin/plantopo/api/v1"
 	"github.com/danielzfranklin/plantopo/api_server/internal/anon_name"
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/maps"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -48,7 +48,7 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	l := logger.FromCtx(r.Context()).Sugar().With(
+	l := loggers.FromCtx(r.Context()).Sugar().With(
 		"mapId", mapId,
 		"clientId", clientId,
 	)
@@ -85,18 +85,10 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 
 	if !authz.CanView {
 		if userId == uuid.Nil {
-			writeError(r, w, &ErrorReply{
-				Code:    http.StatusUnauthorized,
-				Reason:  "unauthorized",
-				Message: "You must be logged in to view this map",
-			})
+			writeUnauthorized(r, w)
 			return
 		} else {
-			writeError(r, w, &ErrorReply{
-				Code:    http.StatusForbidden,
-				Reason:  "forbidden",
-				Message: "You do not have permission to view this map",
-			})
+			writeForbidden(r, w)
 			return
 		}
 	}

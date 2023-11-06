@@ -11,7 +11,7 @@ import (
 	api "github.com/danielzfranklin/plantopo/api/v1"
 	"github.com/danielzfranklin/plantopo/api_server/internal/frontend_map_tokens"
 	"github.com/danielzfranklin/plantopo/api_server/internal/importers"
-	"github.com/danielzfranklin/plantopo/api_server/internal/logger"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/mailer"
 	"github.com/danielzfranklin/plantopo/api_server/internal/maps"
 	"github.com/danielzfranklin/plantopo/api_server/internal/server/routes"
@@ -37,10 +37,10 @@ import (
 func main() {
 	uuid.EnableRandPool()
 
-	ul := logger.Get()
-	defer ul.Sync()
-	ctx := logger.WithCtx(context.Background(), ul)
-	l := ul.Sugar()
+	logger := loggers.Get()
+	defer logger.Sync()
+	ctx := loggers.WithCtx(context.Background(), logger)
+	l := logger.Sugar()
 
 	appEnv := os.Getenv("APP_ENV")
 	if appEnv == "development" {

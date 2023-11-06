@@ -91,8 +91,8 @@ func main() {
 		l.Panic("cannot read tilesets dir", zap.Error(err))
 	}
 	for _, tilesetFile := range tilesetFiles {
-		path := path.Join(sourceDir, "tilesets", tilesetFile.Name())
-		tileset := readFile[Tileset](path)
+		p := path.Join(sourceDir, "tilesets", tilesetFile.Name())
+		tileset := readFile[Tileset](p)
 		tilesets.Set(tileset.Id, tileset.Spec)
 	}
 
@@ -103,8 +103,8 @@ func main() {
 		l.Panic("cannot read layers dir", zap.Error(err))
 	}
 	for _, layerFile := range layerFiles {
-		path := path.Join(sourceLayersDir, layerFile.Name())
-		inputLayer := readFile[InputLayer](path)
+		p := path.Join(sourceLayersDir, layerFile.Name())
+		inputLayer := readFile[InputLayer](p)
 		outLayer := rewriteLayer(
 			sprites,
 			&tilesets,
