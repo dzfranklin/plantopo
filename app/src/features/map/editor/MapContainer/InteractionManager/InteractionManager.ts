@@ -14,6 +14,7 @@ import * as ml from 'maplibre-gl';
 import { nearestPointInGeometry } from '../../nearestPointInFeature';
 import { EditorEngine } from '../../engine/EditorEngine';
 import { SyncGeometry } from '@/gen/sync_schema';
+import { BaseActionHandler as BaseInteractionHandler } from './BaseInteractionHandler';
 
 type ScreenXY = [number, number];
 type LngLat = [number, number];
@@ -172,6 +173,7 @@ export class InteractionManager {
   handlers: InteractionHandler[] = [
     new FeatureActionHandler(),
     new CreateFeatureHandler(),
+    new BaseInteractionHandler(),
   ];
 
   private _boundOnPointer = this._onPointer.bind(this);

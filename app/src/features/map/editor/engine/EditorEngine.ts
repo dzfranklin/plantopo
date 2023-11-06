@@ -382,10 +382,12 @@ export class EditorEngine {
     this._renderScene();
   }
 
-  clearSelection(): void {
+  clearSelection(): boolean {
+    if (this._selectedByMe.size === 0) return false;
     this._selectedByMe.clear();
     this._active = null;
     this._renderScene();
+    return true;
   }
 
   moveSelected(place: SceneFeatureInsertPlace): void {
