@@ -34,9 +34,14 @@ export interface RenderFeature {
 
 export interface RenderFeatureHandle {
   type: 'handle';
-  id: string; // id of the handle (not the id of the feature)
+  /** id of the handle (not the id of the feature) */
+  id: string;
   feature: RenderFeature;
-  handleType: 'vertex' | 'midpoint';
+  handleType: 'point' | 'midpoint';
+  /** i is an index into `geometry.coordinates`. For a point this is the index
+   * of the point. For a midpoint it is the index of the vertex before it.
+   */
+  i: number;
   geometry: {
     type: 'Point';
     coordinates: [number, number];
@@ -124,32 +129,53 @@ export class FeatureRenderer {
     };
     itself.push(rf);
 
-    if (feature.active && feature.geometry.type === 'LineString') {
-      const coords = geometry.coordinates as [number, number][];
-      for (const [i, coord] of coords.entries()) {
-        itself.push({
-          type: 'handle',
-          feature: rf,
-          id: `${feature.id}-handle${i}`,
-          handleType: 'vertex',
-          geometry: {
-            type: 'Point',
-            coordinates: coord,
-          },
-        });
-
-        if (i < coords.length - 1) {
-          const nextCoord = coords[i + 1]!;
+    if (feature.active) {
+      switch (feature.geometry.type) {
+        case 'Point': {
+          const coord = geometry.coordinates as [number, number];
           itself.push({
             type: 'handle',
             feature: rf,
-            id: `${feature.id}-handle${i}-midpoint`,
-            handleType: 'midpoint',
+            id: `${feature.id}-h`,
+            i: 0,
+            handleType: 'point',
             geometry: {
               type: 'Point',
-              coordinates: midpoint2(coord, nextCoord),
+              coordinates: coord,
             },
           });
+          break;
+        }
+        case 'LineString': {
+          const coords = geometry.coordinates as [number, number][];
+          for (const [i, coord] of coords.entries()) {
+            itself.push({
+              type: 'handle',
+              feature: rf,
+              id: `${feature.id}-hv${i}`,
+              i,
+              handleType: 'point',
+              geometry: {
+                type: 'Point',
+                coordinates: coord,
+              },
+            });
+
+            if (i < coords.length - 1) {
+              const nextCoord = coords[i + 1]!;
+              itself.push({
+                type: 'handle',
+                feature: rf,
+                id: `${feature.id}-hm${i}`,
+                i,
+                handleType: 'midpoint',
+                geometry: {
+                  type: 'Point',
+                  coordinates: midpoint2(coord, nextCoord),
+                },
+              });
+            }
+          }
         }
       }
     }

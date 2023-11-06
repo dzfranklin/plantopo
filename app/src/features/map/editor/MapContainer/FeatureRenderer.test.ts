@@ -1,3 +1,4 @@
+import { SyncGeometry } from '@/gen/sync_schema';
 import { bboxPolygonOf } from '../CurrentCamera';
 import {
   EMPTY_SCENE,
@@ -78,54 +79,52 @@ test('single active line snapshot', () => {
   expect(got.list).toMatchSnapshot();
 });
 
-test('active line render does not have handles', () => {
-  const got = subject.render(
-    sceneFixture({
-      features: {
-        children: [
-          {
-            geometry: {
-              type: 'LineString',
-              coordinates: [
-                [50, 50],
-                [60, 60],
-              ],
-            },
+describe('non-active renders do not handles', () => {
+  const cases: SyncGeometry[] = [
+    {
+      type: 'Point',
+      coordinates: [50, 50],
+    },
+    {
+      type: 'LineString',
+      coordinates: [
+        [50, 50],
+        [60, 60],
+      ],
+    },
+  ];
+  for (const c of cases) {
+    test(`case ${c.type}`, () => {
+      const gotNoActive = subject.render(
+        sceneFixture({
+          features: {
+            children: [
+              {
+                geometry: c,
+              },
+            ],
           },
-        ],
-      },
-    }),
-    bboxPolygonOf(0, 0, 100, 100),
-  ).list;
-  expect(got.filter((f) => f.type === 'handle')).toHaveLength(0);
-});
+        }),
+        bboxPolygonOf(0, 0, 100, 100),
+      ).list;
+      expect(gotNoActive.filter((f) => f.type === 'handle')).toHaveLength(0);
 
-test('active line render has handles', () => {
-  const got = subject.render(
-    sceneFixture({
-      features: {
-        children: [
-          {
-            active: true,
-            geometry: {
-              type: 'LineString',
-              coordinates: [
-                [50, 50],
-                [60, 60],
-              ],
-            },
+      const gotActive = subject.render(
+        sceneFixture({
+          features: {
+            children: [
+              {
+                active: true,
+                geometry: c,
+              },
+            ],
           },
-        ],
-      },
-    }),
-    bboxPolygonOf(0, 0, 100, 100),
-  ).list;
-  expect(
-    got.filter((f) => f.type === 'handle' && f.handleType === 'vertex'),
-  ).toHaveLength(2);
-  expect(
-    got.filter((f) => f.type === 'handle' && f.handleType === 'midpoint'),
-  ).toHaveLength(1);
+        }),
+        bboxPolygonOf(0, 0, 100, 100),
+      ).list;
+      expect(gotActive.filter((f) => f.type === 'handle')).not.toHaveLength(0);
+    });
+  }
 });
 
 function idFixture(): string {

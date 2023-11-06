@@ -72,8 +72,9 @@ exports[`single active line snapshot 1`] = `
       ],
       "type": "Point",
     },
-    "handleType": "vertex",
-    "id": "id1-handle0",
+    "handleType": "point",
+    "i": 0,
+    "id": "id1-hv0",
     "type": "handle",
   },
   {
@@ -116,7 +117,8 @@ exports[`single active line snapshot 1`] = `
       "type": "Point",
     },
     "handleType": "midpoint",
-    "id": "id1-handle0-midpoint",
+    "i": 0,
+    "id": "id1-hm0",
     "type": "handle",
   },
   {
@@ -158,8 +160,9 @@ exports[`single active line snapshot 1`] = `
       ],
       "type": "Point",
     },
-    "handleType": "vertex",
-    "id": "id1-handle1",
+    "handleType": "point",
+    "i": 1,
+    "id": "id1-hv1",
     "type": "handle",
   },
 ]
