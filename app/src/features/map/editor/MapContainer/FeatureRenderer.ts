@@ -5,7 +5,7 @@ import booleanIntersects from '@turf/boolean-intersects';
 import { SyncGeometry } from '@/gen/sync_schema';
 import { midpoint2 } from '@/generic/vector2';
 
-export interface RenderFeatureList {
+export interface RenderList {
   timing: {
     scene: Scene['timing'];
     start: number;
@@ -50,7 +50,7 @@ interface Inherited {
 const ROOT_INHERITED: Inherited = { color: '#000000' };
 
 export class FeatureRenderer {
-  render(scene: Scene, clipBox: BBoxPolygon): RenderFeatureList {
+  render(scene: Scene, clipBox: BBoxPolygon): RenderList {
     const start = performance.now();
 
     const list: RenderFeature[] = [];

@@ -1,10 +1,6 @@
 import { floor2 } from '@/generic/vector2';
 import { CurrentCameraPosition as CurrentCamera } from '../CurrentCamera';
-import {
-  RenderFeature,
-  RenderFeatureList,
-  RenderItem,
-} from './FeatureRenderer';
+import { RenderFeature, RenderList, RenderItem } from './FeatureRenderer';
 import { LineStringSyncGeometry, PointSyncGeometry } from '@/gen/sync_schema';
 
 const { PI } = Math;
@@ -21,7 +17,7 @@ export class FeaturePainter {
     this.c = canvas.getContext('2d')!;
   }
 
-  paint(camera: CurrentCamera, render: RenderFeatureList): void {
+  paint(camera: CurrentCamera, render: RenderList): void {
     const start = performance.now();
     this.c.save();
     this.c.scale(this.dpi, this.dpi); // Works with the css scale we do
