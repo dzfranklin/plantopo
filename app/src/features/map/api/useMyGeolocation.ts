@@ -18,13 +18,16 @@ export const useMyGeolocation = () =>
 
       let resp: Response;
       try {
-        resp = await fetch('https://geolocate-me.plantopo.com/geolocate-me-v1', {
-          method: 'GET',
-          credentials: 'include',
-          headers: {
-            'X-Request-Id': requestId,
+        resp = await fetch(
+          'https://geolocate-me.plantopo.com/geolocate-me-v1',
+          {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+              'X-Request-Id': requestId,
+            },
           },
-        });
+        );
       } catch (err) {
         throw new TransportError(requestId, err);
       }
