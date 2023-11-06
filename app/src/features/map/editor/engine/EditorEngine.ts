@@ -373,6 +373,7 @@ export class EditorEngine {
 
   clearSelection(): void {
     this._selectedByMe.clear();
+    this._active = null;
     this._renderScene();
   }
 
