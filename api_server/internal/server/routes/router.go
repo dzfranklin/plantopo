@@ -116,7 +116,7 @@ func logMiddleware(next http.Handler) http.Handler {
 			zap.String("origin", r.Header.Get("Origin")),
 		)
 
-		l.Info("request",
+		l.Debug("request",
 			zap.String("userAgent", r.UserAgent()),
 			zap.Bool("hasRidHeader", rid.HasHeader(r)))
 
