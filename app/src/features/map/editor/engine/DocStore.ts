@@ -487,13 +487,13 @@ export class DocStore {
     }
     seen.add(entry.id);
 
-    // if incoming didn't know about a child fix it
-    if (!incoming.has(entry.id)) {
+    if (incoming.has(entry.id)) {
+      this._fdeletes.set(entry.id, generation);
+    } else {
       this._fdeletes.set(entry.id, fixGeneration);
     }
     // change our state
     this._f.delete(entry.id);
-    this._fdeletes.set(entry.id, generation);
     // recurse into children
     for (const childState of preState.byFeature.get(entry.id)!.children) {
       const child = this._f.get(childState.value.id)!;
