@@ -46,13 +46,3 @@ jobs:
           AWS_DEFAULT_REGION: eu-west-2
         run: ./out/deploy --destroy --staging "pr${{ github.event.pull_request.number }}"
 
-      - name: Create comment
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: 'Destroyed staging deployment'
-            })
