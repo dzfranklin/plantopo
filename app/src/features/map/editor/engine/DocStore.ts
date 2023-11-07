@@ -420,28 +420,28 @@ export class DocStore {
     }
   }
 
-  /** Changes since `start` generation (exclusive) */
-  localChangesAfter(start: number): Changeset | null {
+  /** Changes since `generation` generation (exclusive) */
+  localChangesAfter(generation: number): Changeset | null {
     const out = new WorkingChangeset();
-    for (const [fid, gen] of this._fdeletes) {
-      if (gen !== null && gen > start) {
+    for (const [fid, delG] of this._fdeletes) {
+      if (delG !== null && delG > generation) {
         out.fdelete.add(fid);
       }
     }
-    for (const [fid, gen] of this._fadds) {
-      if (!out.fdelete.has(fid) && gen !== null && gen > start) {
+    for (const [fid, addG] of this._fadds) {
+      if (addG !== null && addG > generation) {
         out.fadd.add(fid);
       }
     }
     for (const entry of this._f.values()) {
       entry.localChangesAfter(
-        start,
+        generation,
         out.fset as any as Map<string, Record<string, unknown>>,
       );
     }
     for (const entry of this._l.values()) {
       entry.localChangesAfter(
-        start,
+        generation,
         out.lset as any as Map<string, Record<string, unknown>>,
       );
     }
@@ -470,6 +470,7 @@ export class DocStore {
       } else {
         // otherwise just record this feature was deleted
         this._fdeletes.set(id, generation);
+        this._fadds.delete(id);
       }
     }
   }
@@ -494,17 +495,20 @@ export class DocStore {
     }
     // change our state
     this._f.delete(entry.id);
-    // recurse into children
+    this._fadds.delete(entry.id);
+    // recurse into children if not already deleted
     for (const childState of preState.byFeature.get(entry.id)!.children) {
-      const child = this._f.get(childState.value.id)!;
-      this._fdeleteRecurse(
-        child,
-        incoming,
-        generation,
-        fixGeneration,
-        seen,
-        preState,
-      );
+      const child = this._f.get(childState.value.id);
+      if (child) {
+        this._fdeleteRecurse(
+          child,
+          incoming,
+          generation,
+          fixGeneration,
+          seen,
+          preState,
+        );
+      }
     }
   }
 

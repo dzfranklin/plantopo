@@ -38,7 +38,7 @@ func convertGpx(id string, filename string, reader io.Reader) (*sync_schema.Chan
 	addCount := 1 + len(data.Waypoints) + len(data.Routes) + len(data.Tracks)
 	cset := &sync_schema.Changeset{
 		FAdd: make([]string, 0, addCount),
-		FSet: make(map[string]sync_schema.Feature, addCount),
+		FSet: make(map[string]*sync_schema.Feature, addCount),
 	}
 
 	idBase := ulid.Make().String()
@@ -54,7 +54,7 @@ func convertGpx(id string, filename string, reader io.Reader) (*sync_schema.Chan
 	}
 
 	cset.FAdd = append(cset.FAdd, parent)
-	cset.FSet[parent] = sync_schema.Feature{
+	cset.FSet[parent] = &sync_schema.Feature{
 		Id:                    parent,
 		ParentState:           sync_schema.Set,
 		Parent:                "",
@@ -71,7 +71,7 @@ func convertGpx(id string, filename string, reader io.Reader) (*sync_schema.Chan
 		fid := fmt.Sprintf("import-%s-%d", idBase, idOffset)
 		idxInParent = sync_schema.IdxBetweenStatic(idxInParent, "")
 
-		f := sync_schema.Feature{
+		f := &sync_schema.Feature{
 			Id:                    fid,
 			ParentState:           sync_schema.Set,
 			Parent:                parent,
@@ -102,7 +102,7 @@ func convertGpx(id string, filename string, reader io.Reader) (*sync_schema.Chan
 		fid := fmt.Sprintf("import-%s-%d", idBase, idOffset)
 		idxInParent = sync_schema.IdxBetweenStatic(idxInParent, "")
 
-		f := sync_schema.Feature{
+		f := &sync_schema.Feature{
 			Id:                    fid,
 			ParentState:           sync_schema.Set,
 			Parent:                parent,
@@ -137,7 +137,7 @@ func convertGpx(id string, filename string, reader io.Reader) (*sync_schema.Chan
 		idOffset++
 		trkFid := fmt.Sprintf("import-%s-%d", idBase, idOffset)
 		idxInParent = sync_schema.IdxBetweenStatic(idxInParent, "")
-		trkF := sync_schema.Feature{
+		trkF := &sync_schema.Feature{
 			Id:                    trkFid,
 			ParentState:           sync_schema.Set,
 			Parent:                parent,
@@ -171,7 +171,7 @@ func convertGpx(id string, filename string, reader io.Reader) (*sync_schema.Chan
 				idOffset++
 				segFid := fmt.Sprintf("import-%s-%d", idBase, idOffset)
 				idxInTrk = sync_schema.IdxBetweenStatic(idxInTrk, "")
-				segF := sync_schema.Feature{
+				segF := &sync_schema.Feature{
 					Id:                    segFid,
 					ParentState:           sync_schema.Set,
 					Parent:                trkFid,

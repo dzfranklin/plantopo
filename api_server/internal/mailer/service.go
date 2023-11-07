@@ -78,7 +78,7 @@ func (m *impl) CheckDeliverable(ctx context.Context, email string) (bool, error)
 
 //go:embed templates/*
 var templatesFS embed.FS
-var text_templates = texttemplate.Must(texttemplate.ParseFS(templatesFS,
+var textTemplates = texttemplate.Must(texttemplate.ParseFS(templatesFS,
 	"templates/*.subject.tmpl", "templates/*.text.tmpl",
 ))
 
@@ -93,12 +93,12 @@ func (m *impl) SendConfirmation(to *types.User, token string) error {
 		ConfirmUrl: "https://plantopo.com/confirm/?token=" + token,
 	}
 	var subject strings.Builder
-	err := text_templates.ExecuteTemplate(&subject, "confirmation.subject.tmpl", tdata)
+	err := textTemplates.ExecuteTemplate(&subject, "confirmation.subject.tmpl", tdata)
 	if err != nil {
 		return fmt.Errorf("execute confirmation subject template: %w", err)
 	}
 	var textBody strings.Builder
-	err = text_templates.ExecuteTemplate(&textBody, "confirmation.text.tmpl", tdata)
+	err = textTemplates.ExecuteTemplate(&textBody, "confirmation.text.tmpl", tdata)
 	if err != nil {
 		return fmt.Errorf("execute confirmation textBody template: %w", err)
 	}
@@ -121,12 +121,12 @@ func (m *impl) SendPasswordReset(to *types.User, token string) error {
 		ConfirmUrl: "https://plantopo.com/login/forgot-password/reset/?token=" + token,
 	}
 	var subject strings.Builder
-	err := text_templates.ExecuteTemplate(&subject, "password_reset.subject.tmpl", tdata)
+	err := textTemplates.ExecuteTemplate(&subject, "password_reset.subject.tmpl", tdata)
 	if err != nil {
 		return fmt.Errorf("execute password reset subject template: %w", err)
 	}
 	var textBody strings.Builder
-	err = text_templates.ExecuteTemplate(&textBody, "password_reset.text.tmpl", tdata)
+	err = textTemplates.ExecuteTemplate(&textBody, "password_reset.text.tmpl", tdata)
 	if err != nil {
 		return fmt.Errorf("execute password reset textBody template: %w", err)
 	}
@@ -174,13 +174,13 @@ func (m *impl) SendShareNotification(req ShareNotificationRequest) error {
 	}
 
 	var subject strings.Builder
-	err := text_templates.ExecuteTemplate(&subject, "share_notification.subject.tmpl", tdata)
+	err := textTemplates.ExecuteTemplate(&subject, "share_notification.subject.tmpl", tdata)
 	if err != nil {
 		return fmt.Errorf("execute share notification subject template: %w", err)
 	}
 
 	var textBody strings.Builder
-	err = text_templates.ExecuteTemplate(&textBody, "share_notification.text.tmpl", tdata)
+	err = textTemplates.ExecuteTemplate(&textBody, "share_notification.text.tmpl", tdata)
 	if err != nil {
 		return fmt.Errorf("execute share notification textBody template: %w", err)
 	}
@@ -223,13 +223,13 @@ func (m *impl) SendInvite(req InviteRequest) error {
 	}
 
 	var subject strings.Builder
-	err := text_templates.ExecuteTemplate(&subject, "invite.subject.tmpl", tdata)
+	err := textTemplates.ExecuteTemplate(&subject, "invite.subject.tmpl", tdata)
 	if err != nil {
 		return fmt.Errorf("execute share invite template: %w", err)
 	}
 
 	var textBody strings.Builder
-	err = text_templates.ExecuteTemplate(&textBody, "invite.text.tmpl", tdata)
+	err = textTemplates.ExecuteTemplate(&textBody, "invite.text.tmpl", tdata)
 	if err != nil {
 		return fmt.Errorf("execute share invite textBody template: %w", err)
 	}

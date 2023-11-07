@@ -57,7 +57,7 @@ func (m *Manager) Get(r *http.Request) (*Session, error) {
 	return m.getSess(r, s)
 }
 
-// Must call in handler before writing to response
+// Create must be called in the handler before writing to response
 func (m *Manager) Create(r *http.Request, w http.ResponseWriter, user uuid.UUID) error {
 	s, err := m.store.Get(r, "currentUser")
 	if err != nil {
@@ -72,7 +72,7 @@ func (m *Manager) Create(r *http.Request, w http.ResponseWriter, user uuid.UUID)
 	return nil
 }
 
-// Must call in handler before writing to response
+// Delete must be called in the handler before writing to response
 func (m *Manager) Delete(r *http.Request, w http.ResponseWriter) (*Session, error) {
 	s, err := m.store.Get(r, "currentUser")
 	if err != nil {

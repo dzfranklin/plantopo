@@ -28,13 +28,13 @@ var (
 	ActionDelete     Action = "delete"
 )
 
-// "owner", "editor", or "viewer"
+// Role is "owner", "editor", or "viewer"
 type Role string
 
-// "restricted" or "public"
+// GeneralAccessLevel is "restricted" or "public"
 type GeneralAccessLevel string
 
-// "editor" or "viewer"
+// GeneralAccessRole is "editor" or "viewer"
 type GeneralAccessRole string
 
 const (

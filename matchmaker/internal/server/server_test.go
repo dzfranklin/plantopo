@@ -33,20 +33,18 @@ func TestServer(t *testing.T) {
 
 type noopMatchmaker struct{}
 
-func (noopMatchmaker) SetupConnection(
-	ctx context.Context, mapId string,
-) (internal.Connection, error) {
+func (noopMatchmaker) SetupConnection(_ context.Context, _ string) (internal.Connection, error) {
 	return internal.Connection{
 		Backend: "backend",
 		Token:   "token",
 	}, nil
 }
 
-func (noopMatchmaker) RegisterClose(backend string, mapId string) {}
+func (noopMatchmaker) RegisterClose(_ string, _ string) {}
 
-func (noopMatchmaker) AddBackends(backends []internal.Backend) {}
+func (noopMatchmaker) AddBackends(_ []internal.Backend) {}
 
-func (noopMatchmaker) RemoveBackends(backends []string) {}
+func (noopMatchmaker) RemoveBackends(_ []string) {}
 
 func (noopMatchmaker) Stats() map[string]interface{} {
 	return map[string]interface{}{}
@@ -97,7 +95,7 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	}
 }
 
-func testSetupConnection(t *testing.T, client api.MatchmakerClient, config *Config) {
+func testSetupConnection(t *testing.T, client api.MatchmakerClient, _ *Config) {
 	ctx := context.Background()
 	resp, err := client.SetupConnection(ctx, &api.MatchmakerSetupConnectionRequest{
 		MapId: "mapId",
@@ -107,7 +105,7 @@ func testSetupConnection(t *testing.T, client api.MatchmakerClient, config *Conf
 	require.Equal(t, "token", resp.Token)
 }
 
-func testRegisterClose(t *testing.T, client api.MatchmakerClient, config *Config) {
+func testRegisterClose(t *testing.T, client api.MatchmakerClient, _ *Config) {
 	ctx := context.Background()
 	_, err := client.RegisterClose(ctx, &api.MatchmakerRegisterCloseRequest{
 		Backend: "backend",
@@ -116,7 +114,7 @@ func testRegisterClose(t *testing.T, client api.MatchmakerClient, config *Config
 	require.NoError(t, err)
 }
 
-func testRegisterBackend(t *testing.T, client api.MatchmakerClient, config *Config) {
+func testRegisterBackend(t *testing.T, client api.MatchmakerClient, _ *Config) {
 	ctx := context.Background()
 	_, err := client.RegisterBackend(ctx, &api.MatchmakerRegisterBackendRequest{
 		Backend: "backend",
@@ -124,7 +122,7 @@ func testRegisterBackend(t *testing.T, client api.MatchmakerClient, config *Conf
 	require.NoError(t, err)
 }
 
-func testUnregisterBackend(t *testing.T, client api.MatchmakerClient, config *Config) {
+func testUnregisterBackend(t *testing.T, client api.MatchmakerClient, _ *Config) {
 	ctx := context.Background()
 	_, err := client.UnregisterBackend(ctx, &api.MatchmakerUnregisterBackendRequest{
 		Backend: "backend",

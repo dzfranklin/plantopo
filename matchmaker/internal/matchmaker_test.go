@@ -71,6 +71,6 @@ func (m *mockBackend) Id() string {
 	return m.id
 }
 
-func (m *mockBackend) SetupConnection(ctx context.Context, mapId string, token string) error {
+func (m *mockBackend) SetupConnection(_ context.Context, _ string, _ string) error {
 	return nil
 }

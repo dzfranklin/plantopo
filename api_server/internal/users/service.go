@@ -330,15 +330,15 @@ func (r *impl) RequestPasswordReset(email string) error {
 }
 
 func (r *impl) CheckPasswordReset(ctx context.Context, token string) (*types.User, error) {
-	userId, err := r.checkPasswordReset(token)
+	userId, err := r.checkPasswordReset(ctx, token)
 	if err != nil {
 		return nil, err
 	}
-	return r.Get(r.ctx, userId)
+	return r.Get(ctx, userId)
 }
 
 func (r *impl) ResetPassword(token string, newPassword string) (*types.User, error) {
-	userId, err := r.checkPasswordReset(token)
+	userId, err := r.checkPasswordReset(r.ctx, token)
 	if err != nil {
 		return nil, err
 	}
@@ -393,11 +393,11 @@ func (r *impl) ResetPassword(token string, newPassword string) (*types.User, err
 	return r.Get(r.ctx, userId)
 }
 
-func (r *impl) checkPasswordReset(token string) (uuid.UUID, error) {
+func (r *impl) checkPasswordReset(ctx context.Context, token string) (uuid.UUID, error) {
 	var userId uuid.UUID
 	var issuedAt time.Time
 	var usedAt null.Time
-	err := r.pg.QueryRow(r.ctx,
+	err := r.pg.QueryRow(ctx,
 		`SELECT user_id, issued_at, used_at FROM password_reset_tokens
 			WHERE token = $1`,
 		token).Scan(&userId, &issuedAt, &usedAt)

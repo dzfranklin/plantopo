@@ -1,0 +1,20 @@
+Given:
+  fadd: [f1]
+  fset:
+    f1:
+      id: f1
+      parent: ""
+      idx: "O"
+When:
+  fset:
+    f1:
+      id: f1
+      parent: null
+      idx: null
+Then:
+  fadd: [f1]
+  fset:
+    f1:
+      id: f1
+      parent: null
+      idx: null

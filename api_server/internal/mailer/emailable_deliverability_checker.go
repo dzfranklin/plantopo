@@ -95,9 +95,9 @@ func (c *EmailableDeliverabilityChecker) CheckDeliverable(
 	}
 
 	var reply emailableVerifyReply
-	err = json.Unmarshal([]byte(body), &reply)
+	err = json.Unmarshal(body, &reply)
 	if err != nil {
-		c.l.Errorw("error unmarshaling response body",
+		c.l.Errorw("error unmarshalling response body",
 			"status", resp.StatusCode, "body", string(body), "error", err)
 		return false, fmt.Errorf("unmarshal response body: %w", err)
 	}

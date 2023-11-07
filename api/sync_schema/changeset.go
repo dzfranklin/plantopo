@@ -1,55 +1,20 @@
 package sync_schema
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"slices"
+)
 
 type Changeset struct {
 	FDelete map[string]struct{}
 	// Newly added children must come after their newly added parents. This can
 	// be satisfied by simply recording adds in the order they happened.
 	//
-	// Because order matters we can't use a map here. Instead we deduplicate on
-	// marshalling. But duplicate adds should be rare.
+	// Because order matters we can't use a map here, so we deduplicate on
+	// marshalling instead. But duplicate adds should be rare.
 	FAdd []string
-	FSet map[string]Feature
-	LSet map[string]Layer
-}
-
-func (c *Changeset) IsNil() bool {
-	return c == nil || (c.FDelete == nil && c.FAdd == nil && c.FSet == nil && c.LSet == nil)
-}
-
-/*
-ShallowClone copies the changeset down to the values of individual features
-and layers
-*/
-func (c *Changeset) ShallowClone() *Changeset {
-	if c == nil {
-		return nil
-	}
-	out := &Changeset{}
-	if c.FDelete != nil {
-		out.FDelete = make(map[string]struct{}, len(c.FDelete))
-		for k := range c.FDelete {
-			out.FDelete[k] = struct{}{}
-		}
-	}
-	if c.FAdd != nil {
-		out.FAdd = make([]string, len(c.FAdd))
-		copy(out.FAdd, c.FAdd)
-	}
-	if c.FSet != nil {
-		out.FSet = make(map[string]Feature, len(c.FSet))
-		for k, v := range c.FSet {
-			out.FSet[k] = v.ShallowClone()
-		}
-	}
-	if c.LSet != nil {
-		out.LSet = make(map[string]Layer, len(c.LSet))
-		for k, v := range c.LSet {
-			out.LSet[k] = v.ShallowClone()
-		}
-	}
-	return out
+	FSet map[string]*Feature
+	LSet map[string]*Layer
 }
 
 func (c *Changeset) Merge(incoming *Changeset) {
@@ -65,7 +30,7 @@ func (c *Changeset) Merge(incoming *Changeset) {
 	c.FAdd = append(c.FAdd, incoming.FAdd...)
 	for k, v := range incoming.FSet {
 		if c.FSet == nil {
-			c.FSet = make(map[string]Feature)
+			c.FSet = make(map[string]*Feature)
 		}
 		if existing, ok := c.FSet[k]; ok {
 			existing.Merge(v)
@@ -76,7 +41,7 @@ func (c *Changeset) Merge(incoming *Changeset) {
 	}
 	for k, v := range incoming.LSet {
 		if c.LSet == nil {
-			c.LSet = make(map[string]Layer)
+			c.LSet = make(map[string]*Layer)
 		}
 		if existing, ok := c.LSet[k]; ok {
 			existing.Merge(v)
@@ -88,24 +53,44 @@ func (c *Changeset) Merge(incoming *Changeset) {
 }
 
 type dto struct {
-	FDelete []string           `json:"fdelete,omitempty"`
-	FAdd    []string           `json:"fadd,omitempty"`
-	FSet    map[string]Feature `json:"fset,omitempty"`
-	LSet    map[string]Layer   `json:"lset,omitempty"`
+	FDelete []string            `json:"fdelete,omitempty"`
+	FAdd    []string            `json:"fadd,omitempty"`
+	FSet    map[string]*Feature `json:"fset,omitempty"`
+	LSet    map[string]*Layer   `json:"lset,omitempty"`
 }
 
 func (c Changeset) MarshalJSON() ([]byte, error) {
-	adds := make([]string, 0, len(c.FAdd))
-	addsSeen := make(map[string]struct{})
-	for _, id := range c.FAdd {
-		if _, ok := addsSeen[id]; ok {
-			continue
+	return c.marshalJSON(false)
+}
+
+func (c Changeset) MarshalJSONStable() ([]byte, error) {
+	return c.marshalJSON(true)
+}
+
+func (c Changeset) marshalJSON(stable bool) ([]byte, error) {
+	var adds []string
+	if c.FAdd != nil {
+		adds = make([]string, 0, len(c.FAdd))
+		addsSeen := make(map[string]struct{})
+		for _, id := range c.FAdd {
+			if _, ok := addsSeen[id]; ok {
+				continue
+			}
+			addsSeen[id] = struct{}{}
+			adds = append(adds, id)
 		}
-		addsSeen[id] = struct{}{}
-		adds = append(adds, id)
 	}
+
+	var deletes []string
+	if c.FDelete != nil {
+		deletes = keys(c.FDelete)
+		if stable {
+			slices.Sort(deletes)
+		}
+	}
+
 	return json.Marshal(dto{
-		FDelete: keys(c.FDelete),
+		FDelete: deletes,
 		FAdd:    adds,
 		FSet:    c.FSet,
 		LSet:    c.LSet,
@@ -124,8 +109,20 @@ func (c *Changeset) UnmarshalJSON(data []byte) error {
 		}
 	}
 	c.FAdd = dto.FAdd
-	c.FSet = dto.FSet
-	c.LSet = dto.LSet
+	if dto.FSet != nil {
+		c.FSet = make(map[string]*Feature)
+		for fid, f := range dto.FSet {
+			f.Id = fid
+			c.FSet[fid] = f
+		}
+	}
+	if dto.LSet != nil {
+		c.LSet = make(map[string]*Layer)
+		for lid, l := range dto.LSet {
+			l.Id = lid
+			c.LSet[lid] = l
+		}
+	}
 	return nil
 }
 

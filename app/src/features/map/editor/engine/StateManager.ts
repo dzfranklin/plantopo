@@ -106,12 +106,12 @@ export class StateManager {
   }
 
   private _onMessage(msg: IncomingSessionMsg) {
-    if (msg.ack !== undefined) {
+    if (msg.ack) {
       this._latestAck = Math.max(this._latestAck, msg.ack);
       this._updateHasUnsynced();
       this._store.remoteAck(msg.ack);
     }
-    if (msg.change !== undefined) {
+    if (msg.change) {
       this._store.remoteUpdate(this._generation, msg.change);
       this._onChange?.(this._store.toState());
     }

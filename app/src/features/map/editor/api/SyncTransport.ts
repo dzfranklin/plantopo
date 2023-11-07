@@ -111,8 +111,10 @@ export class SyncTransport {
       }
     };
     this._sock.onclose = (ev) => {
-      if (ev.code === 1000) {
-        console.log(`SyncTransport: sock closed normally: ${ev.reason}`);
+      if (ev.code === 1000 || ev.code == 1001) {
+        console.log(
+          `SyncTransport: sock closed normally: ${ev.code} ${ev.reason}`,
+        );
       } else {
         console.warn(
           `SyncTransport: sock closed abnormally: ${ev.code} ${ev.reason}`,

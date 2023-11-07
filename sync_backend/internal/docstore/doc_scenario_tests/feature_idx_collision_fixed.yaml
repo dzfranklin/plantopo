@@ -1,0 +1,55 @@
+Given:
+  fadd: [before, existing, after]
+  fset:
+    before:
+      parent: ""
+      idx: A
+    existing:
+      parent: ""
+      idx: C
+    after:
+      parent: ""
+      idx: E
+When:
+  fadd: [colliding]
+  fset:
+    colliding:
+      parent: ""
+      idx: C
+Then:
+  fadd: [after, before, colliding, existing]
+  fset:
+    before:
+      parent: ""
+      idx: A
+    existing:
+      parent: ""
+      idx: C
+    after:
+      parent: ""
+      idx: E
+    colliding:
+      parent: ""
+      idx: D)
+---
+Given:
+  fadd: [existing]
+  fset:
+    existing:
+      parent: ""
+      idx: O
+When:
+  fadd: [colliding]
+  fset:
+    colliding:
+      parent: ""
+      idx: O
+Then:
+  fadd: [colliding, existing]
+  fset:
+    existing:
+      parent: ""
+      idx: O
+    colliding:
+      parent: ""
+      idx: g)

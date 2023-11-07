@@ -2,7 +2,6 @@ package importers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	api "github.com/danielzfranklin/plantopo/api/v1"
@@ -179,9 +178,9 @@ func (s *Service) doImport(externalId string) {
 	err = b.Send(&api.SyncBackendIncomingMessage{
 		Msg: &api.SyncBackendIncomingMessage_Connect{
 			Connect: &api.SyncBackendConnectRequest{
-				MapId:        mapId,
-				Token:        resp.Token,
-				ConnectionId: fmt.Sprintf("internal-importer-%d", internalId),
+				MapId:    mapId,
+				Token:    resp.Token,
+				ClientId: fmt.Sprintf("internal-importer-%d", internalId),
 			},
 		},
 	})
@@ -212,17 +211,7 @@ func (s *Service) doImport(externalId string) {
 			return
 		}
 
-		type dataType struct {
-			Ack *int `json:"ack"`
-		}
-		var data dataType
-		err = json.Unmarshal(msg.Data, &data)
-		if err != nil {
-			s.markFailed(externalId, fmt.Errorf("unmarshal data: %w", err), "internal error")
-			return
-		}
-
-		if data.Ack != nil && *data.Ack == 1 {
+		if msg.Ack == 1 {
 			l.Info("got ack")
 			break
 		}

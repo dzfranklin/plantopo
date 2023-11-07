@@ -1,0 +1,12 @@
+When:
+  lset:
+    l1:
+      idx: "foo"
+    l2:
+      idx: null
+Then:
+  lset:
+    l1:
+      idx: "foo"
+    l2:
+      idx: null

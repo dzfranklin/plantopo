@@ -43,6 +43,14 @@ func IdxBetween(rng *rand.Rand, before string, after string) (string, error) {
 	return idxBetween(rng, before, after, true)
 }
 
+func MustIdxBetween(rng *rand.Rand, before string, after string) string {
+	res, err := IdxBetween(rng, before, after)
+	if err != nil {
+		panic(fmt.Errorf("MustIdxBetween got invalid input(s): %w", err))
+	}
+	return res
+}
+
 func idxBetween(rng *rand.Rand, before string, after string, addJitter bool) (string, error) {
 	if err := validateIdxDigits(before); err != nil {
 		return "", err

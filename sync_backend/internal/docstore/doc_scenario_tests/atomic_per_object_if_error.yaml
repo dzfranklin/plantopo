@@ -1,0 +1,27 @@
+When:
+  fadd: ['f1']
+  fset:
+    f1:
+      id: 'f1'
+      parent: 'nonexistent'
+      idx: 'O'
+Then: null
+ThenError: 'parent missing'
+---
+Given:
+  fadd: ['f1']
+  fset:
+    f1:
+      id: 'f1'
+When:
+  fset:
+    f1:
+      id: 'f1'
+      parent: 'nonexistent'
+      idx: 'O'
+Then:
+  fadd: ['f1']
+  fset:
+    f1:
+      id: 'f1'
+ThenError: 'parent missing'

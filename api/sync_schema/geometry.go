@@ -5,6 +5,8 @@ import (
 	"fmt"
 )
 
+// Geometry
+//
 // One or zero of the fields will be non-nil.
 type Geometry struct {
 	Point      *PointGeometry

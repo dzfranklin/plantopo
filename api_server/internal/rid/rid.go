@@ -1,4 +1,4 @@
-// Request id context
+// Package rid handles the request id context
 package rid
 
 import (

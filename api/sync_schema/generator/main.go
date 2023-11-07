@@ -181,7 +181,7 @@ func genGoType(ty typeIR) []byte {
 	sb.WriteString("}\n\n")
 
 	// merge
-	sb.WriteString(fmt.Sprintf("func (t *%s) Merge(other %s) {\n", ty.name, ty.name))
+	sb.WriteString(fmt.Sprintf("func (t *%s) Merge(other *%s) {\n", ty.name, ty.name))
 	sb.WriteString(fmt.Sprintf("if t.%s != other.%s {\n", ty.id.goName, ty.id.goName))
 	sb.WriteString(fmt.Sprintf("\tpanic(\"cannot merge %ss: id differs\")\n", ty.name))
 	sb.WriteString("}\n")
@@ -260,6 +260,41 @@ func genGoType(ty typeIR) []byte {
 
 	sb.WriteString("sb.WriteString(\"}\")\n")
 	sb.WriteString("return []byte(sb.String()), nil\n")
+	sb.WriteString("}\n\n")
+
+	// stored
+
+	sb.WriteString(fmt.Sprintf("type Stored%s struct {\n", ty.name))
+	for _, field := range ty.fields {
+		sb.WriteString(fmt.Sprintf("\t%sState State;\n", field.goName))
+		sb.WriteString(fmt.Sprintf("\t%sGeneration uint64;\n", field.goName))
+		sb.WriteString(fmt.Sprintf("\t%s %s;\n", field.goName, field.goType))
+	}
+	sb.WriteString("}\n\n")
+
+	sb.WriteString(fmt.Sprintf("func (t *Stored%s) Merge(generation uint64, other *%s) {\n", ty.name, ty.name))
+	for _, field := range ty.fields {
+		sb.WriteString(fmt.Sprintf("if other.%sState != Unspecified {", field.goName))
+		sb.WriteString(fmt.Sprintf("t.%sState = other.%sState;", field.goName, field.goName))
+		sb.WriteString(fmt.Sprintf("t.%sGeneration = generation;", field.goName))
+		sb.WriteString(fmt.Sprintf("t.%s = other.%s;", field.goName, field.goName))
+		sb.WriteString("}\n")
+	}
+	sb.WriteString("}\n\n")
+
+	sb.WriteString(fmt.Sprintf("func (t *Stored%s) ChangesSince(generation uint64, fid string) *%s {\n", ty.name, ty.name))
+	sb.WriteString(fmt.Sprintf("out := &%s{Id: fid}\n", ty.name))
+	sb.WriteString("if t == nil { return nil }\n")
+	sb.WriteString("var wroteAny bool\n")
+	for _, field := range ty.fields {
+		sb.WriteString(fmt.Sprintf("if t.%sGeneration > generation {", field.goName))
+		sb.WriteString("wroteAny = true;")
+		sb.WriteString(fmt.Sprintf("out.%sState = t.%sState;", field.goName, field.goName))
+		sb.WriteString(fmt.Sprintf("out.%s = t.%s;", field.goName, field.goName))
+		sb.WriteString("}\n")
+	}
+	sb.WriteString("if !wroteAny { return nil }\n")
+	sb.WriteString("return out\n")
 	sb.WriteString("}\n\n")
 
 	return []byte(sb.String())

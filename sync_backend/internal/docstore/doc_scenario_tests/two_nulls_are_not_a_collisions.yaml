@@ -1,0 +1,21 @@
+Given:
+  lset:
+    l1:
+      id: l1
+      idx: O
+    l2:
+      id: l2
+      idx: null
+When:
+  lset:
+    l1:
+      id: l1
+      idx: null
+Then:
+  lset:
+    l1:
+      id: l1
+      idx: null
+    l2:
+      id: l2
+      idx: null

@@ -20,6 +20,7 @@ func (m *mockSender) Send(p Payload) error {
 }
 
 func setup(t *testing.T) (*impl, *mockSender) {
+	t.Helper()
 	sender := new(mockSender)
 	subject := New(context.Background(), Config{Sender: sender})
 	return subject.(*impl), sender

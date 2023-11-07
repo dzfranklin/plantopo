@@ -6,7 +6,7 @@ import (
 	"github.com/mazznoer/csscolorparser"
 )
 
-func (t *Layer) validate() error {
+func (t Layer) validate() error {
 	if t.IdxState == Set {
 		if err := validateInsertibleIdx(t.Idx); err != nil {
 			return err
@@ -20,16 +20,12 @@ func (t *Layer) validate() error {
 	return nil
 }
 
-func (t *Feature) validate() error {
-	if t.ParentState == Unset {
-		return fmt.Errorf("cannot change feature parent to unset")
-	}
+func (t Feature) validate() error {
 	if t.IdxState == Set {
 		if err := validateInsertibleIdx(t.Idx); err != nil {
 			return err
 		}
 	}
-
 	if t.ColorState == Set {
 		if _, err := csscolorparser.Parse(t.Color); err != nil {
 			return fmt.Errorf("invalid color: %w", err)

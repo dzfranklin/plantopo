@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"net/http"
 	"time"
 
@@ -135,9 +137,9 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 	err = b.Send(&api.SyncBackendIncomingMessage{
 		Msg: &api.SyncBackendIncomingMessage_Connect{
 			Connect: &api.SyncBackendConnectRequest{
-				MapId:        mapId,
-				Token:        resp.Token,
-				ConnectionId: clientId,
+				MapId:    mapId,
+				Token:    resp.Token,
+				ClientId: clientId,
 			},
 		},
 	})
@@ -149,7 +151,7 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	l.Info("upgrading")
-	sock, err := upgrader.Upgrade(w, r, nil)
+	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		// Upgrader handles writing the error
 		cancelB()
@@ -157,54 +159,72 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	l.Info("upgraded")
 
-	go socketReader(l, sock, b, cancelB, trustedAware)
-	go socketWriter(l, sock, b)
+	state := &sockState{
+		l:       l,
+		conn:    conn,
+		b:       b,
+		cancelB: cancelB,
+
+		trustedAware: trustedAware,
+	}
+	go socketReader(state)
+	go socketWriter(state)
 }
 
-type Incoming struct {
+type incomingDto struct {
 	Seq    int32                  `json:"seq"`
 	Aware  *sync_schema.Aware     `json:"aware"`
 	Change *sync_schema.Changeset `json:"change"`
 }
 
+type sockState struct {
+	l       *zap.SugaredLogger
+	conn    *websocket.Conn
+	b       api.SyncBackend_ConnectClient
+	cancelB func()
+
+	trustedAware sync_schema.TrustedAware
+}
+
 func socketReader(
-	l *zap.SugaredLogger,
-	sock *websocket.Conn,
-	b api.SyncBackend_ConnectClient,
-	cancelB func(),
-	trustedAware sync_schema.TrustedAware,
+	s *sockState,
 ) {
-	l = l.Named("socketReader")
+	var err error
 	defer func() {
-		l.Info("closing")
-		_ = sock.Close()
-		cancelB()
+		if err != nil {
+			s.l.Warnw("closing socketReader due to error", zap.Error(err))
+			writeCloseMessage(s.conn, websocket.CloseInternalServerErr, err.Error())
+		} else {
+			s.l.Info("closing socketReader")
+			writeCloseMessage(s.conn, websocket.CloseNormalClosure, "")
+		}
+		_ = s.conn.Close()
+		s.cancelB()
 	}()
 	for {
-		var msg Incoming
-		err := sock.ReadJSON(&msg)
+		var msg incomingDto
+		err = s.conn.ReadJSON(&msg)
 		if err != nil {
-			l.Infow("socket read error", zap.Error(err))
+			err = nil
 			return
 		}
 
 		var aware []byte
 		if msg.Aware != nil {
-			msg.Aware.Trusted = trustedAware
+			msg.Aware.Trusted = s.trustedAware
 			aware, err = json.Marshal(msg.Aware)
 			if err != nil {
-				l.DPanicw("failed to marshal aware", zap.Error(err))
 				return
 			}
 		}
 
-		change, err := json.Marshal(msg.Change)
+		var change []byte
+		change, err = json.Marshal(msg.Change)
 		if err != nil {
-			l.DPanicw("failed to marshal change", zap.Error(err))
 			return
 		}
 
-		err = b.Send(&api.SyncBackendIncomingMessage{
+		err = s.b.Send(&api.SyncBackendIncomingMessage{
 			Msg: &api.SyncBackendIncomingMessage_Update{
 				Update: &api.SyncBackendIncomingUpdate{
 					Seq:    msg.Seq,
@@ -214,40 +234,56 @@ func socketReader(
 			},
 		})
 		if err != nil {
-			l.Infow("backend send error", zap.Error(err))
-			writeCloseMessage(sock, websocket.CloseInternalServerErr, "failed to send to backend")
 			return
 		}
 	}
 }
 
-func socketWriter(
-	l *zap.SugaredLogger,
-	sock *websocket.Conn,
-	b api.SyncBackend_ConnectClient,
-) {
-	l = l.Named("socketWriter")
+type outgoingDto struct {
+	Ack    int32           `json:"ack"`
+	Aware  json.RawMessage `json:"aware"`
+	Change json.RawMessage `json:"change"`
+	Error  string          `json:"error"`
+}
+
+func socketWriter(s *sockState) {
+	var err error
 	defer func() {
-		l.Info("closing")
-		_ = sock.Close()
+		if err != nil {
+			s.l.Warnw("closing socketWriter due to error", zap.Error(err))
+			writeCloseMessage(s.conn, websocket.CloseInternalServerErr, err.Error())
+		} else {
+			s.l.Info("closing socketWriter")
+			writeCloseMessage(s.conn, websocket.CloseNormalClosure, "")
+		}
+		_ = s.conn.Close()
+		s.cancelB()
 	}()
 	for {
-		msg, err := b.Recv()
+		var msg *api.SyncBackendOutgoingMessage
+		msg, err = s.b.Recv()
 		if err != nil {
-			if errors.Is(err, context.Canceled) {
-				l.Info("cancelled")
-				writeCloseMessage(sock, websocket.CloseNormalClosure, "cancelled")
-				return
-			} else {
-				l.Infow("backend recv error", zap.Error(err))
-				writeCloseMessage(sock, websocket.CloseInternalServerErr, "failed to receive from backend")
+			if status.Code(err) == codes.Canceled {
+				err = nil
 				return
 			}
+			return
 		}
 
-		err = sock.WriteMessage(websocket.TextMessage, msg.Data)
+		dto := outgoingDto{
+			Ack:    msg.Ack,
+			Aware:  msg.Aware,
+			Change: msg.Change,
+		}
+		var data []byte
+		data, err = json.Marshal(dto)
 		if err != nil {
-			l.Infow("socket write error", zap.Error(err))
+			return
+		}
+
+		err = s.conn.WriteMessage(websocket.TextMessage, data)
+		if err != nil {
+			err = nil
 			return
 		}
 	}

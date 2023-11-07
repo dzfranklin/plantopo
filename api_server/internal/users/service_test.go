@@ -47,15 +47,15 @@ func (m *mockMailer) SendPasswordReset(user *types.User, token string) error {
 	return nil
 }
 
-func (m *mockMailer) SendShareNotification(req mailer.ShareNotificationRequest) error {
+func (m *mockMailer) SendShareNotification(_ mailer.ShareNotificationRequest) error {
 	return nil
 }
 
-func (m *mockMailer) SendInvite(req mailer.InviteRequest) error {
+func (m *mockMailer) SendInvite(_ mailer.InviteRequest) error {
 	return nil
 }
 
-func (m *mockMailer) CheckDeliverable(ctx context.Context, email string) (bool, error) {
+func (m *mockMailer) CheckDeliverable(_ context.Context, _ string) (bool, error) {
 	return true, nil
 }
 
@@ -211,15 +211,17 @@ func (s *S) TestRequestPasswordReset() {
 		{s.validUser().Email, nil},
 	}
 	for _, c := range cases {
-		subject, cleanup := s.makeSubject()
-		defer cleanup()
+		func() {
+			subject, cleanup := s.makeSubject()
+			defer cleanup()
 
-		err := subject.RequestPasswordReset(c.email)
-		if c.err == nil {
-			require.NoError(s.T(), err)
-		} else {
-			require.ErrorIs(s.T(), err, c.err)
-		}
+			err := subject.RequestPasswordReset(c.email)
+			if c.err == nil {
+				require.NoError(s.T(), err)
+			} else {
+				require.ErrorIs(s.T(), err, c.err)
+			}
+		}()
 	}
 }
 
