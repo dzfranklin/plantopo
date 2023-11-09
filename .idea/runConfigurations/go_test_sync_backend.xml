@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="go test sync_backend" type="GoTestRunConfiguration" factoryName="Go Test">
+    <module name="plantopo" />
+    <working_directory value="$PROJECT_DIR$" />
+    <go_parameters value="-race" />
+    <kind value="DIRECTORY" />
+    <package value="github.com/danielzfranklin/plantopo/sync_backend" />
+    <directory value="$PROJECT_DIR$/sync_backend" />
+    <filePath value="$PROJECT_DIR$" />
+    <framework value="gotest" />
+    <method v="2" />
+  </configuration>
+</component>

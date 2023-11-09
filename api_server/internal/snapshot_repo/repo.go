@@ -84,7 +84,7 @@ func (r *Repo) SetMapSnapshot(
 }
 
 func marshalSnapshot(snapshot schema.Changeset) ([]byte, error) {
-	uncompressed, err := json.Marshal(snapshot)
+	uncompressed, err := snapshot.MarshalJSON()
 	if err != nil {
 		return nil, err
 	}

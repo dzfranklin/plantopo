@@ -3,25 +3,19 @@ package backend
 import (
 	"context"
 	"fmt"
+	"github.com/danielzfranklin/plantopo/sync_backend/internal/docstore"
 	"sync"
 	"time"
 
-	"github.com/danielzfranklin/plantopo/sync_backend/internal/session"
 	"go.uber.org/zap"
 )
 
 type Backend struct {
 	mu               sync.Mutex
 	shutdownSweepers func()
-	pendingTokens    map[string]pendingToken     // by token
-	sessions         map[string]*session.Session // by mapId
+	pendingTokens    map[string]pendingToken // by token
+	sessions         map[string]*docSession  // by mapId
 	*Config
-}
-
-type Connection interface {
-	Receive(session.Incoming) error
-	Outgoing() chan session.Outgoing
-	Close()
 }
 
 type Matchmaker interface {
@@ -31,7 +25,7 @@ type Matchmaker interface {
 type Config struct {
 	ExternalAddr    string
 	Matchmaker      Matchmaker
-	Session         *session.Config
+	DocStore        docstore.Config
 	sweepInterval   time.Duration
 	pendingTTL      time.Duration
 	emptySessionTTL time.Duration
@@ -47,9 +41,6 @@ func New(config *Config) *Backend {
 	if config.Matchmaker == nil {
 		panic("config.Matchmaker required")
 	}
-	if config.Session == nil {
-		panic("config.Session required")
-	}
 	if config.sweepInterval == 0 {
 		config.sweepInterval = 5 * time.Second
 	}
@@ -62,11 +53,11 @@ func New(config *Config) *Backend {
 
 	b := &Backend{
 		pendingTokens: make(map[string]pendingToken),
-		sessions:      make(map[string]*session.Session),
+		sessions:      make(map[string]*docSession),
 		Config:        config,
 	}
 
-	b.startSweepers()
+	b.startSweeper()
 
 	return b
 }
@@ -94,51 +85,73 @@ func (b *Backend) SetupConnection(mapId string, token string) error {
 	return nil
 }
 
-func (b *Backend) Connect(
-	mapId string, token string, connectionId string,
-) (Connection, error) {
-	l := zap.S().Named("Backend.Connect").With("mapId", mapId)
+func (b *Backend) Connect(mapId string, token string, clientId string) (*Session, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	l := zap.S().With("mapId", mapId)
 
-	// Get or create a session while holding the lock.
-	sess, err := func() (*session.Session, error) {
-		b.mu.Lock()
-		defer b.mu.Unlock()
+	state, ok := b.pendingTokens[token]
+	if !ok {
+		l.Info("token not in pending")
+		return nil, fmt.Errorf("invalid token")
+	} else if state.insertedAt.Add(b.pendingTTL).Before(time.Now()) {
+		l.Info("token expired")
+		return nil, fmt.Errorf("invalid token")
+	} else if state.mapId != mapId {
+		l.Info("mapId mismatch")
+		return nil, fmt.Errorf("invalid token")
+	}
+	delete(b.pendingTokens, token)
 
-		state, ok := b.pendingTokens[token]
-		if !ok {
-			l.Info("token not in pending")
-			return nil, fmt.Errorf("invalid token")
-		} else if state.insertedAt.Add(b.pendingTTL).Before(time.Now()) {
-			l.Info("token expired")
-			return nil, fmt.Errorf("invalid token")
-		} else if state.mapId != mapId {
-			l.Info("mapId mismatch")
-			return nil, fmt.Errorf("invalid token")
-		}
-		delete(b.pendingTokens, token)
-
-		sess, ok := b.sessions[mapId]
-		if !ok || sess.IsFailed() {
-			l.Info("creating new session")
-			sess = session.New(b.Session, mapId)
-			b.sessions[mapId] = sess
+	ds, ok := b.sessions[mapId]
+	if !ok {
+		l.Info("creating new session")
+		ds = newDocSession(mapId, b)
+		b.sessions[mapId] = ds
+	} else {
+		if ds.isClosing() {
+			l.Info("rejecting connect as session closing")
+			return nil, fmt.Errorf("session closing, try again later")
 		} else {
-			l.Info("using existing session")
+			l.Info("connecting to existing session")
 		}
-		return sess, nil
-	}()
-	if err != nil {
-		return nil, err
 	}
 
-	l.Info("connecting to session")
-	conn, err := sess.Connect(connectionId)
-	if err != nil {
-		l.Infow("failed to connect", zap.Error(err))
-		return nil, err
+	return ds.newSession(clientId)
+}
+
+func (b *Backend) shutdownSession(ds *docSession) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if len(ds.clients) > 0 {
+		return
 	}
-	l.Info("connected to session")
-	return conn, nil
+
+	mapId := ds.mapId
+	l := zap.S().With("mapId", mapId)
+
+	l.Infow("closing doc session")
+
+	go func() {
+		err := ds.doc.Close()
+		if err != nil {
+			l.Errorw("failed to close docstore", zap.Error(err))
+		}
+
+		b.mu.Lock()
+		delete(b.sessions, mapId)
+		b.mu.Unlock()
+		l.Infof("closed session for map %s", mapId)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+		defer cancel()
+		err = b.Matchmaker.RegisterClose(ctx, b.ExternalAddr, mapId)
+		if err != nil {
+			l.Warnw("failed to register close with matchmaker", "mapId", mapId, zap.Error(err))
+		}
+		l.Infof("registered close of map %s with matchmaker", mapId)
+	}()
 }
 
 func (b *Backend) Stats() map[string]interface{} {
@@ -151,31 +164,22 @@ func (b *Backend) Stats() map[string]interface{} {
 	return stats
 }
 
-func (b *Backend) DebugState() string {
+func (b *Backend) Sessions() interface{} {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	pending := make([]string, 0)
-	for _, state := range b.pendingTokens {
-		pending = append(pending, state.mapId)
-	}
-
-	sessions := make(map[string]map[string]interface{})
-	for mapId, sess := range b.sessions {
-		sessions[mapId] = map[string]interface{}{
-			"isFailed":       sess.IsFailed(),
-			"connectedCount": sess.Connected(),
+	sessions := make(map[string][]string)
+	for _, ds := range b.sessions {
+		clients := make([]string, 0, len(ds.clients))
+		for clientId := range ds.clients {
+			clients = append(clients, clientId)
 		}
+		sessions[ds.mapId] = clients
 	}
-
-	data := map[string]interface{}{
-		"pending":  pending,
-		"sessions": sessions,
-	}
-	return fmt.Sprintf("%#+v", data)
+	return sessions
 }
 
-func (b *Backend) startSweepers() {
+func (b *Backend) startSweeper() {
 	b.mu.Lock()
 	sweepInterval := b.sweepInterval
 	ctx, cancel := context.WithCancel(context.Background())
@@ -193,14 +197,6 @@ func (b *Backend) startSweepers() {
 			}
 
 			b.sweepPendingTokens()
-
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-			}
-
-			b.sweepSessions()
 		}
 	}()
 }
@@ -213,37 +209,6 @@ func (b *Backend) sweepPendingTokens() {
 		if time.Since(state.insertedAt) > b.pendingTTL {
 			zap.S().Infow("sweeping expired pending token", "token", token)
 			delete(b.pendingTokens, token)
-		}
-	}
-}
-
-func (b *Backend) sweepSessions() {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	threshold := time.Now().Add(-b.emptySessionTTL)
-	for mapId, sess := range b.sessions {
-		// note that we don't see all failed sessions here as Connect replaces
-		// failed sessions.
-		isEmpty := sess.Connected() == 0 && sess.IsReady() && sess.LastDisconnect().Before(threshold)
-		if sess.IsFailed() || isEmpty {
-			delete(b.sessions, mapId)
-			if isEmpty {
-				zap.S().Infow("closing session with no connections", "mapId", mapId)
-			}
-			go func(mapId string, sess *session.Session) {
-				err := sess.Close()
-				if err != nil {
-					zap.S().Warnw("failed to close session", "mapId", mapId, zap.Error(err))
-				}
-
-				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-				defer cancel()
-				err = b.Matchmaker.RegisterClose(ctx, b.ExternalAddr, mapId)
-				if err != nil {
-					zap.S().Warnw("failed to register close with matchmaker",
-						"mapId", mapId, zap.Error(err))
-				}
-			}(mapId, sess)
 		}
 	}
 }

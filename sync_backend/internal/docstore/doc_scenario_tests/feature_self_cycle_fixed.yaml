@@ -1,0 +1,12 @@
+Given:
+  fadd: [f1]
+  fset:
+    f1:
+      parent: ""
+      idx: "Z"
+When:
+  fset:
+    f1:
+      parent: "f1"
+      idx: "."
+ThenError: "parent cannot be self"

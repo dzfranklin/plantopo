@@ -13,9 +13,11 @@ test-integration:
 
 test-go-short:
   go test ./... -race -short -timeout 30s
+  golangci-lint run
 
 test-go-long:
   go test ./... -race -timeout 30s
+  golangci-lint run
 
 gen:
   rm -rf ./api/sync_schema/out && mkdir ./api/sync_schema/out

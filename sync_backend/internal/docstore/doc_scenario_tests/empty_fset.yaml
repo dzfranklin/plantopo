@@ -1,0 +1,10 @@
+When:
+  fadd: ['f1']
+  fset:
+    f1:
+      id: 'f1'
+Then:
+  fadd: ['f1']
+  fset:
+    f1:
+      id: 'f1'

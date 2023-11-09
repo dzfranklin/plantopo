@@ -18,6 +18,7 @@ LABEL org.opencontainers.image.source="https://github.com/dzfranklin/plantopo"
 
 RUN mkdir -p /app
 COPY --from=build /build/sync_backend/sync_backend /app/sync_backend
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 ENV TZ=UTC
 ENV APP_ENV=$APP_ENV

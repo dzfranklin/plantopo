@@ -1,7 +1,6 @@
 syntax = "proto3";
 import "google/protobuf/empty.proto";
 import "google/protobuf/struct.proto";
-import "google/protobuf/wrappers.proto";
 option go_package = "github.com/danielzfranklin/plantopo/api/v1";
 
 service SyncBackend {
@@ -16,9 +15,6 @@ service SyncBackend {
     returns (stream SyncBackendOutgoingMessage);
 
   rpc Stats(google.protobuf.Empty) returns (google.protobuf.Struct);
-
-  rpc DebugState(google.protobuf.Empty)
-    returns (google.protobuf.StringValue);
 }
 
 message SyncBackendSetupConnectionRequest {
@@ -39,7 +35,7 @@ message SyncBackendIncomingMessage {
 message SyncBackendConnectRequest {
   string token = 1;
   string map_id = 2;
-  string connection_id = 3;
+  string client_id = 3;
 }
 
 message SyncBackendIncomingUpdate {
@@ -49,5 +45,7 @@ message SyncBackendIncomingUpdate {
 }
 
 message SyncBackendOutgoingMessage {
-  bytes data = 1; // json
+  int32 ack = 1;
+  bytes aware = 2; // json
+  bytes change = 3; // json
 }

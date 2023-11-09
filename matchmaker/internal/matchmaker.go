@@ -121,6 +121,7 @@ func (m *Matchmaker) SetupConnection(ctx context.Context, mapId string) (Connect
 		m.byOpenMap[mapId] = &mapState{backend}
 		backend.open[mapId] = struct{}{}
 
+		l.Infow("setup new connection", "backend", backend.handle.Id())
 		return Connection{Backend: backend.handle.Id(), Token: token}, nil
 	} else {
 		backend := existing.backend
@@ -138,6 +139,7 @@ func (m *Matchmaker) SetupConnection(ctx context.Context, mapId string) (Connect
 			return Connection{}, err
 		}
 
+		l.Infow("setup connection to existing", "backend", backend.handle.Id())
 		return Connection{Backend: backend.handle.Id(), Token: token}, nil
 	}
 }

@@ -8,8 +8,6 @@ type DeliverabilityChecker interface {
 
 type NoopDeliverabilityChecker struct{}
 
-func (c *NoopDeliverabilityChecker) CheckDeliverable(
-	ctx context.Context, email string,
-) (bool, error) {
+func (c *NoopDeliverabilityChecker) CheckDeliverable(_ context.Context, _ string) (bool, error) {
 	return true, nil
 }

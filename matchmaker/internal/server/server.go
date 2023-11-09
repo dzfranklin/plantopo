@@ -58,7 +58,7 @@ func (s *grpcServer) SetupConnection(
 }
 
 func (s *grpcServer) RegisterBackend(
-	ctx context.Context, req *api.MatchmakerRegisterBackendRequest,
+	_ context.Context, req *api.MatchmakerRegisterBackendRequest,
 ) (*api.MatchmakerRegisterBackendResponse, error) {
 	b, err := internal.NewGRPCBackend(req.Backend, s.BackendDialOptions...)
 	if err != nil {
@@ -69,25 +69,25 @@ func (s *grpcServer) RegisterBackend(
 }
 
 func (s *grpcServer) UnregisterBackend(
-	ctx context.Context, req *api.MatchmakerUnregisterBackendRequest,
+	_ context.Context, req *api.MatchmakerUnregisterBackendRequest,
 ) (*api.MatchmakerUnregisterBackendResponse, error) {
 	s.Matchmaker.RemoveBackends([]string{req.Backend})
 	return &api.MatchmakerUnregisterBackendResponse{}, nil
 }
 
 func (s *grpcServer) RegisterClose(
-	ctx context.Context, req *api.MatchmakerRegisterCloseRequest,
+	_ context.Context, req *api.MatchmakerRegisterCloseRequest,
 ) (*api.MatchmakerRegisterCloseResponse, error) {
 	s.Matchmaker.RegisterClose(req.Backend, req.MapId)
 	return &api.MatchmakerRegisterCloseResponse{}, nil
 }
 
-func (s *grpcServer) Stats(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
+func (s *grpcServer) Stats(_ context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
 	stats := s.Matchmaker.Stats()
 	return structpb.NewStruct(stats)
 }
 
-func (s *grpcServer) DebugState(ctx context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
+func (s *grpcServer) DebugState(_ context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {
 	state := s.Matchmaker.DebugState()
 	return structpb.NewStruct(map[string]interface{}{
 		"state": state,

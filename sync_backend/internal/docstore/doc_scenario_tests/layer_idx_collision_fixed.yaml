@@ -1,0 +1,37 @@
+Given:
+  lset:
+    before:
+      idx: A
+    existing:
+      idx: C
+    after:
+      idx: E
+When:
+  lset:
+    colliding:
+      idx: C
+Then:
+  lset:
+    before:
+      idx: A
+    existing:
+      idx: C
+    after:
+      idx: E
+    colliding:
+      idx: D)
+---
+Given:
+  lset:
+    existing:
+      idx: O
+When:
+  lset:
+    colliding:
+      idx: O
+Then:
+  lset:
+    colliding:
+      idx: g)
+    existing:
+      idx: O

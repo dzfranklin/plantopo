@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/danielzfranklin/plantopo/sync_backend/internal/doclog"
+	"github.com/danielzfranklin/plantopo/sync_backend/internal/docstore"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap/zapcore"
 	"log"
 	"net"
@@ -16,9 +20,7 @@ import (
 	api "github.com/danielzfranklin/plantopo/api/v1"
 	"github.com/danielzfranklin/plantopo/sync_backend/internal"
 	"github.com/danielzfranklin/plantopo/sync_backend/internal/backend"
-	"github.com/danielzfranklin/plantopo/sync_backend/internal/repo"
 	"github.com/danielzfranklin/plantopo/sync_backend/internal/server"
-	"github.com/danielzfranklin/plantopo/sync_backend/internal/session"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -69,8 +71,6 @@ func main() {
 	zap.ReplaceGlobals(logger)
 	l := logger.Sugar()
 
-	r := repo.New()
-
 	var grpcClientOptions []grpc.DialOption
 	if appEnv == "development" {
 		grpcClientOptions = append(grpcClientOptions,
@@ -93,12 +93,37 @@ func main() {
 	matchmakerC := api.NewMatchmakerClient(matchmakerCC)
 	matchmaker := internal.NewMatchmaker(matchmakerC)
 
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		l.Panicw("DATABASE_URL must be set")
+	}
+	dbCfg, err := pgxpool.ParseConfig(dbURL)
+	if err != nil {
+		l.Panicw("Failed to parse DATABASE_URL", zap.Error(err))
+	}
+	dbCfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) (err error) {
+		if _, err = conn.Exec(ctx, `SET search_path TO pt`); err != nil {
+			return
+		}
+		return
+	}
+	db, err := pgxpool.NewWithConfig(context.Background(), dbCfg)
+	if err != nil {
+		l.Panicw("Failed to create postgres pool", zap.Error(err))
+	}
+
+	dsLogger := l.Desugar()
+	dsCfg := docstore.Config{
+		Logger: dsLogger,
+		Loader: func(ctx context.Context, mapId string) (docstore.DocLogger, error) {
+			return doclog.Load(ctx, dsLogger, db, mapId)
+		},
+	}
+
 	b := backend.New(&backend.Config{
 		ExternalAddr: selfExternalAddr,
 		Matchmaker:   matchmaker,
-		Session: &session.Config{
-			Repo: r,
-		},
+		DocStore:     dsCfg,
 	})
 
 	srv, err := server.NewGRPCServer(&server.Config{
@@ -128,6 +153,10 @@ func main() {
 	if err != nil {
 		l.Fatalw("Failed to register with matchmaker", zap.Error(err))
 	}
+
+	go func() {
+		_ = http.ListenAndServe(":6060", debugHandler(b))
+	}()
 
 	term := make(chan os.Signal, 1)
 	signal.Notify(term, os.Interrupt, syscall.SIGTERM)

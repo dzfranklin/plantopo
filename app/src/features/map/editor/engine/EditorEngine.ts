@@ -149,10 +149,14 @@ export class EditorEngine {
 
     this._sidebarWidth = this._prefs.sidebarWidth();
 
+    let lastAwareSent: SetAwareRequest | undefined = undefined;
     this._awareSendInterval = window.setInterval(() => {
-      this._transport.send({
-        aware: this._makeSetAwareRequest(),
-      });
+      const aware = this._makeSetAwareRequest();
+      if (!deepEq(aware, lastAwareSent)) {
+        this._transport.send({
+          aware,
+        });
+      }
     }, SEND_INTERVAL);
   }
 

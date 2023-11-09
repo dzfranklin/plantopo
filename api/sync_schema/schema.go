@@ -35,7 +35,7 @@ type Feature struct {
 	ImportedFromFile      string
 }
 
-func (t *Feature) Merge(other Feature) {
+func (t *Feature) Merge(other *Feature) {
 	if t.Id != other.Id {
 		panic("cannot merge Features: id differs")
 	}
@@ -314,6 +314,115 @@ func (t Feature) MarshalJSON() ([]byte, error) {
 	return []byte(sb.String()), nil
 }
 
+type StoredFeature struct {
+	ParentState                State
+	ParentGeneration           uint64
+	Parent                     string
+	IdxState                   State
+	IdxGeneration              uint64
+	Idx                        string
+	GeometryState              State
+	GeometryGeneration         uint64
+	Geometry                   Geometry
+	NameState                  State
+	NameGeneration             uint64
+	Name                       string
+	ColorState                 State
+	ColorGeneration            uint64
+	Color                      string
+	HiddenState                State
+	HiddenGeneration           uint64
+	Hidden                     bool
+	ImportedFromFileState      State
+	ImportedFromFileGeneration uint64
+	ImportedFromFile           string
+}
+
+func (t *StoredFeature) Merge(generation uint64, other *Feature) {
+	if other.ParentState != Unspecified {
+		t.ParentState = other.ParentState
+		t.ParentGeneration = generation
+		t.Parent = other.Parent
+	}
+	if other.IdxState != Unspecified {
+		t.IdxState = other.IdxState
+		t.IdxGeneration = generation
+		t.Idx = other.Idx
+	}
+	if other.GeometryState != Unspecified {
+		t.GeometryState = other.GeometryState
+		t.GeometryGeneration = generation
+		t.Geometry = other.Geometry
+	}
+	if other.NameState != Unspecified {
+		t.NameState = other.NameState
+		t.NameGeneration = generation
+		t.Name = other.Name
+	}
+	if other.ColorState != Unspecified {
+		t.ColorState = other.ColorState
+		t.ColorGeneration = generation
+		t.Color = other.Color
+	}
+	if other.HiddenState != Unspecified {
+		t.HiddenState = other.HiddenState
+		t.HiddenGeneration = generation
+		t.Hidden = other.Hidden
+	}
+	if other.ImportedFromFileState != Unspecified {
+		t.ImportedFromFileState = other.ImportedFromFileState
+		t.ImportedFromFileGeneration = generation
+		t.ImportedFromFile = other.ImportedFromFile
+	}
+}
+
+func (t *StoredFeature) ChangesSince(generation uint64, fid string) *Feature {
+	out := &Feature{Id: fid}
+	if t == nil {
+		return nil
+	}
+	var wroteAny bool
+	if t.ParentGeneration > generation {
+		wroteAny = true
+		out.ParentState = t.ParentState
+		out.Parent = t.Parent
+	}
+	if t.IdxGeneration > generation {
+		wroteAny = true
+		out.IdxState = t.IdxState
+		out.Idx = t.Idx
+	}
+	if t.GeometryGeneration > generation {
+		wroteAny = true
+		out.GeometryState = t.GeometryState
+		out.Geometry = t.Geometry
+	}
+	if t.NameGeneration > generation {
+		wroteAny = true
+		out.NameState = t.NameState
+		out.Name = t.Name
+	}
+	if t.ColorGeneration > generation {
+		wroteAny = true
+		out.ColorState = t.ColorState
+		out.Color = t.Color
+	}
+	if t.HiddenGeneration > generation {
+		wroteAny = true
+		out.HiddenState = t.HiddenState
+		out.Hidden = t.Hidden
+	}
+	if t.ImportedFromFileGeneration > generation {
+		wroteAny = true
+		out.ImportedFromFileState = t.ImportedFromFileState
+		out.ImportedFromFile = t.ImportedFromFile
+	}
+	if !wroteAny {
+		return nil
+	}
+	return out
+}
+
 type Layer struct {
 	Id           string
 	IdxState     State
@@ -322,7 +431,7 @@ type Layer struct {
 	Opacity      float64
 }
 
-func (t *Layer) Merge(other Layer) {
+func (t *Layer) Merge(other *Layer) {
 	if t.Id != other.Id {
 		panic("cannot merge Layers: id differs")
 	}
@@ -439,4 +548,48 @@ func (t Layer) MarshalJSON() ([]byte, error) {
 
 	sb.WriteString("}")
 	return []byte(sb.String()), nil
+}
+
+type StoredLayer struct {
+	IdxState          State
+	IdxGeneration     uint64
+	Idx               string
+	OpacityState      State
+	OpacityGeneration uint64
+	Opacity           float64
+}
+
+func (t *StoredLayer) Merge(generation uint64, other *Layer) {
+	if other.IdxState != Unspecified {
+		t.IdxState = other.IdxState
+		t.IdxGeneration = generation
+		t.Idx = other.Idx
+	}
+	if other.OpacityState != Unspecified {
+		t.OpacityState = other.OpacityState
+		t.OpacityGeneration = generation
+		t.Opacity = other.Opacity
+	}
+}
+
+func (t *StoredLayer) ChangesSince(generation uint64, fid string) *Layer {
+	out := &Layer{Id: fid}
+	if t == nil {
+		return nil
+	}
+	var wroteAny bool
+	if t.IdxGeneration > generation {
+		wroteAny = true
+		out.IdxState = t.IdxState
+		out.Idx = t.Idx
+	}
+	if t.OpacityGeneration > generation {
+		wroteAny = true
+		out.OpacityState = t.OpacityState
+		out.Opacity = t.Opacity
+	}
+	if !wroteAny {
+		return nil
+	}
+	return out
 }

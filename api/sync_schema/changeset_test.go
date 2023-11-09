@@ -10,7 +10,7 @@ func TestChangesetMerge(t *testing.T) {
 	got := Changeset{
 		FDelete: setOf("f1", "f2"),
 		FAdd:    []string{"f3"},
-		FSet: map[string]Feature{
+		FSet: map[string]*Feature{
 			"f3": {
 				Id:          "f3",
 				Parent:      "unchanged",
@@ -19,7 +19,7 @@ func TestChangesetMerge(t *testing.T) {
 				IdxState:    Set,
 			},
 		},
-		LSet: map[string]Layer{
+		LSet: map[string]*Layer{
 			"l1": {
 				Id:       "l1",
 				Idx:      "1",
@@ -31,7 +31,7 @@ func TestChangesetMerge(t *testing.T) {
 	update := Changeset{
 		FDelete: setOf("f1", "f4"),
 		FAdd:    []string{"f5"},
-		FSet: map[string]Feature{
+		FSet: map[string]*Feature{
 			"f5": {
 				Id:          "f5",
 				Parent:      "",
@@ -45,7 +45,7 @@ func TestChangesetMerge(t *testing.T) {
 				IdxState: Set,
 			},
 		},
-		LSet: map[string]Layer{
+		LSet: map[string]*Layer{
 			"l1": {
 				Id:       "l1",
 				IdxState: Unset,
@@ -56,7 +56,7 @@ func TestChangesetMerge(t *testing.T) {
 	want := Changeset{
 		FDelete: setOf("f1", "f2", "f1", "f4"),
 		FAdd:    []string{"f3", "f5"},
-		FSet: map[string]Feature{
+		FSet: map[string]*Feature{
 			"f3": {
 				Id:          "f3",
 				Parent:      "unchanged",
@@ -72,7 +72,7 @@ func TestChangesetMerge(t *testing.T) {
 				IdxState:    Set,
 			},
 		},
-		LSet: map[string]Layer{
+		LSet: map[string]*Layer{
 			"l1": {
 				Id:       "l1",
 				IdxState: Unset,

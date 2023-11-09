@@ -23,6 +23,6 @@ func (s *LogSender) Send(p Payload) error {
 
 type NoopSender struct{}
 
-func (s *NoopSender) Send(p Payload) error {
+func (s *NoopSender) Send(_ Payload) error {
 	return nil
 }
