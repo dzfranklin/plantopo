@@ -240,10 +240,10 @@ func socketReader(
 }
 
 type outgoingDto struct {
-	Ack    int32           `json:"ack"`
-	Aware  json.RawMessage `json:"aware"`
-	Change json.RawMessage `json:"change"`
-	Error  string          `json:"error"`
+	Ack    int32           `json:"ack,omitempty"`
+	Aware  json.RawMessage `json:"aware,omitempty"`
+	Change json.RawMessage `json:"change,omitempty"`
+	Error  string          `json:"error,omitempty"`
 }
 
 func socketWriter(s *sockState) {
