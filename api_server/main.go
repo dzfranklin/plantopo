@@ -16,7 +16,6 @@ import (
 	"github.com/danielzfranklin/plantopo/api_server/internal/maps"
 	"github.com/danielzfranklin/plantopo/api_server/internal/server/routes"
 	"github.com/danielzfranklin/plantopo/api_server/internal/server/session"
-	"github.com/danielzfranklin/plantopo/api_server/internal/snapshot_repo"
 	"github.com/danielzfranklin/plantopo/api_server/internal/sync_backends"
 	"github.com/danielzfranklin/plantopo/api_server/internal/users"
 	"github.com/danielzfranklin/plantopo/db"
@@ -167,7 +166,6 @@ func main() {
 		}),
 		FrontendMapTokens: frontend_map_tokens.MustFromRaw(frontendMapTokens),
 		MapImporter:       importer,
-		SnapshotRepo:      snapshot_repo.New(pg),
 	})
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),

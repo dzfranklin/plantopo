@@ -31,7 +31,6 @@ type Services struct {
 	Matchmaker        api.MatchmakerClient
 	SyncBackends      *sync_backends.Provider
 	MapImporter       MapImporter
-	SnapshotRepo      SnapshotRepo
 }
 
 const (
@@ -87,8 +86,6 @@ func New(s *Services) http.Handler {
 	r.HandleFunc("/api/v1/map/{mapId}/import", s.uploadImportHandler)
 	r.HandleFunc("/api/v1/map/{mapId}/import/{importId}/start", s.startImportHandler)
 	r.HandleFunc("/api/v1/map/{mapId}/import/{importId}", s.checkImportHandler)
-
-	r.HandleFunc("/api/v1/map/{id}/snapshot", s.mapSnapshotHandler)
 
 	if appEnv == "development" || appEnv == "staging" {
 		return r
