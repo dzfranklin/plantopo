@@ -402,9 +402,9 @@ func doUpload(
 		}
 
 		if dryRun {
-			fmt.Printf("Would upload %s (dry run)\n", key)
+			fmt.Printf("Would upload %s to %s (dry run)\n", key, bucket)
 		} else {
-			fmt.Printf("Uploading %s\n", key)
+			fmt.Printf("Uploading %s to %s\n", key, bucket)
 			_, err = client.PutObject(context.Background(), &s3.PutObjectInput{
 				Bucket:      &bucket,
 				Key:         &key,
