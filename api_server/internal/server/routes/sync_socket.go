@@ -79,6 +79,8 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 				Message: "Map does not exist",
 			})
 			return
+		} else if errors.Is(err, context.Canceled) {
+			return
 		} else {
 			writeInternalError(r, w, err)
 			return
@@ -113,25 +115,37 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 		MapId: mapId,
 	})
 	if err != nil {
-		writeInternalError(r, w, err)
-		return
+		if errors.Is(err, context.Canceled) {
+			return
+		} else {
+			writeInternalError(r, w, err)
+			return
+		}
 	}
 	l = l.With("backend", resp.Backend)
 
 	l.Info("connecting to backend")
 	bClient, err := s.SyncBackends.Dial(resp.Backend)
 	if err != nil {
-		writeInternalError(r, w,
-			fmt.Errorf("failed to dial backend (%s): %w", resp.Backend, err))
-		return
+		if errors.Is(err, context.Canceled) {
+			return
+		} else {
+			writeInternalError(r, w,
+				fmt.Errorf("failed to dial backend (%s): %w", resp.Backend, err))
+			return
+		}
 	}
 	bCtx, cancelB := context.WithCancel(context.Background())
 	b, err := bClient.Connect(bCtx)
 	if err != nil {
-		writeInternalError(r, w,
-			fmt.Errorf("failed to connect to backend %s: %s", resp.Backend, err))
 		cancelB()
-		return
+		if errors.Is(err, context.Canceled) {
+			return
+		} else {
+			writeInternalError(r, w,
+				fmt.Errorf("failed to connect to backend %s: %s", resp.Backend, err))
+			return
+		}
 	}
 	l.Info("sending connect to backend")
 	err = b.Send(&api.SyncBackendIncomingMessage{
@@ -144,10 +158,14 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 		},
 	})
 	if err != nil {
-		writeInternalError(r, w,
-			fmt.Errorf("failed to send connect to backend %s: %s", resp.Backend, err))
 		cancelB()
-		return
+		if errors.Is(err, context.Canceled) {
+			return
+		} else {
+			writeInternalError(r, w,
+				fmt.Errorf("failed to send connect to backend %s: %s", resp.Backend, err))
+			return
+		}
 	}
 
 	l.Info("upgrading")
