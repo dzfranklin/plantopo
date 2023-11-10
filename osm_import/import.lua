@@ -49,17 +49,9 @@ local path_to_route = {}
 
 -- Relation
 
--- TODO: This isn't working
-
 function osm2pgsql.select_relation_members(obj)
   if obj.tags.type == 'route' then
-    ids = osm2pgsql.way_member_ids(obj)
-
-    for id in pairs(ids) do
-      path_to_route[id] = obj.id
-    end
- 
-    return { ways = ids }
+    return { ways = osm2pgsql.way_member_ids(obj) }
   end
 end
 
@@ -86,6 +78,10 @@ function osm2pgsql.process_relation(obj)
   symbol_osmc = tags['osmc:symbol']
 
   clean_route_tags(tags)
+
+  for id in pairs(osm2pgsql.way_member_ids(obj)) do
+    path_to_route[id] = obj.id
+  end
 
   routes:add_row({
     type = route_type,
