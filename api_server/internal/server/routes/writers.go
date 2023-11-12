@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/danielzfranklin/plantopo/api_server/internal/rid"
@@ -52,6 +53,20 @@ func writeError(r *http.Request, w http.ResponseWriter, err error) {
 			Message: "internal server error",
 		}
 	}
+
+	if errors.Is(err, context.Canceled) {
+		errReply = &ErrorReply{
+			Code:    http.StatusRequestTimeout,
+			Message: "request canceled",
+		}
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		errReply = &ErrorReply{
+			Code:    http.StatusRequestTimeout,
+			Message: "deadline exceeded",
+		}
+	}
+
 	requestId := rid.FromCtx(r.Context())
 	loggers.Get().Info("writing error response",
 		zap.String("rid", requestId.String()),
