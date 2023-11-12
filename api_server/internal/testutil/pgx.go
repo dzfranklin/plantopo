@@ -55,7 +55,7 @@ func PgxSandbox() *Pgx {
 		log.Fatal(fmt.Errorf("PgxSandbox: failed to create migration instance: %w", err))
 	}
 
-	pg, err := db.NewPg(context.Background(), container.ConnectionString()+"?sslmode=disable")
+	pg, err := db.NewPg(context.Background(), nil, container.ConnectionString()+"?sslmode=disable")
 	if err != nil {
 		log.Fatal(fmt.Errorf("PgxSandbox: failed to create pg instance: %w", err))
 	}

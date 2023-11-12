@@ -105,7 +105,7 @@ func main() {
 	}
 	mailerService := mailer.New(ctx, mailerConfig)
 
-	pg, err := db.NewPg(ctx, os.Getenv("DATABASE_URL"))
+	pg, err := db.NewPg(ctx, l.Desugar(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		l.Fatalw("error creating postgres pool", zap.Error(err))
 	}

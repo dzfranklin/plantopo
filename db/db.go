@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	pgxUUID "github.com/vgarvardt/pgx-google-uuid/v5"
+	"go.uber.org/zap"
 )
 
 type Pg struct {
@@ -21,7 +22,7 @@ type Querier interface {
 	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
 }
 
-func NewPg(ctx context.Context, url string) (*Pg, error) {
+func NewPg(ctx context.Context, logger *zap.Logger, url string) (*Pg, error) {
 	config, err := pgxpool.ParseConfig(url)
 	if err != nil {
 		return nil, fmt.Errorf("invalid postgres url: %w", err)
@@ -29,6 +30,7 @@ func NewPg(ctx context.Context, url string) (*Pg, error) {
 
 	instance := &Pg{}
 
+	config.ConnConfig.Tracer = QueryTracer(logger)
 	config.AfterConnect = instance.afterConnect
 
 	pool, err := pgxpool.NewWithConfig(ctx, config)
