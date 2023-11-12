@@ -12,7 +12,7 @@ import {
 } from './Scene';
 import { LayerSource, MapSources } from '../api/mapSources';
 import { EditorPrefStore } from './EditorPrefStore';
-import { FeatureChange, LayerChange } from '@/gen/sync_schema';
+import { FeatureChange, LayerChange, SyncGeometry } from '@/gen/sync_schema';
 import fracIdxBetween from './fracIdxBetween';
 import { Changeset } from '../api/Changeset';
 import { deepEq } from '@/generic/equality';
@@ -275,6 +275,17 @@ export class EditorEngine {
     this._renderScene();
   }
 
+  _setActiveToolByGeometry(ty: SyncGeometry['type']): void {
+    switch (ty) {
+      case 'LineString':
+        this._setActiveTool('line');
+        break;
+      case 'Point':
+        this._setActiveTool('point');
+        break;
+    }
+  }
+
   getFeature(fid: string): SceneFeature | undefined {
     return this._sceneNodes.get(fid);
   }
@@ -364,7 +375,12 @@ export class EditorEngine {
         } else {
           this._selectedByMe.clear();
           this._selectedByMe.add(fid);
+
           this._active = fid;
+          const geom = this.getFeature(fid)?.geometry;
+          if (geom) {
+            this._setActiveToolByGeometry(geom.type);
+          }
         }
       }
     } else {
@@ -386,6 +402,7 @@ export class EditorEngine {
     if (this._selectedByMe.size === 0) return false;
     this._selectedByMe.clear();
     this._active = null;
+    this._activeTool = 'select';
     this._renderScene();
     return true;
   }
