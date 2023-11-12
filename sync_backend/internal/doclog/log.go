@@ -35,7 +35,7 @@ func Load(ctx context.Context, logger *zap.Logger, db Querier, mapId string) (l 
 		return
 	}
 
-	var entries []*Entry
+	var entries []Entry
 	var rows pgx.Rows
 	rows, err = db.Query(ctx, `SELECT generation_start, generation_end, changeset
 		FROM doclog
@@ -54,7 +54,7 @@ func Load(ctx context.Context, logger *zap.Logger, db Querier, mapId string) (l 
 		if entry.Changeset, err = deserData(changeset); err != nil {
 			return
 		}
-		entries = append(entries, &entry)
+		entries = append(entries, entry)
 	}
 	if err = rows.Err(); err != nil {
 		return
@@ -74,29 +74,39 @@ func Load(ctx context.Context, logger *zap.Logger, db Querier, mapId string) (l 
 type Log struct {
 	mapId   string
 	db      Querier
-	entries []*Entry
+	entries []Entry
 	l       *zap.SugaredLogger
 }
 
 type Entry struct {
-	GenerationStart uint64 // inclusive
-	GenerationEnd   uint64 // inclusive
-	Changeset       *sync_schema.Changeset
+	GenerationStart    uint64 // inclusive
+	GenerationEnd      uint64 // inclusive
+	Changeset          sync_schema.Changeset
+	compressedByteSize int
 }
 
 func (l *Log) Len() int {
 	return len(l.entries)
 }
 
-func (l *Log) Get() []*Entry {
+func (l *Log) ByteSize() int {
+	var size int
+	for _, entry := range l.entries {
+		size += entry.compressedByteSize
+	}
+	return size
+}
+
+func (l *Log) Get() []Entry {
 	return l.entries
 }
 
-func (l *Log) Push(ctx context.Context, entry *Entry) (err error) {
+func (l *Log) Push(ctx context.Context, entry Entry) (err error) {
 	var changeset []byte
 	if changeset, err = serData(entry.Changeset); err != nil {
 		return
 	}
+	entry.compressedByteSize = len(changeset)
 
 	_, err = l.db.Exec(ctx, `INSERT INTO doclog
 		(map_id, generation_start, generation_end, changeset)
@@ -116,11 +126,12 @@ func (l *Log) Push(ctx context.Context, entry *Entry) (err error) {
 	return
 }
 
-func (l *Log) Replace(ctx context.Context, entry *Entry) (err error) {
+func (l *Log) Replace(ctx context.Context, entry Entry) (err error) {
 	var changeset []byte
 	if changeset, err = serData(entry.Changeset); err != nil {
 		return
 	}
+	entry.compressedByteSize = len(changeset)
 
 	var tx pgx.Tx
 	if tx, err = l.db.Begin(ctx); err != nil {
@@ -154,7 +165,7 @@ func (l *Log) Replace(ctx context.Context, entry *Entry) (err error) {
 		return
 	}
 
-	l.entries = []*Entry{entry}
+	l.entries = []Entry{entry}
 
 	l.l.Infof("replaced %s with entry [%d, %d] (%d bytes) in doclog table",
 		l.mapId, entry.GenerationStart, entry.GenerationEnd, len(changeset))
@@ -162,7 +173,7 @@ func (l *Log) Replace(ctx context.Context, entry *Entry) (err error) {
 	return
 }
 
-func serData(v *schema.Changeset) ([]byte, error) {
+func serData(v schema.Changeset) ([]byte, error) {
 	uncompressed, err := v.MarshalJSON()
 	if err != nil {
 		return nil, err
@@ -180,20 +191,20 @@ func serData(v *schema.Changeset) ([]byte, error) {
 	return compressed.Bytes(), nil
 }
 
-func deserData(value []byte) (*schema.Changeset, error) {
+func deserData(value []byte) (schema.Changeset, error) {
 	reader, err := gzip.NewReader(bytes.NewReader(value))
 	if err != nil {
-		return nil, err
+		return schema.Changeset{}, err
 	}
 	var uncompressed bytes.Buffer
 	_, err = uncompressed.ReadFrom(reader)
 	if err != nil {
-		return nil, err
+		return schema.Changeset{}, err
 	}
 	var snapshot schema.Changeset
 	err = snapshot.UnmarshalJSON(uncompressed.Bytes())
 	if err != nil {
-		return nil, err
+		return schema.Changeset{}, err
 	}
-	return &snapshot, nil
+	return snapshot, nil
 }

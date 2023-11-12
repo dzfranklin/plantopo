@@ -157,7 +157,7 @@ func (s *Store) load() {
 
 		doc.FastForward(earliest.GenerationStart - 1)
 		for _, entry := range entries {
-			_, err = doc.Update(entry.Changeset)
+			_, err = doc.Update(&entry.Changeset)
 			if err != nil {
 				return
 			}
@@ -218,7 +218,7 @@ func (s *Store) save() error {
 	entry := &doclog.Entry{
 		GenerationStart: lastSaveG + 1,
 		GenerationEnd:   gEnd,
-		Changeset:       changes,
+		Changeset:       *changes,
 	}
 
 	var err error
