@@ -1,7 +1,13 @@
-import { LineStringSyncGeometry, SyncGeometry } from '@/gen/sync_schema';
+import { SyncGeometry } from '@/gen/sync_schema';
 import { EditorEngine } from '../../engine/EditorEngine';
 import { InteractionEvent, InteractionHandler } from './InteractionManager';
 import { RenderFeatureHandle } from '../FeatureRenderer';
+
+type DragRef = Pick<RenderFeatureHandle, 'handleType' | 'i'> & {
+  feature: {
+    id: string;
+  };
+};
 
 export class FeatureActionHandler implements InteractionHandler {
   cursor?: string | undefined;
@@ -48,9 +54,7 @@ export class FeatureActionHandler implements InteractionHandler {
     return false;
   }
 
-  private dragging: {
-    fid: string;
-  } | null = null;
+  private dragging: DragRef | null = null;
 
   onDragStart(evt: InteractionEvent, engine: EditorEngine): boolean {
     for (const hit of evt.queryHits()) {
@@ -58,14 +62,18 @@ export class FeatureActionHandler implements InteractionHandler {
       const h = hit.item;
       const g = h.feature.geometry;
       engine.changeFeature({
-        id: h.id,
-        geometry: computeGeometryForHandleDrag(h, g, evt.unproject()),
+        id: h.feature.id,
+        geometry: computeGeometryUpdate(h, g, evt.unproject()),
       });
-      this.dragging = {
-        fid: h.id,
-        type: h.type,
-        geometryType: g.type,
-      };
+      if (h.handleType === 'midpoint') {
+        this.dragging = {
+          handleType: 'point',
+          feature: { id: h.feature.id },
+          i: h.i + 1, // the vertex we just created
+        };
+      } else {
+        this.dragging = h;
+      }
       this.cursor = 'grabbing';
       return true;
     }
@@ -78,31 +86,22 @@ export class FeatureActionHandler implements InteractionHandler {
     engine: EditorEngine,
   ): boolean {
     if (this.dragging === null) return false;
-    const g = engine.getFeature(this.dragging.fid)?.geometry;
+    const g = engine.getFeature(this.dragging.feature.id)?.geometry;
     if (!g) return false;
     engine.changeFeature({
-      id: this.dragging.fid,
-      geometry: {
-        type: 'Point',
-        coordinates: computeGeometryForHandleDrag(
-          this.dragging,
-          g,
-          evt.unproject(),
-        ),
-      },
+      id: this.dragging.feature.id,
+      geometry: computeGeometryUpdate(this.dragging, g, evt.unproject()),
     });
     return true;
   }
 
   onDragEnd(evt: InteractionEvent, engine: EditorEngine): boolean {
     if (this.dragging === null) return false;
-
+    const g = engine.getFeature(this.dragging.feature.id)?.geometry;
+    if (!g) return false;
     engine.changeFeature({
-      id: this.dragging.fid,
-      geometry: {
-        type: 'Point',
-        coordinates: evt.unproject(),
-      },
+      id: this.dragging.feature.id,
+      geometry: computeGeometryUpdate(this.dragging, g, evt.unproject()),
     });
 
     this.dragging = null;
@@ -111,7 +110,7 @@ export class FeatureActionHandler implements InteractionHandler {
   }
 }
 
-function computeGeometryForHandleDrag(
+function computeGeometryUpdate(
   h: Pick<RenderFeatureHandle, 'handleType' | 'i'>,
   g: SyncGeometry,
   pt: [number, number],
