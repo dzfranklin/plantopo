@@ -49,12 +49,12 @@ export class CurrentCameraPosition {
 
   bboxPolygon(): BBoxPolygon {
     // TODO: This should take into account sidebarWidth
-    return bboxPolygon([
+    return bboxPolygonOf(
       this.bbox.minX,
       this.bbox.minY,
       this.bbox.maxX,
       this.bbox.maxY,
-    ]) as BBoxPolygon; // as we know it has a bbox property
+    );
   }
 
   // Hack: I should use https://github.com/proj4js/proj4js instead of keeping a
@@ -86,6 +86,14 @@ export class CurrentCameraPosition {
   }
 }
 
+export function bboxPolygonOf(
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number,
+): BBoxPolygon {
+  return bboxPolygon([minX, minY, maxX, maxY]) as BBoxPolygon; // as we know it has a bbox property
+}
 export interface BBoxPolygon extends GeoJSON.Feature<GeoJSON.Polygon> {
   bbox: GeoJSON.BBox;
 }

@@ -1,18 +1,20 @@
-import { RenderFeature } from '../FeatureRenderer';
+import {
+  RenderFeature,
+  RenderFeatureHandle,
+  RenderItem,
+} from '../FeatureRenderer';
 import RBush from 'rbush';
 import { BBox, bbox as computeBBox } from '@turf/turf';
 import { CreateFeatureHandler } from './CreateFeatureHandler';
 import { CurrentCameraPosition } from '../../CurrentCamera';
-import { FeatureHoverHandler as FeatureActionHandler } from './FeatureActionHandler';
+import { FeatureActionHandler as FeatureActionHandler } from './FeatureActionHandler';
 import { add2, magnitude2, sub2 } from '@/generic/vector2';
 import { clamp } from '@/generic/clamp';
 import * as ml from 'maplibre-gl';
 import { nearestPointInGeometry } from '../../nearestPointInFeature';
-import { SceneFeature } from '../../engine/Scene';
 import { EditorEngine } from '../../engine/EditorEngine';
 import { SyncGeometry } from '@/gen/sync_schema';
-
-// TODO: Should this be a maplibre handler at the top?
+import { BaseActionHandler as BaseInteractionHandler } from './BaseInteractionHandler';
 
 type ScreenXY = [number, number];
 type LngLat = [number, number];
@@ -51,36 +53,40 @@ export class InteractionEvent {
     return this._cachedLngLat;
   }
 
-  private _cachedHits: FeatureHit[] | null = null;
+  private _cachedHits: ItemHit[] | null = null;
 
   /** The first entry in the list is the feature on top */
-  queryHits(): FeatureHit[] {
+  queryHits(): ItemHit[] {
     if (this._cachedHits === null) {
       const value = this._scope
         .queryHits(this.screenXY, this.unproject())
-        .map((f) => new FeatureHitImpl(this, f));
+        .map((f) => new ItemHitImpl(this, f));
       this._cachedHits = value;
     }
     return this._cachedHits;
   }
 }
 
-export interface FeatureHit {
-  feature: SceneFeature;
+export interface ItemHit {
+  item: RenderItem;
 
-  /** Pixel distance from the event to the nearest point on the feature */
+  /** Pixel distance from the event to:
+   *
+   * - If a feature: the nearest point in the feature
+   * - If a handle: the handle
+   */
   minPixelsTo(): number;
 }
 
-class FeatureHitImpl implements FeatureHit {
+class ItemHitImpl implements ItemHit {
   constructor(
     private scope: InteractionEvent,
-    public feature: SceneFeature,
+    public item: RenderItem,
   ) {}
 
   minPixelsTo(): number {
     const cam = this.scope.camera;
-    const g = this.feature.geometry!;
+    const g = this.item.geometry!;
     const targetS = this.scope.screenXY; // target, screen space
     let pM: GeoJSON.Position; // nearest point, map space
     let depth = 0; // pixels from pM to edge
@@ -124,7 +130,8 @@ export interface InteractionHandler {
 
 interface IndexEntry {
   id: string;
-  idx: number;
+  linearIdx: number;
+  item: RenderFeature | RenderFeatureHandle;
   // Required by rbush
   minX: number;
   minY: number;
@@ -166,6 +173,7 @@ export class InteractionManager {
   handlers: InteractionHandler[] = [
     new FeatureActionHandler(),
     new CreateFeatureHandler(),
+    new BaseInteractionHandler(),
   ];
 
   private _boundOnPointer = this._onPointer.bind(this);
@@ -215,7 +223,7 @@ export class InteractionManager {
     this._elem.remove();
   }
 
-  register(render: RenderFeature[], camera: CurrentCameraPosition) {
+  register(render: RenderItem[], camera: CurrentCameraPosition) {
     this.cam = camera;
 
     const entries: IndexEntry[] = [];
@@ -224,7 +232,8 @@ export class InteractionManager {
       const [minX, minY, maxX, maxY] = this._computeBboxCached(f.geometry);
       entries.push({
         id: f.id,
-        idx: i,
+        linearIdx: i,
+        item: f,
         minX,
         minY,
         maxX,
@@ -236,7 +245,7 @@ export class InteractionManager {
     this._rbush.load(entries);
   }
 
-  queryHits(screen: ScreenXY, lngLat: LngLat): SceneFeature[] {
+  queryHits(screen: ScreenXY, lngLat: LngLat): RenderItem[] {
     // Convert from centered around `screen` to crs
     const p = this.unproject(add2(screen, this.querySlop));
     const slop = sub2(p, lngLat);
@@ -252,18 +261,10 @@ export class InteractionManager {
       maxY: latA > latB ? latA : latB,
     };
 
-    const hits = this._rbush.search(query);
-    hits.sort((a, b) => b.idx - a.idx);
-
-    const features: SceneFeature[] = [];
-    for (const hit of hits) {
-      const value = this._engine.getFeature(hit.id);
-      if (value) {
-        features.push(value);
-      }
-    }
-
-    return features;
+    return this._rbush
+      .search(query)
+      .sort((a, b) => b.linearIdx - a.linearIdx)
+      .map((e) => e.item);
   }
 
   private _pointers: PointerState[] = [];
@@ -350,7 +351,7 @@ export class InteractionManager {
               this._fire(evt, 'onPress', ievt, this._engine);
             }
             this._lastPinchGap = pinchGap;
-          } else if (d(p.down, pt) > 10) {
+          } else if (d(p.down, pt) > 1) {
             // IS DRAG
             p.couldBePress = false;
             p.inDrag = true;

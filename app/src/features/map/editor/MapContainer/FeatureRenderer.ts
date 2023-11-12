@@ -1,22 +1,27 @@
-import { BBoxPolygon, CurrentCameraPosition } from '../CurrentCamera';
+import { BBoxPolygon } from '../CurrentCamera';
 import { Scene, SceneFeature, SceneRootFeature } from '../engine/Scene';
 import { booleanContains } from '@turf/turf';
 import booleanIntersects from '@turf/boolean-intersects';
 import { SyncGeometry } from '@/gen/sync_schema';
+import { midpoint2 } from '@/generic/vector2';
 
-export interface RenderFeatureList {
+export interface RenderList {
   timing: {
     scene: Scene['timing'];
     start: number;
     end: number;
   };
-  list: RenderFeature[];
+  list: RenderItem[];
 }
 
+export type RenderItem = RenderFeature | RenderFeatureHandle;
+
 export interface RenderFeature {
+  type: 'feature';
   id: string;
   children: RenderFeature[];
 
+  active: boolean;
   selectedByMe: boolean;
   selectedByPeers: string[] | null;
   hoveredByMe: boolean;
@@ -27,6 +32,22 @@ export interface RenderFeature {
   color: string;
 }
 
+export interface RenderFeatureHandle {
+  type: 'handle';
+  /** id of the handle (not the id of the feature) */
+  id: string;
+  feature: RenderFeature;
+  handleType: 'point' | 'midpoint';
+  /** i is an index into `geometry.coordinates`. For a point this is the index
+   * of the point. For a midpoint it is the index of the vertex before it.
+   */
+  i: number;
+  geometry: {
+    type: 'Point';
+    coordinates: [number, number];
+  };
+}
+
 interface Inherited {
   color: string;
 }
@@ -34,12 +55,8 @@ interface Inherited {
 const ROOT_INHERITED: Inherited = { color: '#000000' };
 
 export class FeatureRenderer {
-  // TODO: Write code to import a large gpx to test perf
-
-  render(scene: Scene, camera: CurrentCameraPosition): RenderFeatureList {
+  render(scene: Scene, clipBox: BBoxPolygon): RenderList {
     const start = performance.now();
-    // TODO: Make a little bigger
-    const clipBox = camera.bboxPolygon();
 
     const list: RenderFeature[] = [];
     this._render(clipBox, ROOT_INHERITED, scene.features.root, list);
@@ -51,16 +68,15 @@ export class FeatureRenderer {
     clipBox: BBoxPolygon,
     inherited: Inherited,
     feature: SceneRootFeature | SceneFeature,
-    out: RenderFeature[],
+    out: RenderItem[],
   ) {
     const [newInherited, itself] = this._renderItself(
       clipBox,
       inherited,
       feature,
     );
-
-    if (itself) {
-      out.push(itself);
+    for (const item of itself) {
+      out.push(item);
     }
 
     for (const child of feature.children) {
@@ -72,10 +88,10 @@ export class FeatureRenderer {
     clipBox: BBoxPolygon,
     inherited: Inherited,
     feature: SceneRootFeature | SceneFeature,
-  ): [Inherited | null, RenderFeature | null] {
+  ): [Inherited | null, RenderItem[]] {
     if (!feature.parent) {
       // The root isn't rendered itself
-      return [null, null];
+      return [null, []];
     }
 
     let newInherited = null;
@@ -84,30 +100,85 @@ export class FeatureRenderer {
     }
 
     if (!feature.geometry || feature.hidden) {
-      return [newInherited, null];
+      return [newInherited, []];
     }
 
     let geometry: SyncGeometry;
     if (feature.geometry.type === 'Point') {
       if (!booleanContains(clipBox, feature.geometry)) {
-        return [newInherited, null];
+        return [newInherited, []];
       }
       geometry = feature.geometry;
     } else if (feature.geometry.type === 'LineString') {
       if (!booleanIntersects(feature.geometry, clipBox)) {
-        return [newInherited, null];
+        return [newInherited, []];
       }
       geometry = feature.geometry;
     } else {
-      return [newInherited, null];
+      return [newInherited, []];
     }
 
-    const itself: RenderFeature = {
+    const itself: RenderItem[] = [];
+
+    const rf: RenderFeature = {
       ...feature,
+      type: 'feature',
       children: [],
       geometry,
       color: feature.color ?? inherited.color,
     };
+    itself.push(rf);
+
+    if (feature.active) {
+      switch (feature.geometry.type) {
+        case 'Point': {
+          const coord = geometry.coordinates as [number, number];
+          itself.push({
+            type: 'handle',
+            feature: rf,
+            id: `${feature.id}-h`,
+            i: 0,
+            handleType: 'point',
+            geometry: {
+              type: 'Point',
+              coordinates: coord,
+            },
+          });
+          break;
+        }
+        case 'LineString': {
+          const coords = geometry.coordinates as [number, number][];
+          for (const [i, coord] of coords.entries()) {
+            itself.push({
+              type: 'handle',
+              feature: rf,
+              id: `${feature.id}-hv${i}`,
+              i,
+              handleType: 'point',
+              geometry: {
+                type: 'Point',
+                coordinates: coord,
+              },
+            });
+
+            if (i < coords.length - 1) {
+              const nextCoord = coords[i + 1]!;
+              itself.push({
+                type: 'handle',
+                feature: rf,
+                id: `${feature.id}-hm${i}`,
+                i,
+                handleType: 'midpoint',
+                geometry: {
+                  type: 'Point',
+                  coordinates: midpoint2(coord, nextCoord),
+                },
+              });
+            }
+          }
+        }
+      }
+    }
 
     return [newInherited, itself];
   }

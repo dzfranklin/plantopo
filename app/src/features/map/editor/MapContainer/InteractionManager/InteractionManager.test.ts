@@ -28,8 +28,10 @@ let engine: EditorEngine;
 let nextFid = 1;
 const makeFeature = (props: Partial<RenderFeature> = {}): RenderFeature => ({
   ...props,
+  type: 'feature',
   id: `fake-${nextFid++}`,
   children: [],
+  active: false,
   selectedByMe: false,
   selectedByPeers: null,
   hoveredByMe: false,

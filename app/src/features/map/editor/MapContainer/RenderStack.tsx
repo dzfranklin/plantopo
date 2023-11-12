@@ -116,7 +116,10 @@ export function RenderStack({
       }
       lastSelection = scene.features.selectedByMe;
 
-      const renderList = featureRenderer.render(scene, camera);
+      // TODO: Make a little bigger
+      const clipBox = camera.bboxPolygon();
+
+      const renderList = featureRenderer.render(scene, clipBox);
       featurePainter.paint(camera, renderList);
       interactionManager.register(renderList.list, camera);
     };

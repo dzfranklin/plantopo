@@ -1,13 +1,22 @@
+import { SyncGeometry } from '@/gen/sync_schema';
 import { EditorEngine } from '../../engine/EditorEngine';
 import { InteractionEvent, InteractionHandler } from './InteractionManager';
+import { RenderFeatureHandle } from '../FeatureRenderer';
 
-export class FeatureHoverHandler implements InteractionHandler {
+type DragRef = Pick<RenderFeatureHandle, 'handleType' | 'i'> & {
+  feature: {
+    id: string;
+  };
+};
+
+export class FeatureActionHandler implements InteractionHandler {
   cursor?: string | undefined;
+  lineCreationRun?: string;
 
   onHover(evt: InteractionEvent, engine: EditorEngine): boolean {
     for (const hit of evt.queryHits()) {
       if (hit.minPixelsTo() < 0.5) {
-        engine.setHovered(hit.feature.id);
+        engine.setHovered(hit.item.id);
         this.cursor = 'pointer';
         return true;
       }
@@ -18,29 +27,29 @@ export class FeatureHoverHandler implements InteractionHandler {
   }
 
   onPress(evt: InteractionEvent, engine: EditorEngine): boolean {
-    const activeTool = engine.scene.activeTool;
-    const activeFeature = engine.scene.activeFeature;
-    if (
-      activeTool === 'line' &&
-      activeFeature?.geometry?.type === 'LineString'
-    ) {
-      const coordinates = [
-        ...activeFeature.geometry.coordinates,
-        evt.unproject(),
-      ];
-      engine.changeFeature({
-        id: activeFeature.id,
-        geometry: { type: 'LineString', coordinates },
-      });
-      return true;
+    const at = engine.scene.activeTool;
+    const af = engine.scene.activeFeature;
+    if (at === 'line' && af?.geometry?.type === 'LineString') {
+      if (af.geometry.coordinates.length < 2) {
+        this.lineCreationRun = af.id;
+      }
+      if (this.lineCreationRun === af.id) {
+        engine.changeFeature({
+          id: af.id,
+          geometry: {
+            type: 'LineString',
+            coordinates: [...af.geometry.coordinates, evt.unproject()],
+          },
+        });
+        return true;
+      }
     }
+
+    this.lineCreationRun = undefined;
 
     for (const hit of evt.queryHits()) {
       if (hit.minPixelsTo() < 0.5) {
-        engine.toggleSelection(
-          hit.feature.id,
-          evt.shiftKey ? 'multi' : 'single',
-        );
+        engine.toggleSelection(hit.item.id, evt.shiftKey ? 'multi' : 'single');
         this.cursor = 'pointer';
         return true;
       }
@@ -49,25 +58,28 @@ export class FeatureHoverHandler implements InteractionHandler {
     return false;
   }
 
-  private dragging: string | null = null;
+  private dragging: DragRef | null = null;
 
   onDragStart(evt: InteractionEvent, engine: EditorEngine): boolean {
     for (const hit of evt.queryHits()) {
-      if (!hit.feature.active) continue;
-      if (hit.feature.geometry?.type === 'Point' && hit.minPixelsTo() < 0.5) {
-        this.dragging = hit.feature.id;
-
-        engine.changeFeature({
-          id: hit.feature.id,
-          geometry: {
-            type: 'Point',
-            coordinates: evt.unproject(),
-          },
-        });
-
-        this.cursor = 'grabbing';
-        return true;
+      if (hit.item.type !== 'handle' || hit.minPixelsTo() > 0.5) continue;
+      const h = hit.item;
+      const g = h.feature.geometry;
+      engine.changeFeature({
+        id: h.feature.id,
+        geometry: computeGeometryUpdate(h, g, evt.unproject()),
+      });
+      if (h.handleType === 'midpoint') {
+        this.dragging = {
+          handleType: 'point',
+          feature: { id: h.feature.id },
+          i: h.i + 1, // the vertex we just created
+        };
+      } else {
+        this.dragging = h;
       }
+      this.cursor = 'grabbing';
+      return true;
     }
     return false;
   }
@@ -78,29 +90,54 @@ export class FeatureHoverHandler implements InteractionHandler {
     engine: EditorEngine,
   ): boolean {
     if (this.dragging === null) return false;
+    const g = engine.getFeature(this.dragging.feature.id)?.geometry;
+    if (!g) return false;
     engine.changeFeature({
-      id: this.dragging,
-      geometry: {
-        type: 'Point',
-        coordinates: evt.unproject(),
-      },
+      id: this.dragging.feature.id,
+      geometry: computeGeometryUpdate(this.dragging, g, evt.unproject()),
     });
     return true;
   }
 
   onDragEnd(evt: InteractionEvent, engine: EditorEngine): boolean {
     if (this.dragging === null) return false;
-
+    const g = engine.getFeature(this.dragging.feature.id)?.geometry;
+    if (!g) return false;
     engine.changeFeature({
-      id: this.dragging,
-      geometry: {
-        type: 'Point',
-        coordinates: evt.unproject(),
-      },
+      id: this.dragging.feature.id,
+      geometry: computeGeometryUpdate(this.dragging, g, evt.unproject()),
     });
 
     this.dragging = null;
     this.cursor = undefined;
     return true;
+  }
+}
+
+function computeGeometryUpdate(
+  h: Pick<RenderFeatureHandle, 'handleType' | 'i'>,
+  g: SyncGeometry,
+  pt: [number, number],
+): SyncGeometry {
+  switch (g.type) {
+    case 'Point':
+      return {
+        type: 'Point',
+        coordinates: pt,
+      };
+    case 'LineString':
+      const coords = [...g.coordinates];
+      switch (h.handleType) {
+        case 'point':
+          coords[h.i] = pt;
+          break;
+        case 'midpoint':
+          coords.splice(h.i + 1, 0, pt);
+          break;
+      }
+      return {
+        type: 'LineString',
+        coordinates: coords,
+      };
   }
 }
