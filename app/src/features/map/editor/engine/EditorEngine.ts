@@ -156,6 +156,7 @@ export class EditorEngine {
         this._transport.send({
           aware,
         });
+        lastAwareSent = aware;
       }
     }, SEND_INTERVAL);
   }
