@@ -178,10 +178,10 @@ export function RenderStack({
     <>
       <canvas
         ref={canvasRef}
-        className="absolute z-[1] inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none"
       />
 
-      <div className="absolute z-[2] flex justify-end pointer-events-none bottom-[1px] right-[1px]">
+      <div className="absolute flex justify-end pointer-events-none bottom-[1px] right-[1px]">
         <ProgressBar
           isIndeterminate
           isHidden={!isLoadingContent}
