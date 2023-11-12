@@ -105,7 +105,10 @@ func (d *Deployment) Run(dryRun bool, baseDir string) error {
 			"http://localhost.dfusercontent.com:3000",
 		}, ",")
 	} else {
-		permittedOrigins = "https://plantopo.com"
+		permittedOrigins = strings.Join([]string{
+			"https://plantopo.com",
+			"https://dev-local.plantopo.com",
+		}, ",")
 	}
 
 	specValues := map[string]string{
