@@ -747,6 +747,25 @@ export class EditorEngine {
   addUndoStatusListener(cb: (status: UndoStatus) => any): () => void {
     return this._stateManager.addUndoStatusListener(cb);
   }
+
+  /** execute debug command */
+  executeDbg(cmd: 'local-export'): void {
+    switch (cmd) {
+      case 'local-export': {
+        const value = this._stateManager.toChange();
+        const json = JSON.stringify(value, null, 4);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const node = document.createElement('a');
+        node.href = url;
+        node.download = this.mapId + '-localexport.json';
+        node.click();
+        break;
+      }
+      default:
+        throw new Error(`Unknown dbg command: ${cmd}}`);
+    }
+  }
 }
 
 interface SceneSelectorEntry {

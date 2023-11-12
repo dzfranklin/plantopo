@@ -19,15 +19,38 @@ import { useMapId } from '../useMapId';
 import { KeybindingDisplay } from '../../../keybinding/KeybindingDisplay';
 import { EngineCommand } from '../engine/EditorEngine';
 import { keyBindingToString } from '../engine/Keymap';
+import { useDebugMode } from '../useDebugMode';
+import { useDebugAction, DebugMenu } from './DebugMenu';
 
 export function TitlebarMenu() {
   const engine = useEngine();
   const mapId = useMapId();
   const meta = useMapMeta(mapId);
   const [dialog, setDialog] = useState<'import' | 'share' | null>(null);
+  const debugAction = useDebugAction();
+  const [debugMode] = useDebugMode();
 
   return (
     <div className="mt-0.5">
+      <Menu
+        name="File"
+        isDisabled={!(engine && meta.data)}
+        onAction={(id) => {
+          if (id.startsWith('dbg:')) {
+            debugAction(id);
+          }
+        }}
+      >
+        {!debugMode ? (
+          <MenuItem id="dbg:toggle">Developer mode</MenuItem>
+        ) : (
+          <>
+            <MenuItem id="dbg:toggle">Disable developer mode</MenuItem>
+            <DebugMenu />
+          </>
+        )}
+      </Menu>
+
       <Menu
         name="Edit"
         isDisabled={!(engine && meta.data)}
@@ -132,7 +155,7 @@ function Menu({
   );
 }
 
-function MenuItem(
+export function MenuItem(
   props: ItemProps & { cmd?: EngineCommand; children: React.ReactNode },
 ) {
   return (

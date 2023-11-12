@@ -98,6 +98,10 @@ export class StateManager {
     return this._store.toState();
   }
 
+  toChange(): Changeset | null {
+    return this._store.toChange();
+  }
+
   private _onTransportStatus(status: SyncTransportStatus) {
     if (status.type === 'connected') {
       // on the next send interval resend any un-acked changes
