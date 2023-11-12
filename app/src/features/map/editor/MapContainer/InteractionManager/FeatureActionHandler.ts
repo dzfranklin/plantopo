@@ -11,6 +11,7 @@ type DragRef = Pick<RenderFeatureHandle, 'handleType' | 'i'> & {
 
 export class FeatureActionHandler implements InteractionHandler {
   cursor?: string | undefined;
+  lineCreationRun?: string;
 
   onHover(evt: InteractionEvent, engine: EditorEngine): boolean {
     for (const hit of evt.queryHits()) {
@@ -26,22 +27,25 @@ export class FeatureActionHandler implements InteractionHandler {
   }
 
   onPress(evt: InteractionEvent, engine: EditorEngine): boolean {
-    const activeTool = engine.scene.activeTool;
-    const activeFeature = engine.scene.activeFeature;
-    if (
-      activeTool === 'line' &&
-      activeFeature?.geometry?.type === 'LineString'
-    ) {
-      const coordinates = [
-        ...activeFeature.geometry.coordinates,
-        evt.unproject(),
-      ];
-      engine.changeFeature({
-        id: activeFeature.id,
-        geometry: { type: 'LineString', coordinates },
-      });
-      return true;
+    const at = engine.scene.activeTool;
+    const af = engine.scene.activeFeature;
+    if (at === 'line' && af?.geometry?.type === 'LineString') {
+      if (af.geometry.coordinates.length < 2) {
+        this.lineCreationRun = af.id;
+      }
+      if (this.lineCreationRun === af.id) {
+        engine.changeFeature({
+          id: af.id,
+          geometry: {
+            type: 'LineString',
+            coordinates: [...af.geometry.coordinates, evt.unproject()],
+          },
+        });
+        return true;
+      }
     }
+
+    this.lineCreationRun = undefined;
 
     for (const hit of evt.queryHits()) {
       if (hit.minPixelsTo() < 0.5) {

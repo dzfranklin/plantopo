@@ -38,35 +38,6 @@ describe('onHover', () => {
 });
 
 describe('onPress', () => {
-  it('adds a coordinate to a line feature when activeTool=line', () => {
-    const evt = {
-      shiftKey: false,
-      unproject: () => [1, 2],
-      queryHits: () => [],
-    } as any;
-    const engine = {
-      scene: {
-        activeTool: 'line',
-        activeFeature: {
-          id: 'foo',
-          geometry: { type: 'LineString', coordinates: [[0, 0]] },
-        },
-      },
-      changeFeature: jest.fn(),
-    } as any;
-    subject.onPress(evt, engine);
-    expect(engine.changeFeature).toHaveBeenCalledWith({
-      id: 'foo',
-      geometry: {
-        type: 'LineString',
-        coordinates: [
-          [0, 0],
-          [1, 2],
-        ],
-      },
-    });
-  });
-
   it('toggles the selection of a feature when activeTool=select', () => {
     const evt = {
       shiftKey: false,
@@ -90,6 +61,137 @@ describe('onPress', () => {
     } as any;
     subject.onPress(evt, engine);
     expect(engine.toggleSelection).toHaveBeenCalledWith('foo', 'single');
+  });
+
+  describe('where activeTool=line', () => {
+    it('appends a run of points to the empty active feature', () => {
+      // INITIAL PRESS
+
+      const evt1 = {
+        unproject: () => [1, 2],
+      } as any;
+      const engine1 = {
+        scene: {
+          activeTool: 'line',
+          activeFeature: {
+            id: 'foo',
+            geometry: { type: 'LineString', coordinates: [[0, 0]] },
+          },
+        },
+        changeFeature: jest.fn(),
+      } as any;
+
+      subject.onPress(evt1, engine1);
+      expect(engine1.changeFeature).toHaveBeenCalledWith({
+        id: 'foo',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [0, 0],
+            [1, 2],
+          ],
+        },
+      });
+
+      // FIRST SUBSEQUENT PRESS
+
+      const evt2 = {
+        unproject: () => [3, 4],
+      } as any;
+      const engine2 = {
+        scene: {
+          activeTool: 'line',
+          activeFeature: {
+            id: 'foo',
+            geometry: {
+              type: 'LineString',
+              coordinates: [
+                [0, 0],
+                [1, 2],
+              ],
+            },
+          },
+        },
+        changeFeature: jest.fn(),
+      } as any;
+
+      subject.onPress(evt2, engine2);
+      expect(engine2.changeFeature).toHaveBeenCalledWith({
+        id: 'foo',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [0, 0],
+            [1, 2],
+            [3, 4],
+          ],
+        },
+      });
+
+      // SECOND SUBSEQUENT PRESS
+
+      const evt3 = {
+        unproject: () => [5, 6],
+      } as any;
+
+      const engine3 = {
+        scene: {
+          activeTool: 'line',
+          activeFeature: {
+            id: 'foo',
+            geometry: {
+              type: 'LineString',
+              coordinates: [
+                [0, 0],
+                [1, 2],
+                [3, 4],
+              ],
+            },
+          },
+        },
+        changeFeature: jest.fn(),
+      } as any;
+
+      subject.onPress(evt3, engine3);
+      expect(engine3.changeFeature).toHaveBeenCalledWith({
+        id: 'foo',
+        geometry: {
+          type: 'LineString',
+          coordinates: [
+            [0, 0],
+            [1, 2],
+            [3, 4],
+            [5, 6],
+          ],
+        },
+      });
+    });
+
+    it('does not append a run of points to the non-empty active feature', () => {
+      const evt1 = {
+        unproject: () => [1, 2],
+        queryHits: () => [],
+      } as any;
+      const engine1 = {
+        scene: {
+          activeTool: 'line',
+          activeFeature: {
+            id: 'foo',
+            geometry: {
+              type: 'LineString',
+              coordinates: [
+                [1, 1],
+                [1, 2],
+              ],
+            },
+          },
+        },
+        changeFeature: jest.fn(),
+      } as any;
+
+      subject.onPress(evt1, engine1);
+      expect(engine1.changeFeature).not.toHaveBeenCalled();
+    });
   });
 });
 
