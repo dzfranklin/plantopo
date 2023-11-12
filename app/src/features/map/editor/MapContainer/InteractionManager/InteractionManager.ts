@@ -351,7 +351,7 @@ export class InteractionManager {
               this._fire(evt, 'onPress', ievt, this._engine);
             }
             this._lastPinchGap = pinchGap;
-          } else if (d(p.down, pt) > 10) {
+          } else if (d(p.down, pt) > 1) {
             // IS DRAG
             p.couldBePress = false;
             p.inDrag = true;
