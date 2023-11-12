@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/danielzfranklin/plantopo/db"
 	"github.com/danielzfranklin/plantopo/sync_backend/internal/doclog"
 	"github.com/danielzfranklin/plantopo/sync_backend/internal/docstore"
 	"github.com/jackc/pgx/v5"
@@ -101,6 +102,7 @@ func main() {
 	if err != nil {
 		l.Panicw("Failed to parse DATABASE_URL", zap.Error(err))
 	}
+	dbCfg.ConnConfig.Tracer = db.QueryTracer(l.Desugar())
 	dbCfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) (err error) {
 		if _, err = conn.Exec(ctx, `SET search_path TO pt`); err != nil {
 			return
