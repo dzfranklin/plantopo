@@ -26,6 +26,7 @@ import { isMac as platformIsMac } from '@/features/platformIsMac';
 
 const ROOT_FID = '';
 const SEND_INTERVAL = 15; // ms
+const MIN_AWARE_SEND_INTERVAL = 1000; // ms
 
 export type LayerInsertPlace =
   | { at: 'first' }
@@ -150,13 +151,18 @@ export class EditorEngine {
     this._sidebarWidth = this._prefs.sidebarWidth();
 
     let lastAwareSent: SetAwareRequest | undefined = undefined;
+    let lastAwareSendTime = 0;
     this._awareSendInterval = window.setInterval(() => {
       const aware = this._makeSetAwareRequest();
-      if (!deepEq(aware, lastAwareSent)) {
+      if (
+        Date.now() - lastAwareSendTime > MIN_AWARE_SEND_INTERVAL ||
+        !deepEq(aware, lastAwareSent)
+      ) {
         this._transport.send({
           aware,
         });
         lastAwareSent = aware;
+        lastAwareSendTime = Date.now();
       }
     }, SEND_INTERVAL);
   }
