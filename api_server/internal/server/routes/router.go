@@ -123,25 +123,26 @@ func logMiddleware(next http.Handler) http.Handler {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		if !isPermittedOrigin(origin) {
-			writeError(r, w, &ErrorReply{
-				Code:    http.StatusForbidden,
-				Message: "origin not allowed",
-			})
-			return
-		}
-
 		if r.Method == "OPTIONS" {
+			origin := r.Header.Get("Origin")
+			if !isPermittedOrigin(origin) {
+				writeError(r, w, &ErrorReply{
+					Code:    http.StatusForbidden,
+					Message: "origin not allowed",
+				})
+				return
+			}
+
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", permittedMethods)
 			w.Header().Set("Access-Control-Allow-Headers", permittedHeaders)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 			w.Header().Set("Access-Control-Max-Age", "86400") // 1 day
 			w.WriteHeader(http.StatusOK)
-		} else {
-			next.ServeHTTP(w, r)
+			return
 		}
+
+		next.ServeHTTP(w, r)
 	})
 }
 
