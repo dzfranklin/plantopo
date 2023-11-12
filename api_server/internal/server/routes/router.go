@@ -124,15 +124,7 @@ func logMiddleware(next http.Handler) http.Handler {
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		permit := false
-		for _, p := range permittedOrigins {
-			if origin == p {
-				permit = true
-				break
-			}
-		}
-
-		if !permit {
+		if !isPermittedOrigin(origin) {
 			writeError(r, w, &ErrorReply{
 				Code:    http.StatusForbidden,
 				Message: "origin not allowed",
@@ -151,6 +143,15 @@ func corsMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		}
 	})
+}
+
+func isPermittedOrigin(origin string) bool {
+	for _, p := range permittedOrigins {
+		if origin == p {
+			return true
+		}
+	}
+	return false
 }
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
