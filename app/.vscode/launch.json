@@ -11,6 +11,7 @@
       "url": "https://dev-local.plantopo.com",
       "runtimeArgs": [
         "--ignore-certificate-errors",
+        "--disable-web-security"
       ]
     }
   ]
