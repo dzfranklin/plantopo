@@ -123,33 +123,36 @@ func logMiddleware(next http.Handler) http.Handler {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
-		permit := false
-		for _, p := range permittedOrigins {
-			if origin == p {
-				permit = true
-				break
+		if r.Method == "OPTIONS" {
+			origin := r.Header.Get("Origin")
+			if !isPermittedOrigin(origin) {
+				writeError(r, w, &ErrorReply{
+					Code:    http.StatusForbidden,
+					Message: "origin not allowed",
+				})
+				return
 			}
-		}
 
-		if permit {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", permittedMethods)
 			w.Header().Set("Access-Control-Allow-Headers", permittedHeaders)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
-
-			if r.Method == "OPTIONS" {
-				w.WriteHeader(http.StatusOK)
-			} else {
-				next.ServeHTTP(w, r)
-			}
-		} else {
-			writeError(r, w, &ErrorReply{
-				Code:    http.StatusForbidden,
-				Message: "origin not allowed",
-			})
+			w.Header().Set("Access-Control-Max-Age", "86400") // 1 day
+			w.WriteHeader(http.StatusOK)
+			return
 		}
+
+		next.ServeHTTP(w, r)
 	})
+}
+
+func isPermittedOrigin(origin string) bool {
+	for _, p := range permittedOrigins {
+		if origin == p {
+			return true
+		}
+	}
+	return false
 }
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
