@@ -25,13 +25,7 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		origin := r.Header.Get("Origin")
-		for _, allowed := range permittedOrigins {
-			if origin == allowed {
-				return true
-			}
-		}
-		return false
+		return true
 	},
 	Error: func(w http.ResponseWriter, r *http.Request, status int, reason error) {
 		writeError(r, w, &ErrorReply{
@@ -55,8 +49,16 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 		"clientId", clientId,
 	)
 
-	// Note the upgrader checks the Origin header matches the Host header. Without
-	// that we couldn't rely on cookies for authentication.
+	// The browser doesn't send a preflight request to authorize websockets
+	origin := r.Header.Get("Origin")
+	if origin == "" || !isPermittedOrigin(origin) {
+		writeError(r, w, &ErrorReply{
+			Code:    http.StatusForbidden,
+			Message: "bad origin",
+		})
+		return
+	}
+
 	sess, err := s.SessionManager.Get(r)
 	if err != nil {
 		writeInternalError(r, w, err)
