@@ -19,15 +19,57 @@ import { useMapId } from '../useMapId';
 import { KeybindingDisplay } from '../../../keybinding/KeybindingDisplay';
 import { EngineCommand } from '../engine/EditorEngine';
 import { keyBindingToString } from '../engine/Keymap';
+import { useDebugMode } from '../useDebugMode';
+import { useDebugAction, DebugMenu } from './DebugMenu';
+import { ExportDialog } from '@/features/exporter/ExportDialog';
 
 export function TitlebarMenu() {
   const engine = useEngine();
   const mapId = useMapId();
   const meta = useMapMeta(mapId);
-  const [dialog, setDialog] = useState<'import' | 'share' | null>(null);
+  const [dialog, setDialog] = useState<'import' | 'export' | 'share' | null>(
+    null,
+  );
+  const debugAction = useDebugAction();
+  const [debugMode] = useDebugMode();
 
   return (
     <div className="mt-0.5">
+      <Menu
+        name="File"
+        isDisabled={!(engine && meta.data)}
+        onAction={(id) => {
+          if (id.startsWith('dbg:')) {
+            debugAction(id);
+          }
+          switch (id) {
+            case 'share':
+              setDialog('share');
+              break;
+            case 'import':
+              setDialog('import');
+              break;
+            case 'export':
+              setDialog('export');
+              break;
+          }
+        }}
+      >
+        <MenuItem id="share">Share</MenuItem>
+        <MenuItem id="import">Import</MenuItem>
+        <MenuItem id="export">Export</MenuItem>
+        <MenuSeparator />
+
+        {!debugMode ? (
+          <MenuItem id="dbg:toggle">Developer mode</MenuItem>
+        ) : (
+          <>
+            <MenuItem id="dbg:toggle">Disable developer mode</MenuItem>
+            <DebugMenu />
+          </>
+        )}
+      </Menu>
+
       <Menu
         name="Edit"
         isDisabled={!(engine && meta.data)}
@@ -39,12 +81,6 @@ export function TitlebarMenu() {
             case 'redo':
               engine?.execute('redo');
               break;
-            case 'import':
-              setDialog('import');
-              break;
-            case 'share':
-              setDialog('share');
-              break;
           }
         }}
       >
@@ -54,9 +90,6 @@ export function TitlebarMenu() {
         <MenuItem id="redo" cmd="redo">
           Redo
         </MenuItem>
-        <MenuSeparator />
-        <MenuItem id="share">Share</MenuItem>
-        <MenuItem id="import">Import</MenuItem>
       </Menu>
 
       <Menu
@@ -91,6 +124,7 @@ export function TitlebarMenu() {
         <DialogContainer onDismiss={() => setDialog(null)}>
           {dialog === 'share' && <MapShareDialog item={meta.data!} />}
           {dialog === 'import' && <ImportDialog mapId={engine!.mapId} />}
+          {dialog === 'export' && <ExportDialog mapId={engine!.mapId} />}
         </DialogContainer>
       )}
     </div>
@@ -132,7 +166,7 @@ function Menu({
   );
 }
 
-function MenuItem(
+export function MenuItem(
   props: ItemProps & { cmd?: EngineCommand; children: React.ReactNode },
 ) {
   return (

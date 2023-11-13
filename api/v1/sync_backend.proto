@@ -7,12 +7,15 @@ service SyncBackend {
   // SetupConnection is called by the matchmaker to setup a future connection by
   // the frontend
   rpc SetupConnection(SyncBackendSetupConnectionRequest)
-    returns (SyncBackendSetupConnectionResponse);
+      returns (SyncBackendSetupConnectionResponse);
 
   // Connect is called by the frontend to connect using a token returned by
   // SetupConnection
   rpc Connect(stream SyncBackendIncomingMessage)
-    returns (stream SyncBackendOutgoingMessage);
+      returns (stream SyncBackendOutgoingMessage);
+
+  rpc Export(SyncBackendExportRequest) returns (SyncBackendExportResponse);
+  rpc Import(SyncBackendImportRequest) returns (SyncBackendImportResponse);
 
   rpc Stats(google.protobuf.Empty) returns (google.protobuf.Struct);
 }
@@ -48,4 +51,26 @@ message SyncBackendOutgoingMessage {
   int32 ack = 1;
   bytes aware = 2; // json
   bytes change = 3; // json
+}
+
+message SyncBackendExportRequest {
+  SyncBackendConnectRequest connect = 1;
+  string format = 2;
+  string name = 4;
+  string filename = 3;
+}
+
+message SyncBackendExportResponse {
+  string url = 1;
+}
+
+message SyncBackendImportRequest {
+  SyncBackendConnectRequest connect = 1;
+  string url = 2;
+  string format = 3;
+  string import_id = 4;
+  string imported_from_filename = 5;
+}
+
+message SyncBackendImportResponse {
 }

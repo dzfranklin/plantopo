@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
@@ -20,6 +19,12 @@ import (
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
+
+type SyncerConnection interface {
+	SendUpdate(update *api.SyncBackendIncomingUpdate) error
+	Recv() (*api.SyncBackendOutgoingMessage, error)
+	Close()
+}
 
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -112,78 +117,25 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 		trustedAware.Name = user.FullName
 	}
 
-	l.Info("setting up connection with matchmaker")
-	resp, err := s.Matchmaker.SetupConnection(r.Context(), &api.MatchmakerSetupConnectionRequest{
-		MapId: mapId,
-	})
+	b, err := s.SyncConnector(r.Context(), clientId, mapId)
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			return
-		} else {
-			writeInternalError(r, w, err)
-			return
-		}
-	}
-	l = l.With("backend", resp.Backend)
-
-	l.Info("connecting to backend")
-	bClient, err := s.SyncBackends.Dial(resp.Backend)
-	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			return
-		} else {
-			writeInternalError(r, w,
-				fmt.Errorf("failed to dial backend (%s): %w", resp.Backend, err))
-			return
-		}
-	}
-	bCtx, cancelB := context.WithCancel(context.Background())
-	b, err := bClient.Connect(bCtx)
-	if err != nil {
-		cancelB()
-		if errors.Is(err, context.Canceled) {
-			return
-		} else {
-			writeInternalError(r, w,
-				fmt.Errorf("failed to connect to backend %s: %s", resp.Backend, err))
-			return
-		}
-	}
-	l.Info("sending connect to backend")
-	err = b.Send(&api.SyncBackendIncomingMessage{
-		Msg: &api.SyncBackendIncomingMessage_Connect{
-			Connect: &api.SyncBackendConnectRequest{
-				MapId:    mapId,
-				Token:    resp.Token,
-				ClientId: clientId,
-			},
-		},
-	})
-	if err != nil {
-		cancelB()
-		if errors.Is(err, context.Canceled) {
-			return
-		} else {
-			writeInternalError(r, w,
-				fmt.Errorf("failed to send connect to backend %s: %s", resp.Backend, err))
-			return
-		}
+		writeInternalError(r, w, err)
+		return
 	}
 
 	l.Info("upgrading")
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		// Upgrader handles writing the error
-		cancelB()
+		b.Close()
 		return
 	}
 	l.Info("upgraded")
 
 	state := &sockState{
-		l:       l,
-		conn:    conn,
-		b:       b,
-		cancelB: cancelB,
+		l:    l,
+		conn: conn,
+		b:    b,
 
 		trustedAware: trustedAware,
 	}
@@ -198,10 +150,9 @@ type incomingDto struct {
 }
 
 type sockState struct {
-	l       *zap.SugaredLogger
-	conn    *websocket.Conn
-	b       api.SyncBackend_ConnectClient
-	cancelB func()
+	l    *zap.SugaredLogger
+	conn *websocket.Conn
+	b    SyncerConnection
 
 	trustedAware sync_schema.TrustedAware
 }
@@ -219,7 +170,7 @@ func socketReader(
 			writeCloseMessage(s.conn, websocket.CloseNormalClosure, "")
 		}
 		_ = s.conn.Close()
-		s.cancelB()
+		s.b.Close()
 	}()
 	for {
 		var msg incomingDto
@@ -244,14 +195,10 @@ func socketReader(
 			return
 		}
 
-		err = s.b.Send(&api.SyncBackendIncomingMessage{
-			Msg: &api.SyncBackendIncomingMessage_Update{
-				Update: &api.SyncBackendIncomingUpdate{
-					Seq:    msg.Seq,
-					Aware:  aware,
-					Change: change,
-				},
-			},
+		err = s.b.SendUpdate(&api.SyncBackendIncomingUpdate{
+			Seq:    msg.Seq,
+			Aware:  aware,
+			Change: change,
 		})
 		if err != nil {
 			return
@@ -277,7 +224,7 @@ func socketWriter(s *sockState) {
 			writeCloseMessage(s.conn, websocket.CloseNormalClosure, "")
 		}
 		_ = s.conn.Close()
-		s.cancelB()
+		s.b.Close()
 	}()
 	for {
 		var msg *api.SyncBackendOutgoingMessage

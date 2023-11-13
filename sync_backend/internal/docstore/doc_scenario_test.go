@@ -33,7 +33,7 @@ func TestScenarios(t *testing.T) {
 func runScenario(t *testing.T, s scenarioModel) {
 	l := zaptest.NewLogger(t)
 
-	subject := newDocState(l, 0)
+	subject := NewDoc(l)
 	subject.rng = rand.New(rand.NewSource(0xdeadbeef))
 	subject.stableFindFeatureChanges = true
 

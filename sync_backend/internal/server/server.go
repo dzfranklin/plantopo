@@ -1,13 +1,21 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	signerv4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/danielzfranklin/plantopo/sync_backend/internal/converter"
 	"github.com/danielzfranklin/plantopo/sync_backend/internal/docstore"
+	"github.com/oklog/ulid/v2"
 	"go.uber.org/atomic"
+	"google.golang.org/grpc/status"
 	"io"
+	"net/http"
+	"time"
 
 	schema "github.com/danielzfranklin/plantopo/api/sync_schema"
 	api "github.com/danielzfranklin/plantopo/api/v1"
@@ -28,12 +36,15 @@ type Backend interface {
 }
 
 type Config struct {
-	Backend Backend
+	Backend      Backend
+	S3           S3
+	ExportBucket string
 }
 
 type grpcServer struct {
 	api.UnimplementedSyncBackendServer
 	*Config
+	importFetcher *http.Client
 }
 
 func NewGRPCServer(config *Config) (*grpc.Server, error) {
@@ -45,7 +56,12 @@ func NewGRPCServer(config *Config) (*grpc.Server, error) {
 }
 
 func newGrpcServer(config *Config) *grpcServer {
-	return &grpcServer{Config: config}
+	return &grpcServer{Config: config, importFetcher: &http.Client{}}
+}
+
+type S3 interface {
+	PresignGetObject(context.Context, *s3.GetObjectInput, ...func(*s3.PresignOptions)) (*signerv4.PresignedHTTPRequest, error)
+	PutObject(context.Context, *s3.PutObjectInput, ...func(*s3.Options)) (*s3.PutObjectOutput, error)
 }
 
 func (s *grpcServer) SetupConnection(
@@ -240,6 +256,90 @@ func (s *grpcServer) Connect(stream api.SyncBackend_ConnectServer) error {
 	case err = <-writerResult:
 	}
 	return err
+}
+
+func (s *grpcServer) Export(ctx context.Context, req *api.SyncBackendExportRequest) (*api.SyncBackendExportResponse, error) {
+	logger := zap.L().With(
+		zap.String("mapId", req.Connect.MapId),
+		zap.String("clientId", req.Connect.ClientId))
+
+	sess, err := s.Backend.Connect(req.Connect.MapId, req.Connect.Token, req.Connect.ClientId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect: %w", err)
+	}
+
+	_, cset, err := sess.DocStore().ChangesAfter(0)
+	if err != nil {
+		return nil, err
+	}
+
+	converted, err := converter.ConvertFromChangeset(logger, req.Format, req.Name, *cset)
+	if err != nil {
+		if errors.Is(err, converter.UnknownFormatError) {
+			return nil, status.Error(400, err.Error())
+		}
+		return nil, err
+	}
+
+	key := fmt.Sprintf("sync-backend-export/%s/%s", ulid.Make().String(), req.Filename)
+
+	_, err = s.S3.PutObject(ctx, &s3.PutObjectInput{
+		Bucket: &s.ExportBucket,
+		Key:    &key,
+		Body:   bytes.NewReader(converted),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	presign, err := s.S3.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: &s.ExportBucket,
+		Key:    &key,
+	}, func(options *s3.PresignOptions) {
+		options.Expires = 15 * time.Minute
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &api.SyncBackendExportResponse{Url: presign.URL}, nil
+}
+
+func (s *grpcServer) Import(ctx context.Context, req *api.SyncBackendImportRequest) (*api.SyncBackendImportResponse, error) {
+	logger := zap.L().With(
+		zap.String("mapId", req.Connect.MapId),
+		zap.String("clientId", req.Connect.ClientId),
+		zap.String("importId", req.ImportId))
+
+	fetchReq, err := http.NewRequestWithContext(ctx, "GET", req.Url, nil)
+	if err != nil {
+		return nil, err
+	}
+	fetch, err := s.importFetcher.Do(fetchReq)
+	if err != nil {
+		return nil, err
+	}
+	defer fetch.Body.Close()
+
+	cset, err := converter.ConvertToChangeset(logger, req.Format, req.ImportId, req.ImportedFromFilename, fetch.Body)
+	if err != nil {
+		if errors.Is(err, converter.UnknownFormatError) {
+			return nil, status.Error(400, err.Error())
+		}
+		return nil, err
+	}
+
+	sess, err := s.Backend.Connect(req.Connect.MapId, req.Connect.Token, req.Connect.ClientId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sess.DocStore().Update(cset)
+	if err != nil {
+		return nil, err
+	}
+
+	return &api.SyncBackendImportResponse{}, nil
 }
 
 func (s *grpcServer) Stats(_ context.Context, _ *emptypb.Empty) (*structpb.Struct, error) {

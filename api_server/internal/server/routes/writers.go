@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/danielzfranklin/plantopo/api_server/internal/rid"
+	"google.golang.org/grpc/status"
 	"net/http"
 
 	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
@@ -47,23 +48,27 @@ func writeData(r *http.Request, w http.ResponseWriter, value interface{}) {
 
 func writeError(r *http.Request, w http.ResponseWriter, err error) {
 	var errReply *ErrorReply
-	if !errors.As(err, &errReply) {
-		errReply = &ErrorReply{
-			Code:    http.StatusInternalServerError,
-			Message: "internal server error",
-		}
-	}
-
-	if errors.Is(err, context.Canceled) {
+	if errors.As(err, &errReply) {
+		// already an ErrorReply
+	} else if errors.Is(err, context.Canceled) {
 		errReply = &ErrorReply{
 			Code:    http.StatusRequestTimeout,
 			Message: "request canceled",
 		}
-	}
-	if errors.Is(err, context.DeadlineExceeded) {
+	} else if errors.Is(err, context.DeadlineExceeded) {
 		errReply = &ErrorReply{
 			Code:    http.StatusRequestTimeout,
 			Message: "deadline exceeded",
+		}
+	} else if st, ok := status.FromError(err); ok {
+		errReply = &ErrorReply{
+			Code:    int(st.Code()),
+			Message: st.Message(),
+		}
+	} else {
+		errReply = &ErrorReply{
+			Code:    http.StatusInternalServerError,
+			Message: "internal server error",
 		}
 	}
 

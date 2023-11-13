@@ -34,7 +34,7 @@ type Store struct {
 
 	status       int
 	readyWaiters []chan struct{}
-	doc          *docState
+	doc          *Doc
 	dl           DocLogger
 	subscribers  map[chan uint64]struct{}
 }
@@ -145,7 +145,7 @@ func (s *Store) load() {
 		return
 	}
 
-	doc := newDocState(s.l.Desugar(), 0)
+	doc := NewDoc(s.l.Desugar())
 	lastSaveG := uint64(0)
 	entries := dl.Get()
 	if len(entries) > 0 {

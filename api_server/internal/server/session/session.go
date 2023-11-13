@@ -57,6 +57,22 @@ func (m *Manager) Get(r *http.Request) (*Session, error) {
 	return m.getSess(r, s)
 }
 
+func (m *Manager) GetUserId(r *http.Request) (uuid.UUID, error) {
+	s, err := m.store.Get(r, "currentUser")
+	if err != nil {
+		return uuid.Nil, err
+	}
+	sess, err := m.getSess(r, s)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if sess == nil {
+		return uuid.Nil, nil
+	} else {
+		return sess.UserId, nil
+	}
+}
+
 // Create must be called in the handler before writing to response
 func (m *Manager) Create(r *http.Request, w http.ResponseWriter, user uuid.UUID) error {
 	s, err := m.store.Get(r, "currentUser")

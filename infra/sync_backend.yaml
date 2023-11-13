@@ -43,11 +43,23 @@ spec:
                   fieldPath: status.podIP
             - name: SELF_EXTERNAL_ADDR
               value: "$(__POD_IP):5050"
+            - name: EXPORT_BUCKET
+              value: "{{ .Values.exportBucket }}"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: db
                   key: DATABASE_URL
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: sync-backend-aws-credentials
+                  key: access_key_id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: sync-backend-aws-credentials
+                  key: secret_access_key
           ports:
             - containerPort: 5050
               name: grpc

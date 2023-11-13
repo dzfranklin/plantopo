@@ -11,6 +11,7 @@ import { AppErrorBoundary } from '@/features/error/AppErrorBoundary';
 import { FaroSDK } from '@/features/FaroSDK';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { DebugModeProvider } from '@/features/map/editor/useDebugMode';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -38,24 +39,26 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   return (
-    <AppErrorBoundary>
-      <FaroSDK />
-      <QueryClientProvider client={queryClient}>
-        <SpectrumProvider
-          theme={defaultSpectrumTheme}
-          router={{ navigate: router.push }}
-          // Set render consistently on the server so Next.js can
-          // rehydrate. Is there a better way to do this?
-          locale="en-US"
-          scale="medium"
-          colorScheme="light"
-          minHeight="100vh"
-        >
-          {children}
-          <div id="portal-container" className="z-[60]"></div>
-          <ReactQueryDevtools initialIsOpen={false} />
-        </SpectrumProvider>
-      </QueryClientProvider>
-    </AppErrorBoundary>
+    <DebugModeProvider>
+      <AppErrorBoundary>
+        <FaroSDK />
+        <QueryClientProvider client={queryClient}>
+          <SpectrumProvider
+            theme={defaultSpectrumTheme}
+            router={{ navigate: router.push }}
+            // Set render consistently on the server so Next.js can
+            // rehydrate. Is there a better way to do this?
+            locale="en-US"
+            scale="medium"
+            colorScheme="light"
+            minHeight="100vh"
+          >
+            {children}
+            <div id="portal-container" className="z-[60]"></div>
+            <ReactQueryDevtools initialIsOpen={false} />
+          </SpectrumProvider>
+        </QueryClientProvider>
+      </AppErrorBoundary>
+    </DebugModeProvider>
   );
 }
