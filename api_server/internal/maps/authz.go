@@ -43,6 +43,42 @@ const (
 	RoleViewer Role = "viewer"
 )
 
+func roleCmp(a Role, b Role) int {
+	if a == b {
+		return 0
+	}
+
+	if a == RoleOwner {
+		return 1
+	}
+	if b == RoleOwner {
+		return -1
+	}
+
+	if a == RoleEditor {
+		return 1
+	}
+	if b == RoleEditor {
+		return -1
+	}
+
+	if a == RoleViewer {
+		return 1
+	}
+	if b == RoleViewer {
+		return -1
+	}
+
+	return 0
+}
+
+func roleMax(a Role, b Role) Role {
+	if roleCmp(a, b) > 0 {
+		return a
+	}
+	return b
+}
+
 type PutAccessRequest struct {
 	MapId              string                           `json:"mapId"`
 	Owner              *uuid.UUID                       `json:"owner"`

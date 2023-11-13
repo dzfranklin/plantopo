@@ -379,3 +379,53 @@ func (s *S) TestDuplicateInvite() {
 	})
 	require.NoError(s.T(), err)
 }
+
+func (s *S) TestSignedInUserCanAccessUnderGeneral() {
+	subject := makeSubject(s)
+	alice := makeUser(s)
+	bob := makeUser(s)
+
+	m1, err := subject.Create(s.ctx, alice.Id)
+	require.NoError(s.T(), err)
+
+	require.False(s.T(), subject.IsAuthorized(s.ctx, AuthzRequest{
+		UserId: bob.Id,
+		MapId:  m1.Id,
+	}, ActionView))
+
+	err = subject.PutAccess(s.ctx, alice, PutAccessRequest{
+		MapId:              m1.Id,
+		GeneralAccessLevel: "public",
+		GeneralAccessRole:  "viewer",
+	})
+	require.NoError(s.T(), err)
+
+	require.True(s.T(), subject.IsAuthorized(s.ctx, AuthzRequest{
+		UserId: bob.Id,
+		MapId:  m1.Id,
+	}, ActionView))
+}
+
+func (s *S) TestSignedInRoleOverridesGeneral() {
+	subject := makeSubject(s)
+	alice := makeUser(s)
+	bob := makeUser(s)
+
+	m1, err := subject.Create(s.ctx, alice.Id)
+	require.NoError(s.T(), err)
+
+	err = subject.PutAccess(s.ctx, alice, PutAccessRequest{
+		MapId:              m1.Id,
+		GeneralAccessLevel: "public",
+		GeneralAccessRole:  "viewer",
+		UserAccess: map[uuid.UUID]PutUserAccessEntry{
+			bob.Id: {Role: "editor"},
+		},
+	})
+	require.NoError(s.T(), err)
+
+	require.True(s.T(), subject.IsAuthorized(s.ctx, AuthzRequest{
+		UserId: bob.Id,
+		MapId:  m1.Id,
+	}, ActionEdit))
+}
