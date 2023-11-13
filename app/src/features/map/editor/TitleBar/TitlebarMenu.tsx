@@ -23,7 +23,11 @@ import { useDebugMode } from '../useDebugMode';
 import { useDebugAction, DebugMenu } from './DebugMenu';
 import { ExportDialog } from '@/features/exporter/ExportDialog';
 
-export function TitlebarMenu() {
+export function TitlebarMenu({
+  focusTitleEdit,
+}: {
+  focusTitleEdit: () => any;
+}) {
   const engine = useEngine();
   const mapId = useMapId();
   const meta = useMapMeta(mapId);
@@ -43,6 +47,9 @@ export function TitlebarMenu() {
             debugAction(id);
           }
           switch (id) {
+            case 'rename':
+              focusTitleEdit();
+              break;
             case 'share':
               setDialog('share');
               break;
@@ -55,6 +62,7 @@ export function TitlebarMenu() {
           }
         }}
       >
+        <MenuItem id="rename">Rename</MenuItem>
         <MenuItem id="share">Share</MenuItem>
         <MenuItem id="import">Import</MenuItem>
         <MenuItem id="export">Export</MenuItem>

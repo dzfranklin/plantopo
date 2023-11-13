@@ -1,10 +1,12 @@
 import { MapIcon } from '@/generic/MapIcon';
 import { TitlebarMenu } from './TitlebarMenu';
 import cls from '@/generic/cls';
-import { TitleEditComponent } from './TitleEditComponent';
+import { Focuser, TitleEditComponent } from './TitleEditComponent';
 import { StatusComponent } from './StatusComponent';
+import { useRef } from 'react';
 
 export function Titlebar() {
+  const titleEditRef = useRef<Focuser>(null);
   return (
     <div
       className={cls(
@@ -20,12 +22,12 @@ export function Titlebar() {
       </div>
 
       <div className="flex justify-between col-start-2 row-start-1 gap-2 mx-1">
-        <TitleEditComponent />
+        <TitleEditComponent ref={titleEditRef} />
         <StatusComponent />
       </div>
 
       <div className="flex items-center col-start-2 row-start-2 gap-2 grow">
-        <TitlebarMenu />
+        <TitlebarMenu focusTitleEdit={() => titleEditRef.current?.focus()} />
       </div>
     </div>
   );
