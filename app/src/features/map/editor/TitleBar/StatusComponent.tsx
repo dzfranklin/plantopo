@@ -27,26 +27,27 @@ export function StatusComponent() {
     };
   }, [engine]);
   return (
-    <div className="flex items-center gap-2 pt-1 text-xs">
+    <div className="flex items-center gap-2 pt-0.5 text-xs">
       {(readyForCheck && !status) ||
         (status?.type === 'connecting' && (
           <>
-            <span>Connecting...</span>
             <DisconnectedIcon height="20px" />
+            <span>Connecting...</span>
           </>
         ))}
       {status?.type === 'connected' && (
         <>
-          {hasUnsyncedChanges && (
-            <span className="text-neutral-500">Syncing...</span>
-          )}
           <button onClick={() => engine?.forceDisconnect()}>
             <ConnectedIcon height="20px" />
           </button>
+          {hasUnsyncedChanges && (
+            <span className="text-neutral-500">Syncing...</span>
+          )}
         </>
       )}
       {readyForCheck && status?.type === 'disconnected' && (
         <>
+          <DisconnectedIcon height="20px" />
           <div>
             <ReconnectingAt at={status.reconnectingAt} />
             <button
@@ -56,7 +57,6 @@ export function StatusComponent() {
               Reconnect now
             </button>
           </div>
-          <DisconnectedIcon height="20px" />
         </>
       )}
     </div>

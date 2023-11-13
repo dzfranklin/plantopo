@@ -26,6 +26,7 @@ export const TitleEditComponent = forwardRef<Focuser>((_, ref) => {
   }, [ref]);
   return (
     <form
+      className="grow max-w-[40rem]"
       onSubmit={(evt) => {
         evt.preventDefault();
         inputRef.current?.blur();
@@ -34,7 +35,7 @@ export const TitleEditComponent = forwardRef<Focuser>((_, ref) => {
       <input
         ref={inputRef}
         className={cls(
-          'w-fit pl-1 pr-5 py-0.5 bg-neutral-100 rounded outline-none border border-transparent',
+          'w-full px-1 py-0.5 bg-neutral-100 rounded outline-none border border-transparent',
           'font-normal text-sm',
           'hover:border-neutral-500 active:border-neutral-500 focus:border-neutral-500 focus:ring-0',
         )}

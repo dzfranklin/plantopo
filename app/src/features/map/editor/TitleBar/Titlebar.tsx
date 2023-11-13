@@ -4,13 +4,23 @@ import cls from '@/generic/cls';
 import { Focuser, TitleEditComponent } from './TitleEditComponent';
 import { StatusComponent } from './StatusComponent';
 import { useRef } from 'react';
+import { ShareButton } from './ShareButton';
+import { useLoadedSession } from '@/features/account/session';
+import { RequestEditAccessButton } from './RequestEditAccessButton';
+import { LoginButton } from './LoginButton';
+import { useMapMeta } from '../../api/mapMeta';
+import { useMapId } from '../useMapId';
 
 export function Titlebar() {
+  const mapId = useMapId();
   const titleEditRef = useRef<Focuser>(null);
+  const sess = useLoadedSession();
+  const meta = useMapMeta(mapId);
+  const mayEdit = meta.data?.currentSessionMayEdit;
   return (
     <div
       className={cls(
-        'grid grid-cols-[min-content_1fr] grid-rows-[min-content_min-content]',
+        'grid grid-cols-[min-content_1fr_max-content] grid-rows-[min-content_min-content]',
         'pl-3 pr-1 py-1 items-center border-b border-neutral-300 bg-neutral-100',
       )}
     >
@@ -21,13 +31,19 @@ export function Titlebar() {
         </a>
       </div>
 
-      <div className="flex justify-between col-start-2 row-start-1 gap-2 mx-1">
+      <div className="flex col-start-2 row-start-1 gap-2 mx-1">
         <TitleEditComponent ref={titleEditRef} />
+      </div>
+
+      <div className="flex items-center col-start-2 row-start-2 gap-4">
+        <TitlebarMenu focusTitleEdit={() => titleEditRef.current?.focus()} />
         <StatusComponent />
       </div>
 
-      <div className="flex items-center col-start-2 row-start-2 gap-2 grow">
-        <TitlebarMenu focusTitleEdit={() => titleEditRef.current?.focus()} />
+      <div className="flex items-center col-start-3 gap-4 p-1 pl-10 row-span-full">
+        {mayEdit === false && <RequestEditAccessButton />}
+        <ShareButton />
+        {sess === null && <LoginButton />}
       </div>
     </div>
   );

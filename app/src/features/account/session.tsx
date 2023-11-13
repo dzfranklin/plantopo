@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { User } from '@/features/account/api/User';
 import { useApiQuery } from '@/api/useApiQuery';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, UseQueryResult } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { TransportError } from '@/api/errors';
 
@@ -15,13 +15,7 @@ export function useSession({
   require?: boolean;
 } = {}): Session | null {
   const redirector = useSessionRedirector();
-
-  const query = useApiQuery<Session | NoSession>({
-    path: ['session'],
-    retry: (failureCount, error) =>
-      error instanceof TransportError && failureCount < 3,
-  });
-
+  const query = useSessionQuery();
   useEffect(() => {
     if (require && query.data && !query.data.user) {
       redirector();
@@ -33,6 +27,25 @@ export function useSession({
   } else {
     return null;
   }
+}
+
+export function useLoadedSession(): Session | 'loading' | null {
+  const query = useSessionQuery();
+  if (query.isInitialLoading) {
+    return 'loading';
+  } else if (query.isSuccess && query.data.user) {
+    return query.data;
+  } else {
+    return null;
+  }
+}
+
+function useSessionQuery(): UseQueryResult<Session | NoSession> {
+  return useApiQuery<Session | NoSession>({
+    path: ['session'],
+    retry: (failureCount, error) =>
+      error instanceof TransportError && failureCount < 3,
+  });
 }
 
 export function useSessionRedirector(): () => void {

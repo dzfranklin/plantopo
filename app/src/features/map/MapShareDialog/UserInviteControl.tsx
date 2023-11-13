@@ -103,7 +103,7 @@ export function UserInviteControl({ map }: { map: string }) {
             rows={3}
             className={cls(
               'w-full p-2 bg-transparent disabled:bg-neutral-200 resize-none',
-              'outline-none border-t-0 border-b disabled:border-b-0 border-x-0 border-neutral-700 focus:border-blue-600',
+              'outline-none border-t-0 border-b disabled:border-b-0 border-x-0 border-neutral-700 focus:border-blue-600 focus:ring-0',
             )}
           />
 
