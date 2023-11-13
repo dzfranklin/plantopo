@@ -23,6 +23,8 @@ const _ = grpc.SupportPackageIsVersion7
 const (
 	SyncBackend_SetupConnection_FullMethodName = "/SyncBackend/SetupConnection"
 	SyncBackend_Connect_FullMethodName         = "/SyncBackend/Connect"
+	SyncBackend_Export_FullMethodName          = "/SyncBackend/Export"
+	SyncBackend_Import_FullMethodName          = "/SyncBackend/Import"
 	SyncBackend_Stats_FullMethodName           = "/SyncBackend/Stats"
 )
 
@@ -36,6 +38,8 @@ type SyncBackendClient interface {
 	// Connect is called by the frontend to connect using a token returned by
 	// SetupConnection
 	Connect(ctx context.Context, opts ...grpc.CallOption) (SyncBackend_ConnectClient, error)
+	Export(ctx context.Context, in *SyncBackendExportRequest, opts ...grpc.CallOption) (*SyncBackendExportResponse, error)
+	Import(ctx context.Context, in *SyncBackendImportRequest, opts ...grpc.CallOption) (*SyncBackendImportResponse, error)
 	Stats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error)
 }
 
@@ -87,6 +91,24 @@ func (x *syncBackendConnectClient) Recv() (*SyncBackendOutgoingMessage, error) {
 	return m, nil
 }
 
+func (c *syncBackendClient) Export(ctx context.Context, in *SyncBackendExportRequest, opts ...grpc.CallOption) (*SyncBackendExportResponse, error) {
+	out := new(SyncBackendExportResponse)
+	err := c.cc.Invoke(ctx, SyncBackend_Export_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *syncBackendClient) Import(ctx context.Context, in *SyncBackendImportRequest, opts ...grpc.CallOption) (*SyncBackendImportResponse, error) {
+	out := new(SyncBackendImportResponse)
+	err := c.cc.Invoke(ctx, SyncBackend_Import_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *syncBackendClient) Stats(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*structpb.Struct, error) {
 	out := new(structpb.Struct)
 	err := c.cc.Invoke(ctx, SyncBackend_Stats_FullMethodName, in, out, opts...)
@@ -106,6 +128,8 @@ type SyncBackendServer interface {
 	// Connect is called by the frontend to connect using a token returned by
 	// SetupConnection
 	Connect(SyncBackend_ConnectServer) error
+	Export(context.Context, *SyncBackendExportRequest) (*SyncBackendExportResponse, error)
+	Import(context.Context, *SyncBackendImportRequest) (*SyncBackendImportResponse, error)
 	Stats(context.Context, *emptypb.Empty) (*structpb.Struct, error)
 	mustEmbedUnimplementedSyncBackendServer()
 }
@@ -119,6 +143,12 @@ func (UnimplementedSyncBackendServer) SetupConnection(context.Context, *SyncBack
 }
 func (UnimplementedSyncBackendServer) Connect(SyncBackend_ConnectServer) error {
 	return status.Errorf(codes.Unimplemented, "method Connect not implemented")
+}
+func (UnimplementedSyncBackendServer) Export(context.Context, *SyncBackendExportRequest) (*SyncBackendExportResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Export not implemented")
+}
+func (UnimplementedSyncBackendServer) Import(context.Context, *SyncBackendImportRequest) (*SyncBackendImportResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Import not implemented")
 }
 func (UnimplementedSyncBackendServer) Stats(context.Context, *emptypb.Empty) (*structpb.Struct, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Stats not implemented")
@@ -180,6 +210,42 @@ func (x *syncBackendConnectServer) Recv() (*SyncBackendIncomingMessage, error) {
 	return m, nil
 }
 
+func _SyncBackend_Export_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncBackendExportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SyncBackendServer).Export(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SyncBackend_Export_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SyncBackendServer).Export(ctx, req.(*SyncBackendExportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SyncBackend_Import_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncBackendImportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SyncBackendServer).Import(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SyncBackend_Import_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SyncBackendServer).Import(ctx, req.(*SyncBackendImportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SyncBackend_Stats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -208,6 +274,14 @@ var SyncBackend_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetupConnection",
 			Handler:    _SyncBackend_SetupConnection_Handler,
+		},
+		{
+			MethodName: "Export",
+			Handler:    _SyncBackend_Export_Handler,
+		},
+		{
+			MethodName: "Import",
+			Handler:    _SyncBackend_Import_Handler,
 		},
 		{
 			MethodName: "Stats",

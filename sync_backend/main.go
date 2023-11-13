@@ -4,12 +4,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	api "github.com/danielzfranklin/plantopo/api/v1"
 	"github.com/danielzfranklin/plantopo/db"
+	"github.com/danielzfranklin/plantopo/sync_backend/internal"
+	"github.com/danielzfranklin/plantopo/sync_backend/internal/backend"
 	"github.com/danielzfranklin/plantopo/sync_backend/internal/doclog"
 	"github.com/danielzfranklin/plantopo/sync_backend/internal/docstore"
+	"github.com/danielzfranklin/plantopo/sync_backend/internal/server"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"net"
 	"net/http"
@@ -17,15 +27,6 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-
-	api "github.com/danielzfranklin/plantopo/api/v1"
-	"github.com/danielzfranklin/plantopo/sync_backend/internal"
-	"github.com/danielzfranklin/plantopo/sync_backend/internal/backend"
-	"github.com/danielzfranklin/plantopo/sync_backend/internal/server"
-	"github.com/joho/godotenv"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -109,7 +110,7 @@ func main() {
 		}
 		return
 	}
-	db, err := pgxpool.NewWithConfig(context.Background(), dbCfg)
+	dbpool, err := pgxpool.NewWithConfig(context.Background(), dbCfg)
 	if err != nil {
 		l.Panicw("Failed to create postgres pool", zap.Error(err))
 	}
@@ -118,7 +119,7 @@ func main() {
 	dsCfg := docstore.Config{
 		Logger: dsLogger,
 		Loader: func(ctx context.Context, mapId string) (docstore.DocLogger, error) {
-			return doclog.Load(ctx, dsLogger, db, mapId)
+			return doclog.Load(ctx, dsLogger, dbpool, mapId)
 		},
 	}
 
@@ -128,8 +129,22 @@ func main() {
 		DocStore:     dsCfg,
 	})
 
+	exportBucket := os.Getenv("EXPORT_BUCKET")
+	if exportBucket == "" {
+		l.Panicw("EXPORT_BUCKET must be set")
+	}
+
+	awsConfig, err := awsconfig.LoadDefaultConfig(context.Background(), awsconfig.WithRegion("eu-west-2"))
+	if err != nil {
+		l.Panicw("Failed to load aws config", zap.Error(err))
+	}
+	s3Client := s3.NewFromConfig(awsConfig)
+	s3Presigner := s3.NewPresignClient(s3Client)
+
 	srv, err := server.NewGRPCServer(&server.Config{
-		Backend: b,
+		Backend:      b,
+		S3:           &s3erAndPresigner{s3Client, s3Presigner},
+		ExportBucket: exportBucket,
 	})
 	if err != nil {
 		l.Panicw("Failed to create grpc srv", zap.Error(err))
@@ -186,4 +201,9 @@ func main() {
 	}
 
 	l.Info("Shutdown complete")
+}
+
+type s3erAndPresigner struct {
+	*s3.Client
+	*s3.PresignClient
 }

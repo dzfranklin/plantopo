@@ -8,15 +8,13 @@ import (
 	"fmt"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	api "github.com/danielzfranklin/plantopo/api/v1"
 	"github.com/danielzfranklin/plantopo/api_server/internal/frontend_map_tokens"
-	"github.com/danielzfranklin/plantopo/api_server/internal/importers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/mailer"
 	"github.com/danielzfranklin/plantopo/api_server/internal/maps"
+	"github.com/danielzfranklin/plantopo/api_server/internal/mapsync"
 	"github.com/danielzfranklin/plantopo/api_server/internal/server/routes"
 	"github.com/danielzfranklin/plantopo/api_server/internal/server/session"
-	"github.com/danielzfranklin/plantopo/api_server/internal/sync_backends"
 	"github.com/danielzfranklin/plantopo/api_server/internal/users"
 	"github.com/danielzfranklin/plantopo/db"
 	"github.com/google/uuid"
@@ -114,58 +112,53 @@ func main() {
 	mapsService := maps.NewService(l.Desugar(), pg, usersService, mailerService)
 
 	var dialOpts []grpc.DialOption
-	var matchAddr string
+	var matchmakerTarget string
 	if appEnv == "development" {
 		dialOpts = []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		}
-		matchAddr = "localhost:4001"
+		matchmakerTarget = "localhost:4001"
 	} else {
 		// TODO: Add mTLS
 		dialOpts = []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		}
-		matchAddr = "matchmaker:5050"
+		matchmakerTarget = "matchmaker:5050"
 	}
-	matchCC, err := grpc.Dial(matchAddr, dialOpts...)
+	syncer, err := mapsync.NewSyncer(matchmakerTarget, dialOpts)
 	if err != nil {
-		l.Fatalw("Failed to dial matchmaker", zap.Error(err))
+		l.Fatalw("error creating syncer", zap.Error(err))
 	}
-	matchmaker := api.NewMatchmakerClient(matchCC)
-
-	syncBackends := sync_backends.NewProvider(&sync_backends.Config{
-		DialOpts: dialOpts,
-	})
 
 	s3Client := s3.NewFromConfig(awsConfig)
+	s3AndPresigner := &s3erAndPresigner{s3Client, s3.NewPresignClient(s3Client)}
 
-	importUploadsBucket := os.Getenv("IMPORT_UPLOADS_BUCKET")
-	if importUploadsBucket == "" {
+	importBucket := os.Getenv("IMPORT_UPLOADS_BUCKET")
+	if importBucket == "" {
 		l.Fatalw("missing IMPORT_UPLOADS_BUCKET")
 	}
-	importer, err := importers.New(&importers.Config{
-		ObjectStore:  importers.NewS3ObjectStore(s3Client, importUploadsBucket),
-		Matchmaker:   matchmaker,
-		SyncBackends: syncBackends,
-		Db:           pg,
+	importer := mapsync.NewImporter(&mapsync.ImporterConfig{
+		S3:       s3AndPresigner,
+		Bucket:   importBucket,
+		Importer: syncer,
+		Db:       pg,
 	})
-	if err != nil {
-		l.Fatalw("error creating importer", zap.Error(err))
-	}
 
 	router := routes.New(&routes.Services{
-		Pg:           pg,
-		Users:        usersService,
-		Maps:         mapsService,
-		Mailer:       mailerService,
-		Matchmaker:   matchmaker,
-		SyncBackends: syncBackends,
+		Pg:     pg,
+		Users:  usersService,
+		Maps:   mapsService,
+		Mailer: mailerService,
+		SyncConnector: func(ctx context.Context, clientId string, mapId string) (routes.SyncerConnection, error) {
+			return syncer.Connect(ctx, clientId, mapId)
+		},
 		SessionManager: session.NewManager(&session.Config{
 			Users:   usersService,
 			AuthKey: sessionAuthKey,
 		}),
 		FrontendMapTokens: frontend_map_tokens.MustFromRaw(frontendMapTokens),
 		MapImporter:       importer,
+		MapExporter:       syncer,
 	})
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%s", port),
@@ -211,4 +204,9 @@ func main() {
 		fmt.Println(stack)
 		l.Fatalw("graceful server shutdown timed out")
 	}
+}
+
+type s3erAndPresigner struct {
+	*s3.Client
+	*s3.PresignClient
 }

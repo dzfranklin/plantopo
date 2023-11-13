@@ -1,14 +1,13 @@
 package routes
 
 import (
+	"context"
 	"fmt"
-	"github.com/danielzfranklin/plantopo/api_server/internal/sync_backends"
 	gorillahandlers "github.com/gorilla/handlers"
 	"net/http"
 	"os"
 	"strings"
 
-	api "github.com/danielzfranklin/plantopo/api/v1"
 	"github.com/danielzfranklin/plantopo/api_server/internal/frontend_map_tokens"
 	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/mailer"
@@ -28,9 +27,9 @@ type Services struct {
 	Mailer            mailer.Service
 	SessionManager    *session.Manager
 	FrontendMapTokens *frontend_map_tokens.Tokens
-	Matchmaker        api.MatchmakerClient
-	SyncBackends      *sync_backends.Provider
+	SyncConnector     func(ctx context.Context, clientId string, mapId string) (SyncerConnection, error)
 	MapImporter       MapImporter
+	MapExporter       MapExporter
 }
 
 const (
@@ -80,8 +79,11 @@ func New(s *Services) http.Handler {
 
 	r.HandleFunc("/api/v1/map", s.mapsHandler)
 	r.HandleFunc("/api/v1/map/{id}", s.mapHandler)
-	r.HandleFunc("/api/v1/map/{id}/sync-socket", s.mapSyncSocketHandler)
 	r.HandleFunc("/api/v1/map/{id}/access", s.mapAccessHandler)
+
+	r.HandleFunc("/api/v1/map/{id}/sync-socket", s.mapSyncSocketHandler)
+
+	r.HandleFunc("/api/v1/map/{id}/export", s.mapExportHandler)
 
 	r.HandleFunc("/api/v1/map/{mapId}/import", s.uploadImportHandler)
 	r.HandleFunc("/api/v1/map/{mapId}/import/{importId}/start", s.startImportHandler)

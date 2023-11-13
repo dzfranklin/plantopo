@@ -1,28 +1,39 @@
-package importers
+package converter
 
 import (
 	"fmt"
 	"github.com/danielzfranklin/plantopo/api/sync_schema"
-	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
 	"github.com/oklog/ulid/v2"
 	"github.com/tkrajina/gpxgo/gpx"
 	"go.uber.org/zap"
 	"io"
 )
 
-func convertFormat(format string, id string, filename string, reader io.Reader) (*sync_schema.Changeset, error) {
+func ConvertToChangeset(logger *zap.Logger, format string, id string, filename string, reader io.Reader) (*sync_schema.Changeset, error) {
+	l := logger.Sugar()
 	switch format {
+	case "ptinternal":
+		bytes, err := io.ReadAll(reader)
+		if err != nil {
+			return nil, err
+		}
+
+		cset := &sync_schema.Changeset{}
+		err = cset.UnmarshalJSON(bytes)
+		if err != nil {
+			return nil, err
+		}
+
+		return cset, nil
 	case "gpx":
-		return convertGpx(id, filename, reader)
+		return convertGpxToChangeset(l, id, filename, reader)
 	default:
-		loggers.Get().Sugar().Warnw("unknown format", "id", id, "format", format)
-		return nil, fmt.Errorf("unknown format: %s", format)
+		l.Warnw("unknown format", "id", id, "format", format)
+		return nil, UnknownFormatError
 	}
 }
 
-func convertGpx(id string, filename string, reader io.Reader) (*sync_schema.Changeset, error) {
-	l := loggers.Get().Sugar()
-
+func convertGpxToChangeset(l *zap.SugaredLogger, id string, filename string, reader io.Reader) (*sync_schema.Changeset, error) {
 	data, err := gpx.Parse(reader)
 	if err != nil {
 		l.Warnw("failed to parse gpx", zap.Error(err))

@@ -93,8 +93,10 @@ func (d *Deployment) Run(dryRun bool, baseDir string) error {
 		apiDomain = fmt.Sprintf("%s.api.pt-staging.dfusercontent.com", d.Staging)
 	}
 	importUploadBucket := "pt-import-uploads"
+	exportBucket := "pt-exports"
 	if d.Staging != "" {
 		importUploadBucket = "pt-staging-import-uploads"
+		exportBucket = "pt-staging0-exports"
 	}
 	var permittedOrigins string
 	if d.Staging != "" {
@@ -118,6 +120,7 @@ func (d *Deployment) Run(dryRun bool, baseDir string) error {
 		"apiDomain":          apiDomain,
 		"permittedOrigins":   permittedOrigins,
 		"importUploadBucket": importUploadBucket,
+		"exportBucket":       exportBucket,
 	}
 
 	var spec strings.Builder

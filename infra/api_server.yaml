@@ -67,6 +67,8 @@ spec:
               value: "{{ .Values.env }}"
             - name: IMPORT_UPLOADS_BUCKET
               value: "{{ .Values.importUploadBucket }}"
+            - name: EXPORT_BUCKET
+              value: "{{ .Values.exportBucket }}"
             - name: PERMITTED_ORIGINS
               value: "{{ .Values.permittedOrigins }}"
             - name: API_DOMAIN

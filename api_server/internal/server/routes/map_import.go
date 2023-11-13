@@ -4,17 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/danielzfranklin/plantopo/api_server/internal/importers"
 	"github.com/danielzfranklin/plantopo/api_server/internal/maps"
+	"github.com/danielzfranklin/plantopo/api_server/internal/mapsync"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"net/http"
 )
 
 type MapImporter interface {
-	CreateImport(ctx context.Context, req *importers.CreateImportRequest) (*importers.Import, error)
-	StartImport(importId string) (*importers.Import, error)
-	CheckImport(ctx context.Context, importId string) (*importers.Import, error)
+	CreateImport(ctx context.Context, req *mapsync.CreateImportRequest) (*mapsync.Import, error)
+	StartImport(importId string) (*mapsync.Import, error)
+	CheckImport(ctx context.Context, importId string) (*mapsync.Import, error)
 }
 
 func (s *Services) uploadImportHandler(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +42,7 @@ func (s *Services) uploadImportHandler(w http.ResponseWriter, r *http.Request) {
 		writeForbidden(r, w)
 		return
 	}
-	var req *importers.CreateImportRequest
+	var req *mapsync.CreateImportRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeBadRequest(r, w)
 		return
@@ -84,7 +84,7 @@ func (s *Services) startImportHandler(w http.ResponseWriter, r *http.Request) {
 
 	status, err := s.MapImporter.CheckImport(r.Context(), importId)
 	if err != nil {
-		if errors.Is(err, importers.ErrNotFound) {
+		if errors.Is(err, mapsync.ImportNotFound) {
 			writeNotFound(r, w)
 		} else {
 			writeError(r, w, err)
@@ -98,7 +98,7 @@ func (s *Services) startImportHandler(w http.ResponseWriter, r *http.Request) {
 
 	status, err = s.MapImporter.StartImport(importId)
 	if err != nil {
-		if errors.Is(err, importers.ErrNotFound) {
+		if errors.Is(err, mapsync.ImportNotFound) {
 			writeNotFound(r, w)
 		} else {
 			writeError(r, w, err)
@@ -127,7 +127,7 @@ func (s *Services) checkImportHandler(w http.ResponseWriter, r *http.Request) {
 
 	status, err := s.MapImporter.CheckImport(r.Context(), importId)
 	if err != nil {
-		if errors.Is(err, importers.ErrNotFound) {
+		if errors.Is(err, mapsync.ImportNotFound) {
 			writeNotFound(r, w)
 		} else {
 			writeError(r, w, err)

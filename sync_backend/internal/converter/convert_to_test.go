@@ -1,8 +1,9 @@
-package importers
+package converter
 
 import (
 	"embed"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 	"strings"
 	"testing"
 )
@@ -11,10 +12,12 @@ import (
 var testdata embed.FS
 
 func TestConvertSample(t *testing.T) {
+	l := zaptest.NewLogger(t).Sugar()
+
 	input, err := testdata.Open("testdata/fife_coastal_path.gpx")
 	require.NoError(t, err)
 
-	got, err := convertGpx("testid", "fife_coastal_path.gpx", input)
+	got, err := convertGpxToChangeset(l, "testid", "fife_coastal_path.gpx", input)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, len(got.FAdd))
@@ -28,6 +31,7 @@ func TestConvertSample(t *testing.T) {
 }
 
 func TestConvertGpxBasic(t *testing.T) {
+	l := zaptest.NewLogger(t).Sugar()
 	input := strings.NewReader(`
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <gpx version="1.1" 
@@ -66,13 +70,14 @@ creator="Memory-Map 5.4.2.1089 http://www.memory-map.com"
 </rte>
 </gpx>
 	`)
-	cset, err := convertGpx("testid", "test-basic.gpx", input)
+	cset, err := convertGpxToChangeset(l, "testid", "test-basic.gpx", input)
 	require.NoError(t, err)
 	require.NoError(t, err)
 	require.Equal(t, 6, len(cset.FAdd))
 }
 
 func TestSingleSegmentTrackIsFlattened(t *testing.T) {
+	l := zaptest.NewLogger(t).Sugar()
 	input := strings.NewReader(`
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <gpx version="1.1" 
@@ -90,7 +95,7 @@ func TestSingleSegmentTrackIsFlattened(t *testing.T) {
 	</trkseg>
 </trk>
 </gpx>`)
-	cset, err := convertGpx("testid", "test-single-segment-track.gpx", input)
+	cset, err := convertGpxToChangeset(l, "testid", "test-single-segment-track.gpx", input)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(cset.FAdd))
 	feat := cset.FSet[cset.FAdd[0]]
