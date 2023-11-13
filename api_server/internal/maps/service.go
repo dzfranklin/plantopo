@@ -290,27 +290,58 @@ func (s *impl) getRole(ctx context.Context, req AuthzRequest) (Role, error) {
 		return "", errors.New("mapId is required")
 	}
 
-	var row pgx.Row
-	if req.UserId == uuid.Nil {
-		row = s.pg.QueryRow(ctx,
-			`SELECT general_access_role FROM maps
+	generalRole, err := s.getGeneralAccessRole(ctx, req.MapId)
+	if err != nil {
+		return "", err
+	}
+
+	var userRole Role
+	if req.UserId != uuid.Nil {
+		if userRole, err = s.getUserAccessRole(ctx, req.MapId, req.UserId); err != nil {
+			return "", err
+		}
+	}
+
+	return roleMax(generalRole, userRole), nil
+}
+
+func (s *impl) getGeneralAccessRole(ctx context.Context, mapId string) (Role, error) {
+	if mapId == "" {
+		return "", errors.New("mapId is required")
+	}
+	var role Role
+	err := s.pg.QueryRow(ctx,
+		`SELECT general_access_role FROM maps
 				WHERE external_id = $1
 					AND general_access_level = 'public'
 					AND deleted_at IS NULL`,
-			req.MapId,
-		)
-	} else {
-		row = s.pg.QueryRow(ctx,
-			`SELECT map_roles.my_role FROM map_roles
-				INNER JOIN maps ON maps.internal_id = map_roles.map_id
-				WHERE maps.external_id = $1 AND map_roles.user_id = $2
-					AND maps.deleted_at IS NULL
-			`,
-			req.MapId, req.UserId,
-		)
+		mapId,
+	).Scan(&role)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", nil
+		} else {
+			return "", err
+		}
+	}
+	return role, nil
+}
+
+func (s *impl) getUserAccessRole(ctx context.Context, mapId string, userId uuid.UUID) (Role, error) {
+	if mapId == "" {
+		return "", errors.New("mapId is required")
+	}
+	if userId == uuid.Nil {
+		return "", errors.New("userId is required")
 	}
 	var role Role
-	err := row.Scan(&role)
+	err := s.pg.QueryRow(ctx,
+		`SELECT map_roles.my_role FROM map_roles
+				INNER JOIN maps ON maps.internal_id = map_roles.map_id
+				WHERE maps.external_id = $1 AND map_roles.user_id = $2
+					AND maps.deleted_at IS NULL`,
+		mapId, userId,
+	).Scan(&role)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", nil
