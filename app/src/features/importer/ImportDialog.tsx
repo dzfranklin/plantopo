@@ -18,7 +18,7 @@ import {
   uploadImport,
 } from './api/importerApi';
 
-const acceptTypes = ['.gpx', 'application/gpx+xml'];
+const acceptTypes = ['.gpx', 'application/gpx+xml', '.ptinternal'];
 
 type Stage =
   | 'pre'
@@ -135,14 +135,15 @@ async function doImport(
   file: File,
   onProgress: (stage: Stage) => any,
 ) {
-  if (!file) return;
+  let format = 'gpx';
+  if (file.name.endsWith('.ptinternal')) format = 'ptinternal';
 
   onProgress('preparing');
   const data = await readFile(file);
   const contentMD5 = computeContentMD5(data);
 
   onProgress('setting-up-upload');
-  const uploadInfo = await createImport(mapId, 'gpx', contentMD5);
+  const uploadInfo = await createImport(mapId, format, contentMD5);
 
   onProgress('uploading');
   await uploadImport(uploadInfo, contentMD5, data);
