@@ -92,7 +92,7 @@ func main() {
 		Sender:                &mailer.LogSender{Logger: l},
 		DeliverabilityChecker: &mailer.NoopDeliverabilityChecker{},
 	}
-	if appEnv == "production" || (appEnv == "development" && *devLiveMailer) {
+	if appEnv == "prod" || appEnv == "staging" || (appEnv == "development" && *devLiveMailer) {
 		mailgunKey := os.Getenv("PT_MAILGUN_KEY")
 		if mailgunKey == "" {
 			l.Fatalw("PT_MAILGUN_KEY must be set")
