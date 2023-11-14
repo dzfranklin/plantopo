@@ -30,11 +30,14 @@ func Get() *zap.Logger {
 
 		config.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
 
-		var err error
-		logger, err = config.Build()
+		newLogger, err := config.Build()
 		if err != nil {
 			panic(err)
 		}
+
+		newLogger = newLogger.With(zap.String("appEnv", env))
+
+		logger = newLogger
 	})()
 	return logger
 }

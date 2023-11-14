@@ -76,8 +76,7 @@ func main() {
 	if port == "" {
 		port = "4000"
 	}
-	l = l.With(zap.String("host", host), zap.String("port", port))
-	l.Infow("starting")
+	l.Infow("starting", "host", host, "port", port)
 
 	awsConfig, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("eu-west-2"))
 	if err != nil {
