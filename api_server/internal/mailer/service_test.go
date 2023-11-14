@@ -258,6 +258,55 @@ https://plantopo.com/signup/?returnTo=%2Fmap%2Fd1%2F&email=bob%40example.com
 	sender.AssertExpectations(t)
 }
 
+func TestSendRequestAccess(t *testing.T) {
+	subject, sender := setup(t)
+	alice := types.User{
+		Id:       uuid.New(),
+		Email:    "alice@example.com",
+		FullName: "Alice Smith",
+	}
+	bob := types.User{
+		Id:       uuid.New(),
+		Email:    "bob@example.com",
+		FullName: "Bob Smith",
+	}
+	meta := types.MapMeta{
+		Id:   "d1",
+		Name: "Trip to Alaska",
+	}
+
+	sender.On("Send", Payload{
+		to:      "bob@example.com",
+		subject: "Alice Smith requested access to \"Trip to Alaska\" on PlanTopo",
+		textBody: `Hi Bob Smith,
+
+Alice Smith requested access to your map "Trip to Alaska" on PlanTopo.
+
+Requested role: editor
+
+You can give Alice Smith access here:
+
+https://plantopo.com/access/?requestId=01HF6TJRPWX9MRC4WDZ8TDDVX2
+
+Alice Smith says:
+
+> can i edit this?
+`,
+	}).Return(nil)
+
+	err := subject.SendRequestAccess(RequestAccessRequest{
+		RequestId:     "01HF6TJRPWX9MRC4WDZ8TDDVX2",
+		From:          alice,
+		To:            bob,
+		Map:           meta,
+		RequestedRole: "editor",
+		Message:       "can i edit this?",
+	})
+	require.NoError(t, err)
+
+	sender.AssertExpectations(t)
+}
+
 func TestSenderFails(t *testing.T) {
 	subject, sender := setup(t)
 	user := validUser()

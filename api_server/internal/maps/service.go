@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/oklog/ulid/v2"
-
 	"github.com/danielzfranklin/plantopo/api_server/internal/mailer"
+	"github.com/danielzfranklin/plantopo/api_server/internal/queries"
 	"github.com/danielzfranklin/plantopo/api_server/internal/types"
 	"github.com/danielzfranklin/plantopo/api_server/internal/users"
 	"github.com/danielzfranklin/plantopo/db"
 	"github.com/google/uuid"
 	"github.com/guregu/null"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/oklog/ulid/v2"
 	"go.uber.org/zap"
 )
 
@@ -28,12 +29,17 @@ type Service interface {
 	Access(ctx context.Context, mapId string) (*Access, error)
 	PutAccess(ctx context.Context, from *types.User, req PutAccessRequest) error
 	Invite(ctx context.Context, from *types.User, req InviteRequest) error
+	RequestAccess(ctx context.Context, req RequestAccessRequest) error
+	ListPendingAccessRequestsToRecipient(ctx context.Context, recipientId uuid.UUID) ([]PendingAccessRequest, error)
+	ApproveAccessRequestIfAuthorized(ctx context.Context, approvingUser *types.User, id string) error
+	RejectAccessRequestIfAuthorized(ctx context.Context, rejectingUser *types.User, id string) error
 }
 
 var ErrMapNotFound = errors.New("map not found")
 
 type impl struct {
 	pg     *db.Pg
+	q      *queries.Queries
 	l      *zap.Logger
 	users  users.Service
 	mailer mailer.Service
@@ -69,6 +75,7 @@ func NewService(
 
 	s := &impl{
 		pg:     pg,
+		q:      queries.New(pg),
 		l:      l,
 		users:  users,
 		mailer: mailer,
@@ -561,6 +568,139 @@ func (s *impl) listRoles(ctx context.Context, mapId string) ([]roleEntry, error)
 	return roles, nil
 }
 
+func (s *impl) RequestAccess(ctx context.Context, req RequestAccessRequest) error {
+	if req.RequestedRole != RoleViewer && req.RequestedRole != RoleEditor {
+		return errors.New("invalid requested role")
+	}
+
+	meta, err := s.q.GetMapByExternalId(ctx, req.MapId)
+	if err != nil {
+		return fmt.Errorf("failed to get map: %w", err)
+	}
+
+	from, err := s.users.Get(ctx, req.RequestingUser)
+	if err != nil {
+		return fmt.Errorf("failed to get requesting user: %w", err)
+	}
+
+	access, err := s.Access(ctx, req.MapId)
+	if err != nil {
+		return fmt.Errorf("failed to get access: %w", err)
+	}
+
+	for _, userAccess := range access.UserAccess {
+		if userAccess.User.Id == from.Id && roleCmp(userAccess.Role, req.RequestedRole) >= 0 {
+			s.l.Info("already has access", zap.String("mapId", req.MapId))
+			return nil
+		}
+	}
+	for _, invite := range access.PendingInvites {
+		if invite.Email == from.Email && roleCmp(invite.Role, req.RequestedRole) >= 0 {
+			s.l.Info("already has pending invite", zap.String("mapId", req.MapId))
+			return nil
+		}
+	}
+
+	row, err := s.q.CreateAccessRequest(ctx, queries.CreateAccessRequestParams{
+		ExternalID:       ulid.Make().String(),
+		RequestingUserID: pgtype.UUID{Bytes: from.Id, Valid: true},
+		RecipientUserID:  pgtype.UUID{Bytes: access.Owner.Id, Valid: true},
+		MapInternalID:    meta.InternalID,
+		RequestedRole:    queries.PtMyRole(req.RequestedRole),
+		Message:          req.Message,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = s.mailer.SendRequestAccess(mailer.RequestAccessRequest{
+		RequestId:     row.ExternalID,
+		From:          *from,
+		To:            *access.Owner,
+		Map:           metaFromQuery(meta),
+		RequestedRole: string(req.RequestedRole),
+		Message:       req.Message,
+	})
+	if err != nil {
+		return err
+	}
+
+	s.l.Info("sent request access", zap.String("mapId", req.MapId))
+
+	return nil
+}
+
+func (s *impl) ListPendingAccessRequestsToRecipient(ctx context.Context, recipientId uuid.UUID) ([]PendingAccessRequest, error) {
+	rows, err := s.q.ListPendingAccessRequestsToRecipient(ctx, pgtype.UUID{Bytes: recipientId, Valid: true})
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]PendingAccessRequest, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, PendingAccessRequest{
+			Id:                     row.ExternalID,
+			CreatedAt:              row.CreatedAt.Time,
+			RequestingUserEmail:    row.RequestingUserEmail,
+			RequestingUserFullName: row.RequestingUserFullName,
+			MapId:                  row.MapExternalID,
+			MapName:                row.MapName,
+			RequestedRole:          Role(row.RequestedRole),
+			Message:                row.Message,
+		})
+	}
+
+	return out, nil
+}
+
+func (s *impl) ApproveAccessRequestIfAuthorized(ctx context.Context, approvingUser *types.User, id string) (err error) {
+	var tx pgx.Tx
+	if tx, err = s.pg.Begin(ctx); err != nil {
+		return
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback(ctx)
+		}
+	}()
+	q := s.q.WithTx(tx)
+
+	var req queries.GetAccessRequestByExternalIdRow
+	if req, err = q.GetAccessRequestByExternalId(ctx, id); err != nil {
+		return
+	}
+	var requestingUser uuid.UUID
+	if requestingUser, err = uuid.FromBytes(req.RequestingUserID.Bytes[:]); err != nil {
+		return
+	}
+	requestedRole := Role(req.RequestedRole)
+
+	if !s.IsAuthorized(ctx, AuthzRequest{UserId: approvingUser.Id, MapId: req.MapExternalID}, ActionShare) {
+		return errors.New("not authorized to approve access request")
+	}
+
+	if err = q.MarkAccessRequestApproved(ctx, id); err != nil {
+		return
+	}
+	if err = grant(ctx, tx, req.MapExternalID, requestingUser, requestedRole); err != nil {
+		return
+	}
+
+	return tx.Commit(ctx)
+}
+
+func (s *impl) RejectAccessRequestIfAuthorized(ctx context.Context, rejectingUser *types.User, id string) (err error) {
+	var req queries.GetAccessRequestByExternalIdRow
+	if req, err = s.q.GetAccessRequestByExternalId(ctx, id); err != nil {
+		return
+	}
+	if !s.IsAuthorized(ctx, AuthzRequest{UserId: rejectingUser.Id, MapId: req.MapExternalID}, ActionShare) {
+		return errors.New("not authorized to reject access request")
+	}
+
+	return s.q.MarkAccessRequestRejected(ctx, id)
+}
+
 func (s *impl) Invite(ctx context.Context, from *types.User, req InviteRequest) error {
 	meta, err := s.Get(ctx, req.MapId)
 	if err != nil {
@@ -662,6 +802,7 @@ func grant(
 	if err != nil {
 		return err
 	}
+
 	_, err = db.Exec(ctx,
 		`INSERT INTO map_roles (map_id, user_id, my_role)
 			VALUES ($1, $2, $3)
@@ -672,5 +813,23 @@ func grant(
 	if err != nil {
 		return err
 	}
+
+	q := queries.New(db)
+	err = q.MarkAccessRequestImplicitlyObsoleted(ctx, queries.MarkAccessRequestImplicitlyObsoletedParams{
+		RequestingUserID: pgtype.UUID{Bytes: userId, Valid: true},
+		MapInternalID:    internalId,
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func metaFromQuery(query queries.PtMap) types.MapMeta {
+	return types.MapMeta{
+		Id:        query.ExternalID,
+		Name:      query.Name,
+		CreatedAt: query.CreatedAt.Time,
+	}
 }

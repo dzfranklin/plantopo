@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"net/http"
 	"time"
 
@@ -282,4 +283,131 @@ func (s *Services) putMapAccessHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeData(r, w, updatedValue)
+}
+
+type requestMapAccessRequest struct {
+	RequestedRole maps.Role `json:"requestedRole"`
+	Message       string    `json:"message"`
+}
+
+func (s *Services) requestMapAccessHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeMethodNotAllowed(r, w)
+		return
+	}
+
+	sess, err := s.SessionManager.GetUserId(r)
+	if err != nil {
+		writeError(r, w, err)
+		return
+	}
+	if sess == uuid.Nil {
+		writeUnauthorized(r, w)
+		return
+	}
+
+	mapId := mux.Vars(r)["id"]
+
+	var req requestMapAccessRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeBadRequest(r, w)
+		return
+	}
+
+	err = s.Maps.RequestAccess(r.Context(), maps.RequestAccessRequest{
+		MapId:          mapId,
+		RequestedRole:  req.RequestedRole,
+		RequestingUser: sess,
+		Message:        req.Message,
+	})
+	if errors.Is(err, maps.ErrMapNotFound) {
+		writeNotFound(r, w)
+		return
+	}
+	if err != nil {
+		writeError(r, w, err)
+		return
+	}
+
+	writeData(r, w, nil)
+}
+
+func (s *Services) pendingAccessRequestsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeMethodNotAllowed(r, w)
+		return
+	}
+
+	sess, err := s.SessionManager.GetUserId(r)
+	if err != nil {
+		return
+	}
+	if sess == uuid.Nil {
+		writeUnauthorized(r, w)
+		return
+	}
+
+	list, err := s.Maps.ListPendingAccessRequestsToRecipient(r.Context(), sess)
+	if err != nil {
+		writeError(r, w, err)
+		return
+	}
+
+	writeData(r, w, list)
+}
+
+func (s *Services) approveAccessRequestHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeMethodNotAllowed(r, w)
+		return
+	}
+
+	sess, err := s.SessionManager.Get(r)
+	if err != nil {
+		writeError(r, w, err)
+		return
+	}
+	user, err := sess.GetUser()
+	if err != nil {
+		writeError(r, w, err)
+		return
+	}
+
+	requestId := mux.Vars(r)["id"]
+
+	err = s.Maps.ApproveAccessRequestIfAuthorized(r.Context(), user, requestId)
+	if err != nil {
+		writeError(r, w, err)
+		return
+	}
+
+	writeData(r, w, nil)
+}
+
+func (s *Services) rejectAccessRequestHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeMethodNotAllowed(r, w)
+		return
+	}
+
+	sess, err := s.SessionManager.Get(r)
+	if err != nil {
+		writeError(r, w, err)
+		return
+	}
+	user, err := sess.GetUser()
+	if err != nil {
+		writeError(r, w, err)
+		return
+	}
+
+	requestId := mux.Vars(r)["id"]
+
+	err = s.Maps.RejectAccessRequestIfAuthorized(r.Context(), user, requestId)
+	if err != nil {
+		writeError(r, w, err)
+		return
+	}
+
+	writeData(r, w, nil)
 }

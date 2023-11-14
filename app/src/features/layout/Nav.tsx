@@ -11,7 +11,10 @@ import { UserImage } from '../account/UserImage';
 type NavAction = 'signOut';
 type NavEntry = { name: string } & ({ path: string } | { action: NavAction });
 
-const sessionNav: NavEntry[] = [{ name: 'Dashboard', path: '/dashboard' }];
+const sessionNav: NavEntry[] = [
+  { name: 'Dashboard', path: '/dashboard' },
+  { name: 'Access requests', path: '/access' },
+];
 const userNav: NavEntry[] = [
   { name: 'Account', path: '/account' },
   { name: 'Sign out', action: 'signOut' },

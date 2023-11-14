@@ -36,6 +36,8 @@ gen:
     --go-grpc_opt paths=source_relative \
     --proto_path=.
 
+  cd api_server && sqlc generate
+
 app:
   cd app && npm run dev -- --port 443 --experimental-https
 

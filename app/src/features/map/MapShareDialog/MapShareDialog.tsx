@@ -8,13 +8,13 @@ import {
   ProgressCircle,
   useDialogContainer,
 } from '@adobe/react-spectrum';
-import { InlineErrorComponent } from '@/features/error/InlineErrorComponent';
 import { useMapAccess } from '../api/mapMeta';
 import { PutMapAccessRequest } from '../api/MapAccess';
 import { useState } from 'react';
 import { GeneralAccessPicker } from '../GeneralAccessPicker';
 import { UserAccessControl } from './UserAccessControl';
 import { UserInviteControl } from './UserInviteControl';
+import { AppError } from '@/api/errors';
 
 export function MapShareDialog({ item }: { item: MapMeta }) {
   const dialog = useDialogContainer();
@@ -31,17 +31,40 @@ export function MapShareDialog({ item }: { item: MapMeta }) {
     mutation.mutate(changes);
   };
 
+  if (query.isError) {
+    const error = query.error;
+    if (
+      error instanceof AppError &&
+      (error.code === 401 || error.code === 403)
+    ) {
+      return (
+        <Dialog>
+          <Heading marginBottom="1.25rem">
+            Share &quot;{item.name || 'Unnamed map'}&quot;
+          </Heading>
+          <Content>
+            <p>You do not have permission to share this map.</p>
+          </Content>
+          <ButtonGroup>
+            <Button variant="secondary" onPress={dialog.dismiss}>
+              Close
+            </Button>
+          </ButtonGroup>
+        </Dialog>
+      );
+    }
+    throw error;
+  }
+
   return (
     <Dialog>
       <Heading marginBottom="1.25rem">
         Share &quot;{item.name || 'Unnamed map'}&quot;
       </Heading>
       <Content>
-        {mutation.isError && <InlineErrorComponent error={mutation.error} />}
         {query.isLoading && (
           <ProgressCircle isIndeterminate aria-label="loading" size="M" />
         )}
-        {query.isError && <InlineErrorComponent error={query.error} />}
         {query.isSuccess && (
           <div className="flex flex-col gap-6 pt-1 pb-1">
             <section>

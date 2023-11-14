@@ -101,11 +101,21 @@ function RequestAccessComponent({
   const [message, setMessage] = useState('');
   const mutation = useRequestMapAccessMutation(mapId);
   if (mutation.error) throw mutation.error;
+  if (mutation.isSuccess) {
+    return (
+      <div className="p-4 border-l-4 border-green-400 bg-green-50">
+        <div className="ml-3">
+          <p className="text-sm text-green-700">Request sent.</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <form
       className="flex flex-col gap-4"
       onSubmit={(evt) => {
         evt.preventDefault();
+        if (mutation.isLoading) return;
         mutation.mutate({
           requestedRole,
           message: message.length > 0 ? message : undefined,
@@ -155,7 +165,7 @@ function RequestAccessComponent({
       </div>
 
       <div className="flex justify-end mt-2">
-        <Button variant="accent" type="submit">
+        <Button variant="accent" type="submit" isDisabled={mutation.isLoading}>
           Send request
         </Button>
       </div>
