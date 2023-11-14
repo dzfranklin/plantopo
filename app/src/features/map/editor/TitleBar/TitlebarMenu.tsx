@@ -47,6 +47,9 @@ export function TitlebarMenu({
             debugAction(id);
           }
           switch (id) {
+            case 'new':
+              window.open('/new', '_blank');
+              break;
             case 'rename':
               focusTitleEdit();
               break;
@@ -62,6 +65,7 @@ export function TitlebarMenu({
           }
         }}
       >
+        <MenuItem id="new">New</MenuItem>
         <MenuItem id="rename">Rename</MenuItem>
         <MenuItem id="share">Share</MenuItem>
         <MenuItem id="import">Import</MenuItem>
