@@ -29,7 +29,7 @@ func (s *Services) postMapsHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(r, w, err)
 		return
 	} else if sess == nil {
-		writeBadRequest(r, w)
+		writeUnauthorized(r, w)
 		return
 	}
 
