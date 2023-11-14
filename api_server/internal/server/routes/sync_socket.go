@@ -133,9 +133,10 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 	l.Info("upgraded")
 
 	state := &sockState{
-		l:    l,
-		conn: conn,
-		b:    b,
+		l:       l,
+		conn:    conn,
+		b:       b,
+		mayEdit: authz.CanEdit,
 
 		trustedAware: trustedAware,
 	}
@@ -154,17 +155,19 @@ type sockState struct {
 	conn *websocket.Conn
 	b    SyncerConnection
 
+	mayEdit      bool
 	trustedAware sync_schema.TrustedAware
 }
 
 func socketReader(
 	s *sockState,
 ) {
+	errCode := websocket.CloseInternalServerErr
 	var err error
 	defer func() {
 		if err != nil {
 			s.l.Warnw("closing socketReader due to error", zap.Error(err))
-			writeCloseMessage(s.conn, websocket.CloseInternalServerErr, err.Error())
+			writeCloseMessage(s.conn, errCode, err.Error())
 		} else {
 			s.l.Info("closing socketReader")
 			writeCloseMessage(s.conn, websocket.CloseNormalClosure, "")
@@ -176,7 +179,11 @@ func socketReader(
 		var msg incomingDto
 		err = s.conn.ReadJSON(&msg)
 		if err != nil {
-			err = nil
+			if errors.Is(err, &websocket.CloseError{}) {
+				err = nil
+				return
+			}
+			errCode = websocket.CloseProtocolError
 			return
 		}
 
@@ -190,8 +197,14 @@ func socketReader(
 		}
 
 		var change []byte
-		change, err = json.Marshal(msg.Change)
-		if err != nil {
+		if s.mayEdit {
+			change, err = json.Marshal(msg.Change)
+			if err != nil {
+				return
+			}
+		} else if msg.Change != nil {
+			err = errors.New("not authorized to send changes")
+			errCode = websocket.ClosePolicyViolation
 			return
 		}
 
