@@ -53,3 +53,7 @@ SET implicitly_obsoleted_at = NOW()
 WHERE requesting_user_id = $1
   AND map_internal_id = $2
   AND implicitly_obsoleted_at IS NULL;
+
+-- name: PushEntryToMailgunLog :exec
+INSERT INTO pt.mailgun_log ("to", subject, text_body, send_status, send_id)
+VALUES ($1, $2, $3, $4, $5);

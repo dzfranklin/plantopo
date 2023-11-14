@@ -173,6 +173,16 @@ type PtEmailConfirmationToken struct {
 	UsedAt   pgtype.Timestamptz
 }
 
+type PtMailgunLog struct {
+	ID         int64
+	CreatedAt  pgtype.Timestamptz
+	To         string
+	Subject    string
+	TextBody   string
+	SendStatus string
+	SendID     string
+}
+
 type PtMap struct {
 	InternalID         int64
 	ExternalID         string

@@ -232,3 +232,27 @@ func (q *Queries) MarkAccessRequestRejected(ctx context.Context, externalID stri
 	_, err := q.db.Exec(ctx, markAccessRequestRejected, externalID)
 	return err
 }
+
+const pushEntryToMailgunLog = `-- name: PushEntryToMailgunLog :exec
+INSERT INTO pt.mailgun_log ("to", subject, text_body, send_status, send_id)
+VALUES ($1, $2, $3, $4, $5)
+`
+
+type PushEntryToMailgunLogParams struct {
+	To         string
+	Subject    string
+	TextBody   string
+	SendStatus string
+	SendID     string
+}
+
+func (q *Queries) PushEntryToMailgunLog(ctx context.Context, arg PushEntryToMailgunLogParams) error {
+	_, err := q.db.Exec(ctx, pushEntryToMailgunLog,
+		arg.To,
+		arg.Subject,
+		arg.TextBody,
+		arg.SendStatus,
+		arg.SendID,
+	)
+	return err
+}

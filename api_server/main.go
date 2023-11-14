@@ -76,24 +76,28 @@ func main() {
 	if port == "" {
 		port = "4000"
 	}
-	l = l.With(zap.String("host", host), zap.String("port", port))
-	l.Infow("starting")
+	l.Infow("starting", "host", host, "port", port)
 
 	awsConfig, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("eu-west-2"))
 	if err != nil {
 		l.Fatalw("error loading aws config", zap.Error(err))
 	}
 
+	pg, err := db.NewPg(ctx, l.Desugar(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		l.Fatalw("error creating postgres pool", zap.Error(err))
+	}
+
 	mailerConfig := mailer.Config{
 		Sender:                &mailer.LogSender{Logger: l},
 		DeliverabilityChecker: &mailer.NoopDeliverabilityChecker{},
 	}
-	if appEnv == "production" || (appEnv == "development" && *devLiveMailer) {
+	if appEnv == "prod" || appEnv == "staging" || (appEnv == "development" && *devLiveMailer) {
 		mailgunKey := os.Getenv("PT_MAILGUN_KEY")
 		if mailgunKey == "" {
 			l.Fatalw("PT_MAILGUN_KEY must be set")
 		}
-		mailerConfig.Sender = mailer.NewMailgunSender(l, mailgunKey)
+		mailerConfig.Sender = mailer.NewMailgunSender(l, pg, mailgunKey)
 
 		emailableKey := os.Getenv("PT_EMAILABLE_KEY")
 		if emailableKey == "" {
@@ -102,11 +106,6 @@ func main() {
 		mailerConfig.DeliverabilityChecker = mailer.NewEmailableDeliverabilityChecker(ctx, emailableKey)
 	}
 	mailerService := mailer.New(ctx, mailerConfig)
-
-	pg, err := db.NewPg(ctx, l.Desugar(), os.Getenv("DATABASE_URL"))
-	if err != nil {
-		l.Fatalw("error creating postgres pool", zap.Error(err))
-	}
 
 	usersService := users.NewService(ctx, pg, mailerService)
 	mapsService := maps.NewService(l.Desugar(), pg, usersService, mailerService)
