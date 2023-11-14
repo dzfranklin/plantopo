@@ -23,7 +23,7 @@ export function MapsManagerComponent() {
       router.push(`/map/${map.id}`);
     },
   });
-  const doNew = useCallback(() => createMutation.mutate(), [createMutation]);
+  const doNew = useCallback(() => createMutation.mutate({}), [createMutation]);
 
   const renderEmptyOwnedByMe = useCallback(
     () => (
