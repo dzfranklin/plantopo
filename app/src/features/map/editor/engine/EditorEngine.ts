@@ -530,36 +530,40 @@ export class EditorEngine {
     return { before, after };
   }
 
-  private _renderScene(): Scene {
-    const start = performance.now();
-    const layers = this._renderLayers();
-    const features = this._renderFeatures();
-    const end = performance.now();
-    this._scene = {
-      timing: { start, end },
-      sidebarWidth: this._sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH,
-      activeTool: this._activeTool,
-      layers,
-      activeFeature: this._active
-        ? this._sceneNodes.get(this._active) ?? null
-        : null,
-      features,
-    };
+  private _nextTick: number | undefined;
 
-    const query = (fid: string) => this.getFeature(fid);
-    for (const entry of this._sceneSelectors.values()) {
-      const value = entry.sel(this._scene, query);
-      if (value === entry.cached) continue;
-      if (entry.equalityFn) {
-        if (entry.equalityFn(value, entry.cached)) {
-          continue;
+  private _renderScene() {
+    if (this._nextTick) return;
+    this._nextTick = window.requestAnimationFrame(() => {
+      this._nextTick = undefined;
+      const start = performance.now();
+      const layers = this._renderLayers();
+      const features = this._renderFeatures();
+      const end = performance.now();
+      this._scene = {
+        timing: { start, end },
+        sidebarWidth: this._sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH,
+        activeTool: this._activeTool,
+        layers,
+        activeFeature: this._active
+          ? this._sceneNodes.get(this._active) ?? null
+          : null,
+        features,
+      };
+
+      const query = (fid: string) => this.getFeature(fid);
+      for (const entry of this._sceneSelectors.values()) {
+        const value = entry.sel(this._scene, query);
+        if (value === entry.cached) continue;
+        if (entry.equalityFn) {
+          if (entry.equalityFn(value, entry.cached)) {
+            continue;
+          }
         }
+        entry.cached = value;
+        entry.cb(value);
       }
-      entry.cached = value;
-      entry.cb(value);
-    }
-
-    return this._scene;
+    });
   }
 
   private _renderLayers(): Scene['layers'] {
