@@ -9,7 +9,7 @@ import (
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
-//go:embed *.sql
+//go:embed *
 var embedded embed.FS
 
 func Iofs() source.Driver {
@@ -21,7 +21,7 @@ func Iofs() source.Driver {
 }
 
 func SetupScript(user string) string {
-	tmpl, err := embedded.ReadFile("setup.sql")
+	tmpl, err := embedded.ReadFile("setup.sql.tmpl")
 	if err != nil {
 		panic(fmt.Errorf("cannot read setup tmpl: %w", err))
 	}
