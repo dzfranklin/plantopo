@@ -158,7 +158,7 @@ export class EditorEngine {
         Date.now() - lastAwareSendTime > MIN_AWARE_SEND_INTERVAL ||
         !deepEq(aware, lastAwareSent)
       ) {
-        this._transport.send({
+        const _ = this._transport.send({
           aware,
         });
         lastAwareSent = aware;

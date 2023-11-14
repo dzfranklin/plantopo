@@ -124,14 +124,10 @@ export class StateManager {
   private _onSendInterval() {
     const change = this._store.localChangesAfter(this._latestSend);
     if (change) {
-      const err = this._transport.send({
+      const _ = this._transport.send({
         seq: this._generation,
         change,
       });
-      if (err) {
-        console.error('failed to send change', err);
-        return;
-      }
       this._hasUnsent = false;
       this._latestSend = this._generation;
       this._generation++;
