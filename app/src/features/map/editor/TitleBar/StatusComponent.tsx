@@ -40,7 +40,9 @@ export function StatusComponent() {
           <button onClick={() => engine?.forceDisconnect()}>
             <ConnectedIcon height="20px" />
           </button>
-          {hasUnsyncedChanges && (
+          {!hasUnsyncedChanges ? (
+            <span className="text-neutral-500">All changes saved</span>
+          ) : (
             <span className="text-neutral-500">Syncing...</span>
           )}
         </>
