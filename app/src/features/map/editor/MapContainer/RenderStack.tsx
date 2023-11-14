@@ -16,6 +16,7 @@ import { Scene, SceneFeature } from '../engine/Scene';
 import { nearestPointInGeometry } from '../nearestPointInFeature';
 import booleanIntersects from '@turf/boolean-intersects';
 import { MapToolbar } from './MapToolbar/MapToolbar';
+import { useDebugMode } from '../useDebugMode';
 
 // Instruct nextjs to remout this component on every edit
 // @refresh reset
@@ -38,6 +39,7 @@ export function RenderStack({
   const canvasCtxRef = useRef<CanvasRenderingContext2D | null>(null);
 
   const [isLoadingContent, setIsLoadingContent] = useState(true);
+  const [debugMode] = useDebugMode();
 
   // ATTACH TO MAP
   useEffect(() => {
@@ -68,6 +70,7 @@ export function RenderStack({
 
     const featureRenderer = new FeatureRenderer();
     const featurePainter = new FeaturePainter(canvas, canvasCtx);
+    featurePainter.showDebug = debugMode;
     const interactionManager = new InteractionManager({
       engine,
       initialCamera: CurrentCameraPosition.fromMap(map),
@@ -163,7 +166,7 @@ export function RenderStack({
       map.off('movestart', onMoveStart);
       map.off('moveend', onMoveEnd);
     };
-  }, [engine, containerRef, map]);
+  }, [engine, containerRef, map, debugMode]);
 
   // SIZE/RESIZE
   useEffect(() => {
