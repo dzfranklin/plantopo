@@ -8,6 +8,7 @@ export type SyncTransportStatus =
   | { type: 'disconnected'; reconnectingAt: number; reconnectNow: () => void };
 
 const HEALTHCHECK_INTERVAL = 1000 * 15;
+const HEALTHY_MIN_CONNECTED_DURATION = 1000 * 60 * 5;
 
 export class SyncTransport {
   public readonly mapId: string;
@@ -96,9 +97,19 @@ export class SyncTransport {
     }
     const endpoint = `${API_ENDPOINT_WS}map/${this.mapId}/sync-socket?clientId=${this.clientId}`;
     console.log('Connecting to', endpoint);
-    this._sock = new WebSocket(endpoint);
+    const sock = new WebSocket(endpoint);
+    this._sock = sock;
     this._sock.onopen = () => {
       this._advanceState('connected');
+
+      setTimeout(() => {
+        if (this._sock === sock && this.status.type === 'connected') {
+          if (this._failures > 0) {
+            console.log('SyncTransport: marking previously failed as healthy');
+            this._failures = 0;
+          }
+        }
+      }, HEALTHY_MIN_CONNECTED_DURATION);
     };
     this._sock.onmessage = (ev) => {
       const msg = JSON.parse(ev.data) as IncomingSessionMsg;
