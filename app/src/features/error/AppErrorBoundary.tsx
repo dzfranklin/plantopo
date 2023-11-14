@@ -8,7 +8,7 @@ import { XCircleIcon } from '@heroicons/react/20/solid';
 export default function fallbackRender({ error }: { error: unknown }) {
   return (
     <div className="max-w-2xl p-4 mx-auto mt-12 rounded-md bg-red-50">
-      <div className="flex">
+      <div className="flex w-full">
         <div className="flex-shrink-0">
           <XCircleIcon className="w-5 h-5 text-red-400" aria-hidden="true" />
         </div>
@@ -21,6 +21,15 @@ export default function fallbackRender({ error }: { error: unknown }) {
             </p>
           </div>
           <ErrorTechInfo error={error} />
+          <div className="flex justify-end my-4">
+            <button
+              type="button"
+              className="px-3 py-2 text-sm font-semibold text-gray-900 bg-white rounded-md shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+              onClick={() => window.location.reload()}
+            >
+              Reload page
+            </button>
+          </div>
         </div>
       </div>
     </div>

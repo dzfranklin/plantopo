@@ -80,6 +80,10 @@ func New(s *Services) http.Handler {
 	r.HandleFunc("/api/v1/map", s.mapsHandler)
 	r.HandleFunc("/api/v1/map/{id}", s.mapHandler)
 	r.HandleFunc("/api/v1/map/{id}/access", s.mapAccessHandler)
+	r.HandleFunc("/api/v1/map/{id}/access/request", s.requestMapAccessHandler)
+	r.HandleFunc("/api/v1/access-request/pending", s.pendingAccessRequestsHandler)
+	r.HandleFunc("/api/v1/access-request/{id}/approve", s.approveAccessRequestHandler)
+	r.HandleFunc("/api/v1/access-request/{id}/reject", s.rejectAccessRequestHandler)
 
 	r.HandleFunc("/api/v1/map/{id}/sync-socket", s.mapSyncSocketHandler)
 

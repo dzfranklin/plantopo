@@ -1,8 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { apiQueryKey, useApiQuery } from '@/api/useApiQuery';
-import { MapAccess, PutMapAccessRequest } from './MapAccess';
+import {
+  MapAccess,
+  PutMapAccessRequest,
+  RequestMapAccessRequest,
+} from './MapAccess';
 import { useApiMutation } from '@/api/useApiMutation';
 import { mapsOwnedByMeKey, mapsSharedWithMeKey } from './mapList';
+import { AppError } from '@/api/errors';
 
 export interface MapMeta {
   id: string;
@@ -20,6 +25,19 @@ export const mapKey = (id: string) => apiQueryKey({ path: ['map', id] });
 export const useMapMeta = (id: string) =>
   useApiQuery<MapMeta, unknown>({
     path: ['map', id],
+  });
+
+export const useMaybeMapMeta = (id: string) =>
+  useApiQuery<MapMeta, unknown>({
+    path: ['map', id],
+    retry: (failureCount, error) => {
+      if (error instanceof AppError) {
+        if (error.code > 400 && error.code < 500) {
+          return false;
+        }
+      }
+      return failureCount < 3;
+    },
   });
 
 export function usePutMapMetaMutation(
@@ -64,3 +82,9 @@ export function usePutMapAccessMutation(
     },
   });
 }
+
+export const useRequestMapAccessMutation = (id: string) =>
+  useApiMutation<void, void, RequestMapAccessRequest>({
+    path: ['map', id, 'access', 'request'],
+    method: 'POST',
+  });

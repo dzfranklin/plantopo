@@ -20,6 +20,7 @@ type Service interface {
 	SendPasswordReset(to *types.User, token string) error
 	SendShareNotification(req ShareNotificationRequest) error
 	SendInvite(req InviteRequest) error
+	SendRequestAccess(req RequestAccessRequest) error
 }
 
 type ShareNotificationRequest struct {
@@ -160,16 +161,11 @@ type inviteContext struct {
 }
 
 func (m *impl) SendShareNotification(req ShareNotificationRequest) error {
-	mapName := req.Map.Name
-	if mapName == "" {
-		mapName = "Untitled"
-	}
-	mapUrl := fmt.Sprintf("https://plantopo.com/map/%s/", req.Map.Id)
 	tdata := shareContext{
 		FromFullName: req.From.FullName,
 		ToFullName:   req.To.FullName,
-		MapName:      mapName,
-		MapUrl:       template.URL(mapUrl),
+		MapName:      mapName(*req.Map),
+		MapUrl:       template.URL(mapURL(*req.Map)),
 		Message:      req.Message,
 	}
 
@@ -205,10 +201,6 @@ func (m *impl) SendShareNotification(req ShareNotificationRequest) error {
 }
 
 func (m *impl) SendInvite(req InviteRequest) error {
-	mapName := req.Map.Name
-	if mapName == "" {
-		mapName = "Untitled"
-	}
 	signupUrl := fmt.Sprintf(
 		"https://plantopo.com/signup/?returnTo=%s&email=%s",
 		url.QueryEscape(fmt.Sprintf("/map/%s/", req.Map.Id)),
@@ -217,7 +209,7 @@ func (m *impl) SendInvite(req InviteRequest) error {
 	tdata := inviteContext{
 		ToEmail:      req.ToEmail,
 		FromFullName: req.From.FullName,
-		MapName:      mapName,
+		MapName:      mapName(*req.Map),
 		SignupUrl:    template.URL(signupUrl),
 		Message:      req.Message,
 	}
@@ -248,4 +240,74 @@ func (m *impl) SendInvite(req InviteRequest) error {
 	m.l.Info("sent invite email", " from=", req.From.Id)
 
 	return nil
+}
+
+type requestAccessContext struct {
+	FromFullName  string
+	ToFullName    string
+	MapName       string
+	MapURL        template.URL
+	GrantURL      template.URL
+	RequestedRole string
+	Message       string
+}
+
+type RequestAccessRequest struct {
+	RequestId     string
+	From          types.User
+	To            types.User
+	Map           types.MapMeta
+	RequestedRole string
+	Message       string
+}
+
+func (m *impl) SendRequestAccess(req RequestAccessRequest) error {
+	grantURL := fmt.Sprintf("https://plantopo.com/access/?requestId=%s", req.RequestId)
+	tdata := requestAccessContext{
+		FromFullName:  req.From.FullName,
+		ToFullName:    req.To.FullName,
+		MapName:       mapName(req.Map),
+		RequestedRole: req.RequestedRole,
+		MapURL:        template.URL(mapURL(req.Map)),
+		GrantURL:      template.URL(grantURL),
+		Message:       req.Message,
+	}
+
+	var subject strings.Builder
+	err := textTemplates.ExecuteTemplate(&subject, "request_access.subject.tmpl", tdata)
+	if err != nil {
+		return fmt.Errorf("execute request access subject template: %w", err)
+	}
+
+	var textBody strings.Builder
+	err = textTemplates.ExecuteTemplate(&textBody, "request_access.text.tmpl", tdata)
+	if err != nil {
+		return fmt.Errorf("execute request access textBody template: %w", err)
+	}
+
+	err = m.s.Send(Payload{
+		to:       req.To.Email,
+		subject:  strings.TrimSpace(subject.String()),
+		textBody: textBody.String(),
+	})
+	if err != nil {
+		m.l.Warn("failed to send request access email",
+			" from=", req.From.Id, " to=", req.To.Id, zap.Error(err))
+		return err
+	}
+
+	m.l.Info("sent request access email",
+		" from=", req.From.Id, " to=", req.To.Id)
+	return nil
+}
+
+func mapName(meta types.MapMeta) string {
+	if meta.Name != "" {
+		return meta.Name
+	}
+	return "Unnamed map"
+}
+
+func mapURL(meta types.MapMeta) string {
+	return fmt.Sprintf("https://plantopo.com/map/%s/", meta.Id)
 }

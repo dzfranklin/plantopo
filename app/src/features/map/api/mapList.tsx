@@ -6,6 +6,12 @@ interface ListReply {
   items: MapMeta[];
 }
 
+export interface MapListEntry {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
 const OWNED_BY_ME_PATH = ['map', 'list', 'owned-by-me'];
 
 export const useMapsOwnedByMe = () =>

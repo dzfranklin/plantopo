@@ -36,6 +36,8 @@ gen:
     --go-grpc_opt paths=source_relative \
     --proto_path=.
 
+  cd api_server && sqlc generate
+
 app:
   cd app && npm run dev -- --port 443 --experimental-https
 
@@ -45,6 +47,9 @@ test-app:
   cd app && npm run test
 
 migrationOpts := "x-migrations-table=%22pt%22.%22schema_migrations%22&x-migrations-table-quoted=true"
+
+create-migration name:
+  migrate create -ext sql -dir migrations -seq -digits 3 {{name}}
 
 migrate *ARGS:
   migrate \
@@ -74,7 +79,7 @@ migrate-prod-down url:
     down 1
 
 setup-prod-db user url:
-   sed 's/{{{{user}}/{{user}}/' migrations/setup.sql | psql "{{url}}" -f -
+   sed 's/{{{{user}}/{{user}}/' migrations/setup.sql.tmpl | psql "{{url}}" -f -
 
 recreatedb:
   dropdb --if-exists pt
@@ -85,7 +90,7 @@ recreatedb:
     -database "postgres://postgres:postgres@localhost:5432/pt?sslmode=disable&{{migrationOpts}}" \
     up
   psql -d pt \
-    -f migrations/test_seed.sql
+    -f migrations/test_seed.sql.tmpl
 
 loc:
   tokei . -e '*.{json,xml,svg,txt,pb.go}'

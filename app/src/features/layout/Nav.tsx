@@ -2,7 +2,7 @@ import cls from '@/generic/cls';
 import { Disclosure, Menu, Transition } from '@headlessui/react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Fragment, useEffect, useState } from 'react';
 import { useSession } from '../account/session';
 import { useLogoutMutation } from '../account/api/useSessionMutation';
@@ -11,7 +11,10 @@ import { UserImage } from '../account/UserImage';
 type NavAction = 'signOut';
 type NavEntry = { name: string } & ({ path: string } | { action: NavAction });
 
-const sessionNav: NavEntry[] = [{ name: 'Dashboard', path: '/dashboard' }];
+const sessionNav: NavEntry[] = [
+  { name: 'Dashboard', path: '/dashboard' },
+  { name: 'Access requests', path: '/access' },
+];
 const userNav: NavEntry[] = [
   { name: 'Account', path: '/account' },
   { name: 'Sign out', action: 'signOut' },
@@ -34,6 +37,11 @@ function NavBar({ open }: { open: boolean }) {
   const session = useSession();
   const doAction = useDoAction();
   const current = useCurrentSessionNav();
+
+  const currentPath = usePathname() ?? '/';
+  const currentSearch = useSearchParams() ?? '';
+  const returnTo = currentPath === '/' ? '' : currentPath + '?' + currentSearch;
+
   return (
     <div className="sm:px-6 lg:px-8">
       <div className="border-b border-gray-700">
@@ -78,13 +86,13 @@ function NavBar({ open }: { open: boolean }) {
           {!session && (
             <div className="flex gap-4">
               <Link
-                href="/login"
+                href={'/login?returnTo=' + encodeURIComponent(returnTo)}
                 className="rounded-md bg-white/10 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-white/20"
               >
                 Log in
               </Link>
               <Link
-                href="/signup"
+                href={'/signup' + encodeURIComponent(returnTo)}
                 className="rounded-md bg-indigo-500 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
               >
                 Sign up

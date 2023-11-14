@@ -3,6 +3,7 @@ package maps
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/danielzfranklin/plantopo/api_server/internal/types"
 	"github.com/google/uuid"
@@ -79,6 +80,13 @@ func roleMax(a Role, b Role) Role {
 	return b
 }
 
+type RequestAccessRequest struct {
+	MapId          string
+	RequestedRole  Role
+	RequestingUser uuid.UUID
+	Message        string
+}
+
 type PutAccessRequest struct {
 	MapId              string                           `json:"mapId"`
 	Owner              *uuid.UUID                       `json:"owner"`
@@ -133,4 +141,15 @@ func (r *InviteRequest) Validate() error {
 		return fmt.Errorf("invalid role")
 	}
 	return nil
+}
+
+type PendingAccessRequest struct {
+	Id                     string    `json:"id"`
+	CreatedAt              time.Time `json:"createdAt"`
+	RequestingUserEmail    string    `json:"requestingUserEmail"`
+	RequestingUserFullName string    `json:"requestingUserFullName"`
+	MapId                  string    `json:"mapId"`
+	MapName                string    `json:"mapName"`
+	RequestedRole          Role      `json:"requestedRole"`
+	Message                string    `json:"message"`
 }

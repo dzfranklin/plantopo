@@ -2,7 +2,7 @@
 
 import '../../globals.css';
 import { PageTitle } from '../../generic/PageTitle';
-import { useMapMeta } from '@/features/map/api/mapMeta';
+import { MapMeta, useMapMeta } from '@/features/map/api/mapMeta';
 import { useEffect, useMemo, useState } from 'react';
 import { AppError } from '@/api/errors';
 import { MapEditor } from '@/features/map/editor/MapEditor';
@@ -13,9 +13,6 @@ import {
   InitialCamera,
 } from '@/features/map/editor/engine/EditorEngine';
 import { EditorEngineProvider } from '@/features/map/editor/engine/useEngine';
-import { AlertDialog, DialogContainer } from '@adobe/react-spectrum';
-import ErrorTechInfo from '@/features/error/ErrorTechInfo';
-import { useTokensQuery } from '@/features/map/api/useTokens';
 import { GetStaticPaths, GetStaticProps } from 'next';
 import {
   parseCameraURLParam,
@@ -27,11 +24,78 @@ import {
   useMyGeolocation,
 } from '@/features/map/api/useMyGeolocation';
 import { MapIdProvider } from '@/features/map/editor/useMapId';
+import { UseQueryResult } from '@tanstack/react-query';
+import NotFoundPage from '@/app/not-found';
 
 export default function MapPage() {
   const router = useRouter();
   const session = useSession();
   const sessionRedirector = useSessionRedirector();
+  const mapId = useMemo(
+    () => pathParts(router.asPath).at(-1)!,
+    [router.asPath],
+  );
+  const meta = useMapMeta(mapId);
+  const engine = useEngineForPage(meta);
+
+  const error = meta.error;
+  if (error) {
+    if (error instanceof AppError) {
+      if (error.code === 401 && session === null) {
+        sessionRedirector();
+        return;
+      }
+      if (error.code === 401 || error.code === 403) {
+        router.replace(`/request-access?mapId=${mapId}`);
+        return;
+      }
+      if (error.code === 404) {
+        return <NotFoundPage />;
+      }
+    }
+    throw error;
+  }
+
+  return (
+    <div className="w-screen h-screen">
+      {meta.isLoading && <PageTitle title="Opening map..." />}
+      {meta.data && <PageTitle title={meta.data.name || 'Unnamed map'} />}
+
+      <MapIdProvider mapId={mapId}>
+        <EditorEngineProvider engine={engine}>
+          <MapEditor />
+        </EditorEngineProvider>
+      </MapIdProvider>
+    </div>
+  );
+}
+
+export const getStaticProps = (async () => {
+  return {
+    props: {},
+  };
+}) satisfies GetStaticProps;
+
+export const getStaticPaths = (async () => {
+  return {
+    paths: [
+      {
+        params: {
+          id: '__id__',
+        },
+      },
+    ],
+    fallback: false,
+  };
+}) satisfies GetStaticPaths;
+
+function notFound(): never {
+  window.location.href = '/map-not-found';
+  throw new Error('Redirecting');
+}
+
+function useEngineForPage(meta: UseQueryResult<MapMeta>): EditorEngine | null {
+  const router = useRouter();
 
   const mapId = useMemo(() => pathParts(router.asPath).at(-1), [router.asPath]);
   if (!mapId) notFound();
@@ -43,17 +107,6 @@ export default function MapPage() {
   });
 
   const myGeolocation = useMyGeolocation();
-
-  const meta = useMapMeta(mapId);
-  const isRedirectedError =
-    meta.error instanceof AppError &&
-    (meta.error.code === 404 || (meta.error.code === 401 && !session));
-  useEffect(() => {
-    if (meta.error instanceof AppError) {
-      if (meta.error.code === 404) notFound();
-      else if (meta.error.code === 401 && !session) sessionRedirector();
-    }
-  }, [meta.error, session, sessionRedirector]);
 
   const mapSources = useMapSources();
 
@@ -68,7 +121,6 @@ export default function MapPage() {
 
     const engine = new EditorEngine({
       mapId,
-      // NOTE: We shouldn't need to wait for meta to load to initialize the engine
       mayEdit: meta.data.currentSessionMayEdit,
       mapSources,
       initialCamera,
@@ -106,61 +158,7 @@ export default function MapPage() {
     }
   }, [engine, myGeolocation.data]);
 
-  // Avoid starting this blocker after the metadata is loaded.
-  // NOTE: If we fix waiting for meta to load the engine we don't need this
-  useTokensQuery();
-
-  return (
-    <div className="w-screen h-screen">
-      <PageTitle
-        title={meta.data ? `${meta.data.name || 'Unnamed map'}` : 'Loading...'}
-      />
-
-      <DialogContainer isDismissable={false} onDismiss={() => {}}>
-        {meta.error && !isRedirectedError && (
-          <AlertDialog
-            title={'Error opening map'}
-            variant="error"
-            primaryActionLabel={'Reload'}
-            onPrimaryAction={() => document.location.reload()}
-          >
-            <h1 className="mb-4">{meta.error.message}</h1>
-            <ErrorTechInfo error={meta.error} />
-          </AlertDialog>
-        )}
-      </DialogContainer>
-
-      <MapIdProvider mapId={mapId}>
-        <EditorEngineProvider engine={engine}>
-          <MapEditor />
-        </EditorEngineProvider>
-      </MapIdProvider>
-    </div>
-  );
-}
-
-export const getStaticProps = (async () => {
-  return {
-    props: {},
-  };
-}) satisfies GetStaticProps;
-
-export const getStaticPaths = (async () => {
-  return {
-    paths: [
-      {
-        params: {
-          id: '__id__',
-        },
-      },
-    ],
-    fallback: false,
-  };
-}) satisfies GetStaticPaths;
-
-function notFound(): never {
-  window.location.href = '/map-not-found';
-  throw new Error('Redirecting');
+  return engine;
 }
 
 function pathParts(pathname: string): string[] {
@@ -177,6 +175,7 @@ function pathParts(pathname: string): string[] {
 
   return pathname.split('/');
 }
+
 function initialCameraFromMyGeolocation(
   data: MyGeolocation,
 ): InitialCamera | undefined {

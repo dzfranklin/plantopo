@@ -49,3 +49,8 @@ export interface PutMapAccessRequest {
   userAccess?: Record<string, PutUserAccessEntry>; // by userId
   invite?: InviteRequest[];
 }
+
+export interface RequestMapAccessRequest {
+  requestedRole: UserAccessRole;
+  message?: string;
+}

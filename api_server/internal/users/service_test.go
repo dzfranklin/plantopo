@@ -59,6 +59,10 @@ func (m *mockMailer) CheckDeliverable(_ context.Context, _ string) (bool, error)
 	return true, nil
 }
 
+func (m *mockMailer) SendRequestAccess(_ mailer.RequestAccessRequest) error {
+	return nil
+}
+
 var validName = "Test User"
 var validPassword = "testpassword"
 
@@ -238,6 +242,7 @@ func (s *S) TestResetPasswordExpiredToken() {
 	token := m.resets[user.Id]
 	require.NotEmpty(s.T(), token)
 
+	time.Sleep(time.Nanosecond)
 	_, err = subject.ResetPassword(token, "new password")
 	require.ErrorIs(s.T(), err, ErrTokenExpired)
 }
