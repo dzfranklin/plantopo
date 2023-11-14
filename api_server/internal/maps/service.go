@@ -20,6 +20,7 @@ import (
 type Service interface {
 	Get(ctx context.Context, id string) (types.MapMeta, error)
 	Create(ctx context.Context, owner uuid.UUID) (types.MapMeta, error)
+	CreateCopy(ctx context.Context, copyFrom string) (types.MapMeta, error)
 	Put(ctx context.Context, update MetaUpdateRequest) (types.MapMeta, error)
 	Delete(ctx context.Context, ids []string) error
 	ListOwnedBy(ctx context.Context, userId uuid.UUID) ([]types.MapMeta, error)
@@ -122,9 +123,11 @@ func (s *impl) Create(ctx context.Context, owner uuid.UUID) (types.MapMeta, erro
 		return types.MapMeta{}, err
 	}
 
-	err = grant(ctx, tx, meta.Id, owner, RoleOwner)
-	if err != nil {
-		return types.MapMeta{}, err
+	if owner != uuid.Nil {
+		err = grant(ctx, tx, meta.Id, owner, RoleOwner)
+		if err != nil {
+			return types.MapMeta{}, err
+		}
 	}
 
 	err = tx.Commit(ctx)
@@ -133,6 +136,60 @@ func (s *impl) Create(ctx context.Context, owner uuid.UUID) (types.MapMeta, erro
 	}
 
 	return meta, nil
+}
+
+func (s *impl) CreateCopy(ctx context.Context, copyFrom string) (created types.MapMeta, err error) {
+	var sourceMeta types.MapMeta
+	if sourceMeta, err = s.Get(ctx, copyFrom); err != nil {
+		return
+	}
+
+	var sourceAccess *Access
+	if sourceAccess, err = s.Access(ctx, copyFrom); err != nil {
+		return
+	}
+
+	var target types.MapMeta
+	if target, err = s.Create(ctx, uuid.Nil); err != nil {
+		return
+	}
+
+	if target, err = s.Put(ctx, MetaUpdateRequest{
+		Id:   target.Id,
+		Name: sourceMeta.Name + " (copy)",
+	}); err != nil {
+		s.l.Error("failed to copy meta", zap.Error(err))
+	}
+
+	putUserAccess := make(map[uuid.UUID]PutUserAccessEntry)
+	for _, entry := range sourceAccess.UserAccess {
+		if entry.Role == RoleOwner {
+			continue
+		}
+		putUserAccess[entry.User.Id] = PutUserAccessEntry{
+			Role: entry.Role,
+		}
+	}
+	putInvites := make([]InviteRequest, 0)
+	for _, invite := range sourceAccess.PendingInvites {
+		putInvites = append(putInvites, InviteRequest{
+			Email:  invite.Email,
+			Role:   invite.Role,
+			Notify: false,
+		})
+	}
+	if err = s.PutAccess(ctx, nil, PutAccessRequest{
+		MapId:              target.Id,
+		Owner:              &sourceAccess.Owner.Id,
+		GeneralAccessLevel: sourceAccess.GeneralAccessLevel,
+		GeneralAccessRole:  sourceAccess.GeneralAccessRole,
+		UserAccess:         putUserAccess,
+		Invite:             putInvites,
+	}); err != nil {
+		s.l.Error("failed to copy access", zap.Error(err))
+	}
+
+	return target, nil
 }
 
 func (s *impl) Put(ctx context.Context, update MetaUpdateRequest) (types.MapMeta, error) {

@@ -272,6 +272,9 @@ func (s *grpcServer) Export(ctx context.Context, req *api.SyncBackendExportReque
 	if err != nil {
 		return nil, err
 	}
+	if cset == nil {
+		cset = &schema.Changeset{}
+	}
 
 	converted, err := converter.ConvertFromChangeset(logger, req.Format, req.Name, *cset)
 	if err != nil {

@@ -3,10 +3,12 @@ package mapsync
 import (
 	"context"
 	"fmt"
+	"github.com/cenkalti/backoff/v4"
 	api "github.com/danielzfranklin/plantopo/api/v1"
 	"github.com/oklog/ulid/v2"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"google.golang.org/grpc"
+	"time"
 )
 
 type Syncer struct {
@@ -39,6 +41,15 @@ func NewSyncer(matchmakerTarget string, dialOpts []grpc.DialOption) (*Syncer, er
 //
 // ctx is only used for the setup phase.
 func (s *Syncer) Connect(ctx context.Context, clientId string, mapId string) (*Connection, error) {
+	var conn *Connection
+	err := s.withRetries(func() (err error) {
+		conn, err = s.connectOnce(ctx, clientId, mapId)
+		return
+	})
+	return conn, err
+}
+
+func (s *Syncer) connectOnce(ctx context.Context, clientId string, mapId string) (*Connection, error) {
 	c := preConn{mapId: mapId, clientId: clientId}
 	if err := s.setup(ctx, &c); err != nil {
 		return nil, err
@@ -55,6 +66,12 @@ type ImportInfo struct {
 
 // Import imports a changeset into the map.
 func (s *Syncer) Import(ctx context.Context, mapId string, info ImportInfo) error {
+	return s.withRetries(func() error {
+		return s.importOnce(ctx, mapId, info)
+	})
+}
+
+func (s *Syncer) importOnce(ctx context.Context, mapId string, info ImportInfo) error {
 	c := internalClient(mapId)
 	if err := s.setup(ctx, &c); err != nil {
 		return err
@@ -77,6 +94,15 @@ type ExportInfo struct {
 
 // Export returns a URL to download the export.
 func (s *Syncer) Export(ctx context.Context, mapId string, info ExportInfo) (string, error) {
+	var url string
+	err := s.withRetries(func() (err error) {
+		url, err = s.exportOnce(ctx, mapId, info)
+		return
+	})
+	return url, err
+}
+
+func (s *Syncer) exportOnce(ctx context.Context, mapId string, info ExportInfo) (string, error) {
 	c := internalClient(mapId)
 	if err := s.setup(ctx, &c); err != nil {
 		return "", err
@@ -138,4 +164,10 @@ func (p preConn) toRequest() *api.SyncBackendConnectRequest {
 		Token:    p.setup.Token,
 		ClientId: p.clientId,
 	}
+}
+
+func (s *Syncer) withRetries(op backoff.Operation) error {
+	b := backoff.NewExponentialBackOff()
+	b.InitialInterval = 100 * time.Millisecond
+	return backoff.Retry(op, backoff.WithMaxRetries(b, 5))
 }

@@ -50,6 +50,9 @@ export function TitlebarMenu({
             case 'new':
               window.open('/new', '_blank');
               break;
+            case 'duplicate':
+              window.open(`/new/?copyFrom=${mapId}`, '_blank');
+              break;
             case 'rename':
               focusTitleEdit();
               break;
@@ -66,6 +69,7 @@ export function TitlebarMenu({
         }}
       >
         <MenuItem id="new">New</MenuItem>
+        <MenuItem id="duplicate">Duplicate</MenuItem>
         <MenuItem id="rename">Rename</MenuItem>
         <MenuItem id="share">Share</MenuItem>
         <MenuItem id="import">Import</MenuItem>

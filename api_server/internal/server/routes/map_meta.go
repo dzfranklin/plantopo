@@ -1,10 +1,19 @@
 package routes
 
 import (
+	"bytes"
+	"context"
+	"crypto/md5"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/danielzfranklin/plantopo/api_server/internal/loggers"
+	"github.com/danielzfranklin/plantopo/api_server/internal/mapsync"
+	"github.com/danielzfranklin/plantopo/api_server/internal/types"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
+	"io"
 	"net/http"
 	"time"
 
@@ -23,7 +32,12 @@ func (s *Services) mapsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type createMapRequest struct {
+	CopyFrom string `json:"copyFrom"`
+}
+
 func (s *Services) postMapsHandler(w http.ResponseWriter, r *http.Request) {
+	l := loggers.FromCtx(r.Context()).Sugar()
 	sess, err := s.SessionManager.Get(r)
 	if err != nil {
 		writeError(r, w, err)
@@ -33,13 +47,125 @@ func (s *Services) postMapsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	meta, err := s.Maps.Create(r.Context(), sess.UserId)
-	if err != nil {
-		writeInternalError(r, w, err)
+	var req createMapRequest
+	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeBadRequest(r, w)
 		return
 	}
 
-	writeData(r, w, meta)
+	if req.CopyFrom != "" {
+		newMap, err := s.Maps.CreateCopy(r.Context(), req.CopyFrom)
+		if errors.Is(err, maps.ErrMapNotFound) {
+			writeNotFound(r, w)
+			return
+		}
+		if err != nil {
+			writeError(r, w, err)
+			return
+		}
+
+		go s.copyMapInto(l, req.CopyFrom, newMap)
+
+		writeData(r, w, newMap)
+	} else {
+		meta, err := s.Maps.Create(r.Context(), sess.UserId)
+		if err != nil {
+			writeError(r, w, err)
+			return
+		}
+		writeData(r, w, meta)
+	}
+}
+
+func (s *Services) copyMapInto(l *zap.SugaredLogger, copyFrom string, newMap types.MapMeta) {
+	ctx := context.Background()
+	l = l.With("copyFrom", copyFrom, "newMapId", newMap.Id)
+	l.Info("copying map")
+
+	var err error
+	defer func() {
+		if err != nil {
+			l.Errorw("error copying map", zap.Error(err))
+		}
+	}()
+
+	var exportURL string
+	exportURL, err = s.MapExporter.Export(ctx, copyFrom, mapsync.ExportInfo{
+		Name:     newMap.Name,
+		Filename: "copy.json",
+		Format:   "ptinternal",
+	})
+	if err != nil {
+		return
+	}
+	l.Info("exported map to copy from")
+
+	var exportResp *http.Response
+	if exportResp, err = http.Get(exportURL); err != nil {
+		return
+	}
+	defer exportResp.Body.Close()
+
+	var export []byte
+	if export, err = io.ReadAll(exportResp.Body); err != nil {
+		return
+	}
+	l.Info("downloaded export")
+	exportMD5 := md5.Sum(export)
+	encodedExportMD5 := base64.StdEncoding.EncodeToString(exportMD5[:])
+
+	var imp *mapsync.Import
+	imp, err = s.MapImporter.CreateImport(ctx, &mapsync.CreateImportRequest{
+		MapId:      newMap.Id,
+		Filename:   "copy.json",
+		Format:     "ptinternal",
+		ContentMD5: encodedExportMD5,
+	})
+	if err != nil {
+		return
+	}
+	l.Info("created import")
+
+	var uploadReq *http.Request
+	if uploadReq, err = http.NewRequest("PUT", imp.UploadURL, bytes.NewReader(export)); err != nil {
+		return
+	}
+	uploadReq.Header.Set("Content-MD5", encodedExportMD5)
+
+	var upload *http.Response
+	upload, err = http.DefaultClient.Do(uploadReq)
+	if err != nil {
+		return
+	}
+	defer upload.Body.Close()
+	if upload.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(upload.Body)
+		err = fmt.Errorf("upload failed: %s: %s", upload.Status, body)
+		return
+	}
+	l.Info("uploaded import")
+
+	var status *mapsync.Import
+
+	status, err = s.MapImporter.StartImport(imp.Id)
+	if err != nil {
+		return
+	}
+	l.Info("started import")
+
+	for status.Status != "complete" && status.Status != "failed" {
+		time.Sleep(1 * time.Second)
+		status, err = s.MapImporter.CheckImport(ctx, status.MapId)
+		l.Infof("waiting for import: %s", status.Status)
+		if err != nil {
+			return
+		}
+	}
+	if status.Status == "failed" {
+		err = fmt.Errorf("import failed: %s", status.StatusMessage)
+		return
+	}
+	l.Info("copied map")
 }
 
 type deleteRequest struct {

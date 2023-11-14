@@ -17,7 +17,7 @@ export async function createImport(
   contentMD5: string,
 ): Promise<CreateImportResponse> {
   return await performApi('POST', ['map', mapId, 'import'], undefined, {
-    format: 'gpx',
+    format,
     contentMD5,
   });
 }

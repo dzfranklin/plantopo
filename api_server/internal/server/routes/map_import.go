@@ -50,11 +50,6 @@ func (s *Services) uploadImportHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	req.MapId = mapId
 
-	if req.Format != "gpx" {
-		writeBadRequest(r, w)
-		return
-	}
-
 	status, err := s.MapImporter.CreateImport(r.Context(), req)
 	if err != nil {
 		writeError(r, w, err)
