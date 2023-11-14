@@ -315,8 +315,6 @@ function ActiveLayerActionMenu({
   );
 }
 
-const MAX_UPDATE_INTERVAL = 10; // Throttle changes to 100 per second
-
 function ActiveLayerEditor({
   layer,
   engine,
@@ -324,30 +322,6 @@ function ActiveLayerEditor({
   engine: EditorEngine;
   layer: SceneLayer;
 }) {
-  const [opacity, _setOpacity] = useState(
-    layer.opacity ?? layer.source.defaultOpacity,
-  );
-  const tick = useRef<number | null>(null);
-  const setOpacity = useCallback(
-    (value: number, immediate = false) => {
-      _setOpacity(value);
-
-      if (tick.current) {
-        window.clearTimeout(tick.current);
-        tick.current = null;
-      }
-
-      if (immediate) {
-        engine.changeLayer({ id: layer.id, opacity: value });
-      } else {
-        tick.current = window.setTimeout(() => {
-          engine.changeLayer({ id: layer.id, opacity: value });
-          tick.current = null;
-        }, MAX_UPDATE_INTERVAL);
-      }
-    },
-    [engine, layer.id],
-  );
   return (
     <div className="flex items-center justify-center overflow-auto row-span-full col-span-full">
       <Slider
@@ -356,9 +330,8 @@ function ActiveLayerEditor({
         maxValue={1}
         step={0.01}
         formatOptions={{ style: 'percent' }}
-        value={opacity}
-        onChange={setOpacity}
-        onChangeEnd={(v) => setOpacity(v, true)}
+        value={layer.opacity ?? 1}
+        onChange={(v) => engine.changeLayer({ id: layer.id, opacity: v })}
       />
     </div>
   );
