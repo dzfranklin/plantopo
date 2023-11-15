@@ -34,6 +34,48 @@ test('single point snapshot', () => {
   expect(got.list).toMatchSnapshot();
 });
 
+test('active single point snapshot when mayEdit', () => {
+  const got = subject.render(
+    sceneFixture({
+      mayEdit: true,
+      features: {
+        children: [
+          {
+            active: true,
+            geometry: {
+              type: 'Point',
+              coordinates: [50, 50],
+            },
+          },
+        ],
+      },
+    }),
+    bboxPolygonOf(0, 0, 100, 100),
+  );
+  expect(got.list).toMatchSnapshot();
+});
+
+test('active single point snapshot when !mayEdit', () => {
+  const got = subject.render(
+    sceneFixture({
+      mayEdit: false,
+      features: {
+        children: [
+          {
+            active: true,
+            geometry: {
+              type: 'Point',
+              coordinates: [50, 50],
+            },
+          },
+        ],
+      },
+    }),
+    bboxPolygonOf(0, 0, 100, 100),
+  );
+  expect(got.list).toMatchSnapshot();
+});
+
 test('single line snapshot', () => {
   const got = subject.render(
     sceneFixture({
@@ -133,6 +175,7 @@ function idFixture(): string {
 
 interface SceneTemplate {
   features: RootFeatureTemplate;
+  mayEdit?: Scene['mayEdit'];
 }
 
 type RootFeatureTemplate = { children: Array<FeatureTemplate> };
@@ -143,6 +186,7 @@ function sceneFixture(tmpl: SceneTemplate): Scene {
   const rootFeature: SceneRootFeature = { id: '', parent: null, children: [] };
   return {
     ...EMPTY_SCENE,
+    mayEdit: tmpl.mayEdit ?? true,
     features: {
       ...EMPTY_SCENE.features,
       root: {

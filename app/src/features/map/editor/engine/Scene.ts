@@ -6,6 +6,7 @@ export type Scene = {
     start: number;
     end: number;
   };
+  mayEdit: boolean;
   sidebarWidth: number;
   activeTool: 'select' | 'point' | 'line';
   layers: {
@@ -79,6 +80,7 @@ export type SceneFInsertPlace =
 export const DEFAULT_SIDEBAR_WIDTH = 200;
 
 export const EMPTY_SCENE: Scene = {
+  mayEdit: false,
   timing: {
     start: 0,
     end: 0,

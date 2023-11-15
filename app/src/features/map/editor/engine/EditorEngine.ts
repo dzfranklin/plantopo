@@ -542,6 +542,7 @@ export class EditorEngine {
       const features = this._renderFeatures();
       const end = performance.now();
       this._scene = {
+        mayEdit: this.mayEdit,
         timing: { start, end },
         sidebarWidth: this._sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH,
         activeTool: this._activeTool,
