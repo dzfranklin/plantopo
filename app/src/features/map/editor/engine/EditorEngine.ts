@@ -138,6 +138,7 @@ export class EditorEngine {
 
     this._stateManager = new StateManager({
       clientId,
+      mayEdit,
       transport: this._transport,
       onChange: (doc) => {
         this._doc = doc;

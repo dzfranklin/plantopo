@@ -14,6 +14,7 @@ const SEND_INTERVAL_MS = 15;
 
 export class StateManager {
   public readonly clientId: string;
+  public readonly mayEdit: boolean;
 
   private _ulidFactory: ULID;
   private _hasUnsent = false;
@@ -29,10 +30,12 @@ export class StateManager {
   constructor(config: {
     clientId: string;
     transport: ITransport;
+    mayEdit: boolean;
     onChange?: (state: DocState) => any;
     looper?: Looper;
   }) {
     this.clientId = config.clientId;
+    this.mayEdit = config.mayEdit;
     this._onChange = config.onChange;
     this._ulidFactory = ulidFactory(ulidDetectPrng(true));
     this._store = new DocStore();
@@ -45,10 +48,12 @@ export class StateManager {
       this._transport.addOnStatusListener(this._onTransportStatus.bind(this)),
     );
 
-    const looper = config.looper || new TimedLooper(SEND_INTERVAL_MS);
-    looper.do = this._onSendInterval.bind(this);
-    this._destroy.push(() => looper.destroy());
-    looper.start();
+    if (this.mayEdit) {
+      const looper = config.looper || new TimedLooper(SEND_INTERVAL_MS);
+      looper.do = this._onSendInterval.bind(this);
+      this._destroy.push(() => looper.destroy());
+      looper.start();
+    }
   }
 
   destroy() {
@@ -72,6 +77,10 @@ export class StateManager {
   }
 
   update(change: Changeset) {
+    if (!this.mayEdit) {
+      console.error('cannot update read-only doc');
+      return;
+    }
     this._store.localUpdate(this._generation, change);
     this._onChange?.(this._store.toState());
     this._hasUnsent = true;
