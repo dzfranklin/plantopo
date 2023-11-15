@@ -10,14 +10,7 @@ import { ListView, Item } from '@react-spectrum/list';
 import { DOMProps } from '@react-types/shared';
 import EditIcon from '@spectrum-icons/workflow/Edit';
 import LayersIcon from '@spectrum-icons/workflow/Layers';
-import {
-  Key,
-  ReactNode,
-  RefObject,
-  useCallback,
-  useRef,
-  useState,
-} from 'react';
+import { Key, ReactNode, RefObject, useRef } from 'react';
 import {
   AriaButtonProps,
   useButton,
