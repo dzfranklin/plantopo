@@ -49,17 +49,19 @@ export interface RenderFeatureHandle {
 }
 
 interface Inherited {
+  mayEdit: boolean;
   color: string;
 }
 
-const ROOT_INHERITED: Inherited = { color: '#000000' };
+const ROOT_INHERITED: Omit<Inherited, 'mayEdit'> = { color: '#000000' };
 
 export class FeatureRenderer {
   render(scene: Scene, clipBox: BBoxPolygon): RenderList {
     const start = performance.now();
 
+    const inherited: Inherited = { ...ROOT_INHERITED, mayEdit: scene.mayEdit };
     const list: RenderFeature[] = [];
-    this._render(clipBox, ROOT_INHERITED, scene.features.root, list);
+    this._render(clipBox, inherited, scene.features.root, list);
     const end = performance.now();
     return { list, timing: { scene: scene.timing, start, end } };
   }
@@ -129,7 +131,7 @@ export class FeatureRenderer {
     };
     itself.push(rf);
 
-    if (feature.active) {
+    if (feature.active && inherited.mayEdit) {
       switch (feature.geometry.type) {
         case 'Point': {
           const coord = geometry.coordinates as [number, number];

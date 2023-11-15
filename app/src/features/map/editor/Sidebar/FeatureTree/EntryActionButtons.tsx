@@ -55,7 +55,8 @@ const EntryButton = forwardRef<
       aria-label="delete"
       className={cls(
         'flex justify-center items-center px-0.5',
-        'text-gray-600 hover:text-gray-800',
+        'text-gray-600 ',
+        !isDisabled ? 'hover:text-gray-800' : 'opacity-50 cursor-default',
       )}
       ref={ref}
     >

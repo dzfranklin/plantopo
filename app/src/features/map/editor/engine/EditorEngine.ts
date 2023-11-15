@@ -138,6 +138,7 @@ export class EditorEngine {
 
     this._stateManager = new StateManager({
       clientId,
+      mayEdit,
       transport: this._transport,
       onChange: (doc) => {
         this._doc = doc;
@@ -158,7 +159,7 @@ export class EditorEngine {
         Date.now() - lastAwareSendTime > MIN_AWARE_SEND_INTERVAL ||
         !deepEq(aware, lastAwareSent)
       ) {
-        this._transport.send({
+        const _ = this._transport.send({
           aware,
         });
         lastAwareSent = aware;
@@ -541,6 +542,7 @@ export class EditorEngine {
       const features = this._renderFeatures();
       const end = performance.now();
       this._scene = {
+        mayEdit: this.mayEdit,
         timing: { start, end },
         sidebarWidth: this._sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH,
         activeTool: this._activeTool,
