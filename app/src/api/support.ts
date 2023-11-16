@@ -1,3 +1,4 @@
+import wrapError from '@/generic/wrapError';
 import { API_ENDPOINT } from './endpoint';
 import { AppError, TransportError } from './errors';
 import { ErrorReply, SuccessReply } from './reply';
@@ -66,6 +67,14 @@ export async function performApi<TData>(
     throw TransportError.notJson(requestId, resp.status, body);
   }
 
+  if (resp.status === 500) {
+    const body = await resp.text();
+    throw new TransportError(
+      requestId,
+      wrapError(body, 'Internal server error'),
+    );
+  }
+
   let json: unknown;
   try {
     json = await resp.json();
@@ -77,10 +86,6 @@ export async function performApi<TData>(
     return (json as SuccessReply<TData>).data;
   } else {
     const payload = json as ErrorReply;
-    if (payload.error.code === 500) {
-      throw new TransportError(requestId, new AppError(requestId, payload));
-    } else {
-      throw new AppError(requestId, payload);
-    }
+    throw new AppError(requestId, payload);
   }
 }
