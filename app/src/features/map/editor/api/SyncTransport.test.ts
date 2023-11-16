@@ -22,9 +22,9 @@ afterEach(() => {
 });
 
 it('connects', async () => {
-  await waitForStatus((s) => s.type === 'connected' && !s.loadComplete);
+  await waitForStatus((s) => s.type === 'connected' && !s.initialLoadComplete);
   srv.send({ initialLoadComplete: true });
-  await waitForStatus((s) => s.type === 'connected' && s.loadComplete);
+  await waitForStatus((s) => s.type === 'connected' && s.initialLoadComplete);
 });
 
 function waitForStatus(p: (s: SyncTransport['status']) => boolean) {

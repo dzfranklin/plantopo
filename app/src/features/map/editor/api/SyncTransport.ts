@@ -4,7 +4,7 @@ import wrapError from '@/generic/wrapError';
 
 export type SyncTransportStatus =
   | { type: 'connecting' }
-  | { type: 'connected'; loadComplete: boolean; disconnect: () => void }
+  | { type: 'connected'; initialLoadComplete: boolean; disconnect: () => void }
   | { type: 'disconnected'; reconnectingAt: number; reconnectNow: () => void };
 
 export const INITIAL_SYNC_TRANSPORT_STATUS: SyncTransportStatus = {
@@ -22,6 +22,7 @@ export class SyncTransport {
   private _destroyed = false;
   private _sock: WebSocket | null = null;
   private _failures = 0;
+  private _initialLoadComplete = false;
   private _status: SyncTransportStatus = INITIAL_SYNC_TRANSPORT_STATUS;
 
   private _receivesSinceLastHealthcheck = 0;
@@ -169,14 +170,15 @@ export class SyncTransport {
         }
         status = {
           type: 'connected',
-          loadComplete: false,
+          initialLoadComplete: this._initialLoadComplete,
           disconnect: () => this.disconnect(),
         };
         break;
       case 'loadComplete':
+        this._initialLoadComplete = true;
         status = {
           type: 'connected',
-          loadComplete: true,
+          initialLoadComplete: this._initialLoadComplete,
           disconnect: () => this.disconnect(),
         };
         break;

@@ -132,7 +132,7 @@ export class StateManager {
   private _onTStatus(status: SyncTransportStatus) {
     this._updateStatus({ transport: status });
     if (status.type === 'connected') {
-      this._updateStatus({ loaded: status.loadComplete });
+      this._updateStatus({ loaded: status.initialLoadComplete });
       // on the next send interval resend any un-acked changes
       this._latestSend = this._latestAck;
     }
