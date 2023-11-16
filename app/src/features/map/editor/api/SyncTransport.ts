@@ -25,6 +25,7 @@ export class SyncTransport {
   private _initialLoadComplete = false;
   private _status: SyncTransportStatus = INITIAL_SYNC_TRANSPORT_STATUS;
 
+  private _started = performance.now();
   private _receivesSinceLastHealthcheck = 0;
   private _healthCheckInterval: number;
 
@@ -175,7 +176,15 @@ export class SyncTransport {
         };
         break;
       case 'loadComplete':
-        this._initialLoadComplete = true;
+        if (!this._initialLoadComplete) {
+          this._initialLoadComplete = true;
+
+          console.log(
+            'initial load took',
+            performance.now() - this._started,
+            'ms',
+          );
+        }
         status = {
           type: 'connected',
           initialLoadComplete: this._initialLoadComplete,
