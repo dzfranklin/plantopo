@@ -9,9 +9,10 @@ type Aware struct {
 }
 
 type TrustedAware struct {
-	ClientId string     `json:"clientId"` // changes every session
-	UserId   *uuid.UUID `json:"userId"`   // nil for anonymous
-	Name     string     `json:"name"`
+	ClientId  string     `json:"clientId"` // changes every session
+	AvatarURL string     `json:"avatarURL"`
+	UserId    *uuid.UUID `json:"userId"` // nil for anonymous
+	Name      string     `json:"name"`
 }
 
 type Camera struct {
