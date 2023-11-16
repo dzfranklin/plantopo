@@ -1,11 +1,13 @@
 import { LayerSource } from '../api/mapSources';
 import { SyncGeometry } from '@/gen/sync_schema';
+import { INITIAL_STATE_STATUS, StateStatus } from './StateManager';
 
 export type Scene = {
   timing: {
     start: number;
     end: number;
   };
+  stateStatus: StateStatus;
   mayEdit: boolean;
   sidebarWidth: number;
   activeTool: 'select' | 'point' | 'line';
@@ -85,6 +87,7 @@ export const EMPTY_SCENE: Scene = {
     start: 0,
     end: 0,
   },
+  stateStatus: INITIAL_STATE_STATUS,
   sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
   activeTool: 'select',
   layers: {

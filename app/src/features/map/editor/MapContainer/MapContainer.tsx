@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import * as ml from 'maplibre-gl';
 import { TokenValues, useTokensQuery } from '../../api/useTokens';
 import { RenderStack } from './RenderStack';
+import { ProgressCircle } from '@adobe/react-spectrum';
+import { useStateStatus } from '../engine/useEngine';
 
 const GLYPH_URL = 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf';
 
@@ -14,6 +16,7 @@ const GLYPH_URL = 'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf';
  */
 
 export function MapContainer() {
+  const stateStatus = useStateStatus();
   const { data: tokens } = useTokensQuery();
   const containerRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<ml.Map | null>(null);
@@ -54,6 +57,14 @@ export function MapContainer() {
   return (
     <div ref={containerRef} className="relative w-full h-full">
       {tokens && <RenderStack map={map} containerRef={containerRef} />}
+
+      {!stateStatus.loaded && (
+        <div className="absolute inset-0 z-40">
+          <div className="grid w-full h-full bg-opacity-40 place-items-center bg-neutral-400">
+            <ProgressCircle aria-label="Loading..." isIndeterminate size="L" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

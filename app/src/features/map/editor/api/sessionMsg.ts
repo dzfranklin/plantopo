@@ -13,6 +13,7 @@ export interface SetAwareRequest {
 
 export interface IncomingSessionMsg {
   ack?: number;
+  initialLoadComplete?: boolean;
   aware?: Record<string, AwareEntry>;
   change?: Changeset;
   error?: string;

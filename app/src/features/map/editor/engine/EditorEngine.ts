@@ -1,4 +1,4 @@
-import { SyncTransport, SyncTransportStatus } from '../api/SyncTransport';
+import { SyncTransport } from '../api/SyncTransport';
 import { AwareCamera, AwareEntry, SetAwareRequest } from '../api/sessionMsg';
 import {
   DEFAULT_SIDEBAR_WIDTH,
@@ -18,8 +18,12 @@ import { Changeset } from '../api/Changeset';
 import { deepEq } from '@/generic/equality';
 import stringOrd from '@/generic/stringOrd';
 import { CurrentCameraPosition } from '../CurrentCamera';
-import { StateManager } from './StateManager';
-import { DocFeature, DocState, UndoStatus } from './DocStore';
+import {
+  INITIAL_STATE_STATUS,
+  StateManager,
+  StateStatus,
+} from './StateManager';
+import { DocFeature, DocState } from './DocStore';
 import { ulid } from 'ulid';
 import { DEFAULT_KEYMAP, KeymapSpec, KeyBinding, Keymap } from './Keymap';
 import { isMac as platformIsMac } from '@/features/platformIsMac';
@@ -82,6 +86,7 @@ export class EditorEngine {
   private _awareMap: Readonly<Record<string, AwareEntry>> = {};
 
   private _scene: Scene | null = null;
+  private _lastStateStatus: StateStatus = INITIAL_STATE_STATUS;
   private _sceneNodes = new Map<string, SceneFeature>();
   private _sidebarWidth: number | undefined;
   private _hoveredByMe: string | null = null; // fid
@@ -92,10 +97,6 @@ export class EditorEngine {
 
   private _sceneSelectorId = 0;
   private _sceneSelectors = new Map<number, SceneSelectorEntry>();
-
-  private _transportStatusListeners = new Set<
-    (_: SyncTransportStatus) => any
-  >();
 
   constructor({
     mapId,
@@ -130,11 +131,6 @@ export class EditorEngine {
         this._awareMap = msg.aware;
       }
     });
-    this._transport.addOnStatusListener((status) => {
-      for (const cb of this._transportStatusListeners) {
-        cb(status);
-      }
-    });
 
     this._stateManager = new StateManager({
       clientId,
@@ -144,6 +140,10 @@ export class EditorEngine {
         this._doc = doc;
         this._renderScene();
       },
+    });
+    this._stateManager.onStatus((st) => {
+      this._lastStateStatus = st;
+      this._renderScene();
     });
     this._doc = this._stateManager.toState();
 
@@ -212,11 +212,6 @@ export class EditorEngine {
     return () => this._initialCamUpdateListeners.delete(cb);
   }
 
-  addTransportStatusListener(cb: (_: SyncTransportStatus) => any): () => void {
-    this._transportStatusListeners.add(cb);
-    return () => this._transportStatusListeners.delete(cb);
-  }
-
   addCameraMoveEndListener(cb: CameraListener): () => void {
     this._camMoveEndListeners.add(cb);
     return () => this._camMoveEndListeners.delete(cb);
@@ -253,22 +248,10 @@ export class EditorEngine {
     return () => this._sceneSelectors.delete(id);
   }
 
-  hasUnsyncedChanges(): boolean {
-    return this._stateManager.hasUnsynced();
-  }
-
-  addHasUnsyncedListener(cb: (hasPending: boolean) => any): () => void {
-    return this._stateManager.addHasUnsyncedListener(cb);
-  }
-
   setSidebarWidth(width: number): void {
     this._sidebarWidth = width;
     this._prefs.setSidebarWidth(width);
     this._renderScene();
-  }
-
-  forceDisconnect(): void {
-    this._transport.forceDisconnect();
   }
 
   _setActiveTool(tool: Scene['activeTool']): void {
@@ -542,6 +525,7 @@ export class EditorEngine {
       const features = this._renderFeatures();
       const end = performance.now();
       this._scene = {
+        stateStatus: this._lastStateStatus,
         mayEdit: this.mayEdit,
         timing: { start, end },
         sidebarWidth: this._sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH,
@@ -744,14 +728,6 @@ export class EditorEngine {
       default:
         throw new Error(`Unknown command: ${cmd}}`);
     }
-  }
-
-  undoStatus(): UndoStatus {
-    return this._stateManager.undoStatus();
-  }
-
-  addUndoStatusListener(cb: (status: UndoStatus) => any): () => void {
-    return this._stateManager.addUndoStatusListener(cb);
   }
 
   /** execute debug command */

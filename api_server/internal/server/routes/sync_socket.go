@@ -220,10 +220,11 @@ func socketReader(
 }
 
 type outgoingDto struct {
-	Ack    int32           `json:"ack,omitempty"`
-	Aware  json.RawMessage `json:"aware,omitempty"`
-	Change json.RawMessage `json:"change,omitempty"`
-	Error  string          `json:"error,omitempty"`
+	Ack                 int32           `json:"ack,omitempty"`
+	InitialLoadComplete bool            `json:"initialLoadComplete,omitempty"`
+	Aware               json.RawMessage `json:"aware,omitempty"`
+	Change              json.RawMessage `json:"change,omitempty"`
+	Error               string          `json:"error,omitempty"`
 }
 
 func socketWriter(s *sockState) {
@@ -251,9 +252,10 @@ func socketWriter(s *sockState) {
 		}
 
 		dto := outgoingDto{
-			Ack:    msg.Ack,
-			Aware:  msg.Aware,
-			Change: msg.Change,
+			Ack:                 msg.Ack,
+			InitialLoadComplete: msg.InitialLoadComplete,
+			Aware:               msg.Aware,
+			Change:              msg.Change,
 		}
 		var data []byte
 		data, err = json.Marshal(dto)
