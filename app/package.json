@@ -19,6 +19,7 @@
     "@mapbox/mapbox-gl-draw": "^1.4.3",
     "@maplibre/maplibre-gl-style-spec": "^19.3.2",
     "@react-spectrum/list": "^3.6.2",
+    "@react-spectrum/toast": "^3.0.0-beta.7",
     "@react-spectrum/utils": "^3.10.2",
     "@react-types/shared": "^3.20.0",
     "@spectrum-icons/illustrations": "^3.6.5",
