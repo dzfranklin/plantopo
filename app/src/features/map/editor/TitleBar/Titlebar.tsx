@@ -10,6 +10,7 @@ import { RequestEditAccessButton } from './RequestEditAccessButton';
 import { LoginButton } from './LoginButton';
 import { useMapMeta } from '../../api/mapMeta';
 import { useMapId } from '../useMapId';
+import { AwarenessComponent } from './AwarenessComponent';
 
 export function Titlebar() {
   const mapId = useMapId();
@@ -40,7 +41,11 @@ export function Titlebar() {
         <StatusComponent />
       </div>
 
-      <div className="flex items-center col-start-3 gap-4 p-1 pl-10 row-span-full">
+      <div className="flex items-end h-full col-start-3 mb-4 row-span-full">
+        <AwarenessComponent />
+      </div>
+
+      <div className="flex items-center col-start-4 gap-4 p-1 pl-8 row-span-full">
         {mayEdit === false && <RequestEditAccessButton />}
         <ShareButton />
         {sess === null && <LoginButton />}

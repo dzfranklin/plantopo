@@ -129,6 +129,9 @@ export class EditorEngine {
     this._transport.addOnMessageListener((msg) => {
       if (msg.aware) {
         this._awareMap = msg.aware;
+
+        const peers = this.peers();
+        this._peerUpdateListeners.forEach((cb) => cb(peers));
       }
     });
 
@@ -268,6 +271,19 @@ export class EditorEngine {
         this._setActiveTool('point');
         break;
     }
+  }
+
+  peers(): AwareEntry[] {
+    return Object.values(this._awareMap).filter(
+      (e) => e.trusted.clientId !== this.clientId,
+    );
+  }
+
+  private _peerUpdateListeners = new Set<(_: AwareEntry[]) => any>();
+
+  onPeerUpdate(cb: (_: AwareEntry[]) => any): () => void {
+    this._peerUpdateListeners.add(cb);
+    return () => this._peerUpdateListeners.delete(cb);
   }
 
   getFeature(fid: string): SceneFeature | undefined {

@@ -10,6 +10,7 @@ import {
 import { EMPTY_SCENE, Scene, SceneFeature } from './Scene';
 import { EditorEngine, EngineCommand } from './EditorEngine';
 import { KeyBinding } from './Keymap';
+import { AwareEntry } from '../api/sessionMsg';
 
 const EngineContext = createContext<EditorEngine | null>(null);
 
@@ -142,5 +143,16 @@ export function useKeyBindingsFor(cmd: EngineCommand): readonly KeyBinding[] {
       setValue(keymap.lookupByCmd(cmd)),
     );
   }, [cmd, engine]);
+  return value;
+}
+
+export function usePeers(): readonly AwareEntry[] {
+  const engine = useEngine();
+  const [value, setValue] = useState<readonly AwareEntry[]>([]);
+  useEffect(() => {
+    if (!engine) return;
+    setValue(engine.peers());
+    return engine.onPeerUpdate(setValue);
+  }, [engine]);
   return value;
 }
