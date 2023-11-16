@@ -28,7 +28,7 @@ export function AttributionControl() {
 
   return (
     <div
-      className="absolute bottom-0 right-0 z-10 flex items-end min-w-0 gap-3 ml-2 mr-16"
+      className="absolute bottom-0 right-0 z-20 flex items-end min-w-0 gap-3 ml-2 mr-16"
       style={{ left: `${sidebarWidth}px` }}
     >
       {value.logos.length > 0 && (

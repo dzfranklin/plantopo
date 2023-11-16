@@ -54,7 +54,7 @@ function ControlOpenButton(props: {
 }) {
   const { buttonProps } = useButton(props.buttonProps, props.buttonRef);
   return (
-    <div className="absolute z-10 bottom-0 right-0 m-[10px]">
+    <div className="absolute z-20 bottom-0 right-0 m-[10px]">
       <button
         className="bg-white rounded border-gray-400 p-1.5 border"
         {...buttonProps}

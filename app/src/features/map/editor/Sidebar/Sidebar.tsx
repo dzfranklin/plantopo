@@ -15,7 +15,7 @@ export default function Sidebar() {
       <div
         ref={rootRef}
         className={cls(
-          'absolute bottom-0 left-0 flex flex-row',
+          'absolute bottom-0 left-0 flex flex-row z-20',
           'top-[-1px]', // Cover up titlebar border
         )}
         style={{ width: `${width}px` }}
