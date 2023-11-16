@@ -123,6 +123,7 @@ func (s *Store) WaitForReady() error {
 }
 
 func (s *Store) load() {
+	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), s.c.LoadTimeout)
 	defer cancel()
 
@@ -176,6 +177,8 @@ func (s *Store) load() {
 	}
 	s.readyWaiters = nil
 	s.mu.Unlock()
+
+	s.l.Infow("loaded doclog", "duration", time.Since(start))
 }
 
 func (s *Store) saveLoop() {
