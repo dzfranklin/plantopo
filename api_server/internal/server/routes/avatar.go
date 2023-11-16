@@ -9,7 +9,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (s *Services) accountImageHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Services) avatarHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		writeMethodNotAllowed(r, w)
 		return

@@ -68,7 +68,7 @@ func NewService(ctx context.Context, pg *db.Pg, mailer mailer.Service) Service {
 }
 
 func (r *impl) Get(ctx context.Context, userId uuid.UUID) (*types.User, error) {
-	user := types.User{Id: userId, ImageUrl: imageUrlFor(userId)}
+	user := types.User{Id: userId, ImageUrl: AvatarURL(userId)}
 	err := r.pg.QueryRow(ctx,
 		`SELECT email, full_name, created_at, confirmed_at from users
 			WHERE id = $1`,
@@ -98,7 +98,7 @@ func (r *impl) GetByEmail(ctx context.Context, email string) (*types.User, error
 			return nil, err
 		}
 	}
-	user.ImageUrl = imageUrlFor(user.Id)
+	user.ImageUrl = AvatarURL(user.Id)
 	return &user, nil
 }
 
@@ -162,7 +162,7 @@ func (r *impl) Register(req RegisterRequest) (*types.User, error) {
 		r.l.DPanic("failed to insert user", zap.Error(err))
 		return nil, err
 	}
-	user.ImageUrl = imageUrlFor(user.Id)
+	user.ImageUrl = AvatarURL(user.Id)
 
 	token, err := r.createConfirmToken(tx, &user)
 	if err != nil {
@@ -445,7 +445,7 @@ func (r *impl) CheckLogin(ctx context.Context, req LoginRequest) (*types.User, e
 			return nil, err
 		}
 	}
-	user.ImageUrl = imageUrlFor(user.Id)
+	user.ImageUrl = AvatarURL(user.Id)
 
 	err = bcrypt.CompareHashAndPassword(expectedPassword, []byte(req.Password))
 	if err != nil {
@@ -459,6 +459,6 @@ func createHashedPassword(password string) ([]byte, error) {
 	return bcrypt.GenerateFromPassword([]byte(password), hashCost)
 }
 
-func imageUrlFor(userId uuid.UUID) string {
+func AvatarURL(userId uuid.UUID) string {
 	return fmt.Sprintf("https://%s/api/v1/account/profile-png/%s.png", apiDomain, userId)
 }

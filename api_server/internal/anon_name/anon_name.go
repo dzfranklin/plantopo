@@ -5,7 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"os"
 )
+
+var apiDomain string
+
+func init() {
+	apiDomain = os.Getenv("API_DOMAIN")
+	if apiDomain == "" {
+		apiDomain = "plantopo.com"
+	}
+}
 
 //go:embed animals.json
 var animalsJSON []byte
@@ -39,4 +49,8 @@ func For(id string) string {
 	colorI := i % len(colors)
 
 	return fmt.Sprintf("Anonymous %s %s", colors[colorI], animals[animalI])
+}
+
+func AvatarURL(id string) string {
+	return fmt.Sprintf("https://%s/api/v1/anon-avatar/%s.png", apiDomain, id)
 }

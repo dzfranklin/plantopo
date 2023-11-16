@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/danielzfranklin/plantopo/api_server/internal/users"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"net/http"
@@ -107,8 +108,10 @@ func (s *Services) mapSyncSocketHandler(w http.ResponseWriter, r *http.Request) 
 	trustedAware := sync_schema.TrustedAware{ClientId: clientId}
 	if userId == uuid.Nil {
 		trustedAware.Name = anon_name.For(clientId)
+		trustedAware.AvatarURL = anon_name.AvatarURL(clientId)
 	} else {
 		trustedAware.UserId = &userId
+		trustedAware.AvatarURL = users.AvatarURL(userId)
 		user, err := s.Users.Get(r.Context(), userId)
 		if err != nil {
 			writeInternalError(r, w, err)

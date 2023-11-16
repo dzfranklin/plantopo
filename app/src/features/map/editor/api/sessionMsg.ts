@@ -24,6 +24,7 @@ export interface AwareEntry {
   selectedFeatures?: string[];
   trusted: {
     clientId: string;
+    avatarURL?: string;
     userId?: string;
     name?: string;
   };
