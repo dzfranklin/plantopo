@@ -4,30 +4,6 @@ import { AppError, TransportError } from './errors';
 import { ErrorReply, SuccessReply } from './reply';
 import { v4 as uuidv4 } from 'uuid';
 
-export async function handleResp<T>(req: Promise<Response>): Promise<T> {
-  let resp: Response;
-  try {
-    resp = await req;
-
-    if (resp.ok) {
-      return await resp.json();
-    } else {
-      throw await respToError(resp);
-    }
-  } catch (err) {
-    throw new TransportError('unspecified', err);
-  }
-}
-
-export async function respToError(resp: Response): Promise<Error> {
-  try {
-    const json: ErrorReply = await resp.json();
-    throw new AppError('unspecified', json);
-  } catch (err) {
-    throw new TransportError('unspecified', err);
-  }
-}
-
 export async function performApi<TData>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: Array<string | number>,
