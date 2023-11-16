@@ -49,6 +49,7 @@ message SyncBackendIncomingUpdate {
 
 message SyncBackendOutgoingMessage {
   int32 ack = 1;
+  bool initialLoadComplete = 4; // set to true to indicate the initial load is complete
   bytes aware = 2; // json
   bytes change = 3; // json
 }

@@ -9,8 +9,6 @@ import {
 } from 'react';
 import { EMPTY_SCENE, Scene, SceneFeature } from './Scene';
 import { EditorEngine, EngineCommand } from './EditorEngine';
-import { SyncTransportStatus } from '../api/SyncTransport';
-import { UndoStatus } from './DocStore';
 import { KeyBinding } from './Keymap';
 
 const EngineContext = createContext<EditorEngine | null>(null);
@@ -132,26 +130,7 @@ export function useSceneFeature<T>(
   return value;
 }
 
-export function useSyncTransportStatus(): SyncTransportStatus | null {
-  const engine = useEngine();
-  const [value, setValue] = useState<SyncTransportStatus | null>(null);
-  useEffect(() => engine?.addTransportStatusListener(setValue), [engine]);
-  return value;
-}
-
-export function useHasUnsyncedChanges(): boolean {
-  const engine = useEngine();
-  const [value, setValue] = useState(engine?.hasUnsyncedChanges() ?? false);
-  useEffect(() => engine?.addHasUnsyncedListener(setValue), [engine]);
-  return value;
-}
-
-export function useUndoStatus(): UndoStatus | undefined {
-  const engine = useEngine();
-  const [value, setValue] = useState(engine?.undoStatus());
-  useEffect(() => engine?.addUndoStatusListener(setValue), [engine]);
-  return value;
-}
+export const useStateStatus = () => useSceneSelector((s) => s.stateStatus);
 
 export function useKeyBindingsFor(cmd: EngineCommand): readonly KeyBinding[] {
   const engine = useEngine();

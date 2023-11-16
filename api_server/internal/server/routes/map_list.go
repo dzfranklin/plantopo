@@ -22,7 +22,7 @@ func (s *Services) mapListOwnedByMeHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if session == nil {
-		writeBadRequest(r, w)
+		writeUnauthorized(r, w)
 		return
 	}
 
@@ -47,7 +47,7 @@ func (s *Services) mapListSharedWithMeHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if session == nil {
-		writeBadRequest(r, w)
+		writeUnauthorized(r, w)
 		return
 	}
 

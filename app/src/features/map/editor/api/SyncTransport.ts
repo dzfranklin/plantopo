@@ -4,8 +4,12 @@ import wrapError from '@/generic/wrapError';
 
 export type SyncTransportStatus =
   | { type: 'connecting' }
-  | { type: 'connected' }
+  | { type: 'connected'; initialLoadComplete: boolean; disconnect: () => void }
   | { type: 'disconnected'; reconnectingAt: number; reconnectNow: () => void };
+
+export const INITIAL_SYNC_TRANSPORT_STATUS: SyncTransportStatus = {
+  type: 'connecting',
+};
 
 const HEALTHCHECK_INTERVAL = 1000 * 15;
 const HEALTHY_MIN_CONNECTED_DURATION = 1000 * 60 * 5;
@@ -14,10 +18,12 @@ export class SyncTransport {
   public readonly mapId: string;
   public readonly clientId: string;
 
+  private _endpoint: string;
   private _destroyed = false;
   private _sock: WebSocket | null = null;
   private _failures = 0;
-  private _status: SyncTransportStatus = { type: 'connecting' };
+  private _initialLoadComplete = false;
+  private _status: SyncTransportStatus = INITIAL_SYNC_TRANSPORT_STATUS;
 
   private _receivesSinceLastHealthcheck = 0;
   private _healthCheckInterval: number;
@@ -25,9 +31,10 @@ export class SyncTransport {
   private _onMessageListeners = new Set<(msg: IncomingSessionMsg) => any>();
   private _onStatusListeners = new Set<(status: SyncTransportStatus) => any>();
 
-  constructor(props: { mapId: string; clientId: string }) {
+  constructor(props: { mapId: string; clientId: string; endpoint?: string }) {
     this.mapId = props.mapId;
     this.clientId = props.clientId;
+    this._endpoint = props.endpoint ?? API_ENDPOINT_WS;
     this._healthCheckInterval = window.setInterval(() => {
       if (this._sock === null) return;
       if (
@@ -56,7 +63,7 @@ export class SyncTransport {
     return this._status;
   }
 
-  forceDisconnect() {
+  disconnect() {
     this._sock?.close();
   }
 
@@ -95,7 +102,7 @@ export class SyncTransport {
     if (this._sock !== null || this._destroyed) {
       return;
     }
-    const endpoint = `${API_ENDPOINT_WS}map/${this.mapId}/sync-socket?clientId=${this.clientId}`;
+    const endpoint = `${this._endpoint}map/${this.mapId}/sync-socket?clientId=${this.clientId}`;
     console.log('Connecting to', endpoint);
     const sock = new WebSocket(endpoint);
     this._sock = sock;
@@ -116,6 +123,11 @@ export class SyncTransport {
       if (msg.error) {
         console.warn(`SyncTransport: received error: ${msg.error}`);
       }
+
+      if (msg.initialLoadComplete) {
+        this._advanceState('loadComplete');
+      }
+
       this._receivesSinceLastHealthcheck++;
       for (const listener of this._onMessageListeners) {
         listener(msg);
@@ -139,9 +151,11 @@ export class SyncTransport {
 
   private _openTimeout: number | null = null;
 
-  private _advanceState(type: SyncTransportStatus['type']) {
+  private _advanceState(
+    ev: 'connecting' | 'connected' | 'loadComplete' | 'disconnected',
+  ) {
     let status: SyncTransportStatus;
-    switch (type) {
+    switch (ev) {
       case 'connecting':
         if (this._openTimeout !== null) {
           window.clearTimeout(this._openTimeout);
@@ -154,7 +168,19 @@ export class SyncTransport {
           window.clearTimeout(this._openTimeout);
           this._openTimeout = null;
         }
-        status = { type: 'connected' };
+        status = {
+          type: 'connected',
+          initialLoadComplete: this._initialLoadComplete,
+          disconnect: () => this.disconnect(),
+        };
+        break;
+      case 'loadComplete':
+        this._initialLoadComplete = true;
+        status = {
+          type: 'connected',
+          initialLoadComplete: this._initialLoadComplete,
+          disconnect: () => this.disconnect(),
+        };
         break;
       case 'disconnected':
         if (this._status.type === 'disconnected') {

@@ -198,8 +198,9 @@ func (s *grpcServer) Connect(stream api.SyncBackend_ConnectServer) error {
 			return
 		}
 		err = stream.Send(&api.SyncBackendOutgoingMessage{
-			Aware:  initialA,
-			Change: initialD,
+			Aware:               initialA,
+			Change:              initialD,
+			InitialLoadComplete: true,
 		})
 		if err != nil {
 			return

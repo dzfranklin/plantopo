@@ -41,6 +41,11 @@ export interface UndoStatus {
   canRedo: boolean;
 }
 
+export const INITIAL_UNDO_STATUS: UndoStatus = {
+  canUndo: false,
+  canRedo: false,
+};
+
 const MAX_UNDO_STACK = 1000;
 const MERGE_WINDOW_IDLE_MS = 1000;
 

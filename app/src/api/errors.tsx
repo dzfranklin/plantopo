@@ -32,7 +32,7 @@ export class AppError<TDetails> extends Error {
     public requestId: string,
     public cause: ErrorReply<TDetails>,
   ) {
-    const msg = cause.error.message || `Error ${cause.error.code}`;
+    const msg = cause.error.message || `error ${cause.error.code}`;
     super(`${msg} (requestId: ${requestId})`);
     this.code = cause.error.code;
     this.reason = cause.error.reason;

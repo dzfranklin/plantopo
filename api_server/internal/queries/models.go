@@ -214,13 +214,6 @@ type PtMapRole struct {
 	CreatedAt pgtype.Timestamptz
 }
 
-type PtMapSnapshot struct {
-	ID        int64
-	MapID     int64
-	Value     []byte
-	CreatedAt pgtype.Timestamptz
-}
-
 type PtPasswordResetToken struct {
 	ID       int32
 	UserID   pgtype.UUID

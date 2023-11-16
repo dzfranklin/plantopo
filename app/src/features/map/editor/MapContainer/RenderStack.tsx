@@ -184,7 +184,7 @@ export function RenderStack({
     <>
       <canvas
         ref={canvasRef}
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 z-10 pointer-events-none"
       />
 
       <div className="absolute flex justify-end pointer-events-none bottom-[1px] right-[1px]">

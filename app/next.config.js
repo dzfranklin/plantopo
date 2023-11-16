@@ -57,6 +57,7 @@ const config = {
     '@react-spectrum/tooltip',
     '@react-spectrum/view',
     '@react-spectrum/well',
+    '@react-spectrum/toast',
     '@spectrum-icons/illustrations',
     '@spectrum-icons/ui',
     '@spectrum-icons/workflow',

@@ -18,7 +18,7 @@ export function MapToolbar() {
 
   return (
     <div
-      className="absolute top-0 z-10 pt-2 pl-1"
+      className="absolute top-0 z-20 pt-2 pl-1"
       style={{ left: `${sidebarWidth}px` }}
     >
       <div className="flex flex-col border-[#d8d4d2] rounded-md shadow-sm bg-white border-[2px]">

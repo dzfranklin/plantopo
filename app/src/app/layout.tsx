@@ -12,6 +12,8 @@ import { FaroSDK } from '@/features/FaroSDK';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { DebugModeProvider } from '@/features/map/editor/useDebugMode';
+import { ToastContainer, ToastQueue } from '@react-spectrum/toast';
+import { AppError, TransportError } from '@/api/errors';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -35,7 +37,24 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
-  const queryClient = new QueryClient();
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      mutations: {
+        onError: (err) => {
+          let category = 'unknown error';
+          if (err instanceof TransportError) {
+            category = 'network error';
+          } else if (err instanceof AppError) {
+            if (err.code >= 400 && err.code < 500) {
+              return;
+            }
+            category = 'server error: ' + err.message;
+          }
+          ToastQueue.negative('Failed to save changes: ' + category);
+        },
+      },
+    },
+  });
   const router = useRouter();
 
   return (
@@ -54,6 +73,7 @@ export function RootLayout({ children }: { children: React.ReactNode }) {
             minHeight="100vh"
           >
             {children}
+            <ToastContainer />
             <div id="portal-container" className="z-[60]"></div>
             <ReactQueryDevtools initialIsOpen={false} />
           </SpectrumProvider>

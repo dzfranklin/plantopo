@@ -19,6 +19,7 @@
     "@mapbox/mapbox-gl-draw": "^1.4.3",
     "@maplibre/maplibre-gl-style-spec": "^19.3.2",
     "@react-spectrum/list": "^3.6.2",
+    "@react-spectrum/toast": "^3.0.0-beta.7",
     "@react-spectrum/utils": "^3.10.2",
     "@react-types/shared": "^3.20.0",
     "@spectrum-icons/illustrations": "^3.6.5",
@@ -39,6 +40,7 @@
     "@types/react": "^18.2",
     "@types/react-dom": "^18.2",
     "@types/uuid": "^9.0.4",
+    "@types/ws": "^8.5.9",
     "@typescript-eslint/eslint-plugin": "^6.10",
     "@xstate/react": "^3.2.2",
     "@xstate/test": "^0.5.1",
@@ -77,6 +79,7 @@
     "typescript": "^5.2.2",
     "ulid": "^2.3.0",
     "uuid": "^9.0.1",
+    "ws": "https://github.com/dzfranklin/ws-for-jest.git#ws-for-jest",
     "xstate": "^4.38.2",
     "xstate-logger": "^0.0.3"
   },

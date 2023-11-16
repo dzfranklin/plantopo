@@ -1,7 +1,6 @@
 import { ImportDialog } from '@/features/importer/ImportDialog';
 import cls from '@/generic/cls';
 import { DialogContainer } from '@adobe/react-spectrum';
-import { useState } from 'react';
 import {
   Button as AriaButton,
   Item as AriaItem,
@@ -12,7 +11,11 @@ import {
   Keyboard as AriaKeyboard,
 } from 'react-aria-components';
 import type { ItemProps } from 'react-aria-components';
-import { useEngine, useKeyBindingsFor } from '../engine/useEngine';
+import {
+  useEngine,
+  useKeyBindingsFor,
+  useStateStatus,
+} from '../engine/useEngine';
 import { MapShareDialog } from '../../MapShareDialog/MapShareDialog';
 import { useMapMeta } from '../../api/mapMeta';
 import { useMapId } from '../useMapId';
@@ -22,6 +25,7 @@ import { keyBindingToString } from '../engine/Keymap';
 import { useDebugMode } from '../useDebugMode';
 import { useDebugAction, DebugMenu } from './DebugMenu';
 import { ExportDialog } from '@/features/exporter/ExportDialog';
+import { useState } from 'react';
 
 export function TitlebarMenu({
   focusTitleEdit,
@@ -36,6 +40,7 @@ export function TitlebarMenu({
   );
   const debugAction = useDebugAction();
   const [debugMode] = useDebugMode();
+  const { undoStatus } = useStateStatus();
 
   return (
     <div className="mt-0.5">
@@ -100,10 +105,10 @@ export function TitlebarMenu({
           }
         }}
       >
-        <MenuItem id="undo" cmd="undo">
+        <MenuItem id="undo" cmd="undo" disabled={!undoStatus.canUndo}>
           Undo
         </MenuItem>
-        <MenuItem id="redo" cmd="redo">
+        <MenuItem id="redo" cmd="redo" disabled={!undoStatus.canRedo}>
           Redo
         </MenuItem>
       </Menu>
@@ -183,12 +188,20 @@ function Menu({
 }
 
 export function MenuItem(
-  props: ItemProps & { cmd?: EngineCommand; children: React.ReactNode },
+  props: ItemProps & {
+    cmd?: EngineCommand;
+    disabled?: boolean;
+    children: React.ReactNode;
+  },
 ) {
   return (
     <AriaItem
       {...props}
-      className="box-border flex items-center justify-between w-full px-2 py-1 text-sm text-gray-900 rounded outline-none cursor-default group focus:bg-neutral-200"
+      className={cls(
+        'box-border flex items-center justify-between w-full px-2 py-1',
+        'text-sm text-gray-900 rounded outline-none cursor-default group',
+        !props.disabled ? 'focus:bg-neutral-200' : 'opacity-60',
+      )}
     >
       {props.children}
       {props.cmd && <MenuItemKeyBindings cmd={props.cmd} />}

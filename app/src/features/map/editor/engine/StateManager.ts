@@ -1,16 +1,40 @@
 import { FeatureChange } from '@/gen/sync_schema';
 import { Changeset } from '../api/Changeset';
 import { IncomingSessionMsg, OutgoingSessionMsg } from '../api/sessionMsg';
-import { DocState, DocStore, UndoStatus } from './DocStore';
+import {
+  DocState,
+  DocStore,
+  INITIAL_UNDO_STATUS,
+  UndoStatus,
+} from './DocStore';
 import {
   ULID,
   factory as ulidFactory,
   detectPrng as ulidDetectPrng,
 } from 'ulid';
-import { SyncTransportStatus } from '../api/SyncTransport';
+import {
+  INITIAL_SYNC_TRANSPORT_STATUS,
+  SyncTransportStatus,
+} from '../api/SyncTransport';
 import { Looper, TimedLooper } from './Looper';
 
 const SEND_INTERVAL_MS = 15;
+
+export interface StateStatus {
+  loaded: boolean;
+  hasChanges: boolean;
+  unsyncedChanges: boolean;
+  undoStatus: UndoStatus;
+  transport: SyncTransportStatus;
+}
+
+export const INITIAL_STATE_STATUS: StateStatus = {
+  loaded: false,
+  hasChanges: false,
+  unsyncedChanges: false,
+  undoStatus: INITIAL_UNDO_STATUS,
+  transport: INITIAL_SYNC_TRANSPORT_STATUS,
+};
 
 export class StateManager {
   public readonly clientId: string;
@@ -21,10 +45,9 @@ export class StateManager {
   private _generation = 1;
   private _latestSend = 0;
   private _latestAck = 0;
-  private _store: DocStore;
-  private _transport: ITransport;
+  private _s: DocStore;
+  private _t: ITransport;
   private _onChange?: (state: DocState) => any;
-  private _hasUnsyncedListeners = new Set<(hasUnsynced: boolean) => any>();
   private _destroy: Array<() => void> = [];
 
   constructor(config: {
@@ -38,15 +61,17 @@ export class StateManager {
     this.mayEdit = config.mayEdit;
     this._onChange = config.onChange;
     this._ulidFactory = ulidFactory(ulidDetectPrng(true));
-    this._store = new DocStore();
 
-    this._transport = config.transport;
+    const s = new DocStore();
+    this._s = s;
     this._destroy.push(
-      this._transport.addOnMessageListener(this._onMessage.bind(this)),
+      s.addUndoStatusListener((st) => this._updateStatus({ undoStatus: st })),
     );
-    this._destroy.push(
-      this._transport.addOnStatusListener(this._onTransportStatus.bind(this)),
-    );
+
+    const t = config.transport;
+    this._t = t;
+    this._destroy.push(t.addOnMessageListener(this._onMessage.bind(this)));
+    this._destroy.push(t.addOnStatusListener(this._onTStatus.bind(this)));
 
     if (this.mayEdit) {
       const looper = config.looper || new TimedLooper(SEND_INTERVAL_MS);
@@ -60,59 +85,54 @@ export class StateManager {
     this._destroy.forEach((fn) => fn());
   }
 
-  hasUnsynced(): boolean {
-    return this._hasUnsent || this._latestSend > this._latestAck;
-  }
-
-  addHasUnsyncedListener(cb: (hasPending: boolean) => any): () => void {
-    this._hasUnsyncedListeners.add(cb);
-    return () => this._hasUnsyncedListeners.delete(cb);
-  }
-
-  _updateHasUnsynced() {
-    const value = this.hasUnsynced();
-    for (const cb of this._hasUnsyncedListeners) {
-      cb(value);
-    }
-  }
-
   update(change: Changeset) {
     if (!this.mayEdit) {
       console.error('cannot update read-only doc');
       return;
     }
-    this._store.localUpdate(this._generation, change);
-    this._onChange?.(this._store.toState());
+    this._s.localUpdate(this._generation, change);
+    this._onChange?.(this._s.toState());
     this._hasUnsent = true;
-    this._updateHasUnsynced();
+    this._updateStatus({ hasChanges: true, unsyncedChanges: true });
   }
 
   undo() {
-    this._store.undo(this._generation);
+    this._s.undo(this._generation);
   }
 
   redo() {
-    this._store.redo(this._generation);
-  }
-
-  undoStatus(): UndoStatus {
-    return this._store.undoStatus();
-  }
-
-  addUndoStatusListener(cb: (status: UndoStatus) => any): () => void {
-    return this._store.addUndoStatusListener(cb);
+    this._s.redo(this._generation);
   }
 
   toState(): DocState {
-    return this._store.toState();
+    return this._s.toState();
   }
 
   toChange(): Changeset | null {
-    return this._store.toChange();
+    return this._s.toChange();
   }
 
-  private _onTransportStatus(status: SyncTransportStatus) {
+  private _lastStatus: StateStatus = INITIAL_STATE_STATUS;
+  private _statusListeners = new Set<(status: StateStatus) => any>();
+
+  private _updateStatus(partial: Partial<StateStatus>) {
+    this._lastStatus = { ...this._lastStatus, ...partial };
+    this._statusListeners.forEach((cb) => cb(this._lastStatus));
+  }
+
+  status(): StateStatus {
+    return this._lastStatus;
+  }
+
+  onStatus(cb: (status: StateStatus) => any): () => void {
+    this._statusListeners.add(cb);
+    return () => this._statusListeners.delete(cb);
+  }
+
+  private _onTStatus(status: SyncTransportStatus) {
+    this._updateStatus({ transport: status });
     if (status.type === 'connected') {
+      this._updateStatus({ loaded: status.initialLoadComplete });
       // on the next send interval resend any un-acked changes
       this._latestSend = this._latestAck;
     }
@@ -121,19 +141,21 @@ export class StateManager {
   private _onMessage(msg: IncomingSessionMsg) {
     if (msg.ack) {
       this._latestAck = Math.max(this._latestAck, msg.ack);
-      this._updateHasUnsynced();
-      this._store.remoteAck(msg.ack);
+      this._updateStatus({
+        unsyncedChanges: this._hasUnsent || this._latestAck < this._generation,
+      });
+      this._s.remoteAck(msg.ack);
     }
     if (msg.change) {
-      this._store.remoteUpdate(this._generation, msg.change);
-      this._onChange?.(this._store.toState());
+      this._s.remoteUpdate(this._generation, msg.change);
+      this._onChange?.(this._s.toState());
     }
   }
 
   private _onSendInterval() {
-    const change = this._store.localChangesAfter(this._latestSend);
+    const change = this._s.localChangesAfter(this._latestSend);
     if (change) {
-      const _ = this._transport.send({
+      const _ = this._t.send({
         seq: this._generation,
         change,
       });
