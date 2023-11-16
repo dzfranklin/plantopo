@@ -22,13 +22,12 @@ export default function Sidebar() {
       >
         <div
           className={cls(
-            'flex flex-col w-full min-w-0 bg-neutral-100',
+            'flex relative flex-col w-full min-w-0 bg-neutral-100',
             // Visually appears to connect to titlebar border
             'border-r border-neutral-300',
           )}
         >
           <TreeToolbar />
-
           {engine && <FeatureTree engine={engine} />}
         </div>
 
