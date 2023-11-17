@@ -43,6 +43,9 @@ export const Layout = forwardRef(
           <a href="/third-party-attribution.txt" className="underline">
             Third-party attribution
           </a>
+          <a href="https://status.plantopo.com/" className="underline">
+            Status
+          </a>
         </div>
       </div>
     );
