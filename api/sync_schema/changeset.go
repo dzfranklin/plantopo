@@ -2,6 +2,7 @@ package sync_schema
 
 import (
 	"encoding/json"
+	"errors"
 	"slices"
 )
 
@@ -59,42 +60,140 @@ type dto struct {
 	LSet    map[string]*Layer   `json:"lset,omitempty"`
 }
 
-func (c Changeset) MarshalJSON() ([]byte, error) {
-	return c.marshalJSON(false)
+type streamDto struct {
+	FDelete []string                   `json:"fdelete,omitempty"`
+	FAdd    []string                   `json:"fadd,omitempty"`
+	FSet    map[string]json.RawMessage `json:"fset,omitempty"`
+	LSet    json.RawMessage            `json:"lset,omitempty"`
 }
 
-func (c Changeset) MarshalJSONStable() ([]byte, error) {
-	return c.marshalJSON(true)
-}
+const maxContainerOverhead = len(`{"fadd":[],"fdelete":[],"fset":{},"lset":{}}`)
 
-func (c Changeset) marshalJSON(stable bool) ([]byte, error) {
-	var adds []string
-	if c.FAdd != nil {
-		adds = make([]string, 0, len(c.FAdd))
-		addsSeen := make(map[string]struct{})
-		for _, id := range c.FAdd {
-			if _, ok := addsSeen[id]; ok {
-				continue
-			}
-			addsSeen[id] = struct{}{}
-			adds = append(adds, id)
+func (c Changeset) MarshalJSONStream(maxChunk int, cb func([]byte) error) (err error) {
+	// prepare
+
+	faddsSeen := make(map[string]struct{}, len(c.FAdd))
+	fadds := make([]string, 0, len(c.FAdd))
+	for _, id := range c.FAdd {
+		if _, ok := faddsSeen[id]; ok {
+			continue
 		}
+		faddsSeen[id] = struct{}{}
+		fadds = append(fadds, id)
 	}
+
+	fupdates := make([]string, 0, len(c.FSet))
+	for id := range c.FSet {
+		if _, ok := faddsSeen[id]; ok {
+			continue
+		}
+		fupdates = append(fupdates, id)
+	}
+	slices.Sort(fupdates)
+
+	fchanges := append(fadds, fupdates...)
 
 	var deletes []string
 	if c.FDelete != nil {
 		deletes = keys(c.FDelete)
-		if stable {
-			slices.Sort(deletes)
-		}
+		slices.Sort(deletes)
 	}
 
-	return json.Marshal(dto{
-		FDelete: deletes,
-		FAdd:    adds,
-		FSet:    c.FSet,
-		LSet:    c.LSet,
+	// serialize chunks
+
+	var chunkDto streamDto
+	chunkSize := maxContainerOverhead
+
+	// Always send all layers initially, they should be a reasonable size
+	if c.LSet != nil {
+		if chunkDto.LSet, err = json.Marshal(c.LSet); err != nil {
+			return
+		}
+		chunkSize += len(chunkDto.LSet)
+	}
+
+	fchangeI := 0
+	fdeleteI := 0
+	for {
+		for {
+			if fchangeI < len(fchanges) {
+				fid := fchanges[fchangeI]
+				_, isAdd := faddsSeen[fid]
+
+				fset, ok := c.FSet[fid]
+				if !ok {
+					return errors.New("missing fset for fadd")
+				}
+				var fsetBytes []byte
+				if fsetBytes, err = json.Marshal(fset); err != nil {
+					return
+				}
+
+				size := len(fid) + 2 + 1 + len(fsetBytes) + 1 // fset: fid + quotes + colon + fsetBytes + comma
+				if isAdd {
+					size += len(fid) + 2 + 1 // fadd: fid + quotes + comma
+				}
+				if maxChunk > 0 && chunkSize+size > maxChunk {
+					break
+				}
+
+				if isAdd {
+					chunkDto.FAdd = append(chunkDto.FAdd, fid)
+				}
+
+				if chunkDto.FSet == nil {
+					chunkDto.FSet = make(map[string]json.RawMessage)
+				}
+				chunkDto.FSet[fid] = fsetBytes
+
+				chunkSize += size
+				fchangeI += 1
+				continue
+			}
+
+			if fdeleteI < len(deletes) {
+				fid := deletes[fdeleteI]
+
+				size := len(fid) + 2 + 1 // fdelete: fid + quotes + comma
+				if maxChunk > 0 && chunkSize+size > maxChunk {
+					break
+				}
+				fdeleteI += 1
+				chunkDto.FDelete = append(chunkDto.FDelete, fid)
+				chunkSize += size
+			}
+
+			break
+		}
+
+		if chunkSize <= maxContainerOverhead {
+			if fchangeI < len(fadds) || fdeleteI < len(deletes) {
+				return errors.New("chunk too large")
+			}
+			break
+		}
+
+		var chunk []byte
+		if chunk, err = json.Marshal(chunkDto); err != nil {
+			return
+		}
+		if err = cb(chunk); err != nil {
+			return
+		}
+		chunkDto = streamDto{}
+		chunkSize = maxContainerOverhead
+	}
+
+	return nil
+}
+
+func (c Changeset) MarshalJSON() ([]byte, error) {
+	var out []byte
+	err := c.MarshalJSONStream(-1, func(bytes []byte) error {
+		out = bytes
+		return nil
 	})
+	return out, err
 }
 
 func (c *Changeset) UnmarshalJSON(data []byte) error {

@@ -61,7 +61,7 @@ func runScenario(t *testing.T, s scenarioModel) {
 }
 
 func changesetToYaml(v *schema.Changeset) string {
-	jsonB, err := v.MarshalJSONStable()
+	jsonB, err := v.MarshalJSON()
 	if err != nil {
 		panic(err)
 	}
