@@ -1,0 +1,142 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "0.1.0",
+    "title": "PlanTopo API",
+    "description": "Internal API for PlanTopo.com"
+  },
+  "servers": [
+    {
+      "url": "https://api.plantopo.com/api/v1",
+      "description": "Production"
+    },
+    {
+      "url": "http://localhost:4000/api/v1",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    {
+      "name": "elevation"
+    }
+  ],
+  "paths": {
+    "/elevation": {
+      "post": {
+        "tags": [
+          "elevation"
+        ],
+        "operationId": "post_elevation",
+        "summary": "Lookup elevations for a list of coordinates",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ElevationPostReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElevationPostOK"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "example": {
+          "error": {
+            "message": "internal server error (correlation id cor_e0a3b2628acbb22dad4696acaf30be88)"
+          }
+        }
+      },
+      "ElevationPostReq": {
+        "type": "object",
+        "properties": {
+          "coordinates": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        },
+        "example": {
+          "coordinates": [
+            [
+              -105.883643,
+              40.176097
+            ],
+            [
+              -105.861114,
+              40.150743
+            ],
+            [
+              -105.822319,
+              40.14182
+            ]
+          ]
+        },
+        "required": [
+          "coordinates"
+        ]
+      },
+      "ElevationPostOK": {
+        "type": "object",
+        "properties": {
+          "elevation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "elevation"
+        ],
+        "example": {
+          "elevation": [
+            2518,
+            2518,
+            2518
+          ]
+        }
+      }
+    }
+  }
+}
