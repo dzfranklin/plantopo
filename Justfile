@@ -16,7 +16,7 @@ api-gen:
     redocly bundle --output api/schema.json api/schema/schema.yaml
 
     cp api/schema.json backend/internal/papi/schema.gen.json
-    cd backend && go run github.com/ogen-go/ogen/cmd/ogen@latest \
+    cd backend && ogen \
       -target internal/papi -package papi \
       -clean \
       ./internal/papi/schema.gen.json
