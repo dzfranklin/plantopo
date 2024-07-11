@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: pt
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: pt-staging
