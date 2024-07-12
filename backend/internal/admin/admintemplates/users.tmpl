@@ -1,0 +1,30 @@
+{{define "main"}}
+    <form method="GET">
+        <input type="hidden" name="cursor" value="{{.Cursor}}">
+        <button type="submit">Next page</button>
+    </form>
+
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>EmailConfirmed</th>
+        </tr>
+        </thead>
+        {{range .Users}}
+            <tr>
+                <td><a href="/admin/user/{{.ID}}">{{.ID}}</a></td>
+                <td>{{.Name}}</td>
+                <td>{{.Email}}</td>
+                <td>{{.EmailConfirmed}}</td>
+            </tr>
+        {{end}}
+    </table>
+
+    <form method="GET">
+        <input type="hidden" name="cursor" value="{{.Cursor}}">
+        <button type="submit">Next page</button>
+    </form>
+{{end}}

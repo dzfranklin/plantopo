@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/dzfranklin/plantopo/backend/internal/pstrings"
 	"io"
 	"net/http"
 	"strings"
@@ -69,10 +70,7 @@ func (c *Client) Do(ctx context.Context, out any, method string, path string, bo
 		if err != nil {
 			errBody = "<failed to read body>"
 		} else {
-			errBody = string(fullBody[:min(len(fullBody), 500)])
-			if len(errBody) < len(fullBody) {
-				errBody += "..."
-			}
+			errBody = pstrings.TruncateASCII(string(fullBody), 400)
 		}
 
 		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, errBody)

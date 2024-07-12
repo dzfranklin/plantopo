@@ -5,16 +5,16 @@ import (
 	"net/http"
 )
 
-func (h *phandler) PostElevation(ctx context.Context, req *ElevationPostReq) (*ElevationPostOK, error) {
+func (h *phandler) ElevationPost(ctx context.Context, req *ElevationPostReq) (*ElevationPostOK, error) {
 	if len(req.Coordinates) == 0 {
 		return &ElevationPostOK{Elevation: make([]float64, 0)}, nil
 	}
 	var coords [][2]float64
 	for _, item := range req.Coordinates {
 		if len(item) != 2 {
-			return nil, &ErrorResponseStatusCode{
+			return nil, &DefaultErrorResponseStatusCode{
 				StatusCode: http.StatusBadRequest,
-				Response:   ErrorResponse{Message: "invalid coordinate"},
+				Response:   DefaultError{Message: "invalid coordinate"},
 			}
 		}
 		coords = append(coords, [2]float64{item[0], item[1]})

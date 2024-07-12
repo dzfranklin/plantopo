@@ -8,7 +8,7 @@ import (
 	"net/http/pprof"
 )
 
-func NewMetaServer(cfg *pconfig.Config) *http.Server {
+func NewMetaServer(env *pconfig.Env) *http.Server {
 	mux := http.NewServeMux()
 
 	mux.Handle("/metrics", promhttp.Handler())
@@ -20,7 +20,7 @@ func NewMetaServer(cfg *pconfig.Config) *http.Server {
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	srv := &http.Server{
-		Addr:    fmt.Sprintf("0.0.0.0:%d", cfg.MetaPort),
+		Addr:    fmt.Sprintf("0.0.0.0:%d", env.Config.Server.MetaPort),
 		Handler: mux,
 	}
 	return srv

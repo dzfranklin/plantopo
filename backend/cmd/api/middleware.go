@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/papi"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
@@ -15,13 +14,13 @@ import (
 	"strings"
 )
 
-func enableCORS(cfg *pconfig.Config, next http.Handler) http.Handler {
+func enableCORS(env *pconfig.Env, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Vary", "Origin")
 		w.Header().Add("Vary", "Access-Control-Request-Method")
 
 		origin := r.Header.Get("Origin")
-		if corsShouldAllow(cfg, origin) {
+		if corsShouldAllow(env, origin) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 
 			if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
@@ -36,23 +35,23 @@ func enableCORS(cfg *pconfig.Config, next http.Handler) http.Handler {
 	})
 }
 
-func corsShouldAllow(cfg *pconfig.Config, origin string) bool {
+func corsShouldAllow(env *pconfig.Env, origin string) bool {
 	if origin != "" {
 		originURL, err := url.Parse(origin)
 		if err != nil {
-			cfg.Logger.Warn("failed to parse Origin as url", "error", err, "origin", origin)
+			env.Logger.Warn("failed to parse Origin as url", "error", err, "origin", origin)
 			return false
 		}
 		originHost := originURL.Host
 		if strings.Contains(originHost, ":") {
 			originHost, _, err = net.SplitHostPort(originHost)
 			if err != nil {
-				cfg.Logger.Warn("failed to parse Origin host/port", "error", err, "origin", origin)
+				env.Logger.Warn("failed to parse Origin host/port", "error", err, "origin", origin)
 				return false
 			}
 		}
 
-		for _, candidate := range cfg.CORSAllowHosts {
+		for _, candidate := range env.Config.Server.CORSAllowHosts {
 			if originHost == candidate {
 				return true
 			}
@@ -61,19 +60,19 @@ func corsShouldAllow(cfg *pconfig.Config, origin string) bool {
 	return false
 }
 
-func recoverPanic(cfg *pconfig.Config, next http.Handler) http.Handler {
+func recoverPanic(env *pconfig.Env, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				resp := papi.HandleErrorResponse(cfg, r.Context(), fmt.Errorf("panic: %s", err))
+				resp := papi.HandleDefaultErrorResponse(env, r.Context(), fmt.Errorf("panic: %s", err))
 
 				w.Header().Set("Connection", "close")
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(resp.StatusCode)
 
-				js, err := json.Marshal(resp.Response)
+				js, err := resp.Response.MarshalJSON()
 				if err != nil {
-					cfg.Logger.Error("Failed to marshal error response",
+					env.Logger.Error("Failed to marshal error response",
 						"error", err,
 						"response", fmt.Sprintf("%+v", resp))
 					return

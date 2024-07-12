@@ -6,8 +6,288 @@ import (
 	"fmt"
 )
 
-func (s *ErrorResponseStatusCode) Error() string {
+func (s *DefaultErrorResponseStatusCode) Error() string {
 	return fmt.Sprintf("code %d: %+v", s.StatusCode, s.Response)
+}
+
+type AuthCheckPostOK struct {
+	UserID UserID `json:"userID"`
+}
+
+// GetUserID returns the value of UserID.
+func (s *AuthCheckPostOK) GetUserID() UserID {
+	return s.UserID
+}
+
+// SetUserID sets the value of UserID.
+func (s *AuthCheckPostOK) SetUserID(val UserID) {
+	s.UserID = val
+}
+
+// Ref: #/components/schemas/AuthRegisterRequest
+type AuthRegisterRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// GetName returns the value of Name.
+func (s *AuthRegisterRequest) GetName() string {
+	return s.Name
+}
+
+// GetEmail returns the value of Email.
+func (s *AuthRegisterRequest) GetEmail() string {
+	return s.Email
+}
+
+// GetPassword returns the value of Password.
+func (s *AuthRegisterRequest) GetPassword() string {
+	return s.Password
+}
+
+// SetName sets the value of Name.
+func (s *AuthRegisterRequest) SetName(val string) {
+	s.Name = val
+}
+
+// SetEmail sets the value of Email.
+func (s *AuthRegisterRequest) SetEmail(val string) {
+	s.Email = val
+}
+
+// SetPassword sets the value of Password.
+func (s *AuthRegisterRequest) SetPassword(val string) {
+	s.Password = val
+}
+
+type AuthRevokeBrowserPostOK struct{}
+
+// AuthRevokeBrowserPostOKHeaders wraps AuthRevokeBrowserPostOK with response headers.
+type AuthRevokeBrowserPostOKHeaders struct {
+	SetCookie OptString
+	Response  AuthRevokeBrowserPostOK
+}
+
+// GetSetCookie returns the value of SetCookie.
+func (s *AuthRevokeBrowserPostOKHeaders) GetSetCookie() OptString {
+	return s.SetCookie
+}
+
+// GetResponse returns the value of Response.
+func (s *AuthRevokeBrowserPostOKHeaders) GetResponse() AuthRevokeBrowserPostOK {
+	return s.Response
+}
+
+// SetSetCookie sets the value of SetCookie.
+func (s *AuthRevokeBrowserPostOKHeaders) SetSetCookie(val OptString) {
+	s.SetCookie = val
+}
+
+// SetResponse sets the value of Response.
+func (s *AuthRevokeBrowserPostOKHeaders) SetResponse(val AuthRevokeBrowserPostOK) {
+	s.Response = val
+}
+
+type AuthRevokePostOK struct{}
+
+// Ref: #/components/schemas/AuthRevokeReq
+type AuthRevokeReq struct {
+	Token Token `json:"token"`
+}
+
+// GetToken returns the value of Token.
+func (s *AuthRevokeReq) GetToken() Token {
+	return s.Token
+}
+
+// SetToken sets the value of Token.
+func (s *AuthRevokeReq) SetToken(val Token) {
+	s.Token = val
+}
+
+// Ref: #/components/schemas/AuthenticateBrowserOK
+type AuthenticateBrowserOK struct {
+	User User `json:"user"`
+}
+
+// GetUser returns the value of User.
+func (s *AuthenticateBrowserOK) GetUser() User {
+	return s.User
+}
+
+// SetUser sets the value of User.
+func (s *AuthenticateBrowserOK) SetUser(val User) {
+	s.User = val
+}
+
+// AuthenticateBrowserOKHeaders wraps AuthenticateBrowserOK with response headers.
+type AuthenticateBrowserOKHeaders struct {
+	SetCookie OptSetSessionCookieHeader
+	Response  AuthenticateBrowserOK
+}
+
+// GetSetCookie returns the value of SetCookie.
+func (s *AuthenticateBrowserOKHeaders) GetSetCookie() OptSetSessionCookieHeader {
+	return s.SetCookie
+}
+
+// GetResponse returns the value of Response.
+func (s *AuthenticateBrowserOKHeaders) GetResponse() AuthenticateBrowserOK {
+	return s.Response
+}
+
+// SetSetCookie sets the value of SetCookie.
+func (s *AuthenticateBrowserOKHeaders) SetSetCookie(val OptSetSessionCookieHeader) {
+	s.SetCookie = val
+}
+
+// SetResponse sets the value of Response.
+func (s *AuthenticateBrowserOKHeaders) SetResponse(val AuthenticateBrowserOK) {
+	s.Response = val
+}
+
+// Ref: #/components/schemas/AuthenticateOK
+type AuthenticateOK struct {
+	Token Token `json:"token"`
+	User  User  `json:"user"`
+}
+
+// GetToken returns the value of Token.
+func (s *AuthenticateOK) GetToken() Token {
+	return s.Token
+}
+
+// GetUser returns the value of User.
+func (s *AuthenticateOK) GetUser() User {
+	return s.User
+}
+
+// SetToken sets the value of Token.
+func (s *AuthenticateOK) SetToken(val Token) {
+	s.Token = val
+}
+
+// SetUser sets the value of User.
+func (s *AuthenticateOK) SetUser(val User) {
+	s.User = val
+}
+
+// Ref: #/components/schemas/AuthenticateReq
+type AuthenticateReq struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// GetEmail returns the value of Email.
+func (s *AuthenticateReq) GetEmail() string {
+	return s.Email
+}
+
+// GetPassword returns the value of Password.
+func (s *AuthenticateReq) GetPassword() string {
+	return s.Password
+}
+
+// SetEmail sets the value of Email.
+func (s *AuthenticateReq) SetEmail(val string) {
+	s.Email = val
+}
+
+// SetPassword sets the value of Password.
+func (s *AuthenticateReq) SetPassword(val string) {
+	s.Password = val
+}
+
+type Bearer struct {
+	Token string
+}
+
+// GetToken returns the value of Token.
+func (s *Bearer) GetToken() string {
+	return s.Token
+}
+
+// SetToken sets the value of Token.
+func (s *Bearer) SetToken(val string) {
+	s.Token = val
+}
+
+type Browser struct {
+	APIKey string
+}
+
+// GetAPIKey returns the value of APIKey.
+func (s *Browser) GetAPIKey() string {
+	return s.APIKey
+}
+
+// SetAPIKey sets the value of APIKey.
+func (s *Browser) SetAPIKey(val string) {
+	s.APIKey = val
+}
+
+// Ref: #/components/schemas/DefaultError
+type DefaultError struct {
+	Message           string              `json:"message"`
+	RetryAfterSeconds OptInt              `json:"retryAfterSeconds"`
+	ValidationErrors  OptValidationErrors `json:"validationErrors"`
+}
+
+// GetMessage returns the value of Message.
+func (s *DefaultError) GetMessage() string {
+	return s.Message
+}
+
+// GetRetryAfterSeconds returns the value of RetryAfterSeconds.
+func (s *DefaultError) GetRetryAfterSeconds() OptInt {
+	return s.RetryAfterSeconds
+}
+
+// GetValidationErrors returns the value of ValidationErrors.
+func (s *DefaultError) GetValidationErrors() OptValidationErrors {
+	return s.ValidationErrors
+}
+
+// SetMessage sets the value of Message.
+func (s *DefaultError) SetMessage(val string) {
+	s.Message = val
+}
+
+// SetRetryAfterSeconds sets the value of RetryAfterSeconds.
+func (s *DefaultError) SetRetryAfterSeconds(val OptInt) {
+	s.RetryAfterSeconds = val
+}
+
+// SetValidationErrors sets the value of ValidationErrors.
+func (s *DefaultError) SetValidationErrors(val OptValidationErrors) {
+	s.ValidationErrors = val
+}
+
+// DefaultErrorResponseStatusCode wraps DefaultError with StatusCode.
+type DefaultErrorResponseStatusCode struct {
+	StatusCode int
+	Response   DefaultError
+}
+
+// GetStatusCode returns the value of StatusCode.
+func (s *DefaultErrorResponseStatusCode) GetStatusCode() int {
+	return s.StatusCode
+}
+
+// GetResponse returns the value of Response.
+func (s *DefaultErrorResponseStatusCode) GetResponse() DefaultError {
+	return s.Response
+}
+
+// SetStatusCode sets the value of StatusCode.
+func (s *DefaultErrorResponseStatusCode) SetStatusCode(val int) {
+	s.StatusCode = val
+}
+
+// SetResponse sets the value of Response.
+func (s *DefaultErrorResponseStatusCode) SetResponse(val DefaultError) {
+	s.Response = val
 }
 
 // Ref: #/components/schemas/ElevationPostOK
@@ -40,43 +320,369 @@ func (s *ElevationPostReq) SetCoordinates(val [][]float64) {
 	s.Coordinates = val
 }
 
-// Ref: #/components/schemas/ErrorResponse
-type ErrorResponse struct {
-	Message string `json:"message"`
+// NewOptBool returns new OptBool with value set to v.
+func NewOptBool(v bool) OptBool {
+	return OptBool{
+		Value: v,
+		Set:   true,
+	}
 }
 
-// GetMessage returns the value of Message.
-func (s *ErrorResponse) GetMessage() string {
-	return s.Message
+// OptBool is optional bool.
+type OptBool struct {
+	Value bool
+	Set   bool
 }
 
-// SetMessage sets the value of Message.
-func (s *ErrorResponse) SetMessage(val string) {
-	s.Message = val
+// IsSet returns true if OptBool was set.
+func (o OptBool) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptBool) Reset() {
+	var v bool
+	o.Value = v
+	o.Set = false
 }
 
-// ErrorResponseStatusCode wraps ErrorResponse with StatusCode.
-type ErrorResponseStatusCode struct {
-	StatusCode int
-	Response   ErrorResponse
+// SetTo sets value to v.
+func (o *OptBool) SetTo(v bool) {
+	o.Set = true
+	o.Value = v
 }
 
-// GetStatusCode returns the value of StatusCode.
-func (s *ErrorResponseStatusCode) GetStatusCode() int {
-	return s.StatusCode
+// Get returns value and boolean that denotes whether value was set.
+func (o OptBool) Get() (v bool, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
 }
 
-// GetResponse returns the value of Response.
-func (s *ErrorResponseStatusCode) GetResponse() ErrorResponse {
-	return s.Response
+// Or returns value if set, or given parameter if does not.
+func (o OptBool) Or(d bool) bool {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
 }
 
-// SetStatusCode sets the value of StatusCode.
-func (s *ErrorResponseStatusCode) SetStatusCode(val int) {
-	s.StatusCode = val
+// NewOptInt returns new OptInt with value set to v.
+func NewOptInt(v int) OptInt {
+	return OptInt{
+		Value: v,
+		Set:   true,
+	}
 }
 
-// SetResponse sets the value of Response.
-func (s *ErrorResponseStatusCode) SetResponse(val ErrorResponse) {
-	s.Response = val
+// OptInt is optional int.
+type OptInt struct {
+	Value int
+	Set   bool
+}
+
+// IsSet returns true if OptInt was set.
+func (o OptInt) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptInt) Reset() {
+	var v int
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptInt) SetTo(v int) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptInt) Get() (v int, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptInt) Or(d int) int {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptSetSessionCookieHeader returns new OptSetSessionCookieHeader with value set to v.
+func NewOptSetSessionCookieHeader(v SetSessionCookieHeader) OptSetSessionCookieHeader {
+	return OptSetSessionCookieHeader{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSetSessionCookieHeader is optional SetSessionCookieHeader.
+type OptSetSessionCookieHeader struct {
+	Value SetSessionCookieHeader
+	Set   bool
+}
+
+// IsSet returns true if OptSetSessionCookieHeader was set.
+func (o OptSetSessionCookieHeader) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSetSessionCookieHeader) Reset() {
+	var v SetSessionCookieHeader
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSetSessionCookieHeader) SetTo(v SetSessionCookieHeader) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSetSessionCookieHeader) Get() (v SetSessionCookieHeader, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSetSessionCookieHeader) Or(d SetSessionCookieHeader) SetSessionCookieHeader {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptString returns new OptString with value set to v.
+func NewOptString(v string) OptString {
+	return OptString{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptString is optional string.
+type OptString struct {
+	Value string
+	Set   bool
+}
+
+// IsSet returns true if OptString was set.
+func (o OptString) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptString) Reset() {
+	var v string
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptString) SetTo(v string) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptString) Get() (v string, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptString) Or(d string) string {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptValidationErrors returns new OptValidationErrors with value set to v.
+func NewOptValidationErrors(v ValidationErrors) OptValidationErrors {
+	return OptValidationErrors{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptValidationErrors is optional ValidationErrors.
+type OptValidationErrors struct {
+	Value ValidationErrors
+	Set   bool
+}
+
+// IsSet returns true if OptValidationErrors was set.
+func (o OptValidationErrors) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptValidationErrors) Reset() {
+	var v ValidationErrors
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptValidationErrors) SetTo(v ValidationErrors) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptValidationErrors) Get() (v ValidationErrors, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptValidationErrors) Or(d ValidationErrors) ValidationErrors {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptValidationErrorsFieldErrors returns new OptValidationErrorsFieldErrors with value set to v.
+func NewOptValidationErrorsFieldErrors(v ValidationErrorsFieldErrors) OptValidationErrorsFieldErrors {
+	return OptValidationErrorsFieldErrors{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptValidationErrorsFieldErrors is optional ValidationErrorsFieldErrors.
+type OptValidationErrorsFieldErrors struct {
+	Value ValidationErrorsFieldErrors
+	Set   bool
+}
+
+// IsSet returns true if OptValidationErrorsFieldErrors was set.
+func (o OptValidationErrorsFieldErrors) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptValidationErrorsFieldErrors) Reset() {
+	var v ValidationErrorsFieldErrors
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptValidationErrorsFieldErrors) SetTo(v ValidationErrorsFieldErrors) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptValidationErrorsFieldErrors) Get() (v ValidationErrorsFieldErrors, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptValidationErrorsFieldErrors) Or(d ValidationErrorsFieldErrors) ValidationErrorsFieldErrors {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+type SetSessionCookieHeader string
+
+type Token string
+
+// Ref: #/components/schemas/User
+type User struct {
+	ID             UserID    `json:"id"`
+	Name           OptString `json:"name"`
+	Email          string    `json:"email"`
+	EmailConfirmed OptBool   `json:"emailConfirmed"`
+}
+
+// GetID returns the value of ID.
+func (s *User) GetID() UserID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *User) GetName() OptString {
+	return s.Name
+}
+
+// GetEmail returns the value of Email.
+func (s *User) GetEmail() string {
+	return s.Email
+}
+
+// GetEmailConfirmed returns the value of EmailConfirmed.
+func (s *User) GetEmailConfirmed() OptBool {
+	return s.EmailConfirmed
+}
+
+// SetID sets the value of ID.
+func (s *User) SetID(val UserID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *User) SetName(val OptString) {
+	s.Name = val
+}
+
+// SetEmail sets the value of Email.
+func (s *User) SetEmail(val string) {
+	s.Email = val
+}
+
+// SetEmailConfirmed sets the value of EmailConfirmed.
+func (s *User) SetEmailConfirmed(val OptBool) {
+	s.EmailConfirmed = val
+}
+
+type UserID string
+
+// Ref: #/components/schemas/ValidationErrors
+type ValidationErrors struct {
+	GeneralErrors []string                       `json:"generalErrors"`
+	FieldErrors   OptValidationErrorsFieldErrors `json:"fieldErrors"`
+}
+
+// GetGeneralErrors returns the value of GeneralErrors.
+func (s *ValidationErrors) GetGeneralErrors() []string {
+	return s.GeneralErrors
+}
+
+// GetFieldErrors returns the value of FieldErrors.
+func (s *ValidationErrors) GetFieldErrors() OptValidationErrorsFieldErrors {
+	return s.FieldErrors
+}
+
+// SetGeneralErrors sets the value of GeneralErrors.
+func (s *ValidationErrors) SetGeneralErrors(val []string) {
+	s.GeneralErrors = val
+}
+
+// SetFieldErrors sets the value of FieldErrors.
+func (s *ValidationErrors) SetFieldErrors(val OptValidationErrorsFieldErrors) {
+	s.FieldErrors = val
+}
+
+type ValidationErrorsFieldErrors map[string]string
+
+func (s *ValidationErrorsFieldErrors) init() ValidationErrorsFieldErrors {
+	m := *s
+	if m == nil {
+		m = map[string]string{}
+		*s = m
+	}
+	return m
 }

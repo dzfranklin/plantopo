@@ -48,24 +48,219 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		switch elem[0] {
-		case '/': // Prefix: "/elevation"
+		case '/': // Prefix: "/"
 			origElem := elem
-			if l := len("/elevation"); len(elem) >= l && elem[0:l] == "/elevation" {
+			if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 				elem = elem[l:]
 			} else {
 				break
 			}
 
 			if len(elem) == 0 {
-				// Leaf node.
-				switch r.Method {
-				case "POST":
-					s.handlePostElevationRequest([0]string{}, elemIsEscaped, w, r)
-				default:
-					s.notAllowed(w, r, "POST")
+				break
+			}
+			switch elem[0] {
+			case 'a': // Prefix: "auth/"
+				origElem := elem
+				if l := len("auth/"); len(elem) >= l && elem[0:l] == "auth/" {
+					elem = elem[l:]
+				} else {
+					break
 				}
 
-				return
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case 'a': // Prefix: "authenticate"
+					origElem := elem
+					if l := len("authenticate"); len(elem) >= l && elem[0:l] == "authenticate" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						switch r.Method {
+						case "POST":
+							s.handleAuthAuthenticatePostRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "POST")
+						}
+
+						return
+					}
+					switch elem[0] {
+					case '-': // Prefix: "-browser"
+						origElem := elem
+						if l := len("-browser"); len(elem) >= l && elem[0:l] == "-browser" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "POST":
+								s.handleAuthAuthenticateBrowserPostRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, "POST")
+							}
+
+							return
+						}
+
+						elem = origElem
+					}
+
+					elem = origElem
+				case 'c': // Prefix: "check"
+					origElem := elem
+					if l := len("check"); len(elem) >= l && elem[0:l] == "check" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleAuthCheckPostRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "POST")
+						}
+
+						return
+					}
+
+					elem = origElem
+				case 'r': // Prefix: "re"
+					origElem := elem
+					if l := len("re"); len(elem) >= l && elem[0:l] == "re" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						break
+					}
+					switch elem[0] {
+					case 'g': // Prefix: "gister"
+						origElem := elem
+						if l := len("gister"); len(elem) >= l && elem[0:l] == "gister" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							switch r.Method {
+							case "POST":
+								s.handleAuthRegisterPostRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, "POST")
+							}
+
+							return
+						}
+						switch elem[0] {
+						case '-': // Prefix: "-browser"
+							origElem := elem
+							if l := len("-browser"); len(elem) >= l && elem[0:l] == "-browser" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "POST":
+									s.handleAuthRegisterBrowserPostRequest([0]string{}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, "POST")
+								}
+
+								return
+							}
+
+							elem = origElem
+						}
+
+						elem = origElem
+					case 'v': // Prefix: "voke"
+						origElem := elem
+						if l := len("voke"); len(elem) >= l && elem[0:l] == "voke" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							switch r.Method {
+							case "POST":
+								s.handleAuthRevokePostRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, "POST")
+							}
+
+							return
+						}
+						switch elem[0] {
+						case '-': // Prefix: "-browser"
+							origElem := elem
+							if l := len("-browser"); len(elem) >= l && elem[0:l] == "-browser" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "POST":
+									s.handleAuthRevokeBrowserPostRequest([0]string{}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, "POST")
+								}
+
+								return
+							}
+
+							elem = origElem
+						}
+
+						elem = origElem
+					}
+
+					elem = origElem
+				}
+
+				elem = origElem
+			case 'e': // Prefix: "elevation"
+				origElem := elem
+				if l := len("elevation"); len(elem) >= l && elem[0:l] == "elevation" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch r.Method {
+					case "POST":
+						s.handleElevationPostRequest([0]string{}, elemIsEscaped, w, r)
+					default:
+						s.notAllowed(w, r, "POST")
+					}
+
+					return
+				}
+
+				elem = origElem
 			}
 
 			elem = origElem
@@ -149,28 +344,251 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 			break
 		}
 		switch elem[0] {
-		case '/': // Prefix: "/elevation"
+		case '/': // Prefix: "/"
 			origElem := elem
-			if l := len("/elevation"); len(elem) >= l && elem[0:l] == "/elevation" {
+			if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 				elem = elem[l:]
 			} else {
 				break
 			}
 
 			if len(elem) == 0 {
-				// Leaf node.
-				switch method {
-				case "POST":
-					r.name = "PostElevation"
-					r.summary = "Lookup elevations for a list of coordinates"
-					r.operationID = "post_elevation"
-					r.pathPattern = "/elevation"
-					r.args = args
-					r.count = 0
-					return r, true
-				default:
-					return
+				break
+			}
+			switch elem[0] {
+			case 'a': // Prefix: "auth/"
+				origElem := elem
+				if l := len("auth/"); len(elem) >= l && elem[0:l] == "auth/" {
+					elem = elem[l:]
+				} else {
+					break
 				}
+
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case 'a': // Prefix: "authenticate"
+					origElem := elem
+					if l := len("authenticate"); len(elem) >= l && elem[0:l] == "authenticate" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						switch method {
+						case "POST":
+							r.name = "AuthAuthenticatePost"
+							r.summary = "Authenticate as a user (see /auth/authenticate-browser if you are the frontend)"
+							r.operationID = ""
+							r.pathPattern = "/auth/authenticate"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+					switch elem[0] {
+					case '-': // Prefix: "-browser"
+						origElem := elem
+						if l := len("-browser"); len(elem) >= l && elem[0:l] == "-browser" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "POST":
+								r.name = "AuthAuthenticateBrowserPost"
+								r.summary = "Authenticate and store the token in the requesting browser's cookie jar"
+								r.operationID = ""
+								r.pathPattern = "/auth/authenticate-browser"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+
+						elem = origElem
+					}
+
+					elem = origElem
+				case 'c': // Prefix: "check"
+					origElem := elem
+					if l := len("check"); len(elem) >= l && elem[0:l] == "check" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "POST":
+							r.name = "AuthCheckPost"
+							r.summary = "Check if you are authenticated"
+							r.operationID = ""
+							r.pathPattern = "/auth/check"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+					elem = origElem
+				case 'r': // Prefix: "re"
+					origElem := elem
+					if l := len("re"); len(elem) >= l && elem[0:l] == "re" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						break
+					}
+					switch elem[0] {
+					case 'g': // Prefix: "gister"
+						origElem := elem
+						if l := len("gister"); len(elem) >= l && elem[0:l] == "gister" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							switch method {
+							case "POST":
+								r.name = "AuthRegisterPost"
+								r.summary = "Register a new account"
+								r.operationID = ""
+								r.pathPattern = "/auth/register"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+						switch elem[0] {
+						case '-': // Prefix: "-browser"
+							origElem := elem
+							if l := len("-browser"); len(elem) >= l && elem[0:l] == "-browser" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "POST":
+									r.name = "AuthRegisterBrowserPost"
+									r.summary = "Register a new account and store the token in the requesting browser's cookie jar"
+									r.operationID = ""
+									r.pathPattern = "/auth/register-browser"
+									r.args = args
+									r.count = 0
+									return r, true
+								default:
+									return
+								}
+							}
+
+							elem = origElem
+						}
+
+						elem = origElem
+					case 'v': // Prefix: "voke"
+						origElem := elem
+						if l := len("voke"); len(elem) >= l && elem[0:l] == "voke" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							switch method {
+							case "POST":
+								r.name = "AuthRevokePost"
+								r.summary = "Revoke a token"
+								r.operationID = ""
+								r.pathPattern = "/auth/revoke"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+						switch elem[0] {
+						case '-': // Prefix: "-browser"
+							origElem := elem
+							if l := len("-browser"); len(elem) >= l && elem[0:l] == "-browser" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "POST":
+									r.name = "AuthRevokeBrowserPost"
+									r.summary = "Revoke the token stored in the requesting browser's cookie jar"
+									r.operationID = ""
+									r.pathPattern = "/auth/revoke-browser"
+									r.args = args
+									r.count = 0
+									return r, true
+								default:
+									return
+								}
+							}
+
+							elem = origElem
+						}
+
+						elem = origElem
+					}
+
+					elem = origElem
+				}
+
+				elem = origElem
+			case 'e': // Prefix: "elevation"
+				origElem := elem
+				if l := len("elevation"); len(elem) >= l && elem[0:l] == "elevation" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch method {
+					case "POST":
+						r.name = "ElevationPost"
+						r.summary = "Lookup elevations for a list of coordinates"
+						r.operationID = ""
+						r.pathPattern = "/elevation"
+						r.args = args
+						r.count = 0
+						return r, true
+					default:
+						return
+					}
+				}
+
+				elem = origElem
 			}
 
 			elem = origElem

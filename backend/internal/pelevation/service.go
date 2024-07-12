@@ -13,11 +13,11 @@ type Service struct {
 	l   *slog.Logger
 }
 
-func New(cfg *pconfig.Config) *Service {
+func New(env *pconfig.Env) *Service {
 	return &Service{
-		c:   jsonclient.New(cfg.Elevation.Endpoint, cfg.UserAgent),
-		cfg: &cfg.Elevation,
-		l:   cfg.Logger,
+		c:   jsonclient.New(env.Config.Elevation.Endpoint, env.Config.UserAgent),
+		cfg: &env.Config.Elevation,
+		l:   env.Logger,
 	}
 }
 

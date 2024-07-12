@@ -2,44 +2,91 @@ package papi
 
 import (
 	"context"
-	"crypto/rand"
+	"errors"
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
+	"github.com/dzfranklin/plantopo/backend/internal/perrors"
+	"github.com/dzfranklin/plantopo/backend/internal/prand"
+	"github.com/dzfranklin/plantopo/backend/internal/prepo"
+	"net/http"
 	"runtime/debug"
 )
 
-func (h *phandler) NewError(ctx context.Context, err error) *ErrorResponseStatusCode {
-	return HandleErrorResponse(h.Config, ctx, err)
+var ErrNotLoggedIn = errors.New("not logged in")
+
+func (h *phandler) NewError(ctx context.Context, err error) *DefaultErrorResponseStatusCode {
+	return HandleDefaultErrorResponse(h.Env, ctx, err)
 }
 
-func HandleErrorResponse(cfg *pconfig.Config, _ context.Context, err error) *ErrorResponseStatusCode {
+func HandleDefaultErrorResponse(env *pconfig.Env, _ context.Context, err error) *DefaultErrorResponseStatusCode {
 	correlationID := makeCorrelationID()
-	stack := string(debug.Stack())
-	userFacingMessage := fmt.Sprintf("internal server error (correlation id %s)", correlationID)
 
-	if cfg.Env == "development" {
-		debug.PrintStack()
-		userFacingMessage += fmt.Sprintf(": %+v", err)
-		stack = "<omitted in development mode for clarity>"
-	}
+	if specificErr, ok := perrors.Into[*DefaultErrorResponseStatusCode](err); ok {
+		return specificErr
+	} else if errors.Is(err, ErrNotLoggedIn) {
+		return &DefaultErrorResponseStatusCode{
+			StatusCode: http.StatusUnauthorized,
+			Response: DefaultError{
+				Message: "not logged in",
+			},
+		}
+	} else if specificErr, ok := perrors.Into[*prepo.ErrRateLimited](err); ok {
+		return &DefaultErrorResponseStatusCode{
+			StatusCode: http.StatusTooManyRequests,
+			Response: DefaultError{
+				Message:           specificErr.Error(),
+				RetryAfterSeconds: NewOptInt(specificErr.RetryAfterSeconds),
+			},
+		}
+	} else if specificErr, ok := perrors.Into[*prepo.ErrValidation](err); ok {
+		return &DefaultErrorResponseStatusCode{
+			StatusCode: http.StatusUnprocessableEntity,
+			Response: DefaultError{
+				Message: "invalid input",
+				ValidationErrors: NewOptValidationErrors(ValidationErrors{
+					GeneralErrors: specificErr.GeneralErrors,
+					FieldErrors:   NewOptValidationErrorsFieldErrors(specificErr.FieldErrors),
+				}),
+			},
+		}
+	} else if errors.Is(err, prepo.ErrInvalidID) {
+		return &DefaultErrorResponseStatusCode{
+			StatusCode: http.StatusUnprocessableEntity,
+			Response: DefaultError{
+				Message: "invalid id",
+			},
+		}
+	} else if errors.Is(err, prepo.ErrInvalidSessionToken) {
+		return &DefaultErrorResponseStatusCode{
+			StatusCode: http.StatusForbidden,
+			Response: DefaultError{
+				Message: "invalid session token",
+			},
+		}
+	} else {
+		stack := string(debug.Stack())
+		userFacingMessage := fmt.Sprintf("internal server error (correlation id %s)", correlationID)
 
-	cfg.Logger.Error("internal server error",
-		"error", err,
-		"correlationID", correlationID,
-		"stack", stack)
+		if env.Config.Env == "development" {
+			debug.PrintStack()
+			userFacingMessage += fmt.Sprintf(": %+v", err)
+			stack = "<omitted in development mode for clarity>"
+		}
 
-	return &ErrorResponseStatusCode{
-		StatusCode: 500,
-		Response: ErrorResponse{
-			Message: userFacingMessage,
-		},
+		env.Logger.Error("internal server error",
+			"error", err,
+			"correlationID", correlationID,
+			"stack", stack)
+
+		return &DefaultErrorResponseStatusCode{
+			StatusCode: 500,
+			Response: DefaultError{
+				Message: userFacingMessage,
+			},
+		}
 	}
 }
 
 func makeCorrelationID() string {
-	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
-		panic(err)
-	}
-	return fmt.Sprintf("cor_%x", buf)
+	return fmt.Sprintf("cor_%x", prand.CryptoRandHex(16))
 }

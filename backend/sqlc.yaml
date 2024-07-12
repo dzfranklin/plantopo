@@ -1,0 +1,14 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "internal/psqlc/queries"
+    schema: "migrations"
+    database:
+      uri: "${DATABASE_URL}"
+    gen:
+      go:
+        out: "internal/psqlc"
+        sql_package: "pgx/v5"
+        emit_sql_as_comment: true
+        query_parameter_limit: 2
+        emit_methods_with_db_argument: true
