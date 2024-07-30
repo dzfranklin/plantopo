@@ -31,35 +31,6 @@ func assertAudit(t *testing.T, al *AuditLog, mark string, expected AuditLogEntry
 	assert.Equal(t, expected, entry)
 }
 
-func assertAudits(t *testing.T, al *AuditLog, mark string, expected []AuditLogEntry) {
-	t.Helper()
-	actual := auditsSince(al, mark)
-	assert.Equal(t, expected, actual)
-}
-
-func auditsSince(al *AuditLog, mark string) []AuditLogEntry {
-	var out []AuditLogEntry
-	cursor := mark
-	for {
-		page, nextCursor, err := al.ListForwards(nil, nil, nil, &cursor)
-		if err != nil {
-			panic(err)
-		}
-
-		for _, entry := range page {
-			clearIrrelevantAuditLogFields(&entry)
-			out = append(out, entry)
-		}
-
-		cursor = nextCursor
-
-		if len(page) == 0 {
-			break
-		}
-	}
-	return out
-}
-
 func clearIrrelevantAuditLogFields(entry *AuditLogEntry) {
 	entry.ID = ""
 	entry.Time = time.Time{}

@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	requestsWithRequestIdCounter = promauto.NewCounter(prometheus.CounterOpts{
+	requestsWithRequestIDCounter = promauto.NewCounter(prometheus.CounterOpts{
 		Namespace: "plantopo",
 		Name:      "requests_with_request_id",
 	})
@@ -42,7 +42,7 @@ func AssignRequestID(next http.Handler) http.Handler {
 
 			w.Header().Add("X-Generated-Request-ID", value)
 		} else {
-			requestsWithRequestIdCounter.Inc()
+			requestsWithRequestIDCounter.Inc()
 
 			value = "cli_" + value
 		}

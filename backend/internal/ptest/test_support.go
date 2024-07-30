@@ -42,10 +42,9 @@ const (
 
 type TestEnv struct {
 	*pconfig.Env
-	t      *testing.T
-	dbC    *postgrescontainers.PostgresContainer
-	rdbC   *rediscontainers.RedisContainer
-	minioC *miniocontainers.MinioContainer
+	t    *testing.T
+	dbC  *postgrescontainers.PostgresContainer
+	rdbC *rediscontainers.RedisContainer
 }
 
 func NewTestEnv(t *testing.T) *TestEnv {

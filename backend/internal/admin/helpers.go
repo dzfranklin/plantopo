@@ -2,9 +2,7 @@ package admin
 
 import (
 	"bytes"
-	"errors"
 	"github.com/dzfranklin/plantopo/backend/internal/admin/admintemplates"
-	"github.com/go-playground/form"
 	"html/template"
 	"net/http"
 )
@@ -54,22 +52,22 @@ func (app *adminApp) renderIsolatedTemplate(w http.ResponseWriter, r *http.Reque
 	_, _ = w.Write(b.Bytes())
 }
 
-func (app *adminApp) decodePostForm(r *http.Request, dst any) error {
-	err := r.ParseForm()
-	if err != nil {
-		return err
-	}
-
-	err = app.formDecoder.Decode(dst, r.PostForm)
-	if err != nil {
-		// `dst` must be a non-nil pointer. If not we have a bug.
-		var invalidDecoderError *form.InvalidDecoderError
-		if errors.As(err, &invalidDecoderError) {
-			panic(err)
-		}
-
-		return err
-	}
-
-	return nil
-}
+//func (app *adminApp) decodePostForm(r *http.Request, dst any) error {
+//	err := r.ParseForm()
+//	if err != nil {
+//		return err
+//	}
+//
+//	err = app.formDecoder.Decode(dst, r.PostForm)
+//	if err != nil {
+//		// `dst` must be a non-nil pointer. If not we have a bug.
+//		var invalidDecoderError *form.InvalidDecoderError
+//		if errors.As(err, &invalidDecoderError) {
+//			panic(err)
+//		}
+//
+//		return err
+//	}
+//
+//	return nil
+//}

@@ -60,13 +60,6 @@ func stringOrEmpty(v *string) string {
 	return *v
 }
 
-func int64OrZero(v *int64) int64 {
-	if v == nil {
-		return 0
-	}
-	return *v
-}
-
 func SerialToID(kind string, v int64) string {
 	b := make([]byte, 8)
 	idByteOrder.PutUint64(b, uint64(v))

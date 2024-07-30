@@ -164,5 +164,4 @@ func (tl *Tracer) TracePrepareStart(ctx context.Context, _ *pgx.Conn, _ pgx.Trac
 }
 
 func (tl *Tracer) TracePrepareEnd(_ context.Context, _ *pgx.Conn, _ pgx.TracePrepareEndData) {
-	return
 }

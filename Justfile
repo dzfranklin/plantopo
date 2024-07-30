@@ -2,6 +2,15 @@ export RUST_LOG := "watchexec_cli=error"
 
 set dotenv-filename := "./backend/.env"
 
+check-all:
+    spectral lint ./api/schema/schema.yaml --fail-severity error
+
+    cd ./backend && go test -race -v ./...
+    cd backend && test -z $(gofmt -l .)
+    cd backend && go vet ./...
+    cd backend && go mod tidy && git diff --exit-code -- go.mod go.sum
+    cd backend && staticcheck ./...
+
 gen:
     just api-schema-gen
     just sqlc-gen
@@ -52,5 +61,5 @@ migrate-prod-up:
     tern migrate --conn-string "$PROD_DATABASE_URL" --migrations migrations
 
 pre-commit:
-    just api-schema-gen
-    just sqlc-gen
+    just gen
+    just check-all

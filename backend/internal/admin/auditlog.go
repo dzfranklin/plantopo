@@ -47,6 +47,10 @@ func (app *adminApp) auditlogEntryGet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	payloadJSON, err := json.MarshalIndent(entry.Payload, "", "    ")
+	if err != nil {
+		app.internalServerError(w, r, err)
+		return
+	}
 
 	app.render(w, r, "auditlog_entry.tmpl", M{
 		"Entry":       entry,
