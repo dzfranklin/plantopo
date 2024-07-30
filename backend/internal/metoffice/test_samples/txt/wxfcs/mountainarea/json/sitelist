@@ -1,0 +1,46 @@
+{
+  "Locations": {
+    "Location": [
+      {
+        "@id": "Brecon_Beacons",
+        "@name": "Brecon Beacons"
+      },
+      {
+        "@id": "Lake_District",
+        "@name": "Lake District"
+      },
+      {
+        "@id": "North_Grampian",
+        "@name": "North Grampian"
+      },
+      {
+        "@id": "Northwest_Highlands",
+        "@name": "Northwest Highlands"
+      },
+      {
+        "@id": "Peak_District",
+        "@name": "Peak District"
+      },
+      {
+        "@id": "Snowdonia",
+        "@name": "Snowdonia"
+      },
+      {
+        "@id": "South_Grampian_and_Southeast_Highlands",
+        "@name": "South Grampian and Southeast Highlands"
+      },
+      {
+        "@id": "Southwest_Highlands",
+        "@name": "Southwest Highlands"
+      },
+      {
+        "@id": "Yorkshire_Dales",
+        "@name": "Yorkshire Dales"
+      },
+      {
+        "@id": "Mourne_Mountains",
+        "@name": "Mourne Mountains"
+      }
+    ]
+  }
+}

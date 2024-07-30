@@ -4,6 +4,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/pelevation"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
+	"github.com/dzfranklin/plantopo/backend/internal/pweather"
 )
 
 func New(env *pconfig.Env, repo *prepo.Repo) (*Server, error) {
@@ -11,6 +12,7 @@ func New(env *pconfig.Env, repo *prepo.Repo) (*Server, error) {
 		Env:       env,
 		Repo:      repo,
 		elevation: pelevation.New(env),
+		weather:   pweather.New(env),
 	}
 	s := &psecurity{
 		Env:  env,

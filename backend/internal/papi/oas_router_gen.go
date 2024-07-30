@@ -261,6 +261,27 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 
 				elem = origElem
+			case 'w': // Prefix: "weather/short-uk"
+				origElem := elem
+				if l := len("weather/short-uk"); len(elem) >= l && elem[0:l] == "weather/short-uk" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch r.Method {
+					case "GET":
+						s.handleWeatherShortUkGetRequest([0]string{}, elemIsEscaped, w, r)
+					default:
+						s.notAllowed(w, r, "GET")
+					}
+
+					return
+				}
+
+				elem = origElem
 			}
 
 			elem = origElem
@@ -580,6 +601,31 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						r.summary = "Lookup elevations for a list of coordinates"
 						r.operationID = ""
 						r.pathPattern = "/elevation"
+						r.args = args
+						r.count = 0
+						return r, true
+					default:
+						return
+					}
+				}
+
+				elem = origElem
+			case 'w': // Prefix: "weather/short-uk"
+				origElem := elem
+				if l := len("weather/short-uk"); len(elem) >= l && elem[0:l] == "weather/short-uk" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch method {
+					case "GET":
+						r.name = "WeatherShortUkGet"
+						r.summary = "Find short format weather forecasts for a place in the UK"
+						r.operationID = ""
+						r.pathPattern = "/weather/short-uk"
 						r.args = args
 						r.count = 0
 						return r, true

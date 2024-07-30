@@ -9,6 +9,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/papi"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
+	"github.com/dzfranklin/plantopo/backend/internal/pwebhooks"
 	"github.com/google/uuid"
 	"log"
 	"net/http"
@@ -25,12 +26,14 @@ func NewServer(env *pconfig.Env, repo *prepo.Repo) *http.Server {
 		log.Fatal(err)
 	}
 
+	webhookSrv := pwebhooks.Routes(env)
 	adminSrv := admin.Routes(env, repo)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/status", handleStatus(env))
 	mux.Handle("/docs/", http.StripPrefix("/docs", docsRoutes()))
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiSrv))
+	mux.Handle("/webhooks/", webhookSrv)
 	mux.Handle("/admin/", adminSrv)
 
 	srv := &http.Server{

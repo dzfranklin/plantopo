@@ -21,6 +21,8 @@ func (app *adminApp) goGet(w http.ResponseWriter, r *http.Request) {
 		seg = "user"
 	case "al":
 		seg = "auditlog"
+	case "asmss":
+		seg = "authorized-sms-sender"
 	default:
 
 		app.clientError(w, http.StatusNotFound)

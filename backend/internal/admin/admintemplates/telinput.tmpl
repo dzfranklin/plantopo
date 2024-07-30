@@ -1,0 +1,17 @@
+{{define "main"}}
+    <input id="tel-input">
+    <div id="tel-display" class="pt-2"></div>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@23.7.3/build/css/intlTelInput.css">
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.7.3/build/js/intlTelInput.min.js"></script>
+    <script>
+        const displayEl = document.querySelector("#tel-display");
+        const inputEl = document.querySelector("#tel-input");
+        const telInput = intlTelInput(inputEl, {
+            utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@23.7.3/build/js/utils.js",
+        });
+        inputEl.addEventListener("change", () => {
+            displayEl.innerText = telInput.getNumber()
+        })
+    </script>
+{{end}}

@@ -56,6 +56,12 @@ type Handler interface {
 	//
 	// POST /elevation
 	ElevationPost(ctx context.Context, req *ElevationPostReq) (*ElevationPostOK, error)
+	// WeatherShortUkGet implements GET /weather/short-uk operation.
+	//
+	// Find short format weather forecasts for a place in the UK.
+	//
+	// GET /weather/short-uk
+	WeatherShortUkGet(ctx context.Context, params WeatherShortUkGetParams) (WeatherShortUkGetOK, error)
 	// NewError creates *DefaultErrorResponseStatusCode from error returned by handler.
 	//
 	// Used for common default response.

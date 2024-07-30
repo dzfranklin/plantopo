@@ -6,18 +6,21 @@ import (
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
+	"github.com/dzfranklin/plantopo/backend/internal/pwebhooks"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/minio/minio-go/v7"
 	miniocredentials "github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/redis/go-redis/v9"
+	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/throttled/throttled/v2"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -47,7 +50,7 @@ func main() {
 		Redis: pconfig.Redis{
 			Addr:     getEnvString("REDIS_ADDR"),
 			Password: os.Getenv("REDIS_PASSWORD"),
-			DB:       getEnvInt("REDIS_DB"),
+			DB:       getOptionalEnvInt("REDIS_DB", 0),
 		},
 		S3: pconfig.S3{
 			Endpoint:  getEnvString("S3_ENDPOINT"),
@@ -55,21 +58,34 @@ func main() {
 			SecretKey: getEnvString("S3_SECRET_KEY"),
 		},
 		Session: pconfig.Session{
-			SessionIdleExpiry: 24 * time.Hour * 30,
+			SessionIdleExpiry: 24 * time.Hour * 30, // TODO: implement
 		},
 		Users: pconfig.Users{
 			LoginThrottle:       throttled.RateQuota{MaxRate: throttled.PerMin(10), MaxBurst: 20},
 			MinPasswordStrength: getOptionalEnvInt("MIN_PASSWORD_STRENGTH", minPasswordStrength),
 			PasswordHashCost:    12,
 		},
+		OrdnanceSurvey: pconfig.OrdnanceSurvey{
+			APIKey: getEnvString("OS_API_KEY"),
+		},
+		MetOffice: pconfig.MetOffice{
+			DataPointAPIKey: getEnvString("MET_OFFICE_DATAPOINT_API_KEY"),
+		},
+		Twilio: pconfig.Twilio{
+			AuthToken: getEnvString("TWILIO_AUTH_TOKEN"),
+		},
 	}
 
+	logger := pconfig.CreateLoggerForEnv(cfg.Env)
+	db := openDB(cfg, logger)
+	workers := river.NewWorkers()
 	env := &pconfig.Env{
 		Config:  cfg,
-		Logger:  pconfig.CreateLoggerForEnv(cfg.Env),
-		DB:      openDB(cfg),
+		Logger:  logger,
+		DB:      db,
 		RDB:     openRDB(cfg),
 		Objects: openObjects(cfg),
+		River:   openRiver(db, workers),
 	}
 
 	l := env.Logger
@@ -79,8 +95,49 @@ func main() {
 		log.Fatal(err)
 	}
 
+	river.AddWorker[pwebhooks.TwilioJobArgs](workers, pwebhooks.NewTwilioWorker(env, repo))
+
 	shouldQuit := make(chan struct{})
 	var quitGroup sync.WaitGroup
+
+	l.Info("river starting")
+	err = env.River.Start(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	quitGroup.Add(1)
+	go func() {
+		defer quitGroup.Done()
+		<-shouldQuit
+
+		softStopCtx, softStopCtxCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer softStopCtxCancel()
+
+		err := env.River.Stop(softStopCtx)
+		if err != nil && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
+			log.Fatal(err)
+		}
+		if err == nil {
+			l.Info("soft stopped river")
+			return
+		}
+
+		hardStopCtx, hardStopCtxCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer hardStopCtxCancel()
+
+		// As long as all jobs respect context cancellation, StopAndCancel will
+		// always work. However, in the case of a bug where a job blocks despite
+		// being cancelled, it may be necessary to either ignore River's stop
+		// result (what's shown here) or have a supervisor kill the process.
+		err = env.River.StopAndCancel(hardStopCtx)
+		if err != nil && errors.Is(err, context.DeadlineExceeded) {
+			fmt.Printf("Hard stop timeout; ignoring stop procedure and exiting unsafely\n")
+		} else if err != nil {
+			log.Fatal(err)
+		}
+
+		// hard stop succeeded
+	}()
 
 	quitGroup.Add(2)
 	go func() {
@@ -152,51 +209,7 @@ func main() {
 	quitGroup.Wait()
 }
 
-func getEnvInt(key string) int {
-	v := os.Getenv(key)
-	if v == "" {
-		panic(fmt.Sprintf("Missing environment variable %s", key))
-	}
-	parsed, err := strconv.ParseInt(v, 10, 32)
-	if err != nil {
-		panic(fmt.Sprintf("Invalid environment variable %s. Expected an integer, got %s", key, v))
-	}
-	return int(parsed)
-}
-
-func getOptionalEnvInt(key string, defaultValue int) int {
-	v := os.Getenv(key)
-	if v == "" {
-		return defaultValue
-	}
-	parsed, err := strconv.ParseInt(v, 10, 32)
-	if err != nil {
-		panic(fmt.Sprintf("Invalid environment variable %s. Expected an integer, got %s", key, v))
-	}
-	return int(parsed)
-}
-
-func getEnvString(key string) string {
-	v := os.Getenv(key)
-	if v == "" {
-		panic(fmt.Sprintf("Missing environment variable %s", key))
-	}
-	return v
-}
-
-func getEnvStrings(key string) []string {
-	v := os.Getenv(key)
-	if v == "" {
-		panic(fmt.Sprintf("Missing environment variable %s", key))
-	}
-	var parsed []string
-	for _, part := range strings.Split(v, ",") {
-		parsed = append(parsed, strings.TrimSpace(part))
-	}
-	return parsed
-}
-
-func openDB(cfg *pconfig.Config) *pgxpool.Pool {
+func openDB(cfg *pconfig.Config, logger *slog.Logger) *pgxpool.Pool {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -205,7 +218,7 @@ func openDB(cfg *pconfig.Config) *pgxpool.Pool {
 		log.Fatal(err)
 	}
 
-	config.ConnConfig.Tracer = &prepo.Tracer{}
+	config.ConnConfig.Tracer = prepo.NewTracer(logger)
 
 	db, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
@@ -241,4 +254,18 @@ func openObjects(cfg *pconfig.Config) *minio.Client {
 		log.Fatal(err)
 	}
 	return objects
+}
+
+func openRiver(db *pgxpool.Pool, workers *river.Workers) *river.Client[pgx.Tx] {
+	client, err := river.NewClient[pgx.Tx](riverpgxv5.New(db), &river.Config{
+		Queues: map[string]river.QueueConfig{
+			river.QueueDefault:    {MaxWorkers: 100},
+			pwebhooks.QueueTwilio: {MaxWorkers: 100},
+		},
+		Workers: workers,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	return client
 }

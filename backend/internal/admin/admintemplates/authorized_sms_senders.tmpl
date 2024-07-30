@@ -1,0 +1,22 @@
+{{define "main"}}
+    <table>
+        <thead>
+        <tr>
+            <td>ID</td>
+            <td>Inserted at</td>
+            <td>Number</td>
+            <td>Comment</td>
+        </tr>
+        </thead>
+        <tbody>
+        {{ range.Entries}}
+            <tr>
+                <td><a href = "/admin/authorized-sms-sender/{{.ID}}">{{.ID}}</a></td>
+                <td>{{.InsertedAt}}</td>
+                <td>{{.Number}}</td>
+                <td class="max-w-64 overflow-auto">{{.Comment}}</td>
+            </tr>
+        {{end}}
+        </tbody>
+    </table>
+{{end}}

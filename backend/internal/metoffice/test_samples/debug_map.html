@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+<head>
+    <title>Debug map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+    <style>
+        html, body, #map {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+        }
+    </style>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+</head>
+<body>
+<div id="map"></div>
+
+<script>
+    const fetchJSON = (path) => fetch(path).then(v => v.json());
+
+    const map = L.map('map').setView([57, -3.4], 8);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    const fcsIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
+    const obsIcon = new L.Icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
+    Promise.all(
+        [fetchJSON("val/wxfcs/all/json/sitelist"),
+            fetchJSON("val/wxobs/all/json/sitelist")
+        ])
+        .then(([fcsSitelist, obsSitelist]) => {
+            for (const site of fcsSitelist.Locations.Location) {
+                L.marker([parseFloat(site.latitude), parseFloat(site.longitude)], {
+                    icon: fcsIcon,
+                })
+                    .bindPopup(`<pre><code>${JSON.stringify(site, null, '  ')}</code></pre>`)
+                    .addTo(map);
+            }
+
+            for (const site of obsSitelist.Locations.Location) {
+                L.marker([parseFloat(site.latitude), parseFloat(site.longitude)], {
+                    icon: obsIcon,
+                })
+                    .bindPopup(`<pre><code>${JSON.stringify(site, null, '  ')}</code></pre>`)
+                    .addTo(map);
+            }
+        });
+</script>
+</body>
+</html>

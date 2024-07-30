@@ -8,7 +8,13 @@ import (
 	"time"
 )
 
-type Tracer struct{}
+func NewTracer(logger *slog.Logger) *Tracer {
+	return &Tracer{logger}
+}
+
+type Tracer struct {
+	l *slog.Logger
+}
 
 var normalizer = sqllexer.NewNormalizer()
 
@@ -33,7 +39,7 @@ func (tl *Tracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.Tra
 	sql := data.SQL
 	sql, _, err := normalizer.Normalize(sql)
 	if err != nil {
-		slog.Error("error normalizing SQL: %s", "err", err)
+		tl.l.Error("error normalizing SQL: %s", "err", err)
 	}
 	return context.WithValue(ctx, traceQueryCtxKey, &traceQueryData{
 		startTime: time.Now(),
@@ -48,12 +54,12 @@ func (tl *Tracer) TraceQueryEnd(ctx context.Context, _ *pgx.Conn, data pgx.Trace
 	interval := endTime.Sub(queryData.startTime)
 
 	if data.Err != nil {
-		slog.Error("trace error", "err", data.Err, "sql", queryData.sql, "interval", interval)
+		tl.l.Error("trace error", "err", data.Err, "sql", queryData.sql, "interval", interval)
 		return
 	}
 
 	if interval > slowQueryThreshold {
-		slog.Warn("slow query", "sql", queryData.sql, "interval", interval)
+		tl.l.Warn("slow query", "sql", queryData.sql, "interval", interval)
 	}
 }
 
@@ -68,7 +74,7 @@ func (tl *Tracer) TraceBatchStart(ctx context.Context, _ *pgx.Conn, data pgx.Tra
 		s := q.SQL
 		s, _, err := normalizer.Normalize(s)
 		if err != nil {
-			slog.Error("error normalizing SQL", "err", err)
+			tl.l.Error("error normalizing SQL", "err", err)
 		}
 
 		sql[s] += 1
@@ -82,7 +88,7 @@ func (tl *Tracer) TraceBatchStart(ctx context.Context, _ *pgx.Conn, data pgx.Tra
 
 func (tl *Tracer) TraceBatchQuery(_ context.Context, _ *pgx.Conn, data pgx.TraceBatchQueryData) {
 	if data.Err != nil {
-		slog.Error("trace error: BatchQuery", "err", data.Err, "sql", data.SQL)
+		tl.l.Error("trace error: BatchQuery", "err", data.Err, "sql", data.SQL)
 		return
 	}
 }
@@ -94,12 +100,12 @@ func (tl *Tracer) TraceBatchEnd(ctx context.Context, _ *pgx.Conn, data pgx.Trace
 	interval := endTime.Sub(queryData.startTime)
 
 	if data.Err != nil {
-		slog.Error("trace error: BatchClose", "err", data.Err, "interval", interval)
+		tl.l.Error("trace error: BatchClose", "err", data.Err, "interval", interval)
 		return
 	}
 
 	if interval > slowQueryThreshold {
-		slog.Warn("slow batch", "sql", queryData.sql, "interval", interval)
+		tl.l.Warn("slow batch", "sql", queryData.sql, "interval", interval)
 	}
 }
 
@@ -124,7 +130,7 @@ func (tl *Tracer) TraceCopyFromEnd(ctx context.Context, _ *pgx.Conn, data pgx.Tr
 	interval := endTime.Sub(copyFromData.startTime)
 
 	if data.Err != nil {
-		slog.Error("trace error: CopyFrom", "err", data.Err, "tableName", copyFromData.TableName, "columnNames", copyFromData.ColumnNames, "interval", interval)
+		tl.l.Error("trace error: CopyFrom", "err", data.Err, "tableName", copyFromData.TableName, "columnNames", copyFromData.ColumnNames, "interval", interval)
 		return
 	}
 }
@@ -148,7 +154,7 @@ func (tl *Tracer) TraceConnectEnd(ctx context.Context, data pgx.TraceConnectEndD
 	interval := endTime.Sub(connectData.startTime)
 
 	if data.Err != nil {
-		slog.Error("trace error: Connect", "err", data.Err, "host", connectData.connConfig.Host, "port", connectData.connConfig.Port, "database", connectData.connConfig.Database, "interval", interval)
+		tl.l.Error("trace error: Connect", "err", data.Err, "host", connectData.connConfig.Host, "port", connectData.connConfig.Port, "database", connectData.connConfig.Database, "interval", interval)
 		return
 	}
 }

@@ -23,6 +23,13 @@ type AuditLog struct {
 	Payload []byte
 }
 
+type AuthorizedSmsSender struct {
+	ID         pgtype.UUID
+	InsertedAt pgtype.Timestamp
+	NumberE164 string
+	Comment    pgtype.Text
+}
+
 type PendingEmailConfirmationToken struct {
 	Email     pgtype.Text
 	Token     string

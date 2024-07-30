@@ -2,8 +2,9 @@ export RUST_LOG := "watchexec_cli=error"
 
 set dotenv-filename := "./backend/.env"
 
-pre-commit:
-    just api-gen
+gen:
+    just api-schema-gen
+    just sqlc-gen
 
 backend-test-watch:
     cd ./backend && watchexec --clear=clear --restart go test -race ./...
@@ -15,15 +16,14 @@ api-schema-watch:
     watchexec --watch ./api/schema just api-schema-gen
 
 api-schema-gen:
-    spectral lint ./api/spec/schema.yaml --fail-severity warn --quiet
-    redocly bundle --output api/schema.json api/schema/schema.yaml
+    spectral lint ./api/schema/schema.yaml --fail-severity error
 
-    cp api/schema.json backend/internal/papi/schema.gen.json
+    cp api/schema/schema.yaml backend/internal/papi/schema.gen.yaml
     cd backend && ogen \
       -loglevel warn \
       -target internal/papi -package papi \
       -clean \
-      ./internal/papi/schema.gen.json
+      ./internal/papi/schema.gen.yaml
 
 sqlc-watch:
     cd backend && watchexec \
@@ -32,6 +32,10 @@ sqlc-watch:
 
 sqlc-gen:
     cd backend && sqlc generate
+
+river-ui:
+    docker pull ghcr.io/riverqueue/riverui:latest
+    docker run -p 4003:8080 --env "DATABASE_URL=postgres://plantopo:password@host.docker.internal:5432/plantopo?sslmode=disable" ghcr.io/riverqueue/riverui:latest
 
 migration name:
     tern --migrations backend/migrations new {{name}}
@@ -46,3 +50,7 @@ migrate-prod-up:
     export PROD_DATABASE_URL=$(op read "op://plantopo/plantopo-prod/plantopo_migrator_prod/url")
     river migrate-up --database-url "$PROD_DATABASE_URL"
     tern migrate --conn-string "$PROD_DATABASE_URL" --migrations migrations
+
+pre-commit:
+    just api-schema-gen
+    just sqlc-gen

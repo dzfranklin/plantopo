@@ -8,21 +8,43 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/pstrings"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
+const traceRequests = false
+
 type Client struct {
-	h         *http.Client
-	baseURL   string
-	userAgent string
+	h                 *http.Client
+	baseURL           string
+	commonHeaders     http.Header
+	commonQueryParams url.Values
 }
 
 func New(baseURL string, userAgent string) *Client {
+	commonHeaders := make(http.Header)
+	commonHeaders.Set("Accept", "application/json")
+	commonHeaders.Set("User-Agent", userAgent)
+
 	return &Client{
-		h:         &http.Client{},
-		baseURL:   baseURL,
-		userAgent: userAgent,
+		h:             &http.Client{},
+		baseURL:       baseURL,
+		commonHeaders: commonHeaders,
 	}
+}
+
+func (c *Client) SetCommonHeader(k, v string) {
+	if c.commonHeaders == nil {
+		c.commonHeaders = make(http.Header)
+	}
+	c.commonHeaders.Set(k, v)
+}
+
+func (c *Client) AddCommonQueryParam(k, v string) {
+	if c.commonQueryParams == nil {
+		c.commonQueryParams = make(url.Values)
+	}
+	c.commonQueryParams.Add(k, v)
 }
 
 func (c *Client) Get(ctx context.Context, out any, path string) error {
@@ -42,7 +64,7 @@ func (c *Client) Do(ctx context.Context, out any, method string, path string, bo
 		reqURL += path
 	}
 
-	var serBody *bytes.Reader
+	var serBody io.Reader
 	if body != nil {
 		serBodyBytes, err := json.Marshal(body)
 		if err != nil {
@@ -56,8 +78,23 @@ func (c *Client) Do(ctx context.Context, out any, method string, path string, bo
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", c.userAgent)
+	for k, v := range c.commonHeaders {
+		req.Header.Set(k, v[0])
+	}
+
+	if c.commonQueryParams != nil {
+		q := req.URL.Query()
+		for k, vs := range c.commonQueryParams {
+			for _, v := range vs {
+				q.Add(k, v)
+			}
+		}
+		req.URL.RawQuery = q.Encode()
+	}
+
+	if traceRequests {
+		fmt.Printf("TRACE REQUEST %+v\n", req)
+	}
 
 	resp, err := c.h.Do(req)
 	if err != nil {

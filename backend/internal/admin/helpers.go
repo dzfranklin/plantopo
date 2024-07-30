@@ -12,6 +12,10 @@ import (
 type M map[string]any
 
 func (app *adminApp) render(w http.ResponseWriter, r *http.Request, name string, data M) {
+	if data == nil {
+		data = M{}
+	}
+
 	user := getUser(r.Context())
 	data["SignedInUser"] = user
 

@@ -3,9 +3,10 @@ package prepo
 import "github.com/dzfranklin/plantopo/backend/internal/pconfig"
 
 type Repo struct {
-	AuditLog *AuditLog
-	Sessions *Sessions
-	Users    *Users
+	AuditLog             *AuditLog
+	Sessions             *Sessions
+	Users                *Users
+	AuthorizedSMSSenders *AuthorizedSMSSenders
 }
 
 func New(env *pconfig.Env) (*Repo, error) {
@@ -17,8 +18,9 @@ func New(env *pconfig.Env) (*Repo, error) {
 	}
 
 	return &Repo{
-		AuditLog: al,
-		Sessions: newSessions(env, al, users),
-		Users:    users,
+		AuditLog:             al,
+		Sessions:             newSessions(env, al, users),
+		Users:                users,
+		AuthorizedSMSSenders: newAuthorizedSMSSenders(env),
 	}, nil
 }

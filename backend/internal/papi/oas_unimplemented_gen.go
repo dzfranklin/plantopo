@@ -85,6 +85,15 @@ func (UnimplementedHandler) ElevationPost(ctx context.Context, req *ElevationPos
 	return r, ht.ErrNotImplemented
 }
 
+// WeatherShortUkGet implements GET /weather/short-uk operation.
+//
+// Find short format weather forecasts for a place in the UK.
+//
+// GET /weather/short-uk
+func (UnimplementedHandler) WeatherShortUkGet(ctx context.Context, params WeatherShortUkGetParams) (r WeatherShortUkGetOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // NewError creates *DefaultErrorResponseStatusCode from error returned by handler.
 //
 // Used for common default response.

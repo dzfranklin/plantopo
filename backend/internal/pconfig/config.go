@@ -1,9 +1,11 @@
 package pconfig
 
 import (
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/minio/minio-go/v7"
 	"github.com/redis/go-redis/v9"
+	"github.com/riverqueue/river"
 	"github.com/throttled/throttled/v2"
 	"log/slog"
 	"time"
@@ -15,18 +17,22 @@ type Env struct {
 	DB      *pgxpool.Pool
 	RDB     *redis.Client
 	Objects *minio.Client
+	River   *river.Client[pgx.Tx]
 }
 
 type Config struct {
-	Env       string
-	Server    Server
-	Elevation Elevation
-	UserAgent string
-	Users     Users
-	Session   Session
-	Postgres  Postgres
-	Redis     Redis
-	S3        S3
+	Env            string
+	Server         Server
+	Elevation      Elevation
+	UserAgent      string
+	Users          Users
+	Session        Session
+	Postgres       Postgres
+	Redis          Redis
+	S3             S3
+	OrdnanceSurvey OrdnanceSurvey
+	MetOffice      MetOffice
+	Twilio         Twilio
 }
 
 type Elevation struct {
@@ -63,4 +69,16 @@ type S3 struct {
 	Endpoint  string
 	AccessKey string
 	SecretKey string
+}
+
+type OrdnanceSurvey struct {
+	APIKey string
+}
+
+type MetOffice struct {
+	DataPointAPIKey string
+}
+
+type Twilio struct {
+	AuthToken string
 }
