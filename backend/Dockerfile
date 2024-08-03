@@ -11,13 +11,13 @@ COPY . ./
 
 RUN GOOS=linux go build -o /api ./cmd/api
 
-FROM gcr.io/distroless/base-debian12 AS release
+FROM ubuntu:focal AS release
 
 WORKDIR /
 
-COPY --from=build /api /api
+RUN apt update && apt install -y proj-data libproj-dev proj-bin
 
-EXPOSE 8080
+COPY --from=build /api /api
 
 USER nonroot:nonroot
 
