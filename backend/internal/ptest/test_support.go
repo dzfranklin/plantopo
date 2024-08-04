@@ -63,16 +63,7 @@ func NewTestEnv(t *testing.T) *TestEnv {
 					SessionIdleExpiry: 24 * time.Hour * 365,
 				},
 			},
-			Logger: slogt.New(t, slogt.Factory(func(w io.Writer) slog.Handler {
-				opts := &slog.HandlerOptions{
-					AddSource: false,
-					Level:     slog.LevelWarn,
-				}
-				if os.Getenv("TEST_VERBOSE_LOGS") != "" {
-					opts.Level = slog.LevelDebug
-				}
-				return slog.NewTextHandler(w, opts)
-			})),
+			Logger: NewTestLogger(t),
 		},
 		t: t,
 	}
@@ -319,4 +310,17 @@ func gitRoot(t *testing.T) string {
 
 		curr = filepath.Dir(curr)
 	}
+}
+
+func NewTestLogger(t *testing.T) *slog.Logger {
+	return slogt.New(t, slogt.Factory(func(w io.Writer) slog.Handler {
+		opts := &slog.HandlerOptions{
+			AddSource: false,
+			Level:     slog.LevelWarn,
+		}
+		if os.Getenv("TEST_VERBOSE_LOGS") != "" {
+			opts.Level = slog.LevelDebug
+		}
+		return slog.NewTextHandler(w, opts)
+	}))
 }

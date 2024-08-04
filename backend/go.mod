@@ -8,6 +8,7 @@ require (
 	github.com/go-faster/jx v1.1.0
 	github.com/go-playground/form v3.1.4+incompatible
 	github.com/google/uuid v1.6.0
+	github.com/hasura/go-graphql-client v0.13.0
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/joho/godotenv v1.5.1
@@ -124,4 +125,5 @@ require (
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	nhooyr.io/websocket v1.8.11 // indirect
 )

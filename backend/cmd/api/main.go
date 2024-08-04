@@ -74,6 +74,9 @@ func main() {
 		Twilio: pconfig.Twilio{
 			AuthToken: getEnvString("TWILIO_AUTH_TOKEN"),
 		},
+		OpenTransitPlanner: pconfig.OpenTransitPlanner{
+			GTFSEndpoint: getEnvString("OPEN_TRANSIT_PLANNER_GTFS_ENDPOINT"),
+		},
 	}
 
 	logger := pconfig.CreateLoggerForEnv(cfg.Env)

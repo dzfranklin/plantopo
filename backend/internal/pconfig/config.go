@@ -21,18 +21,19 @@ type Env struct {
 }
 
 type Config struct {
-	Env            string
-	Server         Server
-	Elevation      Elevation
-	UserAgent      string
-	Users          Users
-	Session        Session
-	Postgres       Postgres
-	Redis          Redis
-	S3             S3
-	OrdnanceSurvey OrdnanceSurvey
-	MetOffice      MetOffice
-	Twilio         Twilio
+	Env                string
+	Server             Server
+	Elevation          Elevation
+	UserAgent          string
+	Users              Users
+	Session            Session
+	Postgres           Postgres
+	Redis              Redis
+	S3                 S3
+	OrdnanceSurvey     OrdnanceSurvey
+	MetOffice          MetOffice
+	Twilio             Twilio
+	OpenTransitPlanner OpenTransitPlanner
 }
 
 type Elevation struct {
@@ -81,4 +82,8 @@ type MetOffice struct {
 
 type Twilio struct {
 	AuthToken string
+}
+
+type OpenTransitPlanner struct {
+	GTFSEndpoint string
 }
