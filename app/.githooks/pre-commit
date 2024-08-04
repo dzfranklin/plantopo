@@ -1,0 +1,69 @@
+#!/usr/bin/env -S deno run --allow-all --ext ts
+
+const start = performance.now();
+
+const commands = [
+  "npm run lint",
+  "npm run build",
+];
+
+async function copyFrom(r: ReadableStreamDefaultReader<Uint8Array>, onChunk: (chunk: Uint8Array) => void) {
+  await r.read().then(function process({ done, value }) {
+    if (done) {
+      return;
+    }
+    onChunk(value);
+    r.read().then(process);
+  });
+}
+
+const results = await Promise.all(commands.map(async (command) => {
+  const cmdStart = performance.now();
+  console.log('Running: ' + command);
+  const [cmd, ...args] = command.split(' ');
+  const proc = new Deno.Command(cmd, {
+    args,
+    stdout: 'piped',
+    stderr: 'piped',
+    env: {
+      ...Deno.env.toObject(),
+      FORCE_COLOR: '1',
+    },
+  }).spawn();
+
+  const chunks: Uint8Array[] = [];
+  const [status] = await Promise.all([
+    proc.status,
+    copyFrom(proc.stdout.getReader(), (chunk) => chunks.push(chunk)),
+    copyFrom(proc.stderr.getReader(), (chunk) => chunks.push(chunk)),
+  ]);
+
+  const output = new ArrayBuffer(chunks.reduce((acc, chunk) => acc + chunk.byteLength, 0));
+  let offset = 0;
+  for (const chunk of chunks) {
+    new Uint8Array(output).set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return {
+    command,
+    status,
+    output: new Uint8Array(output),
+    duration: performance.now() - cmdStart,
+  };
+}));
+
+for (const { command, status, output, duration } of results) {
+  if (status.success) {
+    console.log('Passed: ' + command + ' in ' + (duration / 1000).toPrecision(2) + 's');
+  } else {
+    console.error('Failed: ' + command)
+    await Deno.stdout.write(output)
+  }
+}
+
+console.log('Checked in ' + ((performance.now() - start) / 1000).toPrecision(2) + 's');
+
+if (results.some(({ status }) => !status.success)) {
+  Deno.exit(1);
+}

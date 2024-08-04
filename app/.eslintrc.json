@@ -1,0 +1,20 @@
+{
+  "extends": ["next", "prettier", "plugin:@typescript-eslint/recommended"],
+  "rules": {
+    "@next/next/no-img-element": "off",
+    "semi": ["warn", "always"],
+    "comma-dangle": ["warn", "always-multiline"],
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "@typescript-eslint/no-empty-function": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "prefer-const": "warn",
+    "no-empty": "warn"
+  }
+}
