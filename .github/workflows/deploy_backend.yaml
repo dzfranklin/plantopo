@@ -1,9 +1,9 @@
-name: deploy
+name: deploy_backend
 concurrency:
   group: ${{ github.workflow }}
 on:
   workflow_run:
-    workflows: [check]
+    workflows: [check_backend]
     branches: [main]
     types:
       - completed
