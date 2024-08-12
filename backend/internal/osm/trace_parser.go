@@ -2,13 +2,14 @@ package osm
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/mmcdole/gofeed/rss"
 	"regexp"
-	"strconv"
 	"time"
 )
+
+// NOTE: We don't parse out the geo:long and geo:lat attributes because they aren't available right after a trace is
+// added to the feed.
 
 type traceMeta struct {
 	ID       string
@@ -17,7 +18,6 @@ type traceMeta struct {
 	Download string
 	UserID   string
 	PubDate  *time.Time
-	Lng, Lat float64
 }
 
 func parseTraceFeed(value []byte) ([]traceMeta, error) {
@@ -38,27 +38,6 @@ func parseTraceFeed(value []byte) ([]traceMeta, error) {
 			return nil, err
 		}
 
-		geo, ok := v.Extensions["geo"]
-		if !ok {
-			return nil, errors.New("missing geo extension")
-		}
-		lngExt, ok := geo["long"]
-		if !ok {
-			return nil, errors.New("missing long")
-		}
-		lng, err := strconv.ParseFloat(lngExt[0].Value, 64)
-		if err != nil {
-			return nil, fmt.Errorf("parse lng: %w", err)
-		}
-		latExt, ok := geo["lat"]
-		if !ok {
-			return nil, errors.New("missing lat")
-		}
-		lat, err := strconv.ParseFloat(latExt[0].Value, 64)
-		if err != nil {
-			return nil, fmt.Errorf("parse lat: %w", err)
-		}
-
 		out = append(out, traceMeta{
 			ID:       id,
 			Title:    v.Title,
@@ -66,8 +45,6 @@ func parseTraceFeed(value []byte) ([]traceMeta, error) {
 			Download: fmt.Sprintf("https://www.openstreetmap.org/trace/%s/data", id),
 			UserID:   userID,
 			PubDate:  v.PubDateParsed,
-			Lng:      lng,
-			Lat:      lat,
 		})
 	}
 	return out, nil

@@ -148,7 +148,7 @@ func (w *TraceDownloaderWorker) Work(ctx context.Context, job *river.Job[TraceDo
 	if err != nil {
 		return err
 	}
-	err = dataGZW.Flush()
+	err = dataGZW.Close()
 	if err != nil {
 		return err
 	}

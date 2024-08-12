@@ -27,8 +27,6 @@ func TestParseFeed(t *testing.T) {
 			Download: "https://www.openstreetmap.org/trace/11111142/data",
 			UserID:   "user-1",
 			PubDate:  &t1,
-			Lng:      9,
-			Lat:      10,
 		},
 		{
 			ID:       "11111143",
@@ -37,8 +35,6 @@ func TestParseFeed(t *testing.T) {
 			Download: "https://www.openstreetmap.org/trace/11111143/data",
 			UserID:   "user-2",
 			PubDate:  &t2,
-			Lng:      14,
-			Lat:      11,
 		},
 	}, v)
 }
