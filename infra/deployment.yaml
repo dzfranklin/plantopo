@@ -42,7 +42,7 @@ spec:
                   name: database
                   key: url
             - name: REDIS_ADDR
-              value: "redis.pt.svc.cluster.local"
+              value: "redis.pt.svc.cluster.local:6379"
             - name: S3_ENDPOINT
               value: "minio.dfranklin.dev"
             - name: S3_ACCESS_KEY

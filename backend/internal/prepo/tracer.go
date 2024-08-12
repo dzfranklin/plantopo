@@ -33,7 +33,7 @@ type traceQueryData struct {
 	sql       string
 }
 
-const slowQueryThreshold = 200 * time.Millisecond
+const slowQueryThreshold = time.Second
 
 func (tl *Tracer) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
 	sql := data.SQL
@@ -105,7 +105,7 @@ func (tl *Tracer) TraceBatchEnd(ctx context.Context, _ *pgx.Conn, data pgx.Trace
 	}
 
 	if interval > slowQueryThreshold {
-		tl.l.Warn("slow batch", "sql", queryData.sql, "interval", interval)
+		tl.l.Warn("slow batch", "sql", queryData.sql, "interval_secs", float64(interval)/float64(time.Second))
 	}
 }
 

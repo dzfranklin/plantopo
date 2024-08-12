@@ -25,7 +25,7 @@ const QueueOSMTraceDownloader = "osm_trace_downloader"
 
 const (
 	traceBucket   = "openstreetmap-traces"
-	maxTraceBytes = 102400 // 100 KiB
+	maxTraceBytes = 10 * 1024 * 1024 // 10 MiB (before compression)
 )
 
 var traceQuota = throttled.RateQuota{MaxRate: throttled.PerMin(1), MaxBurst: 0}
