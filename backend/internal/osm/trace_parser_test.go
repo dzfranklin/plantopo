@@ -23,9 +23,9 @@ func TestParseFeed(t *testing.T) {
 		{
 			ID:       "11111142",
 			Title:    "Title 1",
-			Link:     "https://www.openstreetmap.org/user/user-1/traces/11111142",
+			Link:     "https://www.openstreetmap.org/user/J%C3%B6rg/traces/11111142",
 			Download: "https://www.openstreetmap.org/trace/11111142/data",
-			UserID:   "user-1",
+			UserID:   "Jörg",
 			PubDate:  &t1,
 		},
 		{

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/mmcdole/gofeed/rss"
+	"net/url"
 	"regexp"
 	"time"
 )
@@ -66,5 +67,6 @@ func traceUserID(itemLink string) (string, error) {
 	if matches == nil {
 		return "", fmt.Errorf("failed to parse feed item link: %s", itemLink)
 	}
-	return string(matches[1]), nil
+	part := string(matches[1])
+	return url.QueryUnescape(part)
 }
