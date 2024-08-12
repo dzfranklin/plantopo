@@ -110,7 +110,7 @@ func (c *JSONClient) Do(ctx context.Context, out any, method string, path string
 			errBody = pstrings.TruncateASCII(string(fullBody), 400)
 		}
 
-		return fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, errBody)
+		return fmt.Errorf("unexpected status code %d: %s %s: %s", resp.StatusCode, method, reqURL, errBody)
 	}
 
 	return json.NewDecoder(resp.Body).Decode(out)
