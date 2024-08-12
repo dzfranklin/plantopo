@@ -43,8 +43,7 @@ func setupRiver(env *pconfig.Env, repo *prepo.Repo, jobs *river.Client[pgx.Tx], 
 			func() (river.JobArgs, *river.InsertOpts) {
 				return osm.TraceFeedIngesterJobArgs{}, nil
 			},
-			//nil,
-			&river.PeriodicJobOpts{RunOnStart: true}, // TODO: remove
+			nil,
 		))
 	}
 }
