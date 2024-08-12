@@ -68,7 +68,8 @@ func main() {
 			DataPointAPIKey: getEnvString("MET_OFFICE_DATAPOINT_API_KEY"),
 		},
 		Twilio: pconfig.Twilio{
-			AuthToken: getEnvString("TWILIO_AUTH_TOKEN"),
+			AccountSID: getEnvString("TWILIO_ACCOUNT_SID"),
+			AuthToken:  getEnvString("TWILIO_AUTH_TOKEN"),
 		},
 		OpenTransitPlanner: pconfig.OpenTransitPlanner{
 			GTFSEndpoint: getEnvString("OPEN_TRANSIT_PLANNER_GTFS_ENDPOINT"),
@@ -77,7 +78,7 @@ func main() {
 
 	logger := pconfig.CreateLoggerForEnv(cfg.Env)
 	db := openDB(cfg, logger)
-	jobs, jobWorkers := openRiver(db)
+	jobs, jobWorkers := openRiver(db, logger)
 	env := &pconfig.Env{
 		IsProduction: cfg.Env == "production",
 		Config:       cfg,

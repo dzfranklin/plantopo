@@ -10,10 +10,11 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"log"
+	"log/slog"
 	"time"
 )
 
-func openRiver(db *pgxpool.Pool) (*river.Client[pgx.Tx], *river.Workers) {
+func openRiver(db *pgxpool.Pool, logger *slog.Logger) (*river.Client[pgx.Tx], *river.Workers) {
 	workers := river.NewWorkers()
 	client, err := river.NewClient[pgx.Tx](riverpgxv5.New(db), &river.Config{
 		Queues: map[string]river.QueueConfig{
@@ -22,6 +23,7 @@ func openRiver(db *pgxpool.Pool) (*river.Client[pgx.Tx], *river.Workers) {
 			osm.QueueOSMTraceDownloader: {MaxWorkers: 1},
 		},
 		Workers: workers,
+		Logger:  logger,
 	})
 	if err != nil {
 		log.Fatal(err)
