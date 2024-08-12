@@ -20,7 +20,7 @@ import (
 
 const QueueTwilio = "twilio"
 
-const twilioWebhookHost = "prin.reindeer-neon.ts.net"
+const twilioWebhookHost = "api.plantopo.com"
 
 type TwilioJobArgs struct {
 	Webhook string
