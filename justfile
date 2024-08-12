@@ -56,7 +56,7 @@ migrate-prod-up:
     #!/usr/bin/env bash
     set -euox pipefail
     cd backend
-    export PROD_DATABASE_URL=$(op read "op://plantopo/plantopo-prod/plantopo_migrator_prod/url")
+    export PROD_DATABASE_URL=$(op read "op://plantopo/plantopo-prod/plantopo_prod/url")
     river migrate-up --database-url "$PROD_DATABASE_URL"
     tern migrate --conn-string "$PROD_DATABASE_URL" --migrations migrations
 
