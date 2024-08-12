@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: download-dft-bus-bin
+  namespace: pt
+data:
+  entrypoint.sh: |-
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    cd /root
+
+    curl 'https://data.bus-data.dft.gov.uk/account/login/' -o login.html --fail \
+      --user-agent 'github.com/dzfranklin/plantopo' \
+      --cookie-jar cookies.txt
+
+    export CSRF_TOKEN=$(pup <login.html 'input[name=csrfmiddlewaretoken] attr{value}')
+
+    curl 'https://data.bus-data.dft.gov.uk/account/login/' -X POST --fail \
+      --cookie cookies.txt --cookie-jar cookies.txt \
+      --user-agent 'github.com/dzfranklin/plantopo' \
+      -H 'Referer: https://data.bus-data.dft.gov.uk/account/login/' -H 'Origin: https://data.bus-data.dft.gov.uk' \
+      --data-urlencode "csrfmiddlewaretoken=$CSRF_TOKEN" \
+      --data-urlencode "login=$DFT_USERNAME" \
+      --data-urlencode "password=$DFT_PASSWORD" \
+      --data-urlencode "submit=submit"
+
+    curl "https://data.bus-data.dft.gov.uk/timetable/download/gtfs-file/scotland/" -o "bus-scotland-dft-latest.gtfs.zip" --fail \
+      --cookie cookies.txt \
+      --user-agent 'github.com/dzfranklin/plantopo' \
+      -H 'Referer: https://data.bus-data.dft.gov.uk/timetable/download/' -H 'Origin: https://data.bus-data.dft.gov.uk'
+
+    mc cp ./bus-scotland-dft-latest.gtfs.zip dfranklin/geodata/
+
+    echo "All done"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: download-dft-bus-job
+  namespace: pt
+spec:
+  schedule: "10 23 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: download
+              image: "ghcr.io/dzfranklin/myscrape:2024-08-08"
+              command: [ "/bin/entrypoint.sh" ]
+              volumeMounts:
+                - mountPath: /bin/entrypoint.sh
+                  subPath: entrypoint.sh
+                  readOnly: true
+                  name: bin
+              env:
+                - name: MC_HOST_dfranklin
+                  valueFrom:
+                    secretKeyRef:
+                      name: geodata-uploader-minio-credentials
+                      key: value
+                - name: DFT_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: dft-bus-opendata
+                      key: username
+                - name: DFT_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: dft-bus-opendata
+                      key: password
+          volumes:
+            - name: bin
+              configMap:
+                defaultMode: 0700
+                name: download-dft-bus-bin
+          restartPolicy: Never

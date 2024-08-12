@@ -3,12 +3,12 @@
   <component name="Go" enabled="true" />
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
-      <excludeFolder url="file://$MODULE_DIR$/app/.next" />
-      <excludeFolder url="file://$MODULE_DIR$/app/out" />
-      <excludeFolder url="file://$MODULE_DIR$/out" />
-      <excludeFolder url="file://$MODULE_DIR$/sources/out" />
+      <excludeFolder url="file://$MODULE_DIR$/backend/internal/pmunroaccess/testdata" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="leaflet" level="application" />
+    <orderEntry type="library" name="Control.Geocoder" level="application" />
+    <orderEntry type="library" name="intl-tel-input" level="application" />
   </component>
 </module>

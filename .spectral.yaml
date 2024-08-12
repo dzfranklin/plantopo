@@ -1,0 +1,7 @@
+extends: ["spectral:oas", "spectral:asyncapi"]
+overrides:
+  - files:
+      - "api/schema/schema.yaml"
+    rules:
+      operation-operationId: "off"
+      operation-description: "off"

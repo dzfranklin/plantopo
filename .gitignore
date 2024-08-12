@@ -1,5 +1,4 @@
-target/
-.op_token
-.sync_store/
-out/
-.env.local
+*.local
+.DS_Store
+node_modules
+

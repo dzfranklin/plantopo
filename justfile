@@ -1,96 +1,65 @@
-set shell := ["bash", "-cu"]
+export RUST_LOG := "watchexec_cli=error"
 
-t: test-app test-go-short test-integration
-  echo 'All tests passed (long go tests skipped)'
+set dotenv-filename := "./backend/.env"
 
-ta: test-app
-tg: test-go-short
-tgl: test-go-long
-ti: test-integration
+check-all:
+    spectral lint ./api/schema/schema.yaml --fail-severity error
 
-test-integration:
-  ./api_server/tests/integration_test.sh
-
-test-go-short:
-  go test ./... -race -short -timeout 30s
-  golangci-lint run
-
-test-go-long:
-  go test ./... -race -timeout 30s
-  golangci-lint run
+    cd ./backend && go test -race ./...
+    cd backend && test -z $(gofmt -l .)
+    cd backend && go vet ./...
+    cd backend && go mod tidy && git diff --exit-code -- go.mod go.sum
+    cd backend && staticcheck ./...
 
 gen:
-  rm -rf ./api/sync_schema/out && mkdir ./api/sync_schema/out
-  rm -rf ./app/src/gen && mkdir ./app/src/gen
+    just api-schema-gen
+    just sqlc-gen
 
-  go run ./api/sync_schema/generator
-  cp ./api/sync_schema/out/schema.ts ./app/src/gen/sync_schema.ts
-  
-  go run ./sources
-  mkdir -p app/src/gen && cp sources/out/mapSources.json app/src/gen
+backend-test-watch:
+    cd ./backend && watchexec --clear=clear --restart go test -race ./...
 
-  protoc api/v1/*.proto \
-    --go_out . \
-    --go-grpc_out . \
-    --go_opt paths=source_relative \
-    --go-grpc_opt paths=source_relative \
-    --proto_path=.
+api-watch:
+    cd ./backend && watchexec --clear=clear --restart go run ./cmd/api
 
-  cd api_server && sqlc generate
+api-schema-watch:
+    watchexec --watch ./api/schema just api-schema-gen
 
-app:
-  cd app && npm run dev -- --port 443 --experimental-https
+api-schema-gen:
+    spectral lint ./api/schema/schema.yaml --fail-severity error
 
-test-app:
-  cd app && npm run typecheck
-  cd app && npm run lint
-  cd app && npm run test
+    cp api/schema/schema.yaml backend/internal/papi/schema.gen.yaml
+    cd backend && ogen \
+      -loglevel warn \
+      -target internal/papi -package papi \
+      -clean \
+      ./internal/papi/schema.gen.yaml
 
-migrationOpts := "x-migrations-table=%22pt%22.%22schema_migrations%22&x-migrations-table-quoted=true"
+sqlc-watch:
+    cd backend && watchexec \
+      --watch ./sqlc.yaml --watch ./migrations --watch ./internal/psqlc/queries \
+      just sqlc-gen
 
-create-migration name:
-  migrate create -ext sql -dir migrations -seq -digits 3 {{name}}
+sqlc-gen:
+    cd backend && sqlc generate
 
-migrate *ARGS:
-  migrate \
-    -path=./migrations/ \
-    -database "postgres://postgres:postgres@localhost:5432/pt?sslmode=disable&{{migrationOpts}}" \
-    {{ ARGS }}
+river-ui:
+    docker pull ghcr.io/riverqueue/riverui:latest
+    docker run -p 4003:8080 --env "DATABASE_URL=postgres://plantopo:password@host.docker.internal:5432/plantopo?sslmode=disable" ghcr.io/riverqueue/riverui:latest
 
-# Usage
-# Go to <https://cloud.digitalocean.com/databases/db-postgresql-lon1-08658>
-# Select user doadmin and database pt
-# Copy connection string
-# > read PROD_URL (paste copied)
-# > just migrate-prod-up $PROD_URL
+migration name:
+    tern --migrations backend/migrations new {{name}}
 
-migrate-prod-up url:
-  migrate \
-    -verbose \
-    -path=./migrations/ \
-    -database "{{url}}&{{migrationOpts}}" \
-    up
+migrate *args:
+     cd backend && tern --migrations migrations --conn-string "$DATABASE_URL" migrate {{args}}
 
-migrate-prod-down url:
-    migrate \
-    -verbose \
-    -path=./migrations/ \
-    -database "{{url}}&{{migrationOpts}}" \
-    down 1
+migrate-prod-up:
+    #!/usr/bin/env bash
+    set -euox pipefail
+    cd backend
+    export PROD_DATABASE_URL=$(op read "op://plantopo/plantopo-prod/plantopo_migrator_prod/url")
+    river migrate-up --database-url "$PROD_DATABASE_URL"
+    tern migrate --conn-string "$PROD_DATABASE_URL" --migrations migrations
 
-setup-prod-db user url:
-   sed 's/{{{{user}}/{{user}}/' migrations/setup.sql.tmpl | psql "{{url}}" -f -
-
-recreatedb:
-  dropdb --if-exists pt
-  createdb pt
-  psql -c "DROP ROLE pt; CREATE ROLE pt WITH LOGIN PASSWORD 'postgres'"
-  migrate \
-    -path=./migrations/ \
-    -database "postgres://postgres:postgres@localhost:5432/pt?sslmode=disable&{{migrationOpts}}" \
-    up
-  psql -d pt \
-    -f migrations/test_seed.sql.tmpl
-
-loc:
-  tokei . -e '*.{json,xml,svg,txt,pb.go}'
+pre-commit:
+    just gen
+    just check-all

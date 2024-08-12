@@ -1,4 +1,0 @@
-Clone submodules
-See <https://github.com/maplibre/maplibre-gl-js/blob/main/CONTRIBUTING.md>
-cd maplibre-gl-js && npm run build-prod && npm run build-css && npm run generate-typings
-For dev: `./server` sets up secrets and runs the server with a local shell

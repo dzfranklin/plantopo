@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: download-naptan-bin
+  namespace: pt
+data:
+  entrypoint.sh: |-
+    #!/usr/bin/env bash
+    set -euox pipefail
+
+    cd /root
+
+    # See <https://naptan.api.dft.gov.uk/v1/nptg> and <https://beta-naptan.dft.gov.uk/>
+
+    curl "https://naptan.api.dft.gov.uk/v1/access-nodes?dataFormat=csv" -o naptan.csv --fail
+    mc cp ./naptan.csv dfranklin/geodata/
+
+    curl "https://naptan.api.dft.gov.uk/v1/nptg" -o nptg.xml --fail
+    mc cp ./nptg.xml dfranklin/geodata/
+
+    echo "All done"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: download-naptan-job
+  namespace: pt
+spec:
+  schedule: "15 5 * * 1"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: download
+              image: "ghcr.io/dzfranklin/myscrape:2024-08-08"
+              command: [ "/bin/entrypoint.sh" ]
+              volumeMounts:
+                - mountPath: /bin/entrypoint.sh
+                  subPath: entrypoint.sh
+                  readOnly: true
+                  name: bin
+              env:
+                - name: MC_HOST_dfranklin
+                  valueFrom:
+                    secretKeyRef:
+                      name: geodata-uploader-minio-credentials
+                      key: value
+          volumes:
+            - name: bin
+              configMap:
+                defaultMode: 0700
+                name: download-naptan-bin
+          restartPolicy: Never

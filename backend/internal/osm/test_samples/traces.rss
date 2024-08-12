@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#" xmlns:georss="http://www.georss.org/georss">
+  <channel>
+    <title>OpenStreetMap GPS Traces</title>
+    <description>OpenStreetMap GPS Traces</description>
+    <link>https://www.openstreetmap.org/traces</link>
+    <image>
+      <url>https://www.openstreetmap.org/assets/mag_map-rss2.0-2973595662b8a92522b315b6c69bf5ee9bec75e07d702c5932f114c44a6251ea.png</url>
+      <title>OpenStreetMap GPS Traces</title>
+      <width>100</width>
+      <height>100</height>
+      <link>https://www.openstreetmap.org/traces</link>
+    </image>
+    <item>
+      <title>Title 1</title>
+      <link>https://www.openstreetmap.org/user/user-1/traces/11111142</link>
+      <guid>https://www.openstreetmap.org/user/user-1/traces/11111142</guid>
+      <description>
+        <![CDATA[<img src="https://www.openstreetmap.org/user/user-1/traces/11424931/icon" />
+GPX file with 3052 points from user-1
+]]>
+      </description>
+      <dc:creator>User 1</dc:creator>
+      <pubDate>Mon, 12 Aug 2024 12:07:57 +0000</pubDate>
+      <geo:lat>10.00</geo:lat>
+      <geo:long>9.00</geo:long>
+      <georss:point>10.00 9.00</georss:point>
+    </item>
+    <item>
+      <title>Title 2</title>
+      <link>https://www.openstreetmap.org/user/user-2/traces/11111143</link>
+      <guid>https://www.openstreetmap.org/user/user-2/traces/11111143</guid>
+      <description>
+        <![CDATA[<img src="https://www.openstreetmap.org/user/user-2/traces/11111143/icon" />
+GPX file with 4227 points from user-2
+]]>
+      </description>
+      <dc:creator>User 2</dc:creator>
+      <pubDate>Mon, 12 Aug 2024 11:52:38 +0000</pubDate>
+      <geo:lat>11.00</geo:lat>
+      <geo:long>14.00</geo:long>
+      <georss:point>11.00 14.00</georss:point>
+    </item>
+  </channel>
+</rss>

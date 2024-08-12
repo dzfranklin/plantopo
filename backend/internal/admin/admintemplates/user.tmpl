@@ -1,0 +1,23 @@
+{{define "main"}}
+    <table>
+        <tr>
+            <td>ID</td>
+            <td>{{.User.ID}}</td>
+        </tr>
+        <tr>
+            <td>Name</td>
+            <td>{{.User.Name}}</td>
+        </tr>
+        <tr>
+            <td>Email</td>
+            <td>{{.User.Email}}</td>
+        </tr>
+        <tr>
+            <td>EmailConfirmed</td>
+            <td>{{.User.EmailConfirmed}}</td>
+        </tr>
+        <tr>
+            <td><a href="/admin/sessions?user={{.User.ID}}">Sessions</a></td>
+        </tr>
+    </table>
+{{end}}

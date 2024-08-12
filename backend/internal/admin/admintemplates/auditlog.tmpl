@@ -1,0 +1,61 @@
+{{define "main"}}
+    <form method="GET">
+        <h3>Filters</h3>
+        <div class="flex gap-2">
+            <label class="grow">
+                Subject
+                <input name="subject" placeholder="u_068anhrmfdvb57tw9etp7geqsr" value="{{.Subject}}">
+            </label>
+            <label class="grow">
+                Object
+                <input name="object" placeholder="u_068aqe69jdsq3766yytv6zh7nc" value="{{.Object}}">
+            </label>
+            <label class="grow">
+                Action
+                <input name="action" placeholder="Login" value="{{.Action}}">
+            </label>
+            <button>Search</button>
+        </div>
+    </form>
+
+    <form method="GET" class="my-6 text-right">
+        <input name="subject" value="{{.Subject}}" type="hidden">
+        <input name="object" value="{{.Object}}" type="hidden">
+        <input name="action" value="{{.Action}}" type="hidden">
+        <input name="cursor" value="{{.Cursor}}" type="hidden">
+        <button>Next page</button>
+    </form>
+
+    <table>
+        <thead>
+        <tr>
+            <td>ID</td>
+            <td>Time</td>
+            <td>Subject</td>
+            <td>Object</td>
+            <td>Action</td>
+            <td>Payload</td>
+        </tr>
+        </thead>
+        <tbody>
+        {{range .Entries}}
+            <tr>
+                <td><a href="/admin/auditlog/{{.ID}}">{{.ID}}</a></td>
+                <td>{{.Time}}</td>
+                <td><a href="/admin/go/{{.Subject}}">{{.Subject}}</a></td>
+                <td><a href="/admin/go/{{.Object}}">{{.Object}}</a></td>
+                <td>{{.Action}}</td>
+                <td class="truncate max-w-64">{{.Payload}}</td>
+            </tr>
+        {{end}}
+        </tbody>
+    </table>
+
+    <form method="GET" class="my-6 text-right">
+        <input name="subject" value="{{.Subject}}" type="hidden">
+        <input name="object" value="{{.Object}}" type="hidden">
+        <input name="action" value="{{.Action}}" type="hidden">
+        <input name="cursor" value="{{.Cursor}}" type="hidden">
+        <button>Next page</button>
+    </form>
+{{end}}
