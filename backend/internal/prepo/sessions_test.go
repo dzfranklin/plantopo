@@ -5,7 +5,6 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/ptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"net/netip"
 	"testing"
 )
 
@@ -72,20 +71,17 @@ func TestSessions(t *testing.T) {
 		env.Reset()
 		subject := makeSubject(t)
 
-		ipAddr := netip.AddrFrom4([4]byte{1, 1, 1, 1})
-
 		beforeCreate := markAuditLog(t, al)
 		token, err := subject.Create(SessionCreateOptions{
 			UserID:    user,
 			UserAgent: "myUserAgent",
-			IPAddr:    &ipAddr,
 		})
 		require.NoError(t, err)
 		assertAudit(t, al, beforeCreate, AuditLogEntry{
 			Subject: user,
 			Object:  user,
 			Action:  "SessionCreate",
-			Payload: M{"UserAgent": "myUserAgent", "IPAddr": "1.1.1.1"},
+			Payload: M{"UserAgent": "myUserAgent"},
 		})
 
 		beforeRevoke := markAuditLog(t, al)

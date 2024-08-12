@@ -142,7 +142,6 @@ func (h *phandler) createSessionFor(ctx context.Context, user User) (string, err
 	return h.Sessions.Create(prepo.SessionCreateOptions{
 		UserID:    string(user.ID),
 		UserAgent: clientInfo.UserAgent,
-		IPAddr:    &clientInfo.IP,
 	})
 }
 
