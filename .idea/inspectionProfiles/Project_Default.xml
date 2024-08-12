@@ -13,6 +13,7 @@
         <function importPath="fmt" name="Println" />
         <function importPath="fmt" name="Fprintf" />
         <function importPath="pgx" name="Rollback" />
+        <function importPath="fmt" name="Fprintln" />
       </functions>
       <methods>
         <method importPath="strings" receiver="*Builder" name="WriteByte" />
