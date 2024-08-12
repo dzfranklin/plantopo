@@ -2,6 +2,7 @@ package papi
 
 import (
 	"context"
+	"fmt"
 	"github.com/ogen-go/ogen/middleware"
 	"net/netip"
 	"strings"
@@ -26,7 +27,8 @@ func setClientInfoMiddleware(req middleware.Request, next middleware.Next) (midd
 	}
 	addrPort, err := netip.ParseAddrPort(ipValue)
 	if err != nil {
-		return middleware.Response{}, err
+		fmt.Println("--- TODO: RemoteAddr is", req.Raw.RemoteAddr, "and fwdIPValue is", fwdIPValue)
+		return middleware.Response{}, fmt.Errorf("setClientInfoMiddleware: %w: %s", err, ipValue)
 	}
 
 	userAgent := req.Raw.Header.Get("User-Agent")
