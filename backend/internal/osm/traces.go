@@ -153,8 +153,8 @@ func (w *TraceDownloaderWorker) Work(ctx context.Context, job *river.Job[TraceDo
 		return err
 	}
 
-	_, err = w.objects.PutObject(ctx, traceBucket, meta.ID+".json.gz", &dataGZ, int64(dataGZ.Len()), minio.PutObjectOptions{
-		ContentType:     "application/json",
+	_, err = w.objects.PutObject(ctx, traceBucket, meta.ID+".gpx.gz", &dataGZ, int64(dataGZ.Len()), minio.PutObjectOptions{
+		ContentType:     "application/gpx+xml",
 		ContentEncoding: "gzip",
 	})
 	if err != nil {
