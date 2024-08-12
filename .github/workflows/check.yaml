@@ -1,0 +1,15 @@
+name: Check
+on: push
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - name: Install proj
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install proj-data libproj-dev proj-bin
+      - uses: actions/checkout@v4
+      - name: Check
+        run: ./scripts/check-in-ci.sh

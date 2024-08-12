@@ -1,0 +1,22 @@
+{{define "main"}}
+    <div class="grid w-full h-full">
+        <form id="goForm" class="w-full max-w-lg flex items-baseline gap-4 mb-32 h-12 mt-4 mx-4 place-self-center">
+            <label class="w-full">
+                <span class="sr-only">Any ID</span>
+                <input class="w-full p-4 text-lg" name="id" placeholder="u_068anhrmfdvb57tw9etp7geqsr">
+            </label>
+            <button class="custom rounded-md bg-indigo-600 h-full px-4 py-2 text-lg font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                Go
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const goForm = document.querySelector("#goForm");
+        goForm.addEventListener("submit", (evt) => {
+            evt.preventDefault()
+            const data = new FormData(goForm);
+            location.href = "/admin/go/" + data.get("id");
+        })
+    </script>
+{{end}}

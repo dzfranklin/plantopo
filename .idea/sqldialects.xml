@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/backend/dev_seeds.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/backend/migrations/003_add_users.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/backend/test_seeds.sql" dialect="PostgreSQL" />
     <file url="PROJECT" dialect="PostgreSQL" />
   </component>
 </project>

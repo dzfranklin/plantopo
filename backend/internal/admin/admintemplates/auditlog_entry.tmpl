@@ -1,0 +1,28 @@
+{{define "main"}}
+    <table>
+        <tr>
+            <td>ID</td>
+            <td>{{.Entry.ID}}</td>
+        </tr>
+        <tr>
+            <td>Time</td>
+            <td>{{.Entry.Time}}</td>
+        </tr>
+        <tr>
+            <td>Subject</td>
+            <td><a href="/admin/go/{{.Entry.Subject}}">{{.Entry.Subject}}</a></td>
+        </tr>
+        <tr>
+            <td>Object</td>
+            <td><a href="/admin/go/{{.Entry.Object}}">{{.Entry.Object}}</a></td>
+        </tr>
+        <tr>
+            <td>Action</td>
+            <td>{{.Entry.Action}}</td>
+        </tr>
+    </table>
+
+    <h3>Payload</h3>
+
+    <pre><code>{{.PayloadJSON}}</code></pre>
+{{end}}

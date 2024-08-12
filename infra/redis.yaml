@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: pt
+  labels:
+    app: redis
+spec:
+  ports:
+    - port: 6379
+      name: redis
+      targetPort: redis
+  selector:
+    app: redis
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-configmap
+  namespace: pt
+data:
+  redis-config: ""
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+  namespace: pt
+spec:
+  selector:
+    matchLabels:
+      app: redis
+  serviceName: redis
+  replicas: 1
+  minReadySeconds: 30
+  template:
+    metadata:
+      namespace: pt
+      name: redis
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.4.0
+          command:
+            - redis-server
+            - "/redis-master/redis.conf"
+          env:
+            - name: MASTER
+              value: "true"
+          ports:
+              - name: redis
+                containerPort: 6379
+          resources:
+            limits:
+              cpu: "0.1"
+          volumeMounts:
+            - mountPath: /redis-master-data
+              name: data
+            - mountPath: /redis-master
+              name: config
+      volumes:
+        - name: data     # Temporary directory for writing Redis cache, created and destroyed with the pod lifecycle
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: redis-configmap
+            items:
+              - key: redis-config
+                path: redis.conf

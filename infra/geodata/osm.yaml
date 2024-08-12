@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: download-osm-bin
+  namespace: pt
+data:
+  entrypoint.sh: |-
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    cd /root
+
+    curl "https://download.geofabrik.de/europe/united-kingdom/scotland-latest.osm.pbf.md5" -o scotland-latest.osm.md5 --fail
+    curl "https://download.geofabrik.de/europe/united-kingdom/scotland-latest.osm.pbf" -o scotland-latest.osm.pbf --fail
+    md5sum -c scotland-latest.osm.md5
+
+    mc cp ./scotland-latest.osm.pbf dfranklin/geodata/
+
+    echo "All done"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: download-osm-job
+  namespace: pt
+spec:
+  schedule: "19 23 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: download
+              image: "ghcr.io/dzfranklin/myscrape:2024-08-08"
+              command: [ "/bin/entrypoint.sh" ]
+              volumeMounts:
+                - mountPath: /bin/entrypoint.sh
+                  subPath: entrypoint.sh
+                  readOnly: true
+                  name: bin
+              env:
+                - name: MC_HOST_dfranklin
+                  valueFrom:
+                    secretKeyRef:
+                      name: geodata-uploader-minio-credentials
+                      key: value
+          volumes:
+            - name: bin
+              configMap:
+                defaultMode: 0700
+                name: download-osm-bin
+          restartPolicy: Never

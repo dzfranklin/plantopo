@@ -1,3 +1,0 @@
-When:
-  fdelete: ['']
-ThenError: 'cannot delete root'

@@ -1,0 +1,28 @@
+{{define "main"}}
+    <form method="GET" class="flex gap-4">
+        <label class="grow">
+            User:
+            <input name="user" placeholder="u_248h248h248h248h248h248h24" value="{{.UserQuery}}">
+        </label>
+        <button type="submit" class="primary">Search</button>
+    </form>
+
+    <table>
+        <thead>
+        <tr>
+            <th>CreatedAt</th>
+            <th>ExpiryStart</th>
+            <th>UserAgent</th>
+            <th>IPAddr</th>
+        </tr>
+        </thead>
+        {{range .Sessions}}
+            <tr>
+                <td>{{.CreatedAt}}</td>
+                <td>{{.ExpiryStart}}</td>
+                <td>{{.UserAgent}}</td>
+                <td>{{.IPAddr}}</td>
+            </tr>
+        {{end}}
+    </table>
+{{end}}

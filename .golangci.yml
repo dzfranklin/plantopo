@@ -1,6 +1,0 @@
-linters:
-  enable:
-    - gofmt
-issues:
-  exclude:
-    - "return value of `(tx.Rollback|logger.Sync)` is not checked"

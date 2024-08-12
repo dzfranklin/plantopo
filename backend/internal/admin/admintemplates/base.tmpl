@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" class="min-h-screen bg-white">
+<head>
+    <title>Admin</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <style type="text/tailwindcss">
+        header ul {
+            @apply flex gap-2;
+        }
+
+        header a {
+            @apply underline;
+        }
+
+        header a.currentPage {
+            @apply no-underline;
+        }
+
+        .link {
+            @apply underline;
+        }
+
+        label {
+            @apply inline-flex items-baseline text-sm font-medium leading-6 text-gray-900;
+        }
+
+        input {
+            @apply inline-block ml-1 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6;
+        }
+
+        button:not(.primary):not(.link):not(.custom):not(.iti__selected-country) {
+            @apply rounded bg-white px-2 py-1 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50;
+        }
+
+        button.primary {
+            @apply rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600;
+        }
+
+        tr {
+            @apply odd:bg-white even:bg-gray-50;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-6 overflow-auto grid grid-rows-[min-content_minmax(0,1fr)] grid-cols-1">
+<header class="flex">
+    <ul>
+        <li><a href="/admin/">Index</a></li>
+        <li><a href="/admin/users">Users</a></li>
+        <li><a href="/admin/sessions">Sessions</a></li>
+        <li><a href="/admin/auditlog">Audit log</a></li>
+        <li><a href="/admin/authorized-sms-sender">Authorized SMS senders</a></li>
+        <li class="ml-auto"><a href="/docs">Docs</a></li>
+    </ul>
+    <div class="ml-auto">
+        <span class="text-sm">{{.SignedInUser.Email}}</span>
+        <span class="text-gray-500 text-xs">({{.SignedInUser.ID}})</span>
+        <button id="logoutBtn" class="link text-sm">Logout</button>
+    </div>
+</header>
+
+<main class="prose my-6 w-full max-w-full h-full max-h-full">
+    {{ template "main" . }}
+</main>
+
+<script>
+    for (const el of document.querySelectorAll("header a")) {
+        const hrefPath = new URL(el.href).pathname
+        if (hrefPath === location.pathname) {
+            el.classList.add("currentPage");
+        }
+    }
+
+    document.querySelector("#logoutBtn").addEventListener("click", async () => {
+        await fetch("/api/v1/auth/revoke-browser", {method: "POST"});
+        location.reload();
+    })
+</script>
+</body>
+</html>

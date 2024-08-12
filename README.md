@@ -1,5 +1,13 @@
-# PlanTopo
+# plantopo
 
-## Developing
+## Getting Started
 
-For sample files see https://pt-samples.dfusercontent.com
+First set up the git hooks
+
+```bash
+git config --local core.hooksPath .githooks/
+```
+
+## Admin
+
+Jobs: https://plantopo-river-admin.reindeer-neon.ts.net/
