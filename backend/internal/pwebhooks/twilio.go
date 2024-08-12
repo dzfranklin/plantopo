@@ -45,6 +45,7 @@ type TwilioWorker struct {
 	tw      *twilio.RestClient
 	weather *pweather.Service
 	repo    *prepo.Repo
+	twSID   string
 	river.WorkerDefaults[TwilioJobArgs]
 }
 
@@ -54,6 +55,7 @@ func NewTwilioWorker(env *pconfig.Env, repo *prepo.Repo) *TwilioWorker {
 		tw:      twilio.NewRestClient(),
 		weather: pweather.New(env),
 		repo:    repo,
+		twSID:   env.Config.Twilio.AccountSID,
 	}
 }
 
@@ -83,6 +85,7 @@ func (w *TwilioWorker) Work(ctx context.Context, job *river.Job[TwilioJobArgs]) 
 			}
 
 			tParams := &twilioapi.CreateMessageParams{}
+			tParams.SetPathAccountSid(w.twSID)
 			tParams.SetFrom(to)
 			tParams.SetTo(from)
 			tParams.SetBody(msg)

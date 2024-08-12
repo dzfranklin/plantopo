@@ -82,7 +82,8 @@ type MetOffice struct {
 }
 
 type Twilio struct {
-	AuthToken string
+	AccountSID string
+	AuthToken  string
 }
 
 type OpenTransitPlanner struct {
