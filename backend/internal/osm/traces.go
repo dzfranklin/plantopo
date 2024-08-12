@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/phttp"
@@ -131,7 +132,10 @@ func (w *TraceDownloaderWorker) Work(ctx context.Context, job *river.Job[TraceDo
 	}
 
 	data, err := downloadTrace(ctx, w.limiter, meta.Download)
-	if err != nil {
+	if errors.Is(err, phttp.ErrTooLarge) {
+		w.l.Info("skipping large trace", "link", job.Args.Meta.Link)
+		return nil
+	} else if err != nil {
 		return err
 	}
 
@@ -169,11 +173,11 @@ func (w *TraceDownloaderWorker) Work(ctx context.Context, job *river.Job[TraceDo
 
 func downloadTrace(ctx context.Context, limiter *throttled.GCRARateLimiterCtx, url string) ([]byte, error) {
 	for {
-		ok, res, err := limiter.RateLimitCtx(ctx, "download", 1)
+		limited, res, err := limiter.RateLimitCtx(ctx, "download", 1)
 		if err != nil {
 			return nil, err
 		}
-		if ok {
+		if !limited {
 			break
 		}
 		if err := ptime.Sleep(ctx, res.RetryAfter); err != nil {

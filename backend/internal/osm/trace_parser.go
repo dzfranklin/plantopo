@@ -13,6 +13,7 @@ import (
 type traceMeta struct {
 	ID       string
 	Title    string
+	Link     string
 	Download string
 	UserID   string
 	PubDate  *time.Time
@@ -61,6 +62,7 @@ func parseTraceFeed(value []byte) ([]traceMeta, error) {
 		out = append(out, traceMeta{
 			ID:       id,
 			Title:    v.Title,
+			Link:     v.Link,
 			Download: fmt.Sprintf("https://www.openstreetmap.org/trace/%s/data", id),
 			UserID:   userID,
 			PubDate:  v.PubDateParsed,

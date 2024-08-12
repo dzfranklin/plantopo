@@ -61,5 +61,4 @@ migrate-prod-up:
     tern migrate --conn-string "$PROD_DATABASE_URL" --migrations migrations
 
 pre-commit:
-    just gen
     just check-all

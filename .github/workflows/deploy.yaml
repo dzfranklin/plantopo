@@ -1,9 +1,9 @@
-name: Deploy
+name: deploy
 concurrency:
   group: ${{ github.workflow }}
 on:
   workflow_run:
-    workflows: [Check]
+    workflows: [check]
     branches: [main]
     types:
       - completed
