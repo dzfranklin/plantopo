@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/dzfranklin/plantopo/backend/internal/osm"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
+	"github.com/dzfranklin/plantopo/backend/internal/plog"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
 	"github.com/dzfranklin/plantopo/backend/internal/pwebhooks"
 	"github.com/jackc/pgx/v5"
@@ -23,7 +24,7 @@ func openRiver(db *pgxpool.Pool, logger *slog.Logger) (*river.Client[pgx.Tx], *r
 			osm.QueueOSMTraceDownloader: {MaxWorkers: 1},
 		},
 		Workers: workers,
-		Logger:  logger,
+		Logger:  plog.Filtered(logger, slog.LevelWarn),
 	})
 	if err != nil {
 		log.Fatal(err)
