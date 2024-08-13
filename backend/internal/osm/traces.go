@@ -48,7 +48,7 @@ func NewTraceFeedIngesterWorker(env *pconfig.Env, jobs *river.Client[pgx.Tx]) *T
 	return &TraceFeedIngesterWorker{l: env.Logger, jobs: jobs}
 }
 
-func (w TraceFeedIngesterWorker) Work(ctx context.Context, _ *river.Job[TraceFeedIngesterJobArgs]) error {
+func (w *TraceFeedIngesterWorker) Work(ctx context.Context, _ *river.Job[TraceFeedIngesterJobArgs]) error {
 	items, err := downloadTraceFeed(ctx)
 	if err != nil {
 		return err
