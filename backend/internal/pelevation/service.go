@@ -15,7 +15,7 @@ type Service struct {
 
 func New(env *pconfig.Env) *Service {
 	return &Service{
-		c:   phttp.NewJSONClient(env.Config.Elevation.Endpoint, env.Config.UserAgent),
+		c:   phttp.NewJSONClient(env.Config.Elevation.Endpoint),
 		cfg: &env.Config.Elevation,
 		l:   env.Logger,
 	}

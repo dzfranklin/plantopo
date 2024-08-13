@@ -20,8 +20,8 @@ type Service struct {
 
 func New(env *pconfig.Env) *Service {
 	return &Service{
-		os:  ordnancesurvey.New(env.Config.UserAgent, env.Config.OrdnanceSurvey.APIKey),
-		met: metoffice.New(env.Config.UserAgent, env.Config.MetOffice.DataPointAPIKey),
+		os:  ordnancesurvey.New(env.Config.OrdnanceSurvey.APIKey),
+		met: metoffice.New(env.Config.MetOffice.DataPointAPIKey),
 	}
 }
 

@@ -27,7 +27,6 @@ var ukWeatherCmd = &cobra.Command{
 
 		svc := pweather.New(&pconfig.Env{
 			Config: &pconfig.Config{
-				UserAgent:      userAgent,
 				OrdnanceSurvey: pconfig.OrdnanceSurvey{APIKey: osAPIKey},
 				MetOffice:      pconfig.MetOffice{DataPointAPIKey: metAPIKey},
 			},

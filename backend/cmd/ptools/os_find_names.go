@@ -16,7 +16,7 @@ var osFindNamesCmd = &cobra.Command{
 		if apiKey == "" {
 			panic("Missing OS_API_KEY")
 		}
-		client := ordnancesurvey.New(userAgent, apiKey)
+		client := ordnancesurvey.New(apiKey)
 
 		results, err := client.FindNames(context.Background(), args[0], &ordnancesurvey.FindNamesOptions{
 			MaxResults: 5,

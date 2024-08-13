@@ -25,7 +25,6 @@ type Config struct {
 	Env                string
 	Server             Server
 	Elevation          Elevation
-	UserAgent          string
 	Users              Users
 	Session            Session
 	Postgres           Postgres

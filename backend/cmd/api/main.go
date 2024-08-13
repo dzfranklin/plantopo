@@ -36,7 +36,6 @@ func main() {
 			MetaPort:       getEnvInt("META_PORT"),
 			CORSAllowHosts: getEnvStrings("CORS_ALLOW_HOSTS"),
 		},
-		UserAgent: "github.com/dzfranklin/plantopo (daniel@danielzfranklin.org)",
 		Elevation: pconfig.Elevation{
 			Endpoint: getEnvString("ELEVATION_API_ENDPOINT"),
 		},

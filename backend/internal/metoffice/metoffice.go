@@ -13,8 +13,8 @@ type Client struct {
 	c *phttp.JSONClient
 }
 
-func New(userAgent, datapointAPIKey string) *Client {
-	inner := phttp.NewJSONClient("http://datapoint.metoffice.gov.uk/public/data/", userAgent)
+func New(datapointAPIKey string) *Client {
+	inner := phttp.NewJSONClient("http://datapoint.metoffice.gov.uk/public/data/")
 	inner.AddCommonQueryParam("key", datapointAPIKey)
 	return &Client{inner}
 }

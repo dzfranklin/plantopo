@@ -6,8 +6,8 @@ type Client struct {
 	c *phttp.JSONClient
 }
 
-func New(userAgent, key string) *Client {
-	inner := phttp.NewJSONClient("https://api.os.uk", userAgent)
+func New(key string) *Client {
+	inner := phttp.NewJSONClient("https://api.os.uk")
 	inner.SetCommonHeader("key", key)
 	return &Client{inner}
 }

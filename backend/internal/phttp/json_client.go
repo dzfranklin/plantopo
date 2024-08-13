@@ -21,10 +21,10 @@ type JSONClient struct {
 	commonQueryParams url.Values
 }
 
-func NewJSONClient(baseURL string, userAgent string) *JSONClient {
+func NewJSONClient(baseURL string) *JSONClient {
 	commonHeaders := make(http.Header)
 	commonHeaders.Set("Accept", "application/json")
-	commonHeaders.Set("User-Agent", userAgent)
+	commonHeaders.Set("User-Agent", UserAgent)
 
 	return &JSONClient{
 		h:             &http.Client{},
