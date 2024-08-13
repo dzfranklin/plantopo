@@ -20,6 +20,12 @@ func (JobArgs) Kind() string {
 	return "dft_bus_open_data"
 }
 
+func (JobArgs) InsertOpts() river.InsertOpts {
+	return river.InsertOpts{
+		MaxAttempts: 1,
+	}
+}
+
 type Worker struct {
 	l       *slog.Logger
 	objects *minio.Client
