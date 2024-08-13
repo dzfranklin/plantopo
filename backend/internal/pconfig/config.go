@@ -32,6 +32,7 @@ type Config struct {
 	S3                 S3
 	OrdnanceSurvey     OrdnanceSurvey
 	MetOffice          MetOffice
+	DFTBusOpenData     DFTBusOpenData
 	Twilio             Twilio
 	OpenTransitPlanner OpenTransitPlanner
 }
@@ -78,6 +79,11 @@ type OrdnanceSurvey struct {
 
 type MetOffice struct {
 	DataPointAPIKey string
+}
+
+type DFTBusOpenData struct {
+	Username string
+	Password string
 }
 
 type Twilio struct {

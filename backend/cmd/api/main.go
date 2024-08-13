@@ -66,6 +66,10 @@ func main() {
 		MetOffice: pconfig.MetOffice{
 			DataPointAPIKey: getEnvString("MET_OFFICE_DATAPOINT_API_KEY"),
 		},
+		DFTBusOpenData: pconfig.DFTBusOpenData{
+			Username: getEnvString("DFT_BUS_OPEN_DATA_USERNAME"),
+			Password: getEnvString("DFT_BUS_OPEN_DATA_PASSWORD"),
+		},
 		Twilio: pconfig.Twilio{
 			AccountSID: getEnvString("TWILIO_ACCOUNT_SID"),
 			AuthToken:  getEnvString("TWILIO_AUTH_TOKEN"),

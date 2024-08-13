@@ -6,6 +6,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/joho/godotenv"
 	"github.com/minio/minio-go/v7"
 	miniocredentials "github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/neilotoole/slogt"
@@ -323,4 +324,10 @@ func NewTestLogger(t *testing.T) *slog.Logger {
 		}
 		return slog.NewTextHandler(w, opts)
 	}))
+}
+
+func LoadDevEnv(t *testing.T) {
+	t.Helper()
+	root := gitRoot(t)
+	_ = godotenv.Load(root+"/backend/.env", root+"/backend/.env.local")
 }

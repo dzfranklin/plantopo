@@ -6,10 +6,6 @@ import (
 	"os"
 )
 
-const (
-	userAgent = "github.com/dzfranklin/plantopo ptools <daniel@danielzfranklin.org>"
-)
-
 var rootCmd = &cobra.Command{
 	Use: "ptools",
 }

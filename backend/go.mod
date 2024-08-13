@@ -4,6 +4,7 @@ go 1.22.5
 
 require (
 	github.com/DataDog/go-sqllexer v0.0.12
+	github.com/andybalholm/cascadia v1.3.2
 	github.com/go-faster/errors v0.7.1
 	github.com/go-faster/jx v1.1.0
 	github.com/go-playground/form v3.1.4+incompatible
@@ -23,6 +24,7 @@ require (
 	github.com/redis/go-redis/v9 v9.0.5
 	github.com/riverqueue/river v0.10.1
 	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.10.1
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go v0.32.0
@@ -39,6 +41,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.27.0
 	go.uber.org/multierr v1.11.0
 	golang.org/x/crypto v0.26.0
+	golang.org/x/net v0.28.0
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -118,7 +121,6 @@ require (
 	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
-	golang.org/x/net v0.28.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.23.0 // indirect
 	golang.org/x/text v0.17.0 // indirect

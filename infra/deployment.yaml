@@ -65,6 +65,16 @@ spec:
                 secretKeyRef:
                   name: metoffice
                   key: datapoint_api_key
+            - name: DFT_BUS_OPEN_DATA_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: dft-bus-opendata
+                  key: username
+            - name: DFT_BUS_OPEN_DATA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dft-bus-opendata
+                  key: password
             - name: TWILIO_ACCOUNT_SID
               valueFrom:
                 secretKeyRef:
