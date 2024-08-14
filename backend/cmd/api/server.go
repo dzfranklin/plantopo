@@ -16,6 +16,7 @@ import (
 	"log"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -146,6 +147,16 @@ func handleStatus(env *pconfig.Env) http.HandlerFunc {
 }
 
 func handleHTTPBin(w http.ResponseWriter, r *http.Request) {
+	longpollParam := r.URL.Query().Get("longpoll")
+	if longpollParam != "" {
+		longpoll, err := strconv.ParseInt(longpollParam, 10, 64)
+		if err != nil {
+			http.Error(w, "Bad longpoll param", http.StatusBadRequest)
+			return
+		}
+		time.Sleep(time.Duration(longpoll) * time.Minute)
+	}
+
 	w.Header().Set("Content-Type", "text/plain")
 
 	err := r.ParseForm()
