@@ -2,12 +2,10 @@ package papi
 
 import (
 	"context"
-	"github.com/oklog/ulid"
+	"github.com/oklog/ulid/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"math/rand"
 	"net/http"
-	"time"
 )
 
 var (
@@ -22,8 +20,6 @@ var (
 	})
 )
 
-var requestIDEntropy = rand.New(rand.NewSource(time.Now().UnixNano()))
-
 type requestIDContextKey struct{}
 
 func AssignRequestID(next http.Handler) http.Handler {
@@ -33,17 +29,10 @@ func AssignRequestID(next http.Handler) http.Handler {
 		headerValue := r.Header.Get("X-Request-ID")
 		if headerValue == "" {
 			requestsWithoutRequestIDCounter.Inc()
-
-			newULID, err := ulid.New(ulid.Timestamp(time.Now()), requestIDEntropy)
-			if err != nil {
-				panic(err)
-			}
-			value = "gen_" + newULID.String()
-
+			value = "gen_" + ulid.Make().String()
 			w.Header().Add("X-Generated-Request-ID", value)
 		} else {
 			requestsWithRequestIDCounter.Inc()
-
 			value = "cli_" + value
 		}
 

@@ -18,7 +18,7 @@ require (
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/neilotoole/slogt v1.1.0
 	github.com/ogen-go/ogen v1.2.2
-	github.com/oklog/ulid v1.3.1
+	github.com/oklog/ulid/v2 v2.1.0
 	github.com/paulmach/orb v0.11.1
 	github.com/prometheus/client_golang v1.19.1
 	github.com/redis/go-redis/v9 v9.0.5
