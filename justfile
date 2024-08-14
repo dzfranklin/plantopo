@@ -2,6 +2,8 @@ export RUST_LOG := "watchexec_cli=error"
 
 set dotenv-filename := "./backend/.env"
 
+tmpdir  := `mktemp -d`
+
 check-all:
     spectral lint ./api/schema/schema.yaml --fail-severity error
 
@@ -19,7 +21,8 @@ backend-test-watch:
     cd ./backend && watchexec --clear=clear --restart go test -race ./...
 
 api-watch:
-    cd ./backend && watchexec --clear=clear --restart go run ./cmd/api
+    cd ./backend && watchexec --clear=clear --restart \
+      'go build -race -o {{tmpdir}}/plantopo-api ./cmd/api && {{tmpdir}}/plantopo-api'
 
 api-schema-watch:
     watchexec --watch ./api/schema just api-schema-gen
