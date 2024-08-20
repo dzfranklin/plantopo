@@ -1,0 +1,14 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-prod
+  namespace : pt
+spec:
+  secretName: wildcard-prod
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: 'plantopo.com'
+  dnsNames:
+    - "plantopo.com"
+    - "*.plantopo.com"

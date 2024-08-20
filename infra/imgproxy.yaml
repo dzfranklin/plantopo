@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: imgproxy
+  namespace: pt
+spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: imgproxy
+    template:
+      metadata:
+        labels:
+          app: imgproxy
+        annotations:
+          k8s.grafana.com/scrape: "true"
+          k8s.grafana.com/metrics.portName: "prom"
+      spec:
+        containers:
+          - name: imgproxy
+            image: darthsim/imgproxy:v3.25.0
+            ports:
+              - name: http
+                containerPort: 8080
+              - name: prom
+                containerPort: 8081
+            env:
+              - name: IMGPROXY_PROMETHEUS_BIND
+                value: "0.0.0.0:8081"
+              - name: IMGPROXY_PROMETHEUS_NAMESPACE
+                value: "imgproxy"
+              - name: IMGPROXY_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: imgproxy
+                    key: key
+              - name: IMGPROXY_SALT
+                valueFrom:
+                  secretKeyRef:
+                    name: imgproxy
+                    key: salt
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: imgproxy
+  namespace: pt
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      name: http
+      targetPort: http
+  selector:
+    app: imgproxy
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: imgproxy-ingress-https
+  namespace: pt
+  labels:
+    app: imgproxy
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  rules:
+    - host: imgproxy.plantopo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: imgproxy
+                port: { name: http }
+  tls:
+    - secretName: wildcard-prod
+      hosts:
+        - imgproxy.plantopo.com
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: imgproxy-ingress-http
+  namespace: pt
+  labels:
+    app: imgproxy
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.tls: "false"
+spec:
+  rules:
+    - host: imgproxy.plantopo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: imgproxy
+                port: { name: http }
