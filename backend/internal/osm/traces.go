@@ -135,6 +135,9 @@ func (w *TraceDownloaderWorker) Work(ctx context.Context, job *river.Job[TraceDo
 	if errors.Is(err, phttp.ErrTooLarge) {
 		w.l.Info("skipping large trace", "link", job.Args.Meta.Link)
 		return nil
+	} else if errors.Is(err, ErrTraceNotFound) {
+		w.l.Info("trace not found, skipping", "link", job.Args.Meta.Link)
+		return nil
 	} else if err != nil {
 		return err
 	}
@@ -171,6 +174,8 @@ func (w *TraceDownloaderWorker) Work(ctx context.Context, job *river.Job[TraceDo
 	return nil
 }
 
+var ErrTraceNotFound = errors.New("trace not found")
+
 func downloadTrace(ctx context.Context, limiter *throttled.GCRARateLimiterCtx, url string) ([]byte, error) {
 	for {
 		limited, res, err := limiter.RateLimitCtx(ctx, "download", 1)
@@ -194,7 +199,9 @@ func downloadTrace(ctx context.Context, limiter *throttled.GCRARateLimiterCtx, u
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrTraceNotFound
+	} else if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("http status %d", resp.StatusCode)
 	}
 	body, err := io.ReadAll(phttp.NewMaxBytesReader(resp.Body, maxTraceBytes))
