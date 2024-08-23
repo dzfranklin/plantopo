@@ -1,15 +1,15 @@
 import { Layout } from '@/components/Layout';
 import {
-  Track,
-  TrackImport,
   fetchMyPendingOrRecentTrackImports,
   fetchMyTracks,
+  Track,
+  TrackImport,
 } from '@/features/tracks/api';
 import TrackGridComponent from './TrackGridComponent';
 import TrackUploadButton from '../../features/tracks/upload/TrackUploadButton';
 import InlineAlert from '@/components/InlineAlert';
 import TracksEmptyStateComponent from '@/features/tracks/upload/TracksEmptyStateComponent';
-import { AuthorizationError } from '@/api';
+import { AuthorizationError } from '@/api_to_remove';
 import UnauthorizedScreen from '@/components/UnauthorizedScreen';
 
 // TODO: Live load updated status as imports progress

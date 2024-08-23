@@ -10,7 +10,7 @@ func TestMunroStartClustersSanityCheck(t *testing.T) {
 	assert.Greater(t, len(munroStartClusters), 100)
 	fmt.Println(len(munroStartClusters))
 
-	munros := make(map[string]struct{})
+	munros := make(map[int]struct{})
 	for _, cluster := range munroStartClusters {
 		assert.Less(t, len(cluster.Munros), 30)
 

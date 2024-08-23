@@ -5,6 +5,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/osm"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/plog"
+	"github.com/dzfranklin/plantopo/backend/internal/pmunroaccess"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
 	"github.com/dzfranklin/plantopo/backend/internal/pwebhooks"
 	"github.com/jackc/pgx/v5"
@@ -21,9 +22,10 @@ func openRiver(db *pgxpool.Pool, logger *slog.Logger) (*river.Client[pgx.Tx], *r
 	workers := river.NewWorkers()
 	client, err := river.NewClient[pgx.Tx](riverpgxv5.New(db), &river.Config{
 		Queues: map[string]river.QueueConfig{
-			river.QueueDefault:          {MaxWorkers: 100},
-			pwebhooks.QueueTwilio:       {MaxWorkers: 100},
-			osm.QueueOSMTraceDownloader: {MaxWorkers: 1},
+			river.QueueDefault:                     {MaxWorkers: 100},
+			pwebhooks.QueueTwilio:                  {MaxWorkers: 100},
+			osm.QueueOSMTraceDownloader:            {MaxWorkers: 1},
+			pmunroaccess.QueueMunroAccessGenerator: {MaxWorkers: 1},
 		},
 		Workers: workers,
 		Logger:  plog.Filtered(logger, slog.LevelWarn),
@@ -43,6 +45,8 @@ func setupRiver(env *pconfig.Env, repo *prepo.Repo, jobs *river.Client[pgx.Tx], 
 	river.AddWorker[osm.TraceDownloaderJobArgs](workers, osm.NewTraceDownloaderWorker(env))
 
 	river.AddWorker[dftbusopendata.JobArgs](workers, dftbusopendata.NewWorker(env))
+
+	river.AddWorker[pmunroaccess.GenerateArgs](workers, pmunroaccess.NewGenerateWorker(env))
 
 	if env.IsProduction {
 		periodic.Add(river.NewPeriodicJob(

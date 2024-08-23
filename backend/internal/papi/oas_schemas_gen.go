@@ -5,6 +5,9 @@ package papi
 import (
 	"fmt"
 	"io"
+	"time"
+
+	"github.com/go-faster/errors"
 )
 
 func (s *DefaultErrorResponseStatusCode) Error() string {
@@ -321,6 +324,543 @@ func (s *ElevationPostReq) SetCoordinates(val [][]float64) {
 	s.Coordinates = val
 }
 
+type MunroAccessMunrosGetOK struct {
+	Munros MunroAccessMunrosGetOKMunros `json:"munros"`
+}
+
+// GetMunros returns the value of Munros.
+func (s *MunroAccessMunrosGetOK) GetMunros() MunroAccessMunrosGetOKMunros {
+	return s.Munros
+}
+
+// SetMunros sets the value of Munros.
+func (s *MunroAccessMunrosGetOK) SetMunros(val MunroAccessMunrosGetOKMunros) {
+	s.Munros = val
+}
+
+type MunroAccessMunrosGetOKMunros struct {
+	Type     MunroAccessMunrosGetOKMunrosType           `json:"type"`
+	Features []MunroAccessMunrosGetOKMunrosFeaturesItem `json:"features"`
+}
+
+// GetType returns the value of Type.
+func (s *MunroAccessMunrosGetOKMunros) GetType() MunroAccessMunrosGetOKMunrosType {
+	return s.Type
+}
+
+// GetFeatures returns the value of Features.
+func (s *MunroAccessMunrosGetOKMunros) GetFeatures() []MunroAccessMunrosGetOKMunrosFeaturesItem {
+	return s.Features
+}
+
+// SetType sets the value of Type.
+func (s *MunroAccessMunrosGetOKMunros) SetType(val MunroAccessMunrosGetOKMunrosType) {
+	s.Type = val
+}
+
+// SetFeatures sets the value of Features.
+func (s *MunroAccessMunrosGetOKMunros) SetFeatures(val []MunroAccessMunrosGetOKMunrosFeaturesItem) {
+	s.Features = val
+}
+
+type MunroAccessMunrosGetOKMunrosFeaturesItem struct {
+	Type       MunroAccessMunrosGetOKMunrosFeaturesItemType       `json:"type"`
+	ID         int                                                `json:"id"`
+	Properties MunroAccessMunrosGetOKMunrosFeaturesItemProperties `json:"properties"`
+	Geometry   MunroAccessMunrosGetOKMunrosFeaturesItemGeometry   `json:"geometry"`
+}
+
+// GetType returns the value of Type.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItem) GetType() MunroAccessMunrosGetOKMunrosFeaturesItemType {
+	return s.Type
+}
+
+// GetID returns the value of ID.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItem) GetID() int {
+	return s.ID
+}
+
+// GetProperties returns the value of Properties.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItem) GetProperties() MunroAccessMunrosGetOKMunrosFeaturesItemProperties {
+	return s.Properties
+}
+
+// GetGeometry returns the value of Geometry.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItem) GetGeometry() MunroAccessMunrosGetOKMunrosFeaturesItemGeometry {
+	return s.Geometry
+}
+
+// SetType sets the value of Type.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItem) SetType(val MunroAccessMunrosGetOKMunrosFeaturesItemType) {
+	s.Type = val
+}
+
+// SetID sets the value of ID.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItem) SetID(val int) {
+	s.ID = val
+}
+
+// SetProperties sets the value of Properties.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItem) SetProperties(val MunroAccessMunrosGetOKMunrosFeaturesItemProperties) {
+	s.Properties = val
+}
+
+// SetGeometry sets the value of Geometry.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItem) SetGeometry(val MunroAccessMunrosGetOKMunrosFeaturesItemGeometry) {
+	s.Geometry = val
+}
+
+type MunroAccessMunrosGetOKMunrosFeaturesItemGeometry struct {
+	Type        MunroAccessMunrosGetOKMunrosFeaturesItemGeometryType `json:"type"`
+	Coordinates []float64                                            `json:"coordinates"`
+}
+
+// GetType returns the value of Type.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemGeometry) GetType() MunroAccessMunrosGetOKMunrosFeaturesItemGeometryType {
+	return s.Type
+}
+
+// GetCoordinates returns the value of Coordinates.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemGeometry) GetCoordinates() []float64 {
+	return s.Coordinates
+}
+
+// SetType sets the value of Type.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemGeometry) SetType(val MunroAccessMunrosGetOKMunrosFeaturesItemGeometryType) {
+	s.Type = val
+}
+
+// SetCoordinates sets the value of Coordinates.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemGeometry) SetCoordinates(val []float64) {
+	s.Coordinates = val
+}
+
+type MunroAccessMunrosGetOKMunrosFeaturesItemGeometryType string
+
+const (
+	MunroAccessMunrosGetOKMunrosFeaturesItemGeometryTypePoint MunroAccessMunrosGetOKMunrosFeaturesItemGeometryType = "Point"
+)
+
+// AllValues returns all MunroAccessMunrosGetOKMunrosFeaturesItemGeometryType values.
+func (MunroAccessMunrosGetOKMunrosFeaturesItemGeometryType) AllValues() []MunroAccessMunrosGetOKMunrosFeaturesItemGeometryType {
+	return []MunroAccessMunrosGetOKMunrosFeaturesItemGeometryType{
+		MunroAccessMunrosGetOKMunrosFeaturesItemGeometryTypePoint,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s MunroAccessMunrosGetOKMunrosFeaturesItemGeometryType) MarshalText() ([]byte, error) {
+	switch s {
+	case MunroAccessMunrosGetOKMunrosFeaturesItemGeometryTypePoint:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemGeometryType) UnmarshalText(data []byte) error {
+	switch MunroAccessMunrosGetOKMunrosFeaturesItemGeometryType(data) {
+	case MunroAccessMunrosGetOKMunrosFeaturesItemGeometryTypePoint:
+		*s = MunroAccessMunrosGetOKMunrosFeaturesItemGeometryTypePoint
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type MunroAccessMunrosGetOKMunrosFeaturesItemProperties struct {
+	Name   string                                                     `json:"name"`
+	Meters float64                                                    `json:"meters"`
+	Photo  OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto `json:"photo"`
+}
+
+// GetName returns the value of Name.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemProperties) GetName() string {
+	return s.Name
+}
+
+// GetMeters returns the value of Meters.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemProperties) GetMeters() float64 {
+	return s.Meters
+}
+
+// GetPhoto returns the value of Photo.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemProperties) GetPhoto() OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto {
+	return s.Photo
+}
+
+// SetName sets the value of Name.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemProperties) SetName(val string) {
+	s.Name = val
+}
+
+// SetMeters sets the value of Meters.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemProperties) SetMeters(val float64) {
+	s.Meters = val
+}
+
+// SetPhoto sets the value of Photo.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemProperties) SetPhoto(val OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) {
+	s.Photo = val
+}
+
+type MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto struct {
+	Source     string    `json:"source"`
+	Width      int       `json:"width"`
+	Height     int       `json:"height"`
+	Author     OptString `json:"author"`
+	SourceText OptString `json:"sourceText"`
+	SourceLink OptString `json:"sourceLink"`
+}
+
+// GetSource returns the value of Source.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) GetSource() string {
+	return s.Source
+}
+
+// GetWidth returns the value of Width.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) GetWidth() int {
+	return s.Width
+}
+
+// GetHeight returns the value of Height.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) GetHeight() int {
+	return s.Height
+}
+
+// GetAuthor returns the value of Author.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) GetAuthor() OptString {
+	return s.Author
+}
+
+// GetSourceText returns the value of SourceText.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) GetSourceText() OptString {
+	return s.SourceText
+}
+
+// GetSourceLink returns the value of SourceLink.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) GetSourceLink() OptString {
+	return s.SourceLink
+}
+
+// SetSource sets the value of Source.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) SetSource(val string) {
+	s.Source = val
+}
+
+// SetWidth sets the value of Width.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) SetWidth(val int) {
+	s.Width = val
+}
+
+// SetHeight sets the value of Height.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) SetHeight(val int) {
+	s.Height = val
+}
+
+// SetAuthor sets the value of Author.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) SetAuthor(val OptString) {
+	s.Author = val
+}
+
+// SetSourceText sets the value of SourceText.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) SetSourceText(val OptString) {
+	s.SourceText = val
+}
+
+// SetSourceLink sets the value of SourceLink.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) SetSourceLink(val OptString) {
+	s.SourceLink = val
+}
+
+type MunroAccessMunrosGetOKMunrosFeaturesItemType string
+
+const (
+	MunroAccessMunrosGetOKMunrosFeaturesItemTypeFeature MunroAccessMunrosGetOKMunrosFeaturesItemType = "Feature"
+)
+
+// AllValues returns all MunroAccessMunrosGetOKMunrosFeaturesItemType values.
+func (MunroAccessMunrosGetOKMunrosFeaturesItemType) AllValues() []MunroAccessMunrosGetOKMunrosFeaturesItemType {
+	return []MunroAccessMunrosGetOKMunrosFeaturesItemType{
+		MunroAccessMunrosGetOKMunrosFeaturesItemTypeFeature,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s MunroAccessMunrosGetOKMunrosFeaturesItemType) MarshalText() ([]byte, error) {
+	switch s {
+	case MunroAccessMunrosGetOKMunrosFeaturesItemTypeFeature:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *MunroAccessMunrosGetOKMunrosFeaturesItemType) UnmarshalText(data []byte) error {
+	switch MunroAccessMunrosGetOKMunrosFeaturesItemType(data) {
+	case MunroAccessMunrosGetOKMunrosFeaturesItemTypeFeature:
+		*s = MunroAccessMunrosGetOKMunrosFeaturesItemTypeFeature
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type MunroAccessMunrosGetOKMunrosType string
+
+const (
+	MunroAccessMunrosGetOKMunrosTypeFeatureCollection MunroAccessMunrosGetOKMunrosType = "FeatureCollection"
+)
+
+// AllValues returns all MunroAccessMunrosGetOKMunrosType values.
+func (MunroAccessMunrosGetOKMunrosType) AllValues() []MunroAccessMunrosGetOKMunrosType {
+	return []MunroAccessMunrosGetOKMunrosType{
+		MunroAccessMunrosGetOKMunrosTypeFeatureCollection,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s MunroAccessMunrosGetOKMunrosType) MarshalText() ([]byte, error) {
+	switch s {
+	case MunroAccessMunrosGetOKMunrosTypeFeatureCollection:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *MunroAccessMunrosGetOKMunrosType) UnmarshalText(data []byte) error {
+	switch MunroAccessMunrosGetOKMunrosType(data) {
+	case MunroAccessMunrosGetOKMunrosTypeFeatureCollection:
+		*s = MunroAccessMunrosGetOKMunrosTypeFeatureCollection
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// MunroAccessReportIDGetTemporaryRedirect is response for MunroAccessReportIDGet operation.
+type MunroAccessReportIDGetTemporaryRedirect struct {
+	Location OptString
+}
+
+// GetLocation returns the value of Location.
+func (s *MunroAccessReportIDGetTemporaryRedirect) GetLocation() OptString {
+	return s.Location
+}
+
+// SetLocation sets the value of Location.
+func (s *MunroAccessReportIDGetTemporaryRedirect) SetLocation(val OptString) {
+	s.Location = val
+}
+
+type MunroAccessReportIDStatusGetOK struct {
+	ID        string                               `json:"id"`
+	Timestamp time.Time                            `json:"timestamp"`
+	Status    MunroAccessReportIDStatusGetOKStatus `json:"status"`
+	Report    MunroAccessReportIDStatusGetOKReport `json:"report"`
+}
+
+// GetID returns the value of ID.
+func (s *MunroAccessReportIDStatusGetOK) GetID() string {
+	return s.ID
+}
+
+// GetTimestamp returns the value of Timestamp.
+func (s *MunroAccessReportIDStatusGetOK) GetTimestamp() time.Time {
+	return s.Timestamp
+}
+
+// GetStatus returns the value of Status.
+func (s *MunroAccessReportIDStatusGetOK) GetStatus() MunroAccessReportIDStatusGetOKStatus {
+	return s.Status
+}
+
+// GetReport returns the value of Report.
+func (s *MunroAccessReportIDStatusGetOK) GetReport() MunroAccessReportIDStatusGetOKReport {
+	return s.Report
+}
+
+// SetID sets the value of ID.
+func (s *MunroAccessReportIDStatusGetOK) SetID(val string) {
+	s.ID = val
+}
+
+// SetTimestamp sets the value of Timestamp.
+func (s *MunroAccessReportIDStatusGetOK) SetTimestamp(val time.Time) {
+	s.Timestamp = val
+}
+
+// SetStatus sets the value of Status.
+func (s *MunroAccessReportIDStatusGetOK) SetStatus(val MunroAccessReportIDStatusGetOKStatus) {
+	s.Status = val
+}
+
+// SetReport sets the value of Report.
+func (s *MunroAccessReportIDStatusGetOK) SetReport(val MunroAccessReportIDStatusGetOKReport) {
+	s.Report = val
+}
+
+type MunroAccessReportIDStatusGetOKReport struct {
+	FromLabel   string    `json:"fromLabel"`
+	FromPoint   Point     `json:"fromPoint"`
+	Date        time.Time `json:"date"`
+	RequestTime time.Time `json:"requestTime"`
+	// URL to report JSON.
+	URL OptString `json:"url"`
+}
+
+// GetFromLabel returns the value of FromLabel.
+func (s *MunroAccessReportIDStatusGetOKReport) GetFromLabel() string {
+	return s.FromLabel
+}
+
+// GetFromPoint returns the value of FromPoint.
+func (s *MunroAccessReportIDStatusGetOKReport) GetFromPoint() Point {
+	return s.FromPoint
+}
+
+// GetDate returns the value of Date.
+func (s *MunroAccessReportIDStatusGetOKReport) GetDate() time.Time {
+	return s.Date
+}
+
+// GetRequestTime returns the value of RequestTime.
+func (s *MunroAccessReportIDStatusGetOKReport) GetRequestTime() time.Time {
+	return s.RequestTime
+}
+
+// GetURL returns the value of URL.
+func (s *MunroAccessReportIDStatusGetOKReport) GetURL() OptString {
+	return s.URL
+}
+
+// SetFromLabel sets the value of FromLabel.
+func (s *MunroAccessReportIDStatusGetOKReport) SetFromLabel(val string) {
+	s.FromLabel = val
+}
+
+// SetFromPoint sets the value of FromPoint.
+func (s *MunroAccessReportIDStatusGetOKReport) SetFromPoint(val Point) {
+	s.FromPoint = val
+}
+
+// SetDate sets the value of Date.
+func (s *MunroAccessReportIDStatusGetOKReport) SetDate(val time.Time) {
+	s.Date = val
+}
+
+// SetRequestTime sets the value of RequestTime.
+func (s *MunroAccessReportIDStatusGetOKReport) SetRequestTime(val time.Time) {
+	s.RequestTime = val
+}
+
+// SetURL sets the value of URL.
+func (s *MunroAccessReportIDStatusGetOKReport) SetURL(val OptString) {
+	s.URL = val
+}
+
+type MunroAccessReportIDStatusGetOKStatus string
+
+const (
+	MunroAccessReportIDStatusGetOKStatusReceived MunroAccessReportIDStatusGetOKStatus = "received"
+	MunroAccessReportIDStatusGetOKStatusWorking  MunroAccessReportIDStatusGetOKStatus = "working"
+	MunroAccessReportIDStatusGetOKStatusReady    MunroAccessReportIDStatusGetOKStatus = "ready"
+)
+
+// AllValues returns all MunroAccessReportIDStatusGetOKStatus values.
+func (MunroAccessReportIDStatusGetOKStatus) AllValues() []MunroAccessReportIDStatusGetOKStatus {
+	return []MunroAccessReportIDStatusGetOKStatus{
+		MunroAccessReportIDStatusGetOKStatusReceived,
+		MunroAccessReportIDStatusGetOKStatusWorking,
+		MunroAccessReportIDStatusGetOKStatusReady,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s MunroAccessReportIDStatusGetOKStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case MunroAccessReportIDStatusGetOKStatusReceived:
+		return []byte(s), nil
+	case MunroAccessReportIDStatusGetOKStatusWorking:
+		return []byte(s), nil
+	case MunroAccessReportIDStatusGetOKStatusReady:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *MunroAccessReportIDStatusGetOKStatus) UnmarshalText(data []byte) error {
+	switch MunroAccessReportIDStatusGetOKStatus(data) {
+	case MunroAccessReportIDStatusGetOKStatusReceived:
+		*s = MunroAccessReportIDStatusGetOKStatusReceived
+		return nil
+	case MunroAccessReportIDStatusGetOKStatusWorking:
+		*s = MunroAccessReportIDStatusGetOKStatusWorking
+		return nil
+	case MunroAccessReportIDStatusGetOKStatusReady:
+		*s = MunroAccessReportIDStatusGetOKStatusReady
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type MunroAccessRequestPostOK struct {
+	ID string `json:"id"`
+}
+
+// GetID returns the value of ID.
+func (s *MunroAccessRequestPostOK) GetID() string {
+	return s.ID
+}
+
+// SetID sets the value of ID.
+func (s *MunroAccessRequestPostOK) SetID(val string) {
+	s.ID = val
+}
+
+type MunroAccessRequestPostReq struct {
+	FromLabel string    `json:"fromLabel"`
+	FromPoint Point     `json:"fromPoint"`
+	Date      time.Time `json:"date"`
+}
+
+// GetFromLabel returns the value of FromLabel.
+func (s *MunroAccessRequestPostReq) GetFromLabel() string {
+	return s.FromLabel
+}
+
+// GetFromPoint returns the value of FromPoint.
+func (s *MunroAccessRequestPostReq) GetFromPoint() Point {
+	return s.FromPoint
+}
+
+// GetDate returns the value of Date.
+func (s *MunroAccessRequestPostReq) GetDate() time.Time {
+	return s.Date
+}
+
+// SetFromLabel sets the value of FromLabel.
+func (s *MunroAccessRequestPostReq) SetFromLabel(val string) {
+	s.FromLabel = val
+}
+
+// SetFromPoint sets the value of FromPoint.
+func (s *MunroAccessRequestPostReq) SetFromPoint(val Point) {
+	s.FromPoint = val
+}
+
+// SetDate sets the value of Date.
+func (s *MunroAccessRequestPostReq) SetDate(val time.Time) {
+	s.Date = val
+}
+
 // NewOptBool returns new OptBool with value set to v.
 func NewOptBool(v bool) OptBool {
 	return OptBool{
@@ -407,6 +947,52 @@ func (o OptInt) Get() (v int, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptInt) Or(d int) int {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto returns new OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto with value set to v.
+func NewOptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto(v MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto {
+	return OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto is optional MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto.
+type OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto struct {
+	Value MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto
+	Set   bool
+}
+
+// IsSet returns true if OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto was set.
+func (o OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) Reset() {
+	var v MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) SetTo(v MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) Get() (v MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) Or(d MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -596,6 +1182,8 @@ func (o OptValidationErrorsFieldErrors) Or(d ValidationErrorsFieldErrors) Valida
 	}
 	return d
 }
+
+type Point []float64
 
 type SetSessionCookieHeader string
 

@@ -1,4 +1,4 @@
-import { AuthAcquireResponse } from '@/api/auth';
+import { AuthAcquireResponse } from '@/api_to_remove/auth';
 import { getUser } from '@workos-inc/authkit-nextjs';
 
 export async function POST(_req: Request): Promise<Response> {

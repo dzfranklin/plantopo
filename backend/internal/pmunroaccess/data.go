@@ -11,18 +11,21 @@ var munroStartsGeoJSON []byte
 var munroStartClusters []*munroStartCluster
 
 type munroStartCluster struct {
-	Munros      []string       `json:"munros"`
-	PopularityA map[string]int `json:"popularityA"`
-	PopularityB map[string]int `json:"popularityB"`
-	Point       [2]float64     `json:"point"`
+	Munros      []int       `json:"munros"`
+	PopularityA map[int]int `json:"popularityA"`
+	PopularityB map[int]int `json:"popularityB"`
+	Point       [2]float64  `json:"point"`
+	ID          int         `json:"id"`
+	Name        string      `json:"name"`
 }
 
 func init() {
 	var munroStartsGeoJSONData struct {
 		Features []struct {
 			Properties struct {
-				Munro       string
+				Munro       int
 				Cluster     int
+				ClusterName string
 				PopularityA int
 				PopularityB int
 			}
@@ -44,8 +47,10 @@ func init() {
 		if !ok {
 			cluster = &munroStartCluster{
 				Point:       [2]float64{f.Geometry.Coordinates[0], f.Geometry.Coordinates[1]},
-				PopularityA: make(map[string]int),
-				PopularityB: make(map[string]int),
+				PopularityA: make(map[int]int),
+				PopularityB: make(map[int]int),
+				ID:          f.Properties.Cluster,
+				Name:        f.Properties.ClusterName,
 			}
 			byCluster[props.Cluster] = cluster
 		}

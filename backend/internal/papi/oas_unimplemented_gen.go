@@ -85,6 +85,42 @@ func (UnimplementedHandler) ElevationPost(ctx context.Context, req *ElevationPos
 	return r, ht.ErrNotImplemented
 }
 
+// MunroAccessMunrosGet implements GET /munro-access/munros operation.
+//
+// List munros.
+//
+// GET /munro-access/munros
+func (UnimplementedHandler) MunroAccessMunrosGet(ctx context.Context) (r *MunroAccessMunrosGetOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// MunroAccessReportIDGet implements GET /munro-access/report/{id} operation.
+//
+// Get a report.
+//
+// GET /munro-access/report/{id}
+func (UnimplementedHandler) MunroAccessReportIDGet(ctx context.Context, params MunroAccessReportIDGetParams) (r *MunroAccessReportIDGetTemporaryRedirect, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// MunroAccessReportIDStatusGet implements GET /munro-access/report/{id}/status operation.
+//
+// To subscribe to status updates use `new EventSource('/munro-access/report/{id}/status-updates')`.
+//
+// GET /munro-access/report/{id}/status
+func (UnimplementedHandler) MunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (r *MunroAccessReportIDStatusGetOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// MunroAccessRequestPost implements POST /munro-access/request operation.
+//
+// Request a report be generated.
+//
+// POST /munro-access/request
+func (UnimplementedHandler) MunroAccessRequestPost(ctx context.Context, req *MunroAccessRequestPostReq) (r *MunroAccessRequestPostOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // WeatherShortUkGet implements GET /weather/short-uk operation.
 //
 // Find short format weather forecasts for a place in the UK.

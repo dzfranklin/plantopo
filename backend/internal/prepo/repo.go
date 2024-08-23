@@ -7,6 +7,7 @@ type Repo struct {
 	Sessions             *Sessions
 	Users                *Users
 	AuthorizedSMSSenders *AuthorizedSMSSenders
+	BritishAndIrishHills *BritishAndIrishHills
 }
 
 func New(env *pconfig.Env) (*Repo, error) {
@@ -22,5 +23,6 @@ func New(env *pconfig.Env) (*Repo, error) {
 		Sessions:             newSessions(env, al, users),
 		Users:                users,
 		AuthorizedSMSSenders: newAuthorizedSMSSenders(env),
+		BritishAndIrishHills: NewBritishAndIrishHills(env.DB),
 	}, nil
 }

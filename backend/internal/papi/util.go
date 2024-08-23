@@ -7,3 +7,7 @@ func omitEmptyString(v string) OptString {
 		return OptString{Value: v, Set: true}
 	}
 }
+
+func NewPoint(v [2]float64) Point {
+	return Point{v[0], v[1]}
+}

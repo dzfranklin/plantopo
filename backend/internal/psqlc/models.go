@@ -30,6 +30,44 @@ type AuthorizedSmsSender struct {
 	Comment    pgtype.Text
 }
 
+type BritishAndIrishHill struct {
+	ID             int32
+	Name           pgtype.Text
+	Point          interface{}
+	SmcParentID    pgtype.Int4
+	Classification []string
+	Map50k         pgtype.Text
+	Map25k         pgtype.Text
+	Metres         pgtype.Float8
+	GridRef        pgtype.Text
+	GridRef10      pgtype.Text
+	Drop           pgtype.Float8
+	ColGridRef     pgtype.Text
+	ColHeight      pgtype.Float8
+	Feature        pgtype.Text
+	Observations   pgtype.Text
+	Survey         pgtype.Text
+	Country        pgtype.Text
+	Revision       pgtype.Text
+	Comments       pgtype.Text
+}
+
+type BritishAndIrishHillPhoto struct {
+	ID         int64
+	HillID     int32
+	Caption    pgtype.Text
+	Licenses   []string
+	Source     string
+	Size       int32
+	Width      int32
+	Height     int32
+	UploadedAt pgtype.Timestamp
+	Author     pgtype.Text
+	SourceText pgtype.Text
+	SourceLink pgtype.Text
+	Importer   pgtype.Text
+}
+
 type PendingEmailConfirmationToken struct {
 	Email     pgtype.Text
 	Token     string

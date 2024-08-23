@@ -2,6 +2,7 @@ package prepo
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/base32"
 	"encoding/binary"
 	"github.com/dzfranklin/plantopo/backend/internal/perrors"
@@ -10,6 +11,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"io"
 	"strings"
 	"time"
 )
@@ -28,6 +30,25 @@ func pgText(v string) pgtype.Text {
 	return pgtype.Text{
 		String: v,
 		Valid:  true,
+	}
+}
+
+func pgOptText(v string) pgtype.Text {
+	if v == "" {
+		return pgtype.Text{}
+	} else {
+		return pgtype.Text{
+			String: v,
+			Valid:  true,
+		}
+	}
+}
+
+func pgOptTime(v time.Time) pgtype.Timestamp {
+	if v.IsZero() {
+		return pgtype.Timestamp{}
+	} else {
+		return pgtype.Timestamp{Valid: true, Time: v}
 	}
 }
 
@@ -68,6 +89,14 @@ func SerialToID(kind string, v int64) string {
 
 func UUIDToID(kind string, v uuid.UUID) string {
 	return kind + "_" + idEncoding.EncodeToString(v[:])
+}
+
+func SecureRandomID(kind string) string {
+	v := make([]byte, 64) // https://owasp.org/www-community/vulnerabilities/Insufficient_Session-ID_Length
+	if _, err := io.ReadFull(rand.Reader, v); err != nil {
+		panic("failed to read random bytes")
+	}
+	return kind + "_" + idEncoding.EncodeToString(v)
 }
 
 func IDToSerial(kind string, v string) (int64, error) {

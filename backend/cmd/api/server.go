@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-// TODO: Integrate prometheus
+// WatchStatus: Integrate prometheus
 
 func NewServer(env *pconfig.Env, repo *prepo.Repo) *http.Server {
 	apiSrv, err := papi.New(env, repo)

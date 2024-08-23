@@ -7,13 +7,16 @@ tmpdir  := `mktemp -d`
 check-all:
     spectral lint ./api/schema/schema.yaml --fail-severity error
 
+    cd app && npm run lint
+
     cd ./backend && go test -race ./...
-    cd backend && test -z $(gofmt -l .)
-    cd backend && go vet ./...
-    cd backend && go mod tidy && git diff --exit-code -- go.mod go.sum
     cd backend && staticcheck ./...
+    cd backend && go vet ./...
+    cd backend && test -z $(gofmt -l .)
+    cd backend && go mod tidy && git diff --exit-code -- go.mod go.sum
 
 gen:
+    cd app && npm run build:dependency-report
     just api-schema-gen
     just sqlc-gen
 
@@ -36,6 +39,8 @@ api-schema-gen:
       -target internal/papi -package papi \
       -clean \
       ./internal/papi/schema.gen.yaml
+
+    cd app && npx openapi-typescript ../api/schema/schema.yaml -o ./api/v1.d.ts
 
 sqlc-watch:
     cd backend && watchexec \

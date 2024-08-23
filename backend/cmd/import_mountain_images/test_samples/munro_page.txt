@@ -1,0 +1,36 @@
+{{Use dmy dates|date=August 2019}}
+{{Infobox mountain
+| name = A' Mhaighdean
+| photo = A-Mhaighdean-from-Slioch.jpg
+| photo_caption = View of A' Mhaighdean from Slioch
+| elevation_m = 967
+| elevation_ref = <ref>{{cite web |url= http://www.walkhighlands.co.uk/munros/a-mhaighdean |title= walkhighlands A' Mhaighdean |author=<!--Staff writer(s); no by-line.--> |year=2014 |publisher=walkhighlands.co.uk |accessdate=14 January 2014}}</ref>
+| listing = [[Munro]], [[Marilyn (hill)|Marilyn]]
+| translation =the maiden
+| language = [[Scottish Gaelic language|Gaelic]]
+| prominence_m = 442
+| pronunciation = {{IPA-gd|ə ˈvɤitʲan|lang}}
+| location = [[Highland (council area)|Highland]], [[Scotland]]
+| range = [[Northwest Highlands]]
+| topo = 
+| easiest_route = 
+| grid_ref_UK = NH007749
+| coordinates = {{coord|57.7196|N|5.346|W|type:mountain_scale:100000|format=dms|display=inline,title}}
+| map = Scotland Highland
+}}
+
+'''A' Mhaighdean''' is one of the least accessible of the [[munro]]s in northern [[Scotland]]. It is {{convert|8|mi|km}} north of [[Kinlochewe]] but most easily accessible from [[Poolewe]], taking a private road South East (pedestrian & bicycle access only) to Kernsary. A good track then leads to the causeway between the [[Fionn Loch]] and [[Dubh Loch, Gairloch|Dubh Loch]]. Follow the path eastwards to about the {{convert|1000|ft|m}} level and cross the Allt Bruthach an Esain to gain the North West ridge of the mountain.
+
+The mountain is composed of [[gneiss]], the summit presenting the highest elevation of the [[Lewisian complex|Lewisian]]. Part of the North West ridge is capped by [[Torridonian]] [[sandstone]].
+
+==Footnotes==
+{{reflist}}
+
+{{Scottish Munros section 14}}
+
+[[Category:Munros]]
+[[Category:Marilyns of Scotland]]
+[[Category:Mountains and hills of the Northwest Highlands]]
+
+
+{{Highland-geo-stub}}

@@ -1,4 +1,4 @@
-import { AuthorizationError } from '@/api';
+import { AuthorizationError } from '@/api_to_remove';
 import { fetchUnitSettings } from './serverApi';
 import { UnitSettingsClientProvider } from './useUnitSettings';
 import { UnitSettings } from './schema';

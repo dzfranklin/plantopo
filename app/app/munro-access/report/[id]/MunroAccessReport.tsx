@@ -1,15 +1,30 @@
 'use client';
 
-import { notFound } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import {
-  JourneyData,
-  ReportData,
-  ClusterData,
-  reportDataSchema,
-  itineraryData,
-} from './report';
-import prettyMilliseconds from 'pretty-ms';
+  Dispatch,
+  SetStateAction,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { ClusterData, MunroList, ReportData, reportDataSchema } from './report';
+import { ClusterComponent } from './ClusterComponent';
+import { ReportMapComponent } from './ReportMapComponent';
+import {
+  ClusterScoreFeatures,
+  clusterScoreFeaturesSchema,
+  defaultClusterWeights,
+  scoreCluster,
+  weighClusterScores,
+} from './ranking';
+import { useDebugMode } from '@/hooks/debugMode';
+import { Button } from '@/components/button';
+import Skeleton from '@/components/Skeleton';
+import { Layout } from '@/components/Layout';
+import { paths } from '@/api/v1';
+import { useQuery } from '@tanstack/react-query';
+import { API_ENDPOINT } from '@/env';
 import { DateTime } from 'luxon';
 
 /* TODO:
@@ -18,150 +33,255 @@ import { DateTime } from 'luxon';
   - Also display by munro rather than by cluster
 */
 
-async function fetchReport(
-  url: string,
-): Promise<{ data: ReportData } | { error: unknown }> {
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      if (resp.status === 404) {
-        notFound();
-      } else {
-        throw new Error('report server issue');
-      }
-    }
+type ReportStatus =
+  paths['/munro-access/report/{id}/status']['get']['responses']['200']['content']['application/json'];
 
-    const json = await resp.json();
-    const data = reportDataSchema.parse(json);
-    return { data };
-  } catch (error) {
-    return { error };
-  }
-}
-
-export function MunroAccessReportLoader({ reportURL }: { reportURL: string }) {
-  const [result, setResult] = useState<
-    { data: ReportData } | { error: unknown } | null
-  >(null);
-  useEffect(() => {
-    fetchReport(reportURL).then(setResult);
-  }, [reportURL]);
-
-  if (result && 'error' in result) {
-    if (result.error === 'not-found') {
-      notFound();
-    } else {
-      throw result.error;
-    }
-  }
-
-  if (result === null) {
-    return <div>Loading...</div>;
-  }
-
-  return <MunroAccessReport report={result.data} />;
-}
-
-export function MunroAccessReport({ report }: { report: ReportData }) {
-  return (
-    <div className="space-y-4">
-      <div>
-        {report.from.join(', ')} {report.date}
-      </div>
-      <div>TODO: Data credit</div>
-      <ul>
-        {report.clusters.slice(0, 7).map((cluster, i) => (
-          <li key={i}>
-            <ClusterComponent cluster={cluster} i={i} />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function ClusterComponent({ cluster, i }: { cluster: ClusterData; i: number }) {
-  return (
-    <div className="border-b">
-      <span className="mr-1">{i + 1}</span>
-      <span>{cluster.to.munros.join(', ')}</span>
-      <span>{JSON.stringify(cluster.to)}</span>
-      <JourneysComponent dir="out" journeys={cluster.journeys.out} />
-      <JourneysComponent dir="back" journeys={cluster.journeys.back} />
-    </div>
-  );
-}
-
-function JourneysComponent({
-  dir,
-  journeys,
+export function MunroAccessReportLoader({
+  id,
+  munros,
+  initialStatus,
 }: {
-  dir: 'out' | 'back';
-  journeys: JourneyData;
+  id: string;
+  munros: MunroList;
+  initialStatus: ReportStatus;
 }) {
-  if (journeys.routingErrors.length > 0) {
-    return (
-      <div>
-        no route {dir}: {journeys.messageStrings.join(' ')}
-      </div>
-    );
+  const [status, setStatus] = useState(initialStatus);
+
+  useEffect(() => {
+    let unsubscribe = () => {};
+    const subscribe = () => {
+      const events = new EventSource(
+        API_ENDPOINT + `munro-access/report/${id}/status-updates`,
+      );
+      unsubscribe();
+      unsubscribe = () => events.close();
+      events.addEventListener('open', () => {
+        console.log('event source connected');
+      });
+      events.addEventListener('status', (evt) => {
+        setStatus((p) => {
+          if (p.status === 'ready') {
+            return p;
+          } else {
+            return JSON.parse(evt.data);
+          }
+        });
+        events.addEventListener('error', () => {
+          console.log('event source error, retrying later');
+          setTimeout(subscribe, 10_000);
+        });
+      });
+    };
+    subscribe();
+    return () => unsubscribe();
+  }, [id]);
+
+  const report = useQuery({
+    queryKey: [status.report.url],
+    queryFn: async () =>
+      reportDataSchema.parse(await (await fetch(status.report.url!)).json()),
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    enabled: !!status.report.url,
+  });
+
+  if (report.error) {
+    throw report.error;
   }
-  return (
-    <div>
-      <div>{dir === 'out' ? 'Out' : 'Back'}</div>
-      <ul>
-        {journeys.itineraries.map((itinerary, i) => (
-          <li key={i}>
-            <ItineraryComponent itinerary={itinerary} />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
 
-function ItineraryComponent({ itinerary }: { itinerary: itineraryData }) {
-  const [expanded, setExpanded] = useState(false);
+  const [formattedDate, setFormattedDate] = useState(
+    DateTime.fromISO(status.report.date).toISODate(),
+  );
+  useEffect(() => {
+    setFormattedDate(
+      DateTime.fromISO(status.report.date).toLocaleString(DateTime.DATE_FULL),
+    );
+  }, [status.report.date]);
+  const title = `Munro access report for ${status.report.fromLabel} on ${formattedDate}`;
+
   return (
-    <div>
-      <span className="flex gap-1">
-        <span>
-          <OTPTime>{itinerary.startTime}</OTPTime> -{' '}
-          <OTPTime>{itinerary.endTime}</OTPTime>
-        </span>
-        <span>
-          <OTPDuration>{itinerary.duration}</OTPDuration>
-        </span>
-        <button onClick={() => setExpanded((p) => !p)}>
-          {itinerary.legs.length} steps
-        </button>
-      </span>
-      {expanded && (
-        <div>
-          <ul>
-            {itinerary.legs.map((leg, i) => (
-              <li key={i}>
-                <span>
-                  {leg.from.name} <OTPTime>{leg.startTime}</OTPTime> to{' '}
-                  {leg.to.name} <OTPTime>{leg.endTime}</OTPTime> via {leg.mode}
-                  {leg.headsign && ' ' + leg.headsign}
-                  {leg.interlineWithPreviousLeg && ' (interline)'}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+    <Layout pageTitle={title} wide={true}>
+      {report.data ? (
+        <MunroAccessReport report={report.data} munros={munros} />
+      ) : (
+        <Skeleton />
       )}
+    </Layout>
+  );
+}
+
+export function MunroAccessReport({
+  report,
+  munros,
+}: {
+  report: ReportData;
+  munros: MunroList;
+}) {
+  const [expandedCluster, setExpandedCluster] = useState<number | null>(null);
+  const debugMode = useDebugMode();
+  const [weights, setWeights] = useState(defaultClusterWeights);
+
+  const rankedClusters = useMemo(() => {
+    const scores = weighClusterScores(
+      report.clusters.map(scoreCluster),
+      weights,
+    );
+    return report.clusters
+      .map((v, i): [ClusterData, number] => [v, i])
+      .filter(([v, _]) => scoreCluster(v) !== undefined)
+      .sort(([aV, aI], [bV, bI]) => {
+        const aS = scores[aI]!;
+        const bS = scores[bI]!;
+        if (aS === bS) {
+          return aV.to.id - bV.to.id;
+        } else {
+          return bS - aS;
+        }
+      })
+      .map(([v]) => v);
+  }, [report, weights]);
+
+  return (
+    <div className="space-y-6">
+      <p>TODO time generated</p>
+
+      <ShortCredit />
+
+      {debugMode && (
+        <DebugWeightControl value={weights} setValue={setWeights} />
+      )}
+
+      <div className="grid gap-5 lg:gap-10 grid-rows-[400px_minmax(0,1fr)] lg:grid-rows-1 lg:grid-cols-[minmax(0,4fr)_minmax(0,6fr)] overflow-x-clip">
+        <div className="lg:relative lg:col-start-2 lg:row-start-1">
+          <ReportMapComponent
+            report={report}
+            munros={munros}
+            expandedCluster={expandedCluster}
+          />
+        </div>
+        <ul className="lg:col-start-1 lg:row-start-1 max-h-full max-w-full w-full overflow-y-auto overflow-x-clip">
+          {rankedClusters.map((cluster, i) => (
+            <li
+              key={cluster.to.id}
+              className="mb-2 py-2 border-b w-full max-w-full overflow-x-clip"
+            >
+              <ClusterComponent
+                cluster={cluster}
+                i={i}
+                munros={munros}
+                isExpanded={cluster.to.id === expandedCluster}
+                setIsExpanded={(arg) => {
+                  const v =
+                    typeof arg === 'function'
+                      ? arg(cluster.to.id === expandedCluster)
+                      : arg;
+                  setExpandedCluster(v ? cluster.to.id : null);
+                }}
+                from={report.from}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
 
-function OTPTime({ children }: { children: number }) {
-  const d = DateTime.fromMillis(children).setZone('Europe/London').toUTC();
-  return d.toLocaleString(DateTime.TIME_SIMPLE);
+function ShortCredit() {
+  return (
+    <div className="text-sm">
+      This project relies on information from{' '}
+      <a href="https://www.walkhighlands.co.uk/munros/" className="link">
+        Walkhighlands
+      </a>
+      ,{' '}
+      <a href="https://osdatahub.os.uk/" className="link">
+        Ordnance Survey
+      </a>
+      ,{' '}
+      <a href="https://www.openstreetmap.org" className="link">
+        OpenStreetMap
+      </a>
+      ,{' '}
+      <a href="https://data.bus-data.dft.gov.uk/" className="link">
+        Department for Transit
+      </a>
+      ,{' '}
+      <a href="https://opendata.nationalrail.co.uk" className="link">
+        National Rail
+      </a>
+      ,{' '}
+      <a href="https://www.hills-database.co.uk/" className="link">
+        The Database of British and Irish Hills
+      </a>
+      , and{' '}
+      <a href="https://www.geograph.org.uk" className="link">
+        Geograph
+      </a>
+      , code from{' '}
+      <a href="https://www.opentripplanner.org/" className="link">
+        OpenTripPlanner
+      </a>
+      , and{' '}
+      <a href="/credits" className="link">
+        others
+      </a>
+      .
+    </div>
+  );
 }
 
-function OTPDuration({ children }: { children: number }) {
-  const rounded = Math.round(children / 60) * 60;
-  return prettyMilliseconds(rounded * 1000, {});
+function DebugWeightControl({
+  value,
+  setValue,
+}: {
+  value: ClusterScoreFeatures;
+  setValue: Dispatch<SetStateAction<ClusterScoreFeatures>>;
+}) {
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    input.value = JSON.stringify(value, null, 2);
+  }, [value]);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <textarea
+        defaultValue={JSON.stringify(value, null, 2)}
+        ref={inputRef}
+        rows={6}
+      ></textarea>
+
+      {err && <p className="mt-2 text-sm text-red-600">{err}</p>}
+
+      <Button
+        color="secondary"
+        onClick={() => {
+          const input = inputRef.current;
+          if (!input) return;
+
+          let parsed: unknown;
+          try {
+            parsed = JSON.parse(input.value);
+          } catch (err) {
+            setErr(`${err}`);
+            return;
+          }
+
+          const res = clusterScoreFeaturesSchema.safeParse(parsed);
+          if (res.error) {
+            setErr(res.error.toString());
+            return;
+          }
+
+          setValue(res.data);
+        }}
+      >
+        Update
+      </Button>
+    </div>
+  );
 }

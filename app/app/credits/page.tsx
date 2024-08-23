@@ -1,6 +1,8 @@
 import { Layout } from '@/components/Layout';
 import dependencyReport from '@/dependencyReport.json';
 
+const nounprojectCredit = [{ author: 'Adrien Coquet', name: 'No Image' }];
+
 export default function Page() {
   return (
     <Layout pageTitle="Credits" className="prose prose-h2:text-xl">
@@ -25,9 +27,34 @@ export default function Page() {
               https://doi.org/10.5069/G9028PQB
             </a>
           </li>
+          <li>
+            Data from{' '}
+            <a href="https://www.hills-database.co.uk">
+              The Database of British and Irish Hills
+            </a>
+            licensed under a{' '}
+            <a href="http://creativecommons.org/licenses/by/4.0/">
+              Creative Commons Attribution 4.0 International Licence
+            </a>
+          </li>
+          <li>
+            Data from <a href="https://en.wikipedia.org">Wikipedia</a>
+          </li>
         </ul>
 
         <h2>App</h2>
+
+        <h3>Icons</h3>
+        <ul>
+          {nounprojectCredit.map((entry, i) => (
+            <li key={i}>
+              {entry.name} by {entry.author} from{' '}
+              <a href="https://thenounproject.com">The Noun Project</a>
+            </li>
+          ))}
+        </ul>
+
+        <h3>Dependencies</h3>
         <ul>
           {dependencyReport.map((entry) => (
             <li key={entry.name}>

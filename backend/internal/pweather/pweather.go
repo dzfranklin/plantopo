@@ -28,7 +28,7 @@ func New(env *pconfig.Env) *Service {
 func (s *Service) FindUKShortForecast(ctx context.Context, query string) (string, error) {
 	query = strings.TrimSpace(query)
 
-	// TODO: Cache forecast site list
+	// WatchStatus: Cache forecast site list
 	forecastSites, err := s.met.ForecastSitelist(ctx)
 	if err != nil {
 		return "", err

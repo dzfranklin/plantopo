@@ -3,257 +3,193 @@ package pmunroaccess
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
-	"github.com/hasura/go-graphql-client"
-	"net/http"
-	"slices"
-	"sync"
+	"github.com/dzfranklin/plantopo/backend/internal/prepo"
+	"github.com/jackc/pgx/v5"
+	"github.com/minio/minio-go/v7"
+	"github.com/redis/go-redis/v9"
+	"github.com/riverqueue/river"
+	"log/slog"
 	"time"
 )
 
-var londonTimeLoc *time.Location
+var ErrReportNotFound = errors.New("report not found")
 
-func init() {
-	l, err := time.LoadLocation("Europe/London")
+type Service struct {
+	l       *slog.Logger
+	objects *minio.Client
+	rdb     *redis.Client
+	jobs    *river.Client[pgx.Tx]
+}
+
+func New(env *pconfig.Env) *Service {
+	return &Service{l: env.Logger, objects: env.Objects, rdb: env.RDB, jobs: env.Jobs}
+}
+
+func (s *Service) GetTemporaryURL(ctx context.Context, id string) (string, error) {
+	url, err := s.objects.PresignedGetObject(ctx, reportBucket, reportIDToObjectName(id), time.Hour*24, nil)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-	londonTimeLoc = l
+	return url.String(), nil
 }
 
-type MunroAccessService struct {
-	c  *graphql.Client
-	mu *sync.Mutex
+type Request struct {
+	FromLabel string
+	FromPoint [2]float64
+	Date      time.Time
 }
 
-func New(env *pconfig.Env) *MunroAccessService {
-	c := graphql.NewClient(env.Config.OpenTransitPlanner.GTFSEndpoint, &http.Client{})
-	return &MunroAccessService{c: c, mu: &sync.Mutex{}}
+type Meta struct {
+	FromLabel   string     `json:"fromLabel"`
+	FromPoint   [2]float64 `json:"fromPoint"`
+	Date        time.Time  `json:"date"`
+	RequestTime time.Time  `json:"requestTime"`
+	URL         string     `json:"url,omitempty"` // Only present if status == ready. Not stored
 }
 
-type matrixReport struct {
-	Date     string        `json:"date"` // YYYY-MM-DD
-	From     [2]float64    `json:"from"`
-	Clusters []matrixEntry `json:"clusters"`
-}
+func (s *Service) Request(req Request) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-type matrixEntry struct {
-	To       *munroStartCluster `json:"to"`
-	Journeys json.RawMessage    `json:"journeys"`
-}
+	id := prepo.SecureRandomID("mar")
 
-type buildMatrixSubsetResult struct {
-	i      int
-	subset []matrixEntry
-	err    error
-}
-
-func (s *MunroAccessService) buildMatrix(ctx context.Context, from [2]float64, date time.Time, parallelism int, clusters []*munroStartCluster) (matrixReport, error) {
-	date = date.In(londonTimeLoc)
-	date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, londonTimeLoc)
-
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	var results []buildMatrixSubsetResult
-	chunkSize := len(clusters) / parallelism
-	for i := 0; i < parallelism; i++ {
-		chunkStart := i * chunkSize
-		chunkEnd := chunkStart + chunkSize
-		if i == parallelism-1 {
-			chunkEnd = len(clusters)
-		}
-		chunk := clusters[chunkStart:chunkEnd]
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			subset, err := s.buildMatrixChunk(ctx, from, date, chunk)
-
-			mu.Lock()
-			results = append(results, buildMatrixSubsetResult{i, subset, err})
-			mu.Unlock()
-		}()
-	}
-	wg.Wait()
-
-	slices.SortFunc(results, func(a, b buildMatrixSubsetResult) int {
-		return a.i - b.i
-	})
-
-	var outClusters []matrixEntry
-	for _, result := range results {
-		if result.err != nil {
-			return matrixReport{}, result.err
-		}
-		outClusters = append(outClusters, result.subset...)
+	_, err := s.jobs.Insert(ctx, GenerateArgs{
+		ID:   id,
+		From: req.FromPoint,
+		Date: req.Date,
+	}, nil)
+	if err != nil {
+		return "", err
 	}
 
-	return matrixReport{
-		Date:     date.Format("2006-01-02"),
-		From:     from,
-		Clusters: outClusters,
-	}, nil
+	meta := Meta{
+		FromLabel:   req.FromLabel,
+		FromPoint:   req.FromPoint,
+		Date:        req.Date,
+		RequestTime: time.Now(),
+	}
+	if err := s.rdb.Set(ctx, reportKey(id), meta, reportExpiry).Err(); err != nil {
+		return "", err
+	}
+
+	if err := pushStatus(ctx, s.rdb, reportKey(id), "received"); err != nil {
+		return "", err
+	}
+
+	return id, nil
 }
 
-func (s *MunroAccessService) buildMatrixChunk(ctx context.Context, from [2]float64, date time.Time, clusters []*munroStartCluster) ([]matrixEntry, error) {
-	var out []matrixEntry
-	for _, cluster := range clusters {
-		journeys, err := s.queryOnePair(ctx, date, from, cluster.Point)
+type Status struct {
+	ID        string    `json:"id"`
+	Status    string    `json:"status"` // received | working | ready
+	Timestamp time.Time `json:"timestamp"`
+	Report    Meta      `json:"report"`
+}
+
+func (s *Service) Status(ctx context.Context, report string) (Status, error) {
+	messages, err := s.rdb.XRevRangeN(ctx, reportEventsKey(report), "+", "-", 1).Result()
+	if err != nil {
+		return Status{}, err
+	}
+
+	if len(messages) == 0 {
+		return Status{}, ErrReportNotFound
+	}
+
+	status, err := parseStatus(messages[0].Values)
+	if err != nil {
+		return Status{}, err
+	}
+
+	return s.hydrateStatus(ctx, report, messages[0].ID, status)
+}
+
+func (s *Service) hydrateStatus(ctx context.Context, report string, statusID string, status Status) (Status, error) {
+	status.ID = statusID
+
+	if err := s.rdb.Get(ctx, reportKey(report)).Scan(&status.Report); err != nil {
+		return Status{}, err
+	}
+
+	if status.Status == "ready" {
+		var err error
+		status.Report.URL, err = s.GetTemporaryURL(ctx, report)
 		if err != nil {
-			return nil, err
+			return Status{}, err
 		}
-		out = append(out, matrixEntry{
-			To:       cluster,
-			Journeys: journeys,
-		})
 	}
+
+	return status, nil
+}
+
+func (s *Service) WatchStatus(ctx context.Context, report string) (<-chan Status, error) {
+	stream := reportEventsKey(report)
+	lastID := "0"
+	out := make(chan Status, 1)
+
+	status, err := s.Status(ctx, report)
+	if err != nil {
+		return nil, err
+	}
+	out <- status
+	lastID = status.ID
+
+	go func() {
+		defer func() { close(out) }()
+
+		for {
+			results, err := s.rdb.XRead(ctx, &redis.XReadArgs{
+				Streams: []string{stream, lastID},
+				Block:   time.Minute,
+			}).Result()
+			if errors.Is(err, redis.Nil) {
+				continue
+			} else if err != nil {
+				return
+			}
+			res := results[0]
+
+			for _, msg := range res.Messages {
+				lastID = msg.ID
+
+				status, err := parseStatus(msg.Values)
+				if err != nil {
+					s.l.Error("parse status", "error", err)
+					return
+				}
+
+				status, err = s.hydrateStatus(ctx, report, msg.ID, status)
+				if err != nil {
+					s.l.Error("hydrate status", "error", err)
+					return
+				}
+
+				out <- status
+			}
+		}
+	}()
+
 	return out, nil
 }
 
-func (s *MunroAccessService) queryOnePair(ctx context.Context, date time.Time, from, to [2]float64) (json.RawMessage, error) {
-	q := `
-	# noinspection GraphQLUnresolvedReference
-	
-	fragment LegPlaceParts on Place {
-	  name
-	  vertexType
-	  lat
-	  lon
-	  arrivalTime
-	  departureTime
-	  stop {
-		code
-		desc
-		locationType
-		platformCode
-		cluster {
-		  name
-		}
-		parentStation {
-		  name
-		}
-	  }
-	}
-	
-	fragment BookingInfoParts on BookingInfo {
-	  contactInfo {
-		phoneNumber
-		infoUrl
-		bookingUrl
-		additionalDetails
-	  }
-	  earliestBookingTime {
-		time
-		daysPrior
-	  }
-	  latestBookingTime {
-		time
-		daysPrior
-	  }
-	  message
-	  pickupMessage
-	  dropOffMessage
-	}
-	
-	fragment PlanFragments on Plan {
-	  itineraries {
-		startTime
-		endTime
-		duration
-		waitingTime
-		walkTime
-		walkDistance
-		legs {
-		  startTime
-		  endTime
-		  departureDelay
-		  arrivalDelay
-		  mode
-		  duration
-		  legGeometry {
-			length
-			points
-		  }
-		  agency {
-			id
-		  }
-		  distance
-		  transitLeg
-		  from {
-			...LegPlaceParts
-		  }
-		  to {
-			...LegPlaceParts
-		  }
-		  trip {
-			id
-		  }
-		  serviceDate
-		  headsign
-		  pickupType
-		  dropoffType
-		  interlineWithPreviousLeg
-		  dropOffBookingInfo {
-			...BookingInfoParts
-		  }
-		  pickupBookingInfo {
-			...BookingInfoParts
-		  }
-		}
-		accessibilityScore
-		numberOfTransfers
-	  }
-	  messageEnums
-	  messageStrings
-	  routingErrors {
-		inputField
-	  }
-	  nextPageCursor
-	  previousPageCursor
-	  debugOutput {
-		totalTime
-		pathCalculationTime
-		precalculationTime
-		renderingTime
-		timedOut
-	  }
-	}
-	
-	query Plan($date: String!, $fromLat: Float!, $fromLng: Float!, $toLat: Float!, $toLng: Float!) {
-	  out: plan(
-		date: $date
-		time: "04:00am"
-		from: {lat: $fromLat, lon: $fromLng}
-		to: {lat: $toLat, lon: $toLng}
-		numItineraries: 100
-		searchWindow: 25200 # (11-4)*60*60
-		walkReluctance: 1
-	  ) {
-		...PlanFragments
-	  }
-	  
-	  back: plan(
-		date: $date
-		time: "4:00pm"
-		to: {lat: $fromLat, lon: $fromLng}
-		from: {lat: $toLat, lon: $toLng}
-		numItineraries: 100
-		searchWindow: 28800 # (12-4)*60*60
-		walkReluctance: 1
-	  ) {
-		...PlanFragments
-	  }
-	}`
+func reportIDToObjectName(id string) string {
+	return id + ".json"
+}
 
-	vars := map[string]any{
-		"date":    fmt.Sprintf("%d-%d-%d", date.Year(), date.Month(), date.Day()),
-		"fromLng": from[0],
-		"fromLat": from[1],
-		"toLng":   to[0],
-		"toLat":   to[1],
-	}
+func reportKey(id string) string {
+	return "munro_access_report:" + id
+}
 
-	return s.c.ExecRaw(ctx, q, vars)
+func reportEventsKey(id string) string {
+	return reportKey(id) + ":events"
+}
+
+func (s Meta) MarshalBinary() ([]byte, error) {
+	return json.Marshal(s)
+}
+
+func (s *Meta) UnmarshalBinary(v []byte) error {
+	return json.Unmarshal(v, s)
 }

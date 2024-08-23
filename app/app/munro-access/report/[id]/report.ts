@@ -1,4 +1,8 @@
+import { paths } from '@/api/v1';
 import { z } from 'zod';
+
+export type MunroList =
+  paths['/munro-access/munros']['get']['responses'][200]['content']['application/json']['munros'];
 
 const pointSchema = z.tuple([z.number(), z.number()]);
 
@@ -85,7 +89,7 @@ const legDataSchema = z.object({
   pickupBookingInfo: z.unknown(),
 });
 
-export type legData = z.infer<typeof legDataSchema>;
+export type LegData = z.infer<typeof legDataSchema>;
 
 const itineraryDataSchema = z.object({
   startTime: z.number(),
@@ -99,7 +103,7 @@ const itineraryDataSchema = z.object({
   numberOfTransfers: z.number(),
 });
 
-export type itineraryData = z.infer<typeof itineraryDataSchema>;
+export type ItineraryData = z.infer<typeof itineraryDataSchema>;
 
 const journeyDataSchema = z.object({
   messageEnums: z.array(z.string()),
@@ -118,7 +122,9 @@ const journeyDataSchema = z.object({
 export type JourneyData = z.infer<typeof journeyDataSchema>;
 
 const clusterToSchema = z.object({
-  munros: z.array(z.string()),
+  id: z.number(),
+  name: z.string(),
+  munros: z.array(z.number()),
   popularityA: z.record(z.number()),
   popularityB: z.record(z.number()),
   point: pointSchema,

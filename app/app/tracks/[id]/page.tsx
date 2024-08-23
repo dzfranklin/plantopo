@@ -1,5 +1,5 @@
-import { Track, fetchTrack } from '@/features/tracks/api';
-import { AuthorizationError } from '@/api';
+import { fetchTrack, Track } from '@/features/tracks/api';
+import { AuthorizationError } from '@/api_to_remove';
 import UnauthorizedScreen from '@/components/UnauthorizedScreen';
 import TrackView from './TrackView';
 import TrackActions from '@/features/tracks/TrackActions';

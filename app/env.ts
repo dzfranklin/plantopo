@@ -6,7 +6,8 @@ export const API_ENDPOINT = endpointEnv.endsWith('/')
   ? endpointEnv
   : endpointEnv + '/';
 
-export const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-if (!MAPBOX_TOKEN) {
+const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+if (!mapboxToken) {
   throw new Error('Missing NEXT_PUBLIC_MAPBOX_TOKEN');
 }
+export const MAPBOX_TOKEN: string = mapboxToken;

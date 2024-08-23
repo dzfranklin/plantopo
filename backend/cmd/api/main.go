@@ -53,7 +53,7 @@ func main() {
 			SecretKey: getEnvString("S3_SECRET_KEY"),
 		},
 		Session: pconfig.Session{
-			SessionIdleExpiry: 24 * time.Hour * 30, // TODO: implement
+			SessionIdleExpiry: 24 * time.Hour * 30, // WatchStatus: implement
 		},
 		Users: pconfig.Users{
 			LoginThrottle:       throttled.RateQuota{MaxRate: throttled.PerMin(10), MaxBurst: 20},
@@ -74,8 +74,9 @@ func main() {
 			AccountSID: getEnvString("TWILIO_ACCOUNT_SID"),
 			AuthToken:  getEnvString("TWILIO_AUTH_TOKEN"),
 		},
-		OpenTransitPlanner: pconfig.OpenTransitPlanner{
-			GTFSEndpoint: getEnvString("OPEN_TRANSIT_PLANNER_GTFS_ENDPOINT"),
+		Imgproxy: pconfig.Imgproxy{
+			Key:  getEnvString("IMGPROXY_KEY"),
+			Salt: getEnvString("IMGPROXY_SALT"),
 		},
 	}
 
@@ -252,7 +253,7 @@ func openRDB(cfg *pconfig.Config) *redis.Client {
 
 func openObjects(cfg *pconfig.Config) *minio.Client {
 	objects, err := minio.New(cfg.S3.Endpoint, &minio.Options{
-		Secure: true,
+		Secure: cfg.Env == "production",
 		Creds:  miniocredentials.NewStaticV4(cfg.S3.AccessKey, cfg.S3.SecretKey, ""),
 	})
 	if err != nil {

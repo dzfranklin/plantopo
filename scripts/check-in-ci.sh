@@ -61,6 +61,8 @@ tern_url=$(curl --proto '=https' --tlsv1.2 -sLSf 'https://api.github.com/repos/j
 curl --proto '=https' --tlsv1.2 -sLSf "$tern_url" -o "$tools_dir/tern.tar.gz"
 tar -xvzf $tools_dir/tern.tar.gz -C "$tools_dir"
 
+pushd app && npm ci --include=dev && popd
+
 # Run checks
 
 PATH="$tools_dir:$PATH" $just check-all

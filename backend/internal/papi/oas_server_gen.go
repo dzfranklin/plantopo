@@ -56,6 +56,30 @@ type Handler interface {
 	//
 	// POST /elevation
 	ElevationPost(ctx context.Context, req *ElevationPostReq) (*ElevationPostOK, error)
+	// MunroAccessMunrosGet implements GET /munro-access/munros operation.
+	//
+	// List munros.
+	//
+	// GET /munro-access/munros
+	MunroAccessMunrosGet(ctx context.Context) (*MunroAccessMunrosGetOK, error)
+	// MunroAccessReportIDGet implements GET /munro-access/report/{id} operation.
+	//
+	// Get a report.
+	//
+	// GET /munro-access/report/{id}
+	MunroAccessReportIDGet(ctx context.Context, params MunroAccessReportIDGetParams) (*MunroAccessReportIDGetTemporaryRedirect, error)
+	// MunroAccessReportIDStatusGet implements GET /munro-access/report/{id}/status operation.
+	//
+	// To subscribe to status updates use `new EventSource('/munro-access/report/{id}/status-updates')`.
+	//
+	// GET /munro-access/report/{id}/status
+	MunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (*MunroAccessReportIDStatusGetOK, error)
+	// MunroAccessRequestPost implements POST /munro-access/request operation.
+	//
+	// Request a report be generated.
+	//
+	// POST /munro-access/request
+	MunroAccessRequestPost(ctx context.Context, req *MunroAccessRequestPostReq) (*MunroAccessRequestPostOK, error)
 	// WeatherShortUkGet implements GET /weather/short-uk operation.
 	//
 	// Find short format weather forecasts for a place in the UK.

@@ -75,6 +75,22 @@ func (c *Client) Get(ctx context.Context, url string) (resp *http.Response, err 
 	return c.Do(ctx, req)
 }
 
+func Get(ctx context.Context, url string) (resp *http.Response, err error) {
+	return New(&Options{ErrOnStatus: true}).Get(ctx, url)
+}
+
+func MustGet(url string) []byte {
+	resp, err := Get(context.Background(), url)
+	if err != nil {
+		panic(err)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	return body
+}
+
 func (c *Client) Head(ctx context.Context, url string) (resp *http.Response, err error) {
 	req, err := http.NewRequest("HEAD", url, nil)
 	if err != nil {
@@ -90,6 +106,10 @@ func (c *Client) Post(ctx context.Context, url, contentType string, body io.Read
 	}
 	req.Header.Set("Content-Type", contentType)
 	return c.Do(ctx, req)
+}
+
+func Post(ctx context.Context, url string, contentType string, body io.Reader) (resp *http.Response, err error) {
+	return New(&Options{ErrOnStatus: true}).Post(ctx, url, contentType, body)
 }
 
 func (c *Client) PostForm(ctx context.Context, url string, data url.Values) (resp *http.Response, err error) {

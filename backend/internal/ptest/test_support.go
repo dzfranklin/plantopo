@@ -3,6 +3,7 @@ package ptest
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -11,6 +12,8 @@ import (
 	miniocredentials "github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/neilotoole/slogt"
 	"github.com/redis/go-redis/v9"
+	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+	"github.com/riverqueue/river/rivermigrate"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	miniocontainers "github.com/testcontainers/testcontainers-go/modules/minio"
@@ -30,7 +33,7 @@ import (
 
 // Images
 const (
-	pgImage    = "postgres:15.7-bookworm"
+	pgImage    = "postgis/postgis:16-3.4"
 	redisImage = "redis:7.2-bookworm"
 	minioImage = "minio/minio:RELEASE.2024-07-10T18-41-49Z"
 )
@@ -145,23 +148,23 @@ func (te *TestEnv) setupRDB() {
 
 	c, err := rediscontainers.Run(ctx, redisImage)
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 
 	t.Cleanup(func() {
 		if err := c.Terminate(ctx); err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 	})
 
 	connString, err := c.ConnectionString(ctx)
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 
 	opts, err := redis.ParseURL(connString)
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 
 	te.rdbC = c
@@ -187,38 +190,38 @@ func (te *TestEnv) setupDB() {
 			wait.ForListeningPort("5432/tcp"),
 		))
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 
 	t.Cleanup(func() {
 		if err := c.Terminate(ctx); err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 	})
 
 	connString, err := c.ConnectionString(ctx, "sslmode=disable")
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 
-	runMigrations(t, connString)
+	runMigrations(connString)
 
-	err = c.CopyFileToContainer(ctx, gitRoot(t)+"/backend/test_seeds.sql", "/test_seeds.sql", 0777)
+	err = c.CopyFileToContainer(ctx, gitRoot()+"/backend/test_seeds.sql", "/test_seeds.sql", 0777)
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 	status, resp, err := c.Exec(ctx, []string{"bash", "-c", `psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -f /test_seeds.sql`})
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 	if status != 0 {
 		_, _ = io.Copy(os.Stdout, resp)
-		t.Fatal("Running test_seeds.sql failed")
+		panic("Running test_seeds.sql failed")
 	}
 
 	err = c.Snapshot(ctx, postgrescontainers.WithSnapshotName("test-snapshot"))
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 
 	te.dbC = c
@@ -229,11 +232,11 @@ func (te *TestEnv) connectDB() {
 	ctx := context.Background()
 	connString, err := te.dbC.ConnectionString(ctx, "sslmode=disable")
 	if err != nil {
-		te.t.Fatal(err)
+		panic(err)
 	}
 	db, err := pgxpool.New(ctx, connString)
 	if err != nil {
-		te.t.Fatal(err)
+		panic(err)
 	}
 	te.DB = db
 }
@@ -260,18 +263,33 @@ func (te *TestEnv) setupMinio() {
 	})
 	require.NoError(t, err)
 
+	for _, bucketName := range []string{"munro-access-reports"} {
+		err = client.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{})
+		require.NoError(t, err)
+	}
+
 	te.Objects = client
 }
 
-func runMigrations(t *testing.T, connString string) []byte {
+func runMigrations(connString string) {
+	dbPool, err := pgxpool.New(context.Background(), connString)
+	if err != nil {
+		panic(err)
+	}
+	riverMigrator := rivermigrate.New(riverpgxv5.New(dbPool), nil)
+	_, err = riverMigrator.Migrate(context.Background(), rivermigrate.DirectionUp, nil)
+	if err != nil {
+		panic(err)
+	}
+	dbPool.Close()
+
 	var out bytes.Buffer
 	cmd := exec.Command("tern", "migrate", "--conn-string", connString)
-	cmd.Dir = gitRoot(t) + "/backend/migrations"
+	cmd.Dir = gitRoot() + "/backend/migrations"
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
-		t.Fatal(err)
+		panic(out.String())
 	}
-	return out.Bytes()
 }
 
 var (
@@ -279,7 +297,7 @@ var (
 	gitRootCacheMu sync.Mutex
 )
 
-func gitRoot(t *testing.T) string {
+func gitRoot() string {
 	gitRootCacheMu.Lock()
 	defer gitRootCacheMu.Unlock()
 
@@ -289,13 +307,13 @@ func gitRoot(t *testing.T) string {
 
 	curr, err := os.Getwd()
 	if err != nil {
-		t.Fatal(err)
+		panic(err)
 	}
 
 	for {
 		entries, err := os.ReadDir(curr)
 		if err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 
 		for _, entry := range entries {
@@ -306,7 +324,7 @@ func gitRoot(t *testing.T) string {
 		}
 
 		if curr == "/" {
-			t.Fatal("This test must be run from within the git repository")
+			panic("This test must be run from within the git repository")
 		}
 
 		curr = filepath.Dir(curr)
@@ -321,6 +339,7 @@ func NewTestLogger(t *testing.T) *slog.Logger {
 		}
 		if os.Getenv("TEST_VERBOSE_LOGS") != "" {
 			opts.Level = slog.LevelDebug
+			fmt.Println("TEST_VERBOSE_LOGS enabled")
 		}
 		return slog.NewTextHandler(w, opts)
 	}))
@@ -328,6 +347,6 @@ func NewTestLogger(t *testing.T) *slog.Logger {
 
 func LoadDevEnv(t *testing.T) {
 	t.Helper()
-	root := gitRoot(t)
+	root := gitRoot()
 	_ = godotenv.Load(root+"/backend/.env", root+"/backend/.env.local")
 }

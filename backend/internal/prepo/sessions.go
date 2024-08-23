@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// TODO: Clean up expired sessions
+// WatchStatus: Clean up expired sessions
 
 type Sessions struct {
 	cfg   *pconfig.Session

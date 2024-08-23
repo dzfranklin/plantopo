@@ -133,7 +133,7 @@ func (r *Users) Register(req UserRegistration) (User, error) {
 	}
 	user := mapUser(userRow)
 
-	// TODO: Enqueue to send confirmation email via river
+	// WatchStatus: Enqueue to send confirmation email via river
 
 	err = tx.Commit(ctx)
 	if err != nil {

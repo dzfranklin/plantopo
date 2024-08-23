@@ -54,7 +54,19 @@
     "repository": "https://github.com/eslint/eslint"
   },
   {
+    "name": "@floating-ui/core@0.7.3",
+    "publisher": "atomiks",
+    "licenses": "MIT",
+    "repository": "https://github.com/floating-ui/floating-ui"
+  },
+  {
     "name": "@floating-ui/core@1.6.2",
+    "publisher": "atomiks",
+    "licenses": "MIT",
+    "repository": "https://github.com/floating-ui/floating-ui"
+  },
+  {
+    "name": "@floating-ui/dom@0.5.4",
     "publisher": "atomiks",
     "licenses": "MIT",
     "repository": "https://github.com/floating-ui/floating-ui"
@@ -174,6 +186,30 @@
     "repository": "https://github.com/mapbox/polyline"
   },
   {
+    "name": "@mapbox/search-js-core@1.0.0-beta.22",
+    "publisher": null,
+    "licenses": "Custom: https://static-assets.mapbox.com/www/logos/mapbox-logo-black.png",
+    "repository": null
+  },
+  {
+    "name": "@mapbox/search-js-react@1.0.0-beta.22",
+    "publisher": null,
+    "licenses": "Custom: https://static-assets.mapbox.com/www/logos/mapbox-logo-black.png",
+    "repository": null
+  },
+  {
+    "name": "@mapbox/search-js-web@1.0.0-beta.22",
+    "publisher": null,
+    "licenses": "Custom: https://static-assets.mapbox.com/www/logos/mapbox-logo-black.png",
+    "repository": null
+  },
+  {
+    "name": "@mapbox/sphericalmercator@1.2.0",
+    "publisher": "MapBox",
+    "licenses": "BSD",
+    "repository": "https://github.com/mapbox/sphericalmercator"
+  },
+  {
     "name": "@mapbox/tiny-sdf@2.0.6",
     "publisher": "Vladimir Agafonkin",
     "licenses": "BSD-2-Clause",
@@ -282,6 +318,24 @@
     "repository": "https://github.com/adobe/react-spectrum"
   },
   {
+    "name": "@redocly/ajv@8.11.0",
+    "publisher": "Evgeny Poberezkin",
+    "licenses": "MIT",
+    "repository": "https://github.com/ajv-validator/ajv"
+  },
+  {
+    "name": "@redocly/config@0.7.0",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": null
+  },
+  {
+    "name": "@redocly/openapi-core@1.19.0",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/Redocly/redocly-cli"
+  },
+  {
     "name": "@rushstack/eslint-patch@1.10.3",
     "publisher": null,
     "licenses": "MIT",
@@ -342,13 +396,49 @@
     "repository": "https://github.com/Turfjs/turf"
   },
   {
-    "name": "@turf/bbox@7.0.0",
+    "name": "@turf/bbox-polygon@7.1.0",
     "publisher": "Turf Authors",
     "licenses": "MIT",
     "repository": "https://github.com/Turfjs/turf"
   },
   {
-    "name": "@turf/bearing@7.0.0",
+    "name": "@turf/bbox@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/bearing@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/bezier-spline@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/boolean-point-on-line@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/buffer@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/center@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/circle@7.1.0",
     "publisher": "Turf Authors",
     "licenses": "MIT",
     "repository": "https://github.com/Turfjs/turf"
@@ -360,34 +450,46 @@
     "repository": "https://github.com/Turfjs/turf"
   },
   {
-    "name": "@turf/clone@7.0.0",
+    "name": "@turf/clone@7.1.0",
     "publisher": "Turf Authors",
     "licenses": "MIT",
     "repository": "https://github.com/Turfjs/turf"
   },
   {
-    "name": "@turf/destination@7.0.0",
+    "name": "@turf/destination@7.1.0",
     "publisher": "Turf Authors",
     "licenses": "MIT",
     "repository": "https://github.com/Turfjs/turf"
   },
   {
-    "name": "@turf/distance@7.0.0",
+    "name": "@turf/distance@7.1.0",
     "publisher": "Turf Authors",
     "licenses": "MIT",
     "repository": "https://github.com/Turfjs/turf"
   },
   {
-    "name": "@turf/helpers@7.0.0",
+    "name": "@turf/geojson-rbush@7.1.0",
     "publisher": "Turf Authors",
     "licenses": "MIT",
     "repository": "https://github.com/Turfjs/turf"
   },
   {
-    "name": "@turf/invariant@7.0.0",
+    "name": "@turf/helpers@7.1.0",
     "publisher": "Turf Authors",
     "licenses": "MIT",
     "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/invariant@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/jsts@2.7.1",
+    "publisher": "Björn Harrtell",
+    "licenses": "Custom: https://github.com/bjornharrtell/jsts",
+    "repository": "https://github.com/turf/turf-jsts"
   },
   {
     "name": "@turf/length@7.0.0",
@@ -396,7 +498,67 @@
     "repository": "https://github.com/Turfjs/turf"
   },
   {
-    "name": "@turf/meta@7.0.0",
+    "name": "@turf/line-arc@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/line-intersect@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/line-overlap@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/line-segment@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/meta@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/midpoint@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/nearest-point-on-line@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/projection@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/rhumb-bearing@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/rhumb-destination@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/rhumb-distance@7.1.0",
     "publisher": "Turf Authors",
     "licenses": "MIT",
     "repository": "https://github.com/Turfjs/turf"
@@ -416,6 +578,12 @@
   {
     "name": "@types/json5@0.0.29",
     "publisher": "Jason Swearingen",
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
+  },
+  {
+    "name": "@types/luxon@3.4.2",
+    "publisher": null,
     "licenses": "MIT",
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
   },
@@ -462,7 +630,19 @@
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
   },
   {
-    "name": "@types/react@18.3.3",
+    "name": "@types/react@17.0.80",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
+  },
+  {
+    "name": "@types/react@18.3.4",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
+  },
+  {
+    "name": "@types/scheduler@0.16.8",
     "publisher": null,
     "licenses": "MIT",
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
@@ -570,10 +750,22 @@
     "repository": "https://github.com/acornjs/acorn"
   },
   {
+    "name": "agent-base@7.1.1",
+    "publisher": "Nathan Rajlich",
+    "licenses": "MIT",
+    "repository": "https://github.com/TooTallNate/proxy-agents"
+  },
+  {
     "name": "ajv@6.12.6",
     "publisher": "Evgeny Poberezkin",
     "licenses": "MIT",
     "repository": "https://github.com/ajv-validator/ajv"
+  },
+  {
+    "name": "ansi-colors@4.1.3",
+    "publisher": "Brian Woodward",
+    "licenses": "MIT",
+    "repository": "https://github.com/doowb/ansi-colors"
   },
   {
     "name": "ansi-regex@5.0.1",
@@ -864,6 +1056,12 @@
     "repository": "https://github.com/colorjs/color-name"
   },
   {
+    "name": "colorette@1.4.0",
+    "publisher": "Jorge Bucaran",
+    "licenses": "MIT",
+    "repository": "https://github.com/jorgebucaran/colorette"
+  },
+  {
     "name": "commander@4.1.1",
     "publisher": "TJ Holowaychuk",
     "licenses": "MIT",
@@ -910,6 +1108,12 @@
     "publisher": "Fredrik Nicol",
     "licenses": "MIT",
     "repository": "https://github.com/frenic/csstype"
+  },
+  {
+    "name": "d3-array@1.2.4",
+    "publisher": "Mike Bostock",
+    "licenses": "BSD-3-Clause",
+    "repository": "https://github.com/d3/d3-array"
   },
   {
     "name": "d3-array@3.2.4",
@@ -994,6 +1198,12 @@
     "publisher": "Mike Bostock",
     "licenses": "ISC",
     "repository": "https://github.com/d3/d3-format"
+  },
+  {
+    "name": "d3-geo@1.7.1",
+    "publisher": "Mike Bostock",
+    "licenses": "BSD-3-Clause",
+    "repository": "https://github.com/d3/d3-geo"
   },
   {
     "name": "d3-geo@3.1.1",
@@ -1146,12 +1356,6 @@
     "repository": "https://github.com/sindresorhus/decamelize"
   },
   {
-    "name": "deep-equal@2.2.3",
-    "publisher": "James Halliday",
-    "licenses": "MIT",
-    "repository": "https://github.com/inspect-js/node-deep-equal"
-  },
-  {
     "name": "deep-is@0.1.4",
     "publisher": "Thorsten Lorenz",
     "licenses": "MIT",
@@ -1264,12 +1468,6 @@
     "publisher": "Jordan Harband",
     "licenses": "MIT",
     "repository": "https://github.com/ljharb/es-errors"
-  },
-  {
-    "name": "es-get-iterator@1.1.3",
-    "publisher": "Jordan Harband",
-    "licenses": "MIT",
-    "repository": "https://github.com/ljharb/es-get-iterator"
   },
   {
     "name": "es-iterator-helpers@1.0.19",
@@ -1486,6 +1684,12 @@
     "publisher": "Andrea Giammarchi",
     "licenses": "ISC",
     "repository": "https://github.com/WebReflection/flatted"
+  },
+  {
+    "name": "focus-trap@6.9.4",
+    "publisher": "David Clark",
+    "licenses": "MIT",
+    "repository": "https://github.com/focus-trap/focus-trap"
   },
   {
     "name": "for-each@0.3.3",
@@ -1710,6 +1914,12 @@
     "repository": "https://github.com/npm/hosted-git-info"
   },
   {
+    "name": "https-proxy-agent@7.0.5",
+    "publisher": "Nathan Rajlich",
+    "licenses": "MIT",
+    "repository": "https://github.com/TooTallNate/proxy-agents"
+  },
+  {
     "name": "iconv-lite@0.6.3",
     "publisher": "Alexander Shtuchkin",
     "licenses": "MIT",
@@ -1744,6 +1954,12 @@
     "publisher": "Sindre Sorhus",
     "licenses": "MIT",
     "repository": "https://github.com/sindresorhus/indent-string"
+  },
+  {
+    "name": "index-to-position@0.1.2",
+    "publisher": "Sindre Sorhus",
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/index-to-position"
   },
   {
     "name": "inflight@1.0.6",
@@ -1792,12 +2008,6 @@
     "publisher": "Divyansh Singh",
     "licenses": "MIT",
     "repository": "https://github.com/brc-dd/iron-webcrypto"
-  },
-  {
-    "name": "is-arguments@1.1.1",
-    "publisher": "Jordan Harband",
-    "licenses": "MIT",
-    "repository": "https://github.com/inspect-js/is-arguments"
   },
   {
     "name": "is-array-buffer@3.0.4",
@@ -2022,6 +2232,12 @@
     "repository": "https://github.com/panva/jose"
   },
   {
+    "name": "js-levenshtein@1.1.6",
+    "publisher": "Gustaf Andersson",
+    "licenses": "MIT",
+    "repository": "https://github.com/gustf/js-levenshtein"
+  },
+  {
     "name": "js-tokens@4.0.0",
     "publisher": "Simon Lydell",
     "licenses": "MIT",
@@ -2052,6 +2268,12 @@
     "repository": "https://github.com/epoberezkin/json-schema-traverse"
   },
   {
+    "name": "json-schema-traverse@1.0.0",
+    "publisher": "Evgeny Poberezkin",
+    "licenses": "MIT",
+    "repository": "https://github.com/epoberezkin/json-schema-traverse"
+  },
+  {
     "name": "json-stable-stringify-without-jsonify@1.0.1",
     "publisher": "James Halliday",
     "licenses": "MIT",
@@ -2062,6 +2284,12 @@
     "publisher": "Aseem Kishore",
     "licenses": "MIT",
     "repository": "https://github.com/json5/json5"
+  },
+  {
+    "name": "jsts@2.7.1",
+    "publisher": "Björn Harrtell",
+    "licenses": "Custom: https://travis-ci.org/bjornharrtell/jsts.svg",
+    "repository": "https://github.com/bjornharrtell/jsts"
   },
   {
     "name": "jsx-ast-utils@3.3.5",
@@ -2148,6 +2376,12 @@
     "repository": "https://github.com/lodash/lodash"
   },
   {
+    "name": "lodash.isequal@4.5.0",
+    "publisher": "John-David Dalton",
+    "licenses": "MIT",
+    "repository": "https://github.com/lodash/lodash"
+  },
+  {
     "name": "lodash.isplainobject@4.0.6",
     "publisher": "John-David Dalton",
     "licenses": "MIT",
@@ -2176,6 +2410,12 @@
     "publisher": "Isaac Z. Schlueter",
     "licenses": "ISC",
     "repository": "https://github.com/isaacs/node-lru-cache"
+  },
+  {
+    "name": "luxon@3.5.0",
+    "publisher": "Isaac Cambron",
+    "licenses": "MIT",
+    "repository": "https://github.com/moment/luxon"
   },
   {
     "name": "map-obj@1.0.1",
@@ -2227,6 +2467,12 @@
   },
   {
     "name": "minimatch@3.1.2",
+    "publisher": "Isaac Z. Schlueter",
+    "licenses": "ISC",
+    "repository": "https://github.com/isaacs/minimatch"
+  },
+  {
+    "name": "minimatch@5.1.6",
     "publisher": "Isaac Z. Schlueter",
     "licenses": "ISC",
     "repository": "https://github.com/isaacs/minimatch"
@@ -2298,6 +2544,18 @@
     "repository": "https://github.com/vercel/next.js"
   },
   {
+    "name": "no-scroll@2.1.1",
+    "publisher": "David Clark",
+    "licenses": "MIT",
+    "repository": "https://github.com/davidtheclark/no-scroll"
+  },
+  {
+    "name": "node-fetch@2.7.0",
+    "publisher": "David Frank",
+    "licenses": "MIT",
+    "repository": "https://github.com/bitinn/node-fetch"
+  },
+  {
     "name": "normalize-package-data@2.5.0",
     "publisher": "Meryn Stol",
     "licenses": "BSD-2-Clause",
@@ -2332,12 +2590,6 @@
     "publisher": "James Halliday",
     "licenses": "MIT",
     "repository": "https://github.com/inspect-js/object-inspect"
-  },
-  {
-    "name": "object-is@1.1.6",
-    "publisher": "Jordan Harband",
-    "licenses": "MIT",
-    "repository": "https://github.com/es-shims/object-is"
   },
   {
     "name": "object-keys@1.1.1",
@@ -2388,6 +2640,24 @@
     "repository": "https://github.com/isaacs/once"
   },
   {
+    "name": "openapi-fetch@0.11.1",
+    "publisher": "Drew Powers",
+    "licenses": "MIT",
+    "repository": "https://github.com/openapi-ts/openapi-typescript"
+  },
+  {
+    "name": "openapi-typescript-helpers@0.0.12",
+    "publisher": "Drew Powers",
+    "licenses": "MIT",
+    "repository": "https://github.com/openapi-ts/openapi-typescript"
+  },
+  {
+    "name": "openapi-typescript@7.3.0",
+    "publisher": "Drew Powers",
+    "licenses": "MIT",
+    "repository": "https://github.com/openapi-ts/openapi-typescript"
+  },
+  {
     "name": "optionator@0.9.4",
     "publisher": "George Zahariev",
     "licenses": "MIT",
@@ -2434,6 +2704,18 @@
     "publisher": "Sindre Sorhus",
     "licenses": "MIT",
     "repository": "https://github.com/sindresorhus/parse-json"
+  },
+  {
+    "name": "parse-json@8.1.0",
+    "publisher": "Sindre Sorhus",
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/parse-json"
+  },
+  {
+    "name": "parse-ms@4.0.0",
+    "publisher": "Sindre Sorhus",
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/parse-ms"
   },
   {
     "name": "path-exists@4.0.0",
@@ -2598,6 +2880,12 @@
     "repository": "https://github.com/prettier/prettier"
   },
   {
+    "name": "pretty-ms@9.1.0",
+    "publisher": "Sindre Sorhus",
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/pretty-ms"
+  },
+  {
     "name": "prop-types@15.8.1",
     "publisher": null,
     "licenses": "MIT",
@@ -2632,6 +2920,12 @@
     "publisher": "Vladimir Agafonkin",
     "licenses": "ISC",
     "repository": null
+  },
+  {
+    "name": "rbush@3.0.1",
+    "publisher": "Vladimir Agafonkin",
+    "licenses": "MIT",
+    "repository": "https://github.com/mourner/rbush"
   },
   {
     "name": "react-dom@18.3.1",
@@ -2710,6 +3004,12 @@
     "publisher": "Jordan Harband",
     "licenses": "MIT",
     "repository": "https://github.com/es-shims/RegExp.prototype.flags"
+  },
+  {
+    "name": "require-from-string@2.0.2",
+    "publisher": "Vsevolod Strukchinsky",
+    "licenses": "MIT",
+    "repository": "https://github.com/floatdrop/require-from-string"
   },
   {
     "name": "resolve-from@4.0.0",
@@ -2892,12 +3192,6 @@
     "repository": "https://github.com/jslicense/spdx-license-ids"
   },
   {
-    "name": "stop-iteration-iterator@1.0.0",
-    "publisher": "Jordan Harband",
-    "licenses": "MIT",
-    "repository": "https://github.com/ljharb/stop-iteration-iterator"
-  },
-  {
     "name": "streamsearch@1.1.0",
     "publisher": "Brian White",
     "licenses": "MIT",
@@ -2976,6 +3270,12 @@
     "repository": "https://github.com/vercel/styled-jsx"
   },
   {
+    "name": "subtag@0.5.0",
+    "publisher": "Ryan Van Etten",
+    "licenses": "ISC",
+    "repository": "https://github.com/ryanve/subtag"
+  },
+  {
     "name": "sucrase@3.35.0",
     "publisher": "Alan Pierce",
     "licenses": "MIT",
@@ -3000,10 +3300,28 @@
     "repository": "https://github.com/chalk/supports-color"
   },
   {
+    "name": "supports-color@9.4.0",
+    "publisher": "Sindre Sorhus",
+    "licenses": "MIT",
+    "repository": "https://github.com/chalk/supports-color"
+  },
+  {
     "name": "supports-preserve-symlinks-flag@1.0.0",
     "publisher": "Jordan Harband",
     "licenses": "MIT",
     "repository": "https://github.com/inspect-js/node-supports-preserve-symlinks-flag"
+  },
+  {
+    "name": "sweepline-intersections@1.5.0",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/rowanwins/sweepline-intersections"
+  },
+  {
+    "name": "tabbable@5.3.3",
+    "publisher": "David Clark",
+    "licenses": "MIT",
+    "repository": "https://github.com/focus-trap/tabbable"
   },
   {
     "name": "tabbable@6.2.0",
@@ -3064,6 +3382,12 @@
     "publisher": "Jon Schlinkert",
     "licenses": "MIT",
     "repository": "https://github.com/micromatch/to-regex-range"
+  },
+  {
+    "name": "tr46@0.0.3",
+    "publisher": "Sebastian Mayr",
+    "licenses": "MIT",
+    "repository": "https://github.com/Sebmaster/tr46.js"
   },
   {
     "name": "trim-newlines@3.0.1",
@@ -3132,6 +3456,12 @@
     "repository": "https://github.com/sindresorhus/type-fest"
   },
   {
+    "name": "type-fest@4.24.0",
+    "publisher": "Sindre Sorhus",
+    "licenses": "(MIT OR CC0-1.0)",
+    "repository": "https://github.com/sindresorhus/type-fest"
+  },
+  {
     "name": "typed-array-buffer@1.0.2",
     "publisher": "Jordan Harband",
     "licenses": "MIT",
@@ -3156,7 +3486,7 @@
     "repository": "https://github.com/inspect-js/typed-array-length"
   },
   {
-    "name": "typescript@5.4.5",
+    "name": "typescript@5.5.4",
     "publisher": "Microsoft Corp.",
     "licenses": "Apache-2.0",
     "repository": "https://github.com/Microsoft/TypeScript"
@@ -3208,6 +3538,18 @@
     "publisher": "Anand Thakker",
     "licenses": "MIT",
     "repository": "https://github.com/mapbox/vt-pbf"
+  },
+  {
+    "name": "webidl-conversions@3.0.1",
+    "publisher": "Domenic Denicola",
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/jsdom/webidl-conversions"
+  },
+  {
+    "name": "whatwg-url@5.0.0",
+    "publisher": "Sebastian Mayr",
+    "licenses": "MIT",
+    "repository": "https://github.com/jsdom/whatwg-url"
   },
   {
     "name": "which-boxed-primitive@1.0.2",
@@ -3270,6 +3612,12 @@
     "repository": "https://github.com/isaacs/yallist"
   },
   {
+    "name": "yaml-ast-parser@0.0.43",
+    "publisher": null,
+    "licenses": "Apache-2.0",
+    "repository": "https://github.com/mulesoft-labs/yaml-ast-parser"
+  },
+  {
     "name": "yaml@2.4.5",
     "publisher": "Eemeli Aro",
     "licenses": "ISC",
@@ -3277,6 +3625,12 @@
   },
   {
     "name": "yargs-parser@20.2.9",
+    "publisher": "Ben Coe",
+    "licenses": "ISC",
+    "repository": "https://github.com/yargs/yargs-parser"
+  },
+  {
+    "name": "yargs-parser@21.1.1",
     "publisher": "Ben Coe",
     "licenses": "ISC",
     "repository": "https://github.com/yargs/yargs-parser"

@@ -165,13 +165,25 @@ type ButtonProps = (
   | { color?: keyof typeof styles.colors; outline?: never; plain?: never }
   | { color?: never; outline: true; plain?: never }
   | { color?: never; outline?: never; plain: true }
-) & { className?: string; children: React.ReactNode } & (
+) & {
+  className?: string;
+  disableWith?: string | false | null;
+  children: React.ReactNode;
+} & (
     | Omit<Headless.ButtonProps, 'className'>
     | Omit<React.ComponentPropsWithoutRef<typeof Link>, 'className'>
   );
 
 export const Button = React.forwardRef(function Button(
-  { color, outline, plain, className, children, ...props }: ButtonProps,
+  {
+    color,
+    outline,
+    plain,
+    className,
+    children,
+    disableWith,
+    ...props
+  }: ButtonProps,
   ref: React.ForwardedRef<HTMLElement>,
 ) {
   const classes = clsx(
@@ -187,21 +199,31 @@ export const Button = React.forwardRef(function Button(
   const formStatus = useFormStatus();
 
   return 'href' in props ? (
-    <Link
-      {...props}
-      className={classes}
-      ref={ref as React.ForwardedRef<HTMLAnchorElement>}
-    >
-      <TouchTarget>{children}</TouchTarget>
-    </Link>
+    disableWith ? (
+      <span
+        {...props}
+        className={classes}
+        ref={ref as React.ForwardedRef<HTMLSpanElement>}
+      >
+        {children}
+      </span>
+    ) : (
+      <Link
+        {...props}
+        className={classes}
+        ref={ref as React.ForwardedRef<HTMLAnchorElement>}
+      >
+        <TouchTarget>{children}</TouchTarget>
+      </Link>
+    )
   ) : (
     <Headless.Button
       {...props}
       className={clsx(classes, 'cursor-default')}
-      disabled={props.disabled || formStatus?.pending}
+      disabled={!!disableWith || props.disabled || formStatus?.pending}
       ref={ref}
     >
-      <TouchTarget>{children}</TouchTarget>
+      <TouchTarget>{disableWith || children}</TouchTarget>
     </Headless.Button>
   );
 });

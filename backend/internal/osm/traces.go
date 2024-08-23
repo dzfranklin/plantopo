@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/phttp"
-	"github.com/dzfranklin/plantopo/backend/internal/ptime"
 	"github.com/jackc/pgx/v5"
 	"github.com/minio/minio-go/v7"
 	"github.com/ogen-go/ogen/json"
@@ -138,7 +137,7 @@ func (w *TraceDownloaderWorker) Work(ctx context.Context, job *river.Job[TraceDo
 		return err
 	}
 
-	data, err := downloadTrace(ctx, w.limiter, meta.Download)
+	data, err := downloadTrace(ctx, meta.Download)
 	if errors.Is(err, phttp.ErrTooLarge) {
 		w.l.Info("skipping large trace", "link", job.Args.Meta.Link)
 		return nil

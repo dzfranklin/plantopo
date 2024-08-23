@@ -3,6 +3,7 @@ info:
   version: 0.1.0
   title: PlanTopo API
   description: Internal API for PlanTopo.com
+  contact: { }
 servers:
   - url: "https://api.plantopo.com/api/v1"
     description: "Production"
@@ -16,6 +17,7 @@ tags:
   - name: "auth"
   - name: "elevation"
   - name: "weather"
+  - name: "munro-access-reports"
 paths:
   /auth/check:
     post:
@@ -177,6 +179,189 @@ paths:
                 example: |
                   Mon 22 Partly cloudy 7% 9,Tue 1 " 0% 9,4 Clear 0% 7,7 Sunny 0% 11,10 " 0% 13,13 Partly cloudy 0% 13,16 Sunny 0% 13,19 " 0% 11,22 Clear 0% 9
         default: { $ref: "#/components/responses/DefaultErrorResponse" }
+
+  /munro-access/request:
+    post:
+      tags: [ "munro-access-reports" ]
+      summary: Request a report be generated
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fromLabel:
+                  type: string
+                  example: "Edinburgh Waverley Railway Station (EDB)"
+                fromPoint:
+                  $ref: "#/components/schemas/Point"
+                date:
+                  type: string
+                  format: date-time
+              required: [ "fromLabel", "fromPoint", "date" ]
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                required: [ "id" ]
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
+
+  /munro-access/report/{id}:
+    get:
+      tags: [ "munro-access-reports" ]
+      summary: Get a report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: example
+      responses:
+        "307":
+          description: "Redirect"
+          headers:
+            Location:
+              schema:
+                type: string
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
+  /munro-access/report/{id}/status:
+    get:
+      tags: [ "munro-access-reports" ]
+      summary: Get report generation status
+      description: |
+        To subscribe to status updates use `new EventSource('/munro-access/report/{id}/status-updates')`
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: example
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "1724364326040-0"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  status:
+                    type: string
+                    enum: [ received, working, ready ]
+                  report:
+                    type: object
+                    properties:
+                      fromLabel:
+                        type: string
+                        example: "Edinburgh Waverley Railway Station (EDB)"
+                      fromPoint:
+                        $ref: "#/components/schemas/Point"
+                      date:
+                        type: string
+                        format: date-time
+                      requestTime:
+                        type: string
+                        format: date-time
+                      url:
+                        type: string
+                        description: URL to report JSON
+                        example: https://...
+                    required: [ "fromLabel", "fromPoint", "date", "requestTime" ]
+                required: [ "id", "timestamp", "status", "report" ]
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
+  /munro-access/munros:
+    get:
+      tags: [ "munro-access-reports" ]
+      summary: List munros
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  munros:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        enum: [ "FeatureCollection" ]
+                      features:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            type:
+                              type: string
+                              enum: [ "Feature" ]
+                            id:
+                              type: integer
+                              example: 1
+                            properties:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                  example: Ben Chonzie
+                                meters:
+                                  type: number
+                                  example: 930.4
+                                photo:
+                                  type: object
+                                  properties:
+                                    source:
+                                      type: string
+                                      example: "https://..."
+                                    width:
+                                      type: integer
+                                      example: 800
+                                    height:
+                                      type: integer
+                                      example: 600
+                                    author:
+                                      type: string
+                                      example: Angus
+                                    sourceText:
+                                      type: string
+                                      example: geograph.org.uk
+                                    sourceLink:
+                                      type: string
+                                      example: https://www.geograph.org.uk
+                                  required: [ "source", "width", "height" ]
+                              required: [ "name", "meters" ]
+                            geometry:
+                              type: object
+                              properties:
+                                type:
+                                  type: string
+                                  enum: [ "Point" ]
+                                coordinates:
+                                  type: array
+                                  items:
+                                    type: number
+                                  minItems: 2
+                                  maxItems: 2
+                                  example: [ -3.992057, 56.453851 ]
+                              required: [ "type", "coordinates" ]
+                          required: [ "type", "id", "properties", "geometry" ]
+                    required: [ "type", "features" ]
+                required: [ "munros" ]
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
 components:
   securitySchemes:
     bearer:
@@ -299,6 +484,11 @@ components:
       required: [ "elevation" ]
       example:
         elevation: [ 2518, 2518, 2518 ]
-    Timestamp:
-      type: string
-      example: "2024-04-12T23:20:50.52Z"
+    Point:
+      type: array
+      items:
+        type: number
+      minItems: 2
+      maxItems: 2
+      example: [ -3.36459,55.948390 ]
+      description: longitude, latitude

@@ -85,6 +85,16 @@ spec:
                 secretKeyRef:
                   name: twilio
                   key: auth_token
+            - name: IMGPROXY_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: imgproxy
+                  key: key
+            - name: IMGPROXY_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: imgproxy
+                  key: salt
           livenessProbe:
             httpGet:
               path: /status
