@@ -126,6 +126,13 @@ func NewTraceDownloaderWorker(env *pconfig.Env) *TraceDownloaderWorker {
 func (w *TraceDownloaderWorker) Work(ctx context.Context, job *river.Job[TraceDownloaderJobArgs]) error {
 	meta := job.Args.Meta
 
+	limited, res, err := w.limiter.RateLimitCtx(ctx, "download", 1)
+	if err != nil {
+		return err
+	} else if limited {
+		return river.JobSnooze(res.RetryAfter)
+	}
+
 	metaJSON, err := json.Marshal(meta)
 	if err != nil {
 		return err
@@ -176,20 +183,7 @@ func (w *TraceDownloaderWorker) Work(ctx context.Context, job *river.Job[TraceDo
 
 var ErrTraceNotFound = errors.New("trace not found")
 
-func downloadTrace(ctx context.Context, limiter *throttled.GCRARateLimiterCtx, url string) ([]byte, error) {
-	for {
-		limited, res, err := limiter.RateLimitCtx(ctx, "download", 1)
-		if err != nil {
-			return nil, err
-		}
-		if !limited {
-			break
-		}
-		if err := ptime.Sleep(ctx, res.RetryAfter); err != nil {
-			return nil, err
-		}
-	}
-
+func downloadTrace(ctx context.Context, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
