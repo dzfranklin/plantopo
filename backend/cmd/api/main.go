@@ -78,6 +78,12 @@ func main() {
 			Key:  getEnvString("IMGPROXY_KEY"),
 			Salt: getEnvString("IMGPROXY_SALT"),
 		},
+		SMTPRelay: pconfig.SMTPRelay{
+			Server:   getEnvString("SMTP_RELAY_SERVER"),
+			Port:     getEnvInt("SMTP_RELAY_PORT"),
+			Username: getEnvString("SMTP_RELAY_USERNAME"),
+			Password: getEnvString("SMTP_RELAY_PASSWORD"),
+		},
 	}
 
 	logger := pconfig.CreateLoggerForEnv(cfg.Env)

@@ -35,6 +35,7 @@ type Config struct {
 	DFTBusOpenData DFTBusOpenData
 	Twilio         Twilio
 	Imgproxy       Imgproxy
+	SMTPRelay      SMTPRelay
 }
 
 type Elevation struct {
@@ -94,4 +95,11 @@ type Twilio struct {
 type Imgproxy struct {
 	Key  string
 	Salt string
+}
+
+type SMTPRelay struct {
+	Server   string
+	Port     int
+	Username string
+	Password string
 }

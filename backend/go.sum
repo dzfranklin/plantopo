@@ -336,6 +336,8 @@ github.com/twpayne/go-proj/v10 v10.2.0 h1:EurvRTcUMqsiARMhcF0KDvBjKZeCzJqAPQ0WAb
 github.com/twpayne/go-proj/v10 v10.2.0/go.mod h1:BU5zbXY6XmKenoyf+DbIg7joKlKTJM2rEssPMPJZYjY=
 github.com/urfave/negroni v1.0.0 h1:kIimOitoypq34K7TG7DUaJ9kq/N4Ofuwi1sjz0KipXc=
 github.com/urfave/negroni v1.0.0/go.mod h1:Meg73S6kFm/4PpbYdq35yYWoCZ9mS/YSx+lKnmiohz4=
+github.com/wneessen/go-mail v0.4.3 h1:FN4Ge0lpPxKkXuw4PgJSffXlruDdMo25bamfkMzm+FE=
+github.com/wneessen/go-mail v0.4.3/go.mod h1:zxOlafWCP/r6FEhAaRgH4IC1vg2YXxO0Nar9u0IScZ8=
 github.com/xdg-go/pbkdf2 v1.0.0/go.mod h1:jrpuAogTd400dnrH08LKmI/xc1MbPOebTwRqcT5RDeI=
 github.com/xdg-go/scram v1.1.1/go.mod h1:RaEWvsqvNKKvBPvcKeFjrG2cJqOkHTiyTpzz23ni57g=
 github.com/xdg-go/stringprep v1.0.3/go.mod h1:W3f5j4i+9rC0kuIEJL0ky1VpHXQU3ocBgklLGvcBnW8=

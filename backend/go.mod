@@ -41,6 +41,7 @@ require (
 	github.com/twilio/twilio-go v1.22.3
 	github.com/twpayne/go-proj/v10 v10.2.0
 	github.com/urfave/negroni v1.0.0
+	github.com/wneessen/go-mail v0.4.3
 	go.opentelemetry.io/otel v1.27.0
 	go.opentelemetry.io/otel/metric v1.27.0
 	go.opentelemetry.io/otel/trace v1.27.0

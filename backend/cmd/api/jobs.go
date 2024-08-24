@@ -4,6 +4,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/dftbusopendata"
 	"github.com/dzfranklin/plantopo/backend/internal/osm"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
+	"github.com/dzfranklin/plantopo/backend/internal/pemail"
 	"github.com/dzfranklin/plantopo/backend/internal/plog"
 	"github.com/dzfranklin/plantopo/backend/internal/pmunroaccess"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
@@ -47,6 +48,8 @@ func setupRiver(env *pconfig.Env, repo *prepo.Repo, jobs *river.Client[pgx.Tx], 
 	river.AddWorker[dftbusopendata.JobArgs](workers, dftbusopendata.NewWorker(env))
 
 	river.AddWorker[pmunroaccess.GenerateArgs](workers, pmunroaccess.NewGenerateWorker(env))
+
+	river.AddWorker[pemail.JobArgs](workers, pemail.NewWorker(env))
 
 	if env.IsProduction {
 		periodic.Add(river.NewPeriodicJob(

@@ -1,0 +1,18 @@
+{{define "main"}}
+    <div>{{ .MailStatus }}</div>
+    <form method="POST" class="flex flex-col gap-2">
+        <label>
+            To
+            <input name="To" type="email">
+        </label>
+        <label>
+            Subject
+            <input name="Subject" type="text">
+        </label>
+        <label>
+            Text
+            <textarea name="Text"></textarea>
+        </label>
+        <button type="submit">Enqueue send</button>
+    </form>
+{{end}}

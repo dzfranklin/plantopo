@@ -2,6 +2,7 @@ package admin
 
 import (
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
+	"github.com/dzfranklin/plantopo/backend/internal/pemail"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
 	"github.com/go-playground/form"
 	"net/http"
@@ -11,6 +12,7 @@ func Routes(env *pconfig.Env, repo *prepo.Repo) http.Handler {
 	app := adminApp{
 		Env:         env,
 		Repo:        repo,
+		mailer:      pemail.NewService(env),
 		formDecoder: form.NewDecoder(),
 	}
 
@@ -30,6 +32,8 @@ func Routes(env *pconfig.Env, repo *prepo.Repo) http.Handler {
 	mux.HandleFunc("GET /admin/tel-input", app.telInput)
 	mux.HandleFunc("GET /admin/authorized-sms-sender", app.authorizedSMSSendersGet)
 	mux.HandleFunc("GET /admin/authorized-sms-sender/{id}", app.authorizedSMSSenderGet)
+	mux.HandleFunc("GET /admin/mail", app.mailGet)
+	mux.HandleFunc("POST /admin/mail", app.mailPost)
 
 	return app.requireAdminExceptLoginPageMiddleware(mux)
 }
