@@ -2,8 +2,8 @@ apiVersion: v1
 kind: Service
 metadata:
   annotations:
-    tailscale.com/tailnet-fqdn: db-stallion.reindeer-neon.ts.net
-  name: db-stallion
+    tailscale.com/tailnet-fqdn: geder.reindeer-neon.ts.net
+  name: geder
 spec:
   externalName: placeholder   # any value - will be overwritten by operator
   type: ExternalName
