@@ -3,7 +3,7 @@
 import Skeleton from '@/components/Skeleton';
 import { Track } from './api';
 import { RefObject, useEffect, useRef, useState } from 'react';
-import ml from 'mapbox-gl';
+import * as ml from 'mapbox-gl';
 import { MAPBOX_TOKEN } from '@/env';
 import { bbox as computeBBox } from '@turf/bbox';
 import { along as computeAlong } from '@turf/along';

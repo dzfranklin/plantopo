@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { ItineraryData, MunroList, ReportData } from './report';
-import ml from 'mapbox-gl';
+import * as ml from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN } from '@/env';
 import geojson, { Feature } from 'geojson';
@@ -100,7 +100,7 @@ export function ReportMapComponent({
       })!;
       const bbox = computeBBox(boundsFeature);
       map.fitBounds([bbox[0], bbox[1], bbox[2], bbox[3]], { animate: false });
-      map.setMaxBounds(map.getBounds());
+      map.setMaxBounds(map.getBounds()!);
 
       map.addSource('report', {
         type: 'geojson',
@@ -118,7 +118,7 @@ export function ReportMapComponent({
         map.addLayer(layer);
       }
 
-      map.addControl(new ml.ScaleControl({ unit: 'km' }));
+      map.addControl(new ml.ScaleControl({ unit: 'metric' }));
     });
 
     return () => {
