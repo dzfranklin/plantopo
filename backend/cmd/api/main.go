@@ -81,7 +81,7 @@ func main() {
 	}
 
 	logger := pconfig.CreateLoggerForEnv(cfg.Env)
-    slog.SetDefault(logger)
+	slog.SetDefault(logger)
 
 	db := openDB(cfg, logger)
 	jobs, jobWorkers := openRiver(db, logger)
