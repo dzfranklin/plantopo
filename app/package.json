@@ -36,6 +36,7 @@
     "@turf/rhumb-distance": "^7.1.0",
     "@turf/simplify": "^7.0.0",
     "@workos-inc/authkit-nextjs": "^0.6.1",
+    "eventsource-client": "^1.1.2",
     "framer-motion": "^11.2.10",
     "geojson": "^0.5.0",
     "inter-ui": "^4.0.2",

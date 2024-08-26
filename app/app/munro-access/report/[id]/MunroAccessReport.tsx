@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createEventSource } from 'eventsource-client';
 import { ClusterData, MunroList, ReportData, reportDataSchema } from './report';
 import { ClusterComponent } from './ClusterComponent';
 import { ReportMapComponent } from './ReportMapComponent';
@@ -47,34 +48,24 @@ export function MunroAccessReportLoader({
 }) {
   const [status, setStatus] = useState(initialStatus);
 
+  const isReady = status.status === 'ready';
   useEffect(() => {
-    let unsubscribe = () => {};
-    const subscribe = () => {
-      const events = new EventSource(
-        API_ENDPOINT + `munro-access/report/${id}/status-updates`,
-      );
-      unsubscribe();
-      unsubscribe = () => events.close();
-      events.addEventListener('open', () => {
-        console.log('event source connected');
-      });
-      events.addEventListener('status', (evt) => {
-        setStatus((p) => {
-          if (p.status === 'ready') {
-            return p;
-          } else {
-            return JSON.parse(evt.data);
-          }
-        });
-        events.addEventListener('error', () => {
-          console.log('event source error, retrying later');
-          setTimeout(subscribe, 10_000);
-        });
-      });
-    };
-    subscribe();
-    return () => unsubscribe();
-  }, [id]);
+    if (isReady) return;
+    console.log('subscribing to status updates');
+    const events = createEventSource({
+      url: API_ENDPOINT + `munro-access/report/${id}/status-updates`,
+      onMessage: ({ data, event }) => {
+        if (event === 'status') {
+          setStatus((p) => (p.status === 'ready' ? p : JSON.parse(data)));
+        }
+      },
+      onConnect: () => console.log('connected'),
+      onDisconnect: () => console.log('disconnected'),
+      onScheduleReconnect: ({ delay }) =>
+        console.log(`disconnected, retrying after ${delay}ms`),
+    });
+    return () => events.close();
+  }, [id, isReady]);
 
   const report = useQuery({
     queryKey: [status.report.url],
@@ -99,18 +90,32 @@ export function MunroAccessReportLoader({
   }, [status.report.date]);
   const title = `Munro access report for ${status.report.fromLabel} on ${formattedDate}`;
 
-  return (
-    <Layout pageTitle={title} wide={true}>
-      {report.data ? (
-        <MunroAccessReport report={report.data} munros={munros} />
-      ) : (
+  if (status.status !== 'ready') {
+    return (
+      <Layout pageTitle={title} wide={true}>
+        <ReportGeneratingComponent />
+      </Layout>
+    );
+  } else if (!report.data) {
+    return (
+      <Layout pageTitle={title} wide={true}>
         <Skeleton />
-      )}
-    </Layout>
-  );
+      </Layout>
+    );
+  } else {
+    return (
+      <Layout pageTitle={title} wide={true}>
+        <MunroAccessReport report={report.data} munros={munros} />
+      </Layout>
+    );
+  }
 }
 
-export function MunroAccessReport({
+function ReportGeneratingComponent() {
+  return <div>TODO</div>;
+}
+
+function MunroAccessReport({
   report,
   munros,
 }: {
