@@ -95,6 +95,26 @@ spec:
                 secretKeyRef:
                   name: imgproxy
                   key: salt
+            - name: SMTP_RELAY_SERVER
+              valueFrom:
+                secretKeyRef:
+                  name: sendgrid-smtp
+                  key: server
+            - name: SMTP_RELAY_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: sendgrid-smtp
+                  key: port
+            - name: SMTP_RELAY_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: sendgrid-smtp
+                  key: username
+            - name: SMTP_RELAY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: sendgrid-smtp
+                  key: password
           livenessProbe:
             httpGet:
               path: /status
