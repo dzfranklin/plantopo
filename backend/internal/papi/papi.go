@@ -36,7 +36,7 @@ func New(env *pconfig.Env, repo *prepo.Repo) (http.Handler, error) {
 		Repo: repo,
 	}
 
-	srv, err := NewServer(h, s, WithMiddleware(setClientInfoMiddleware))
+	srv, err := NewServer(h, s, WithMiddleware(h.setClientInfoMiddleware))
 	if err != nil {
 		return nil, err
 	}

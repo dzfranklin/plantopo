@@ -42,6 +42,7 @@ type SessionInfo struct {
 type SessionCreateOptions struct {
 	UserID    string
 	UserAgent string
+	IPAddr    netip.Addr
 }
 
 func (s *Sessions) Create(opts SessionCreateOptions) (string, error) {
@@ -64,6 +65,7 @@ func (s *Sessions) Create(opts SessionCreateOptions) (string, error) {
 	token, err := q.InsertSession(ctx, s.db, psqlc.InsertSessionParams{
 		UserID:    pgUUID(dbUserID),
 		UserAgent: pgTextUnlessEmpty(opts.UserAgent),
+		IpAddr:    &opts.IPAddr,
 	})
 	if err != nil {
 		return "", err

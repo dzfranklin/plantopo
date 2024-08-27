@@ -3,19 +3,31 @@ package papi
 import (
 	"context"
 	"github.com/ogen-go/ogen/middleware"
+	"net/netip"
 )
 
 type ClientInfo struct {
 	UserAgent string
+	IPAddr    netip.Addr
 }
 
 type clientInfoContextKey struct{}
 
-func setClientInfoMiddleware(req middleware.Request, next middleware.Next) (middleware.Response, error) {
+func (h *phandler) setClientInfoMiddleware(req middleware.Request, next middleware.Next) (middleware.Response, error) {
 	userAgent := req.Raw.Header.Get("User-Agent")
+
+	ipAddr, err := netip.ParseAddr("X-Real-IP")
+	if err != nil {
+		if h.IsProduction {
+			panic("missing ip header")
+		} else {
+			ipAddr = netip.IPv4Unspecified()
+		}
+	}
 
 	clientInfo := &ClientInfo{
 		UserAgent: userAgent,
+		IPAddr:    ipAddr,
 	}
 	req.Context = context.WithValue(req.Context, clientInfoContextKey{}, clientInfo)
 
