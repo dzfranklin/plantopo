@@ -50,7 +50,7 @@ export function MunroAccessReport({
 
   return (
     <div className="space-y-6">
-      <p>TODO time generated</p>
+      {/*<p>TODO time generated</p>*/}
 
       <ShortCredit />
 
