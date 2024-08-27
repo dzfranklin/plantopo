@@ -16,10 +16,10 @@ type clientInfoContextKey struct{}
 func (h *phandler) setClientInfoMiddleware(req middleware.Request, next middleware.Next) (middleware.Response, error) {
 	userAgent := req.Raw.Header.Get("User-Agent")
 
-	ipAddr, err := netip.ParseAddr("X-Real-IP")
+	ipAddr, err := netip.ParseAddr(req.Raw.Header.Get("X-Real-IP"))
 	if err != nil {
 		if h.IsProduction {
-			panic("missing ip header")
+			panic("invalid ip header")
 		} else {
 			ipAddr = netip.IPv4Unspecified()
 		}

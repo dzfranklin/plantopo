@@ -72,4 +72,4 @@ pre-commit:
     just check-all
 
 loc:
-    tokei . --exclude '*.sql.go' --exclude '*_gen.go' --exclude '*.d.ts' -t go,sql,css,tsx,typescript
+    tokei . -e '*.sql.go' -e '*_gen.go' -e '*.gen.go' -e '*.d.ts' -t go,sql,css,tsx,typescript
