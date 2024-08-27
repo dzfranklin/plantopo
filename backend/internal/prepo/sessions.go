@@ -73,6 +73,7 @@ func (s *Sessions) Create(opts SessionCreateOptions) (string, error) {
 
 	s.al.Push(opts.UserID, opts.UserID, "SessionCreate", M{
 		"UserAgent": opts.UserAgent,
+		"IPAddr":    opts.IPAddr,
 	})
 
 	return token, nil
