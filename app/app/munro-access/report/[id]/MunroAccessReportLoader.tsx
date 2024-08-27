@@ -40,7 +40,7 @@ export function MunroAccessReportLoader({
   if (status.status !== 'ready') {
     return (
       <Layout pageTitle={title}>
-        <WaitForReportComponent status={status} />
+        <WaitForReportComponent />
       </Layout>
     );
   } else if (!report.data) {
