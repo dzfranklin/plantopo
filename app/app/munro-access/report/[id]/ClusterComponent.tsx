@@ -1,4 +1,3 @@
-'use client';
 import { Dispatch, SetStateAction } from 'react';
 import { ClusterData, MunroList } from './report';
 import { JourneysComponent } from './JourneysComponent';

@@ -8,8 +8,6 @@ import { DateTime } from 'luxon';
 import { $api } from '@/api/client';
 import { useRouter } from 'next/navigation';
 
-const datetimeLocalFmt = "yyyy-MM-dd'T'HH:mm";
-
 export default function RequestReportComponent() {
   const [searchErr, setSearchErr] = useState<string | null>(null);
   const [from, setFrom] = useState<{
@@ -30,11 +28,13 @@ export default function RequestReportComponent() {
       second: 0,
       millisecond: 0,
     });
-    const fmt = (t: DateTime) => t.toFormat(datetimeLocalFmt);
     setTimes({
-      default: fmt(currentTime),
-      min: fmt(currentDate.minus({ day: 14 })),
-      max: fmt(currentDate.plus({ month: 3 }).set({ hour: 23, minute: 59 })),
+      default: currentTime.toISODate(),
+      min: currentDate.minus({ day: 14 }).toISODate(),
+      max: currentDate
+        .plus({ month: 3 })
+        .set({ hour: 23, minute: 59 })
+        .toISODate(),
     });
   }, []);
 
@@ -43,7 +43,7 @@ export default function RequestReportComponent() {
   const mutation = $api.useMutation('post', '/munro-access/request', {
     onSuccess: ({ id }) => router.push('/munro-access/report/' + id),
   });
-  // if (mutation.error) throw mutation.error;
+  if (mutation.error) throw mutation.error;
 
   return (
     <form

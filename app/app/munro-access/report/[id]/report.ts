@@ -4,6 +4,9 @@ import { z } from 'zod';
 export type MunroList =
   paths['/munro-access/munros']['get']['responses'][200]['content']['application/json']['munros'];
 
+export type ReportStatus =
+  paths['/munro-access/report/{id}/status']['get']['responses']['200']['content']['application/json'];
+
 const pointSchema = z.tuple([z.number(), z.number()]);
 
 export type Point = z.infer<typeof pointSchema>;

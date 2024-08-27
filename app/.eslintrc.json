@@ -1,5 +1,10 @@
 {
-  "extends": ["next", "prettier", "plugin:@typescript-eslint/recommended"],
+  "extends": [
+    "next",
+    "prettier",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:storybook/recommended"
+  ],
   "rules": {
     "@next/next/no-img-element": "off",
     "semi": ["warn", "always"],

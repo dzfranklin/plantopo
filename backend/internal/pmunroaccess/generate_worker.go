@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/phttp"
 	"github.com/minio/minio-go/v7"
@@ -63,21 +64,21 @@ func (w GenerateWorker) Work(ctx context.Context, job *river.Job[GenerateArgs]) 
 	l.Info("beginning work on munro access job")
 
 	if err := pushStatus(ctx, w.rdb, job.Args.ID, "working"); err != nil {
-		return err
+		return fmt.Errorf("push status: %w", err)
 	}
 
 	err := doGenerateWork(ctx, l, w.objects, job.Args)
 	if err != nil {
 		l.Error("failed to generate report", "error", err)
 		if err := pushStatus(ctx, w.rdb, job.Args.ID, "received"); err != nil {
-			return err
+			return fmt.Errorf("push status: %w", err)
 		}
-		return err
+		return fmt.Errorf("generate report: %w", err)
 	}
 
 	l.Info("generated report")
 	if err := pushStatus(ctx, w.rdb, job.Args.ID, "ready"); err != nil {
-		return err
+		return fmt.Errorf("push status: %w", err)
 	}
 
 	return nil

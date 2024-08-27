@@ -1,4 +1,4 @@
-import { MunroAccessReportLoader } from './MunroAccessReport';
+import { MunroAccessReportLoader } from './MunroAccessReportLoader';
 import { fetchClient } from '@/api/server';
 import { notFound } from 'next/navigation';
 

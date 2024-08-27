@@ -44,7 +44,7 @@ export default function Page() {
 
         <h2>App</h2>
 
-        <h3>Icons</h3>
+        <h3>Visual resources</h3>
         <ul>
           {nounprojectCredit.map((entry, i) => (
             <li key={i}>
@@ -52,6 +52,7 @@ export default function Page() {
               <a href="https://thenounproject.com">The Noun Project</a>
             </li>
           ))}
+          <li>Free Triangle loading Animation by Sun Cx</li>
         </ul>
 
         <h3>Dependencies</h3>

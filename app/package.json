@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "npm run build && next start",
     "lint": "prettier . --check && next lint",
-    "build:dependency-report": "npx license-checker --json | jq 'to_entries | sort_by(.key) | map({name: .key, publisher: .value.publisher, licenses: .value.licenses, repository: .value.repository})' > dependencyReport.json"
+    "build:dependency-report": "npx license-checker --json | jq 'to_entries | sort_by(.key) | map({name: .key, publisher: .value.publisher, licenses: .value.licenses, repository: .value.repository})' > dependencyReport.json",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@headlessui/react": "^2.0.4",
@@ -55,6 +57,15 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@chromatic-com/storybook": "^1.7.0",
+    "@storybook/addon-essentials": "^8.2.9",
+    "@storybook/addon-interactions": "^8.2.9",
+    "@storybook/addon-links": "^8.2.9",
+    "@storybook/addon-onboarding": "^8.2.9",
+    "@storybook/blocks": "^8.2.9",
+    "@storybook/nextjs": "^8.2.9",
+    "@storybook/react": "^8.2.9",
+    "@storybook/test": "^8.2.9",
     "@types/geojson": "^7946.0.14",
     "@types/luxon": "^3.4.2",
     "@types/mapbox__polyline": "^1.0.5",
@@ -66,9 +77,11 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.4",
     "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-storybook": "^0.8.0",
     "openapi-typescript": "^7.3.0",
     "postcss": "^8",
     "prettier": "^3.3.2",
+    "storybook": "^8.2.9",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.5.4"
   }

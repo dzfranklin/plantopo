@@ -402,7 +402,7 @@ components:
           $ref: "#/components/schemas/ValidationErrors"
       required: [ "message" ]
       example:
-          message: "internal server error (correlation id cor_e0a3b2628acbb22dad4696acaf30be88)"
+        message: "internal server error (correlation id cor_e0a3b2628acbb22dad4696acaf30be88)"
     ValidationErrors:
       type: object
       properties:
@@ -472,7 +472,12 @@ components:
             minItems: 2
             maxItems: 2
       example:
-        coordinates: [ [ -105.883643, 40.176097 ], [ -105.861114, 40.150743 ], [ -105.822319, 40.14182 ] ]
+        coordinates:
+          [
+            [ -105.883643, 40.176097 ],
+            [ -105.861114, 40.150743 ],
+            [ -105.822319, 40.14182 ],
+          ]
       required: [ "coordinates" ]
     ElevationPostOK:
       type: object
@@ -490,5 +495,5 @@ components:
         type: number
       minItems: 2
       maxItems: 2
-      example: [ -3.36459,55.948390 ]
+      example: [ -3.36459, 55.948390 ]
       description: longitude, latitude
