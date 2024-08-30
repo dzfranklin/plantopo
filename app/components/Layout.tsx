@@ -22,6 +22,7 @@ import cls from '@/cls';
 const navItems = [
   { label: 'Home', url: '/' },
   { label: 'My Tracks', url: '/tracks' },
+  { label: 'Tools', url: '/tools' },
 ];
 
 export const Layout = forwardRef(

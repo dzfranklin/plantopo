@@ -30,6 +30,7 @@ type ErrHTTPStatus struct {
 	Code   int
 	Method string
 	URL    string
+	Header http.Header
 	// Only present if less than 10 KiB and valid UTF-8
 	Body string
 }
@@ -138,6 +139,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, err
 			Code:   resp.StatusCode,
 			Method: req.Method,
 			URL:    req.URL.String(),
+			Header: resp.Header,
 			Body:   body,
 		}
 	}

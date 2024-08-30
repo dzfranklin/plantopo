@@ -15,3 +15,12 @@ func Sleep(ctx context.Context, d time.Duration) error {
 		return nil
 	}
 }
+
+func SleepUntil(ctx context.Context, t time.Time) error {
+	now := time.Now()
+	if !t.After(now) {
+		return nil
+	}
+	diff := t.Sub(now)
+	return Sleep(ctx, diff)
+}

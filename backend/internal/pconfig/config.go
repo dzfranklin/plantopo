@@ -36,6 +36,7 @@ type Config struct {
 	Twilio         Twilio
 	Imgproxy       Imgproxy
 	SMTPRelay      SMTPRelay
+	Mapbox         Mapbox
 }
 
 type Elevation struct {
@@ -102,4 +103,9 @@ type SMTPRelay struct {
 	Port     int
 	Username string
 	Password string
+}
+
+type Mapbox struct {
+	PrivateToken string
+	PublicToken  string
 }

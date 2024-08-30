@@ -117,7 +117,7 @@ func (src *csvSource) Values() ([]any, error) {
 		src.get("Feature"),
 		src.get("Observations"),
 		src.get("Survey"),
-		src.get("Country"),
+		src.get("CountryAlpha2"),
 		src.get("Revision"),
 		src.get("Comments"),
 	}, nil

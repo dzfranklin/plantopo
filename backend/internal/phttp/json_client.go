@@ -5,17 +5,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/dzfranklin/plantopo/backend/internal/pstrings"
+	"github.com/dzfranklin/plantopo/backend/internal/perrors"
+	"github.com/dzfranklin/plantopo/backend/internal/ptime"
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
+	"time"
 )
 
-const traceRequests = false
-
 type JSONClient struct {
-	h                 *http.Client
+	c                 *Client
 	baseURL           string
 	commonHeaders     http.Header
 	commonQueryParams url.Values
@@ -27,7 +28,7 @@ func NewJSONClient(baseURL string) *JSONClient {
 	commonHeaders.Set("User-Agent", UserAgent)
 
 	return &JSONClient{
-		h:             &http.Client{},
+		c:             New(nil),
 		baseURL:       baseURL,
 		commonHeaders: commonHeaders,
 	}
@@ -56,6 +57,31 @@ func (c *JSONClient) Post(ctx context.Context, out any, path string, body any) e
 }
 
 func (c *JSONClient) Do(ctx context.Context, out any, method string, path string, body any) error {
+	err := c.do(ctx, out, method, path, body)
+
+	if v, ok := perrors.Into[ErrHTTPStatus](err); ok && v.Code == http.StatusTooManyRequests {
+		resetAt := time.Now().Add(time.Minute)
+
+		resetTS, err := strconv.ParseInt(v.Header.Get("X-Rate-Limit-Reset"), 10, 64)
+		if err != nil {
+			resetAt = time.Unix(resetTS, 0)
+		}
+
+		if err := ptime.SleepUntil(ctx, resetAt); err != nil {
+			return err
+		}
+
+		return c.Do(ctx, out, method, path, body)
+	}
+
+	return err
+}
+
+func (c *JSONClient) do(ctx context.Context, out any, method string, path string, body any) error {
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
 	reqURL := c.baseURL
 	if path != "" {
 		if !strings.HasSuffix(reqURL, "/") {
@@ -73,7 +99,7 @@ func (c *JSONClient) Do(ctx context.Context, out any, method string, path string
 		serBody = bytes.NewReader(serBodyBytes)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, reqURL, serBody)
+	req, err := http.NewRequest(method, reqURL, serBody)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -92,25 +118,9 @@ func (c *JSONClient) Do(ctx context.Context, out any, method string, path string
 		req.URL.RawQuery = q.Encode()
 	}
 
-	if traceRequests {
-		fmt.Printf("TRACE REQUEST %+v\n", req)
-	}
-
-	resp, err := c.h.Do(req)
+	resp, err := c.c.Do(ctx, req)
 	if err != nil {
-		return fmt.Errorf("failed to perform request: %w", err)
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		var errBody string
-		fullBody, err := io.ReadAll(resp.Body)
-		if err != nil {
-			errBody = "<failed to read body>"
-		} else {
-			errBody = pstrings.TruncateASCII(string(fullBody), 400)
-		}
-
-		return fmt.Errorf("unexpected status code %d: %s %s: %s", resp.StatusCode, method, reqURL, errBody)
+		return err
 	}
 
 	return json.NewDecoder(resp.Body).Decode(out)

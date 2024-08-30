@@ -401,8 +401,9 @@ func NewTestLogger(t *testing.T) *slog.Logger {
 	}))
 }
 
-func LoadDevEnv(t *testing.T) {
+func LoadDevEnv(t *testing.T) *pconfig.Config {
 	t.Helper()
 	root := gitRoot()
 	_ = godotenv.Load(root+"/backend/.env", root+"/backend/.env.local")
+	return pconfig.Read()
 }

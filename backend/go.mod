@@ -20,6 +20,7 @@ require (
 	github.com/lmittmann/tint v1.0.5
 	github.com/minio/minio-go/v7 v7.0.73
 	github.com/mmcdole/gofeed v1.3.0
+	github.com/mmcloughlin/geohash v0.10.0
 	github.com/neilotoole/slogt v1.1.0
 	github.com/ogen-go/ogen v1.2.2
 	github.com/oklog/ulid/v2 v2.1.0
@@ -38,7 +39,6 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/redis v0.32.0
 	github.com/throttled/throttled/v2 v2.12.0
 	github.com/tidwall/gjson v1.17.3
-	github.com/tidwall/rtree v1.10.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/trustelem/zxcvbn v1.0.1
 	github.com/twilio/twilio-go v1.22.3
@@ -137,7 +137,6 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/test-go/testify v1.1.4 // indirect
-	github.com/tidwall/geoindex v1.7.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
