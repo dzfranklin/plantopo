@@ -60,9 +60,7 @@ export default function RequestReportComponent() {
           return;
         }
 
-        const date = DateTime.fromISO(data.get('date') as string)
-          .toUTC()
-          .toISO()!;
+        const date = DateTime.fromISO(data.get('date') as string).toISO()!;
 
         mutation.mutate({
           body: { fromLabel: from.label, fromPoint: from.point, date },

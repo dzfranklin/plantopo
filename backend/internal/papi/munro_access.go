@@ -130,7 +130,7 @@ func (h *phandler) MunroAccessReportIDStatusUpdatesGet(w http.ResponseWriter, r 
 			return
 		}
 
-		if _, err := fmt.Fprintf(w, "event: status\ndata: %s\n\n", updateJSON); err != nil {
+		if _, err := fmt.Fprintf(w, "id: %s\nevent: status\ndata: %s\n\n", update.ID, updateJSON); err != nil {
 			return
 		}
 		if err := rc.Flush(); err != nil {

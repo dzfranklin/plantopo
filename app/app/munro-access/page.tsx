@@ -23,7 +23,7 @@ export default async function Page() {
 async function PregeneratedReportsComponent() {
   const reports = await fetchReports();
   return (
-    <ul>
+    <ul className="mt-10 md:mt-2">
       {reports.map((report) => (
         <li key={report.id} className="mb-3">
           <Link

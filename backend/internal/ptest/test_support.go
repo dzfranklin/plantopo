@@ -54,8 +54,20 @@ type TestEnv struct {
 	rdbC *rediscontainers.RedisContainer
 }
 
+var loadedTestEnv = false
+var loadTestEnvMu sync.Mutex
+
 func NewTestEnv(t *testing.T) *TestEnv {
 	t.Helper()
+
+	loadTestEnvMu.Lock()
+	if !loadedTestEnv {
+		if err := godotenv.Load(gitRoot()+"/backend/.env", gitRoot()+"/backend/.env.local"); err != nil {
+			t.Log("load dotenv", err)
+		}
+		loadedTestEnv = true
+	}
+	loadTestEnvMu.Unlock()
 
 	te := &TestEnv{
 		Env: &pconfig.Env{

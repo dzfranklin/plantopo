@@ -148,6 +148,8 @@ const clusterDataSchema = z.object({
 export type ClusterData = z.infer<typeof clusterDataSchema>;
 
 export const reportDataSchema = z.object({
+  version: z.literal(0),
+  generatedAt: z.string().optional(),
   date: z.string().date(),
   from: pointSchema,
   clusters: z.array(clusterDataSchema),

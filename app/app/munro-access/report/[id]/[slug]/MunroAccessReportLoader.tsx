@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { API_ENDPOINT } from '@/env';
 import { MunroAccessReport } from '@/app/munro-access/report/[id]/[slug]/MunroAccessReport';
 import { WaitForReportComponent } from '@/app/munro-access/report/[id]/[slug]/WaitForReportComponent';
-import { useFormattedDate } from '@/components/Date';
+import { useFormattedTimestamp } from '@/components/Timestamp';
 
 export function MunroAccessReportLoader({
   id,
@@ -34,7 +34,7 @@ export function MunroAccessReportLoader({
     throw report.error;
   }
 
-  const formattedDate = useFormattedDate(status.report.date);
+  const formattedDate = useFormattedTimestamp(status.report.date);
   const title = `Munro access report for ${status.report.fromLabel} on ${formattedDate}`;
 
   if (status.status !== 'ready') {

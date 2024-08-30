@@ -16,6 +16,8 @@ import { ShortCredit } from '@/app/munro-access/report/[id]/[slug]/ShortCredit';
 import { DebugWeightControl } from '@/app/munro-access/report/[id]/[slug]/DebugWeightControl';
 import { ReportMapComponent } from '@/app/munro-access/report/[id]/[slug]/ReportMapComponent';
 import { ClusterComponent } from '@/app/munro-access/report/[id]/[slug]/ClusterComponent';
+import { Timestamp } from '@/components/Timestamp';
+import { DateTime } from 'luxon';
 
 export function MunroAccessReport({
   report,
@@ -50,7 +52,12 @@ export function MunroAccessReport({
 
   return (
     <div className="space-y-6">
-      {/*<p>TODO time generated</p>*/}
+      {report.generatedAt && (
+        <p className="-mt-6 mb-6 text-xs text-gray-600">
+          Generated{' '}
+          <Timestamp iso={report.generatedAt} fmt={DateTime.DATETIME_FULL} />
+        </p>
+      )}
 
       <ShortCredit />
 

@@ -73,3 +73,8 @@ pre-commit:
 
 loc:
     tokei . -e '*.sql.go' -e '*_gen.go' -e '*.gen.go' -e '*.d.ts' -t go,sql,css,tsx,typescript
+
+deploy-geder-worker:
+    cd backend && GOOS=linux GOARCH=amd64 go build -o /tmp/plantopo_geder_worker ./cmd/geder_worker
+    rsync -aP /tmp/plantopo_geder_worker geder:/var/plantopo/worker
+    ssh root@geder "systemctl restart plantopo-worker && systemctl status plantopo-worker"

@@ -31,10 +31,11 @@ func NewGederWorker(otpGTFSEndpoint string) *GederWorker {
 }
 
 type AccessReport struct {
-	Version  int           `json:"version"`
-	Date     string        `json:"date"` // YYYY-MM-DD
-	From     [2]float64    `json:"from"`
-	Clusters []matrixEntry `json:"clusters"`
+	Version     int           `json:"version"`
+	GeneratedAt time.Time     `json:"generatedAt"`
+	Date        string        `json:"date"` // YYYY-MM-DD
+	From        [2]float64    `json:"from"`
+	Clusters    []matrixEntry `json:"clusters"`
 }
 
 type matrixEntry struct {
@@ -94,10 +95,11 @@ func (s *GederWorker) generate(ctx context.Context, from [2]float64, date time.T
 	}
 
 	return AccessReport{
-		Version:  0,
-		Date:     date.Format("2006-01-02"),
-		From:     from,
-		Clusters: outClusters,
+		Version:     0,
+		GeneratedAt: time.Now(),
+		Date:        date.Format("2006-01-02"),
+		From:        from,
+		Clusters:    outClusters,
 	}, nil
 }
 
