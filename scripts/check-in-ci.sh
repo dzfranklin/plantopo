@@ -63,6 +63,10 @@ tar -xvzf $tools_dir/tern.tar.gz -C "$tools_dir"
 
 pushd app && npm ci --include=dev && popd
 
+# Setup env
+
+export NEXT_PUBLIC_MAPBOX_TOKEN=ci-stub
+
 # Run checks
 
 PATH="$tools_dir:$PATH" $just check-all
