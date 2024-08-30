@@ -43,7 +43,7 @@ async function fetchReports(): Promise<ReportMeta[]> {
   const reportResp = await fetchClient.GET(
     '/munro-access/pregenerated-reports',
   );
-  if (reportResp.error) throw reportResp.error;
+  if (reportResp.error) throw new Error(reportResp.error.message);
   return reportResp.data.reports.sort((a, b) => {
     if (a.fromLabel < b.fromLabel) return -1;
     if (a.fromLabel > b.fromLabel) return 1;
