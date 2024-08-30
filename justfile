@@ -43,7 +43,7 @@ api-schema-gen:
       -clean \
       ./internal/papi/schema.gen.yaml
 
-    cd app && npx openapi-typescript ../api/schema/schema.yaml -o ./api/v1.d.ts
+    cd app && npx openapi-typescript ../api/schema/schema.yaml -o ./api/v1.d.ts && npx prettier --write ./api/v1.d.ts
 
 sqlc-watch:
     cd backend && watchexec \
