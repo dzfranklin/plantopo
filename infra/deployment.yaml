@@ -120,6 +120,11 @@ spec:
                 secretKeyRef:
                   name: mapbox
                   key: private-token
+            - name: MAPBOX_PUBLIC_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mapbox
+                  key: public-token
           livenessProbe:
             httpGet:
               path: /status
