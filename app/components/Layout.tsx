@@ -31,10 +31,12 @@ export const Layout = forwardRef(
       pageTitle,
       pageActions,
       wide,
+      inlineTitle,
       ...props
     }: {
       children?: React.ReactNode;
       pageTitle?: string;
+      inlineTitle?: boolean;
       pageActions?: React.ReactNode;
       wide?: boolean;
     } & React.ComponentPropsWithoutRef<'div'>,
@@ -111,7 +113,12 @@ export const Layout = forwardRef(
             </Sidebar>
           }
         >
-          <PageTitle title={pageTitle} actions={pageActions} />
+          <PageTitle
+            title={pageTitle}
+            actions={pageActions}
+            inlineTitle={inlineTitle}
+          />
+
           <div {...props} className={cls('grow', props.className)} ref={ref}>
             {children}
           </div>
