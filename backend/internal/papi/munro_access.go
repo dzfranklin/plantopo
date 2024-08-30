@@ -9,6 +9,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
 	"github.com/dzfranklin/plantopo/backend/internal/pslices"
 	"net/http"
+	"time"
 )
 
 func (h *phandler) MunroAccessRequestPost(_ context.Context, req *MunroAccessRequestPostReq) (*MunroAccessRequestPostOK, error) {
@@ -122,17 +123,27 @@ func (h *phandler) MunroAccessReportIDStatusUpdatesGet(w http.ResponseWriter, r 
 	w.Header().Set("Cache-Control", "no-cache")
 	w.WriteHeader(http.StatusOK)
 
-	for update := range updates {
-		toMarshal := mapMunroAccessReportStatus(update)
-		updateJSON, err := toMarshal.MarshalJSON()
-		if err != nil {
-			h.Logger.Error("marshal json", "error", err)
-			return
+	ticker := time.NewTicker(time.Second * 30)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case update := <-updates:
+			toMarshal := mapMunroAccessReportStatus(update)
+			updateJSON, err := toMarshal.MarshalJSON()
+			if err != nil {
+				h.Logger.Error("marshal json", "error", err)
+				return
+			}
+			if _, err := fmt.Fprintf(w, "id: %s\nevent: status\ndata: %s\n\n", update.ID, updateJSON); err != nil {
+				return
+			}
+		case <-ticker.C:
+			if _, err := fmt.Fprintln(w, ":keepalive"); err != nil {
+				return
+			}
 		}
 
-		if _, err := fmt.Fprintf(w, "id: %s\nevent: status\ndata: %s\n\n", update.ID, updateJSON); err != nil {
-			return
-		}
 		if err := rc.Flush(); err != nil {
 			return
 		}
