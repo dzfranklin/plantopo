@@ -4,18 +4,18 @@ import {
   ClusterData,
   MunroList,
   ReportData,
-} from '@/app/munro-access/report/[id]/report';
+} from '@/app/munro-access/report/[id]/[slug]/report';
 import { useMemo, useState } from 'react';
 import { useDebugMode } from '@/hooks/debugMode';
 import {
   defaultClusterWeights,
   scoreCluster,
   weighClusterScores,
-} from '@/app/munro-access/report/[id]/ranking';
-import { ShortCredit } from '@/app/munro-access/report/[id]/ShortCredit';
-import { DebugWeightControl } from '@/app/munro-access/report/[id]/DebugWeightControl';
-import { ReportMapComponent } from '@/app/munro-access/report/[id]/ReportMapComponent';
-import { ClusterComponent } from '@/app/munro-access/report/[id]/ClusterComponent';
+} from '@/app/munro-access/report/[id]/[slug]/ranking';
+import { ShortCredit } from '@/app/munro-access/report/[id]/[slug]/ShortCredit';
+import { DebugWeightControl } from '@/app/munro-access/report/[id]/[slug]/DebugWeightControl';
+import { ReportMapComponent } from '@/app/munro-access/report/[id]/[slug]/ReportMapComponent';
+import { ClusterComponent } from '@/app/munro-access/report/[id]/[slug]/ClusterComponent';
 
 export function MunroAccessReport({
   report,

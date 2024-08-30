@@ -1998,14 +1998,316 @@ func (s *MunroAccessMunrosGetOKMunrosType) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
-func (s *MunroAccessReportIDStatusGetOK) Encode(e *jx.Encoder) {
+func (s *MunroAccessPregeneratedReportsGetOK) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
 	e.ObjEnd()
 }
 
 // encodeFields encodes fields.
-func (s *MunroAccessReportIDStatusGetOK) encodeFields(e *jx.Encoder) {
+func (s *MunroAccessPregeneratedReportsGetOK) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("reports")
+		e.ArrStart()
+		for _, elem := range s.Reports {
+			elem.Encode(e)
+		}
+		e.ArrEnd()
+	}
+}
+
+var jsonFieldsNameOfMunroAccessPregeneratedReportsGetOK = [1]string{
+	0: "reports",
+}
+
+// Decode decodes MunroAccessPregeneratedReportsGetOK from json.
+func (s *MunroAccessPregeneratedReportsGetOK) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode MunroAccessPregeneratedReportsGetOK to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "reports":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				s.Reports = make([]MunroAccessReportMeta, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem MunroAccessReportMeta
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Reports = append(s.Reports, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"reports\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode MunroAccessPregeneratedReportsGetOK")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00000001,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfMunroAccessPregeneratedReportsGetOK) {
+					name = jsonFieldsNameOfMunroAccessPregeneratedReportsGetOK[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *MunroAccessPregeneratedReportsGetOK) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *MunroAccessPregeneratedReportsGetOK) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *MunroAccessReportMeta) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *MunroAccessReportMeta) encodeFields(e *jx.Encoder) {
+	{
+		e.FieldStart("id")
+		e.Str(s.ID)
+	}
+	{
+		e.FieldStart("slug")
+		e.Str(s.Slug)
+	}
+	{
+		e.FieldStart("fromLabel")
+		e.Str(s.FromLabel)
+	}
+	{
+		e.FieldStart("fromPoint")
+		s.FromPoint.Encode(e)
+	}
+	{
+		e.FieldStart("date")
+		json.EncodeDateTime(e, s.Date)
+	}
+	{
+		e.FieldStart("requestTime")
+		json.EncodeDateTime(e, s.RequestTime)
+	}
+	{
+		if s.URL.Set {
+			e.FieldStart("url")
+			s.URL.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfMunroAccessReportMeta = [7]string{
+	0: "id",
+	1: "slug",
+	2: "fromLabel",
+	3: "fromPoint",
+	4: "date",
+	5: "requestTime",
+	6: "url",
+}
+
+// Decode decodes MunroAccessReportMeta from json.
+func (s *MunroAccessReportMeta) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode MunroAccessReportMeta to nil")
+	}
+	var requiredBitSet [1]uint8
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "id":
+			requiredBitSet[0] |= 1 << 0
+			if err := func() error {
+				v, err := d.Str()
+				s.ID = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "slug":
+			requiredBitSet[0] |= 1 << 1
+			if err := func() error {
+				v, err := d.Str()
+				s.Slug = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"slug\"")
+			}
+		case "fromLabel":
+			requiredBitSet[0] |= 1 << 2
+			if err := func() error {
+				v, err := d.Str()
+				s.FromLabel = string(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"fromLabel\"")
+			}
+		case "fromPoint":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				if err := s.FromPoint.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"fromPoint\"")
+			}
+		case "date":
+			requiredBitSet[0] |= 1 << 4
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.Date = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"date\"")
+			}
+		case "requestTime":
+			requiredBitSet[0] |= 1 << 5
+			if err := func() error {
+				v, err := json.DecodeDateTime(d)
+				s.RequestTime = v
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"requestTime\"")
+			}
+		case "url":
+			if err := func() error {
+				s.URL.Reset()
+				if err := s.URL.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"url\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode MunroAccessReportMeta")
+	}
+	// Validate required fields.
+	var failures []validate.FieldError
+	for i, mask := range [1]uint8{
+		0b00111111,
+	} {
+		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
+			// Mask only required fields and check equality to mask using XOR.
+			//
+			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
+			// Bits of fields which would be set are actually bits of missed fields.
+			missed := bits.OnesCount8(result)
+			for bitN := 0; bitN < missed; bitN++ {
+				bitIdx := bits.TrailingZeros8(result)
+				fieldIdx := i*8 + bitIdx
+				var name string
+				if fieldIdx < len(jsonFieldsNameOfMunroAccessReportMeta) {
+					name = jsonFieldsNameOfMunroAccessReportMeta[fieldIdx]
+				} else {
+					name = strconv.Itoa(fieldIdx)
+				}
+				failures = append(failures, validate.FieldError{
+					Name:  name,
+					Error: validate.ErrFieldRequired,
+				})
+				// Reset bit.
+				result &^= 1 << bitIdx
+			}
+		}
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *MunroAccessReportMeta) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *MunroAccessReportMeta) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *MunroAccessReportStatus) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *MunroAccessReportStatus) encodeFields(e *jx.Encoder) {
 	{
 		e.FieldStart("id")
 		e.Str(s.ID)
@@ -2024,17 +2326,17 @@ func (s *MunroAccessReportIDStatusGetOK) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfMunroAccessReportIDStatusGetOK = [4]string{
+var jsonFieldsNameOfMunroAccessReportStatus = [4]string{
 	0: "id",
 	1: "timestamp",
 	2: "status",
 	3: "report",
 }
 
-// Decode decodes MunroAccessReportIDStatusGetOK from json.
-func (s *MunroAccessReportIDStatusGetOK) Decode(d *jx.Decoder) error {
+// Decode decodes MunroAccessReportStatus from json.
+func (s *MunroAccessReportStatus) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode MunroAccessReportIDStatusGetOK to nil")
+		return errors.New("invalid: unable to decode MunroAccessReportStatus to nil")
 	}
 	var requiredBitSet [1]uint8
 
@@ -2089,7 +2391,7 @@ func (s *MunroAccessReportIDStatusGetOK) Decode(d *jx.Decoder) error {
 		}
 		return nil
 	}); err != nil {
-		return errors.Wrap(err, "decode MunroAccessReportIDStatusGetOK")
+		return errors.Wrap(err, "decode MunroAccessReportStatus")
 	}
 	// Validate required fields.
 	var failures []validate.FieldError
@@ -2106,8 +2408,8 @@ func (s *MunroAccessReportIDStatusGetOK) Decode(d *jx.Decoder) error {
 				bitIdx := bits.TrailingZeros8(result)
 				fieldIdx := i*8 + bitIdx
 				var name string
-				if fieldIdx < len(jsonFieldsNameOfMunroAccessReportIDStatusGetOK) {
-					name = jsonFieldsNameOfMunroAccessReportIDStatusGetOK[fieldIdx]
+				if fieldIdx < len(jsonFieldsNameOfMunroAccessReportStatus) {
+					name = jsonFieldsNameOfMunroAccessReportStatus[fieldIdx]
 				} else {
 					name = strconv.Itoa(fieldIdx)
 				}
@@ -2128,218 +2430,56 @@ func (s *MunroAccessReportIDStatusGetOK) Decode(d *jx.Decoder) error {
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s *MunroAccessReportIDStatusGetOK) MarshalJSON() ([]byte, error) {
+func (s *MunroAccessReportStatus) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *MunroAccessReportIDStatusGetOK) UnmarshalJSON(data []byte) error {
+func (s *MunroAccessReportStatus) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
 
-// Encode implements json.Marshaler.
-func (s *MunroAccessReportIDStatusGetOKReport) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *MunroAccessReportIDStatusGetOKReport) encodeFields(e *jx.Encoder) {
-	{
-		e.FieldStart("fromLabel")
-		e.Str(s.FromLabel)
-	}
-	{
-		e.FieldStart("fromPoint")
-		s.FromPoint.Encode(e)
-	}
-	{
-		e.FieldStart("date")
-		json.EncodeDateTime(e, s.Date)
-	}
-	{
-		e.FieldStart("requestTime")
-		json.EncodeDateTime(e, s.RequestTime)
-	}
-	{
-		if s.URL.Set {
-			e.FieldStart("url")
-			s.URL.Encode(e)
-		}
-	}
-}
-
-var jsonFieldsNameOfMunroAccessReportIDStatusGetOKReport = [5]string{
-	0: "fromLabel",
-	1: "fromPoint",
-	2: "date",
-	3: "requestTime",
-	4: "url",
-}
-
-// Decode decodes MunroAccessReportIDStatusGetOKReport from json.
-func (s *MunroAccessReportIDStatusGetOKReport) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode MunroAccessReportIDStatusGetOKReport to nil")
-	}
-	var requiredBitSet [1]uint8
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "fromLabel":
-			requiredBitSet[0] |= 1 << 0
-			if err := func() error {
-				v, err := d.Str()
-				s.FromLabel = string(v)
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"fromLabel\"")
-			}
-		case "fromPoint":
-			requiredBitSet[0] |= 1 << 1
-			if err := func() error {
-				if err := s.FromPoint.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"fromPoint\"")
-			}
-		case "date":
-			requiredBitSet[0] |= 1 << 2
-			if err := func() error {
-				v, err := json.DecodeDateTime(d)
-				s.Date = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"date\"")
-			}
-		case "requestTime":
-			requiredBitSet[0] |= 1 << 3
-			if err := func() error {
-				v, err := json.DecodeDateTime(d)
-				s.RequestTime = v
-				if err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"requestTime\"")
-			}
-		case "url":
-			if err := func() error {
-				s.URL.Reset()
-				if err := s.URL.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"url\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode MunroAccessReportIDStatusGetOKReport")
-	}
-	// Validate required fields.
-	var failures []validate.FieldError
-	for i, mask := range [1]uint8{
-		0b00001111,
-	} {
-		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
-			// Mask only required fields and check equality to mask using XOR.
-			//
-			// If XOR result is not zero, result is not equal to expected, so some fields are missed.
-			// Bits of fields which would be set are actually bits of missed fields.
-			missed := bits.OnesCount8(result)
-			for bitN := 0; bitN < missed; bitN++ {
-				bitIdx := bits.TrailingZeros8(result)
-				fieldIdx := i*8 + bitIdx
-				var name string
-				if fieldIdx < len(jsonFieldsNameOfMunroAccessReportIDStatusGetOKReport) {
-					name = jsonFieldsNameOfMunroAccessReportIDStatusGetOKReport[fieldIdx]
-				} else {
-					name = strconv.Itoa(fieldIdx)
-				}
-				failures = append(failures, validate.FieldError{
-					Name:  name,
-					Error: validate.ErrFieldRequired,
-				})
-				// Reset bit.
-				result &^= 1 << bitIdx
-			}
-		}
-	}
-	if len(failures) > 0 {
-		return &validate.Error{Fields: failures}
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *MunroAccessReportIDStatusGetOKReport) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *MunroAccessReportIDStatusGetOKReport) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode encodes MunroAccessReportIDStatusGetOKStatus as json.
-func (s MunroAccessReportIDStatusGetOKStatus) Encode(e *jx.Encoder) {
+// Encode encodes MunroAccessReportStatusStatus as json.
+func (s MunroAccessReportStatusStatus) Encode(e *jx.Encoder) {
 	e.Str(string(s))
 }
 
-// Decode decodes MunroAccessReportIDStatusGetOKStatus from json.
-func (s *MunroAccessReportIDStatusGetOKStatus) Decode(d *jx.Decoder) error {
+// Decode decodes MunroAccessReportStatusStatus from json.
+func (s *MunroAccessReportStatusStatus) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode MunroAccessReportIDStatusGetOKStatus to nil")
+		return errors.New("invalid: unable to decode MunroAccessReportStatusStatus to nil")
 	}
 	v, err := d.StrBytes()
 	if err != nil {
 		return err
 	}
 	// Try to use constant string.
-	switch MunroAccessReportIDStatusGetOKStatus(v) {
-	case MunroAccessReportIDStatusGetOKStatusReceived:
-		*s = MunroAccessReportIDStatusGetOKStatusReceived
-	case MunroAccessReportIDStatusGetOKStatusWorking:
-		*s = MunroAccessReportIDStatusGetOKStatusWorking
-	case MunroAccessReportIDStatusGetOKStatusReady:
-		*s = MunroAccessReportIDStatusGetOKStatusReady
+	switch MunroAccessReportStatusStatus(v) {
+	case MunroAccessReportStatusStatusReceived:
+		*s = MunroAccessReportStatusStatusReceived
+	case MunroAccessReportStatusStatusWorking:
+		*s = MunroAccessReportStatusStatusWorking
+	case MunroAccessReportStatusStatusReady:
+		*s = MunroAccessReportStatusStatusReady
 	default:
-		*s = MunroAccessReportIDStatusGetOKStatus(v)
+		*s = MunroAccessReportStatusStatus(v)
 	}
 
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s MunroAccessReportIDStatusGetOKStatus) MarshalJSON() ([]byte, error) {
+func (s MunroAccessReportStatusStatus) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *MunroAccessReportIDStatusGetOKStatus) UnmarshalJSON(data []byte) error {
+func (s *MunroAccessReportStatusStatus) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -2354,13 +2494,13 @@ func (s *MunroAccessRequestPostOK) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *MunroAccessRequestPostOK) encodeFields(e *jx.Encoder) {
 	{
-		e.FieldStart("id")
-		e.Str(s.ID)
+		e.FieldStart("status")
+		s.Status.Encode(e)
 	}
 }
 
 var jsonFieldsNameOfMunroAccessRequestPostOK = [1]string{
-	0: "id",
+	0: "status",
 }
 
 // Decode decodes MunroAccessRequestPostOK from json.
@@ -2372,17 +2512,15 @@ func (s *MunroAccessRequestPostOK) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "id":
+		case "status":
 			requiredBitSet[0] |= 1 << 0
 			if err := func() error {
-				v, err := d.Str()
-				s.ID = string(v)
-				if err != nil {
+				if err := s.Status.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"id\"")
+				return errors.Wrap(err, "decode field \"status\"")
 			}
 		default:
 			return d.Skip()

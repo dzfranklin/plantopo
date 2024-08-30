@@ -62,6 +62,12 @@ type Handler interface {
 	//
 	// GET /munro-access/munros
 	MunroAccessMunrosGet(ctx context.Context) (*MunroAccessMunrosGetOK, error)
+	// MunroAccessPregeneratedReportsGet implements GET /munro-access/pregenerated-reports operation.
+	//
+	// Get pregenerated reports for common locations.
+	//
+	// GET /munro-access/pregenerated-reports
+	MunroAccessPregeneratedReportsGet(ctx context.Context) (*MunroAccessPregeneratedReportsGetOK, error)
 	// MunroAccessReportIDGet implements GET /munro-access/report/{id} operation.
 	//
 	// Get a report.
@@ -73,7 +79,7 @@ type Handler interface {
 	// To subscribe to status updates use `new EventSource('/munro-access/report/{id}/status-updates')`.
 	//
 	// GET /munro-access/report/{id}/status
-	MunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (*MunroAccessReportIDStatusGetOK, error)
+	MunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (*MunroAccessReportStatus, error)
 	// MunroAccessRequestPost implements POST /munro-access/request operation.
 	//
 	// Request a report be generated.

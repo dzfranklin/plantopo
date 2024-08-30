@@ -2,17 +2,17 @@ package papi
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/pimg"
 	"github.com/dzfranklin/plantopo/backend/internal/pmunroaccess"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
+	"github.com/dzfranklin/plantopo/backend/internal/pslices"
 	"net/http"
 )
 
-func (h *phandler) MunroAccessRequestPost(ctx context.Context, req *MunroAccessRequestPostReq) (*MunroAccessRequestPostOK, error) {
-	id, err := h.munroaccess.Request(pmunroaccess.Request{
+func (h *phandler) MunroAccessRequestPost(_ context.Context, req *MunroAccessRequestPostReq) (*MunroAccessRequestPostOK, error) {
+	status, err := h.munroaccess.Request(pmunroaccess.Request{
 		FromLabel: req.FromLabel,
 		FromPoint: [2]float64(req.FromPoint),
 		Date:      req.Date,
@@ -20,7 +20,7 @@ func (h *phandler) MunroAccessRequestPost(ctx context.Context, req *MunroAccessR
 	if err != nil {
 		return nil, err
 	}
-	return &MunroAccessRequestPostOK{ID: id}, nil
+	return &MunroAccessRequestPostOK{Status: mapMunroAccessReportStatus(status)}, nil
 }
 
 func (h *phandler) MunroAccessReportIDGet(ctx context.Context, params MunroAccessReportIDGetParams) (*MunroAccessReportIDGetTemporaryRedirect, error) {
@@ -83,7 +83,7 @@ func (h *phandler) MunroAccessMunrosGet(_ context.Context) (*MunroAccessMunrosGe
 	}, nil
 }
 
-func (h *phandler) MunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (*MunroAccessReportIDStatusGetOK, error) {
+func (h *phandler) MunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (*MunroAccessReportStatus, error) {
 	status, err := h.munroaccess.Status(ctx, params.ID)
 	if errors.Is(err, pmunroaccess.ErrReportNotFound) {
 		return nil, &DefaultErrorResponseStatusCode{
@@ -95,18 +95,8 @@ func (h *phandler) MunroAccessReportIDStatusGet(ctx context.Context, params Munr
 	} else if err != nil {
 		return nil, err
 	}
-	return &MunroAccessReportIDStatusGetOK{
-		ID:        status.ID,
-		Timestamp: status.Timestamp,
-		Status:    MunroAccessReportIDStatusGetOKStatus(status.Status),
-		Report: MunroAccessReportIDStatusGetOKReport{
-			FromLabel:   status.Report.FromLabel,
-			FromPoint:   NewPoint(status.Report.FromPoint),
-			Date:        status.Report.Date,
-			RequestTime: status.Report.RequestTime,
-			URL:         omitEmptyString(status.Report.URL),
-		},
-	}, nil
+	out := mapMunroAccessReportStatus(status)
+	return &out, nil
 }
 
 func (h *phandler) MunroAccessReportIDStatusUpdatesGet(w http.ResponseWriter, r *http.Request) {
@@ -133,7 +123,8 @@ func (h *phandler) MunroAccessReportIDStatusUpdatesGet(w http.ResponseWriter, r 
 	w.WriteHeader(http.StatusOK)
 
 	for update := range updates {
-		updateJSON, err := json.Marshal(update)
+		toMarshal := mapMunroAccessReportStatus(update)
+		updateJSON, err := toMarshal.MarshalJSON()
 		if err != nil {
 			h.Logger.Error("marshal json", "error", err)
 			return
@@ -145,5 +136,36 @@ func (h *phandler) MunroAccessReportIDStatusUpdatesGet(w http.ResponseWriter, r 
 		if err := rc.Flush(); err != nil {
 			return
 		}
+	}
+}
+
+func (h *phandler) MunroAccessPregeneratedReportsGet(ctx context.Context) (*MunroAccessPregeneratedReportsGetOK, error) {
+	reports, err := h.munroaccess.PregeneratedReports(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &MunroAccessPregeneratedReportsGetOK{
+		Reports: pslices.Map(reports, mapMunroAccessReportMeta),
+	}, nil
+}
+
+func mapMunroAccessReportStatus(status pmunroaccess.Status) MunroAccessReportStatus {
+	return MunroAccessReportStatus{
+		ID:        status.ID,
+		Timestamp: status.Timestamp,
+		Status:    MunroAccessReportStatusStatus(status.Status),
+		Report:    mapMunroAccessReportMeta(status.Report),
+	}
+}
+
+func mapMunroAccessReportMeta(meta pmunroaccess.Meta) MunroAccessReportMeta {
+	return MunroAccessReportMeta{
+		ID:          meta.ID,
+		Slug:        meta.Slug,
+		FromLabel:   meta.FromLabel,
+		FromPoint:   NewPoint(meta.FromPoint),
+		Date:        meta.Date,
+		RequestTime: meta.RequestTime,
+		URL:         omitEmptyString(meta.URL),
 	}
 }

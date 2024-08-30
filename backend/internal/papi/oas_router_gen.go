@@ -295,6 +295,27 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					}
 
 					elem = origElem
+				case 'p': // Prefix: "pregenerated-reports"
+					origElem := elem
+					if l := len("pregenerated-reports"); len(elem) >= l && elem[0:l] == "pregenerated-reports" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "GET":
+							s.handleMunroAccessPregeneratedReportsGetRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "GET")
+						}
+
+						return
+					}
+
+					elem = origElem
 				case 'r': // Prefix: "re"
 					origElem := elem
 					if l := len("re"); len(elem) >= l && elem[0:l] == "re" {
@@ -767,6 +788,31 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							r.summary = "List munros"
 							r.operationID = ""
 							r.pathPattern = "/munro-access/munros"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+					elem = origElem
+				case 'p': // Prefix: "pregenerated-reports"
+					origElem := elem
+					if l := len("pregenerated-reports"); len(elem) >= l && elem[0:l] == "pregenerated-reports" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "GET":
+							r.name = "MunroAccessPregeneratedReportsGet"
+							r.summary = "Get pregenerated reports for common locations"
+							r.operationID = ""
+							r.pathPattern = "/munro-access/pregenerated-reports"
 							r.args = args
 							r.count = 0
 							return r, true

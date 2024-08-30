@@ -41,7 +41,8 @@ export default function RequestReportComponent() {
   const router = useRouter();
 
   const mutation = $api.useMutation('post', '/munro-access/request', {
-    onSuccess: ({ id }) => router.push('/munro-access/report/' + id),
+    onSuccess: ({ status: { report } }) =>
+      router.push(`/munro-access/report/${report.id}/${report.slug}`),
   });
   if (mutation.error) throw mutation.error;
 
@@ -67,7 +68,7 @@ export default function RequestReportComponent() {
           body: { fromLabel: from.label, fromPoint: from.point, date },
         });
       }}
-      className="max-w-3xl grid grid-rows-1 grid-cols-[minmax(0,2fr),minmax(0,1fr)] gap-12"
+      className="max-w-3xl md:grid grid-rows-1 grid-cols-[minmax(0,2fr),minmax(0,1fr)] gap-12"
     >
       <div className="flex flex-col gap-6">
         <div>
@@ -129,13 +130,15 @@ export default function RequestReportComponent() {
         <div className="flex justify-end">
           <Button
             type="submit"
-            disableWith={mutation.isPending && 'Submitting...'}
+            disableWith={
+              (mutation.isPending || mutation.isSuccess) && 'Submitting...'
+            }
           >
             Request report
           </Button>
         </div>
       </div>
-      <div className="col-start-2 w-full aspect-1">
+      <div className="hidden md:block col-start-2 w-full aspect-1">
         <AddressMinimap
           accessToken={MAPBOX_TOKEN}
           feature={

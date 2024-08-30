@@ -205,6 +205,20 @@ func encodeMunroAccessMunrosGetResponse(response *MunroAccessMunrosGetOK, w http
 	return nil
 }
 
+func encodeMunroAccessPregeneratedReportsGetResponse(response *MunroAccessPregeneratedReportsGetOK, w http.ResponseWriter, span trace.Span) error {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(200)
+	span.SetStatus(codes.Ok, http.StatusText(200))
+
+	e := new(jx.Encoder)
+	response.Encode(e)
+	if _, err := e.WriteTo(w); err != nil {
+		return errors.Wrap(err, "write")
+	}
+
+	return nil
+}
+
 func encodeMunroAccessReportIDGetResponse(response *MunroAccessReportIDGetTemporaryRedirect, w http.ResponseWriter, span trace.Span) error {
 	// Encoding response headers.
 	{
@@ -231,7 +245,7 @@ func encodeMunroAccessReportIDGetResponse(response *MunroAccessReportIDGetTempor
 	return nil
 }
 
-func encodeMunroAccessReportIDStatusGetResponse(response *MunroAccessReportIDStatusGetOK, w http.ResponseWriter, span trace.Span) error {
+func encodeMunroAccessReportIDStatusGetResponse(response *MunroAccessReportStatus, w http.ResponseWriter, span trace.Span) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)
 	span.SetStatus(codes.Ok, http.StatusText(200))

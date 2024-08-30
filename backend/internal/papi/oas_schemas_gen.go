@@ -642,6 +642,20 @@ func (s *MunroAccessMunrosGetOKMunrosType) UnmarshalText(data []byte) error {
 	}
 }
 
+type MunroAccessPregeneratedReportsGetOK struct {
+	Reports []MunroAccessReportMeta `json:"reports"`
+}
+
+// GetReports returns the value of Reports.
+func (s *MunroAccessPregeneratedReportsGetOK) GetReports() []MunroAccessReportMeta {
+	return s.Reports
+}
+
+// SetReports sets the value of Reports.
+func (s *MunroAccessPregeneratedReportsGetOK) SetReports(val []MunroAccessReportMeta) {
+	s.Reports = val
+}
+
 // MunroAccessReportIDGetTemporaryRedirect is response for MunroAccessReportIDGet operation.
 type MunroAccessReportIDGetTemporaryRedirect struct {
 	Location OptString
@@ -657,54 +671,10 @@ func (s *MunroAccessReportIDGetTemporaryRedirect) SetLocation(val OptString) {
 	s.Location = val
 }
 
-type MunroAccessReportIDStatusGetOK struct {
-	ID        string                               `json:"id"`
-	Timestamp time.Time                            `json:"timestamp"`
-	Status    MunroAccessReportIDStatusGetOKStatus `json:"status"`
-	Report    MunroAccessReportIDStatusGetOKReport `json:"report"`
-}
-
-// GetID returns the value of ID.
-func (s *MunroAccessReportIDStatusGetOK) GetID() string {
-	return s.ID
-}
-
-// GetTimestamp returns the value of Timestamp.
-func (s *MunroAccessReportIDStatusGetOK) GetTimestamp() time.Time {
-	return s.Timestamp
-}
-
-// GetStatus returns the value of Status.
-func (s *MunroAccessReportIDStatusGetOK) GetStatus() MunroAccessReportIDStatusGetOKStatus {
-	return s.Status
-}
-
-// GetReport returns the value of Report.
-func (s *MunroAccessReportIDStatusGetOK) GetReport() MunroAccessReportIDStatusGetOKReport {
-	return s.Report
-}
-
-// SetID sets the value of ID.
-func (s *MunroAccessReportIDStatusGetOK) SetID(val string) {
-	s.ID = val
-}
-
-// SetTimestamp sets the value of Timestamp.
-func (s *MunroAccessReportIDStatusGetOK) SetTimestamp(val time.Time) {
-	s.Timestamp = val
-}
-
-// SetStatus sets the value of Status.
-func (s *MunroAccessReportIDStatusGetOK) SetStatus(val MunroAccessReportIDStatusGetOKStatus) {
-	s.Status = val
-}
-
-// SetReport sets the value of Report.
-func (s *MunroAccessReportIDStatusGetOK) SetReport(val MunroAccessReportIDStatusGetOKReport) {
-	s.Report = val
-}
-
-type MunroAccessReportIDStatusGetOKReport struct {
+// Ref: #/components/schemas/MunroAccessReportMeta
+type MunroAccessReportMeta struct {
+	ID          string    `json:"id"`
+	Slug        string    `json:"slug"`
 	FromLabel   string    `json:"fromLabel"`
 	FromPoint   Point     `json:"fromPoint"`
 	Date        time.Time `json:"date"`
@@ -713,81 +683,149 @@ type MunroAccessReportIDStatusGetOKReport struct {
 	URL OptString `json:"url"`
 }
 
+// GetID returns the value of ID.
+func (s *MunroAccessReportMeta) GetID() string {
+	return s.ID
+}
+
+// GetSlug returns the value of Slug.
+func (s *MunroAccessReportMeta) GetSlug() string {
+	return s.Slug
+}
+
 // GetFromLabel returns the value of FromLabel.
-func (s *MunroAccessReportIDStatusGetOKReport) GetFromLabel() string {
+func (s *MunroAccessReportMeta) GetFromLabel() string {
 	return s.FromLabel
 }
 
 // GetFromPoint returns the value of FromPoint.
-func (s *MunroAccessReportIDStatusGetOKReport) GetFromPoint() Point {
+func (s *MunroAccessReportMeta) GetFromPoint() Point {
 	return s.FromPoint
 }
 
 // GetDate returns the value of Date.
-func (s *MunroAccessReportIDStatusGetOKReport) GetDate() time.Time {
+func (s *MunroAccessReportMeta) GetDate() time.Time {
 	return s.Date
 }
 
 // GetRequestTime returns the value of RequestTime.
-func (s *MunroAccessReportIDStatusGetOKReport) GetRequestTime() time.Time {
+func (s *MunroAccessReportMeta) GetRequestTime() time.Time {
 	return s.RequestTime
 }
 
 // GetURL returns the value of URL.
-func (s *MunroAccessReportIDStatusGetOKReport) GetURL() OptString {
+func (s *MunroAccessReportMeta) GetURL() OptString {
 	return s.URL
 }
 
+// SetID sets the value of ID.
+func (s *MunroAccessReportMeta) SetID(val string) {
+	s.ID = val
+}
+
+// SetSlug sets the value of Slug.
+func (s *MunroAccessReportMeta) SetSlug(val string) {
+	s.Slug = val
+}
+
 // SetFromLabel sets the value of FromLabel.
-func (s *MunroAccessReportIDStatusGetOKReport) SetFromLabel(val string) {
+func (s *MunroAccessReportMeta) SetFromLabel(val string) {
 	s.FromLabel = val
 }
 
 // SetFromPoint sets the value of FromPoint.
-func (s *MunroAccessReportIDStatusGetOKReport) SetFromPoint(val Point) {
+func (s *MunroAccessReportMeta) SetFromPoint(val Point) {
 	s.FromPoint = val
 }
 
 // SetDate sets the value of Date.
-func (s *MunroAccessReportIDStatusGetOKReport) SetDate(val time.Time) {
+func (s *MunroAccessReportMeta) SetDate(val time.Time) {
 	s.Date = val
 }
 
 // SetRequestTime sets the value of RequestTime.
-func (s *MunroAccessReportIDStatusGetOKReport) SetRequestTime(val time.Time) {
+func (s *MunroAccessReportMeta) SetRequestTime(val time.Time) {
 	s.RequestTime = val
 }
 
 // SetURL sets the value of URL.
-func (s *MunroAccessReportIDStatusGetOKReport) SetURL(val OptString) {
+func (s *MunroAccessReportMeta) SetURL(val OptString) {
 	s.URL = val
 }
 
-type MunroAccessReportIDStatusGetOKStatus string
+// Ref: #/components/schemas/MunroAccessReportStatus
+type MunroAccessReportStatus struct {
+	ID        string                        `json:"id"`
+	Timestamp time.Time                     `json:"timestamp"`
+	Status    MunroAccessReportStatusStatus `json:"status"`
+	Report    MunroAccessReportMeta         `json:"report"`
+}
+
+// GetID returns the value of ID.
+func (s *MunroAccessReportStatus) GetID() string {
+	return s.ID
+}
+
+// GetTimestamp returns the value of Timestamp.
+func (s *MunroAccessReportStatus) GetTimestamp() time.Time {
+	return s.Timestamp
+}
+
+// GetStatus returns the value of Status.
+func (s *MunroAccessReportStatus) GetStatus() MunroAccessReportStatusStatus {
+	return s.Status
+}
+
+// GetReport returns the value of Report.
+func (s *MunroAccessReportStatus) GetReport() MunroAccessReportMeta {
+	return s.Report
+}
+
+// SetID sets the value of ID.
+func (s *MunroAccessReportStatus) SetID(val string) {
+	s.ID = val
+}
+
+// SetTimestamp sets the value of Timestamp.
+func (s *MunroAccessReportStatus) SetTimestamp(val time.Time) {
+	s.Timestamp = val
+}
+
+// SetStatus sets the value of Status.
+func (s *MunroAccessReportStatus) SetStatus(val MunroAccessReportStatusStatus) {
+	s.Status = val
+}
+
+// SetReport sets the value of Report.
+func (s *MunroAccessReportStatus) SetReport(val MunroAccessReportMeta) {
+	s.Report = val
+}
+
+type MunroAccessReportStatusStatus string
 
 const (
-	MunroAccessReportIDStatusGetOKStatusReceived MunroAccessReportIDStatusGetOKStatus = "received"
-	MunroAccessReportIDStatusGetOKStatusWorking  MunroAccessReportIDStatusGetOKStatus = "working"
-	MunroAccessReportIDStatusGetOKStatusReady    MunroAccessReportIDStatusGetOKStatus = "ready"
+	MunroAccessReportStatusStatusReceived MunroAccessReportStatusStatus = "received"
+	MunroAccessReportStatusStatusWorking  MunroAccessReportStatusStatus = "working"
+	MunroAccessReportStatusStatusReady    MunroAccessReportStatusStatus = "ready"
 )
 
-// AllValues returns all MunroAccessReportIDStatusGetOKStatus values.
-func (MunroAccessReportIDStatusGetOKStatus) AllValues() []MunroAccessReportIDStatusGetOKStatus {
-	return []MunroAccessReportIDStatusGetOKStatus{
-		MunroAccessReportIDStatusGetOKStatusReceived,
-		MunroAccessReportIDStatusGetOKStatusWorking,
-		MunroAccessReportIDStatusGetOKStatusReady,
+// AllValues returns all MunroAccessReportStatusStatus values.
+func (MunroAccessReportStatusStatus) AllValues() []MunroAccessReportStatusStatus {
+	return []MunroAccessReportStatusStatus{
+		MunroAccessReportStatusStatusReceived,
+		MunroAccessReportStatusStatusWorking,
+		MunroAccessReportStatusStatusReady,
 	}
 }
 
 // MarshalText implements encoding.TextMarshaler.
-func (s MunroAccessReportIDStatusGetOKStatus) MarshalText() ([]byte, error) {
+func (s MunroAccessReportStatusStatus) MarshalText() ([]byte, error) {
 	switch s {
-	case MunroAccessReportIDStatusGetOKStatusReceived:
+	case MunroAccessReportStatusStatusReceived:
 		return []byte(s), nil
-	case MunroAccessReportIDStatusGetOKStatusWorking:
+	case MunroAccessReportStatusStatusWorking:
 		return []byte(s), nil
-	case MunroAccessReportIDStatusGetOKStatusReady:
+	case MunroAccessReportStatusStatusReady:
 		return []byte(s), nil
 	default:
 		return nil, errors.Errorf("invalid value: %q", s)
@@ -795,16 +833,16 @@ func (s MunroAccessReportIDStatusGetOKStatus) MarshalText() ([]byte, error) {
 }
 
 // UnmarshalText implements encoding.TextUnmarshaler.
-func (s *MunroAccessReportIDStatusGetOKStatus) UnmarshalText(data []byte) error {
-	switch MunroAccessReportIDStatusGetOKStatus(data) {
-	case MunroAccessReportIDStatusGetOKStatusReceived:
-		*s = MunroAccessReportIDStatusGetOKStatusReceived
+func (s *MunroAccessReportStatusStatus) UnmarshalText(data []byte) error {
+	switch MunroAccessReportStatusStatus(data) {
+	case MunroAccessReportStatusStatusReceived:
+		*s = MunroAccessReportStatusStatusReceived
 		return nil
-	case MunroAccessReportIDStatusGetOKStatusWorking:
-		*s = MunroAccessReportIDStatusGetOKStatusWorking
+	case MunroAccessReportStatusStatusWorking:
+		*s = MunroAccessReportStatusStatusWorking
 		return nil
-	case MunroAccessReportIDStatusGetOKStatusReady:
-		*s = MunroAccessReportIDStatusGetOKStatusReady
+	case MunroAccessReportStatusStatusReady:
+		*s = MunroAccessReportStatusStatusReady
 		return nil
 	default:
 		return errors.Errorf("invalid value: %q", data)
@@ -812,17 +850,17 @@ func (s *MunroAccessReportIDStatusGetOKStatus) UnmarshalText(data []byte) error 
 }
 
 type MunroAccessRequestPostOK struct {
-	ID string `json:"id"`
+	Status MunroAccessReportStatus `json:"status"`
 }
 
-// GetID returns the value of ID.
-func (s *MunroAccessRequestPostOK) GetID() string {
-	return s.ID
+// GetStatus returns the value of Status.
+func (s *MunroAccessRequestPostOK) GetStatus() MunroAccessReportStatus {
+	return s.Status
 }
 
-// SetID sets the value of ID.
-func (s *MunroAccessRequestPostOK) SetID(val string) {
-	s.ID = val
+// SetStatus sets the value of Status.
+func (s *MunroAccessRequestPostOK) SetStatus(val MunroAccessReportStatus) {
+	s.Status = val
 }
 
 type MunroAccessRequestPostReq struct {

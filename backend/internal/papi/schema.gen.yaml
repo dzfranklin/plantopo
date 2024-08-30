@@ -208,11 +208,9 @@ paths:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: string
-                required: [ "id" ]
+                  status: { $ref: "#/components/schemas/MunroAccessReportStatus" }
+                required: [ status ]
         default: { $ref: "#/components/responses/DefaultErrorResponse" }
-
   /munro-access/report/{id}:
     get:
       tags: [ "munro-access-reports" ]
@@ -250,38 +248,24 @@ paths:
           description: OK
           content:
             application/json:
+              schema: { $ref: "#/components/schemas/MunroAccessReportStatus" }
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
+  /munro-access/pregenerated-reports:
+    get:
+      tags: [ "munro-access-reports" ]
+      summary: Get pregenerated reports for common locations
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: string
-                    example: "1724364326040-0"
-                  timestamp:
-                    type: string
-                    format: date-time
-                  status:
-                    type: string
-                    enum: [ received, working, ready ]
-                  report:
-                    type: object
-                    properties:
-                      fromLabel:
-                        type: string
-                        example: "Edinburgh Waverley Railway Station (EDB)"
-                      fromPoint:
-                        $ref: "#/components/schemas/Point"
-                      date:
-                        type: string
-                        format: date-time
-                      requestTime:
-                        type: string
-                        format: date-time
-                      url:
-                        type: string
-                        description: URL to report JSON
-                        example: https://...
-                    required: [ "fromLabel", "fromPoint", "date", "requestTime" ]
-                required: [ "id", "timestamp", "status", "report" ]
+                  reports:
+                    type: array
+                    items: { $ref: "#/components/schemas/MunroAccessReportMeta" }
+                required: [ "reports" ]
         default: { $ref: "#/components/responses/DefaultErrorResponse" }
   /munro-access/munros:
     get:
@@ -402,7 +386,7 @@ components:
           $ref: "#/components/schemas/ValidationErrors"
       required: [ "message" ]
       example:
-          message: "internal server error (correlation id cor_e0a3b2628acbb22dad4696acaf30be88)"
+        message: "internal server error (correlation id cor_e0a3b2628acbb22dad4696acaf30be88)"
     ValidationErrors:
       type: object
       properties:
@@ -472,7 +456,12 @@ components:
             minItems: 2
             maxItems: 2
       example:
-        coordinates: [ [ -105.883643, 40.176097 ], [ -105.861114, 40.150743 ], [ -105.822319, 40.14182 ] ]
+        coordinates:
+          [
+            [ -105.883643, 40.176097 ],
+            [ -105.861114, 40.150743 ],
+            [ -105.822319, 40.14182 ],
+          ]
       required: [ "coordinates" ]
     ElevationPostOK:
       type: object
@@ -490,5 +479,43 @@ components:
         type: number
       minItems: 2
       maxItems: 2
-      example: [ -3.36459,55.948390 ]
+      example: [ -3.36459, 55.948390 ]
       description: longitude, latitude
+    MunroAccessReportStatus:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "1724364326040-0"
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [ received, working, ready ]
+        report: { $ref: "#/components/schemas/MunroAccessReportMeta" }
+      required: [ "id", "timestamp", "status", "report" ]
+    MunroAccessReportMeta:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "mar_2gnkznnp7j5ef54jfqgxnxszsc"
+        slug:
+          type: string
+        fromLabel:
+          type: string
+          example: "Edinburgh Waverley Railway Station (EDB)"
+        fromPoint:
+          $ref: "#/components/schemas/Point"
+        date:
+          type: string
+          format: date-time
+        requestTime:
+          type: string
+          format: date-time
+        url:
+          type: string
+          description: URL to report JSON
+          example: https://...
+      required: [ "id", "slug", "fromLabel", "fromPoint", "date", "requestTime" ]

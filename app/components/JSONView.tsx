@@ -9,6 +9,14 @@ export default function JSONView({
   data: unknown;
   collapsed?: boolean;
 }) {
+  data = JSON.parse(
+    JSON.stringify(data, (_k, v) => {
+      if (v instanceof Map) {
+        return Object.fromEntries(v);
+      }
+      return v;
+    }),
+  );
   return (
     <div className="m-4">
       <JsonView src={data} collapsed={collapsed} />

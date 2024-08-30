@@ -77,6 +77,12 @@ type Invoker interface {
 	//
 	// GET /munro-access/munros
 	MunroAccessMunrosGet(ctx context.Context) (*MunroAccessMunrosGetOK, error)
+	// MunroAccessPregeneratedReportsGet invokes GET /munro-access/pregenerated-reports operation.
+	//
+	// Get pregenerated reports for common locations.
+	//
+	// GET /munro-access/pregenerated-reports
+	MunroAccessPregeneratedReportsGet(ctx context.Context) (*MunroAccessPregeneratedReportsGetOK, error)
 	// MunroAccessReportIDGet invokes GET /munro-access/report/{id} operation.
 	//
 	// Get a report.
@@ -88,7 +94,7 @@ type Invoker interface {
 	// To subscribe to status updates use `new EventSource('/munro-access/report/{id}/status-updates')`.
 	//
 	// GET /munro-access/report/{id}/status
-	MunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (*MunroAccessReportIDStatusGetOK, error)
+	MunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (*MunroAccessReportStatus, error)
 	// MunroAccessRequestPost invokes POST /munro-access/request operation.
 	//
 	// Request a report be generated.
@@ -1228,6 +1234,123 @@ func (c *Client) sendMunroAccessMunrosGet(ctx context.Context) (res *MunroAccess
 	return result, nil
 }
 
+// MunroAccessPregeneratedReportsGet invokes GET /munro-access/pregenerated-reports operation.
+//
+// Get pregenerated reports for common locations.
+//
+// GET /munro-access/pregenerated-reports
+func (c *Client) MunroAccessPregeneratedReportsGet(ctx context.Context) (*MunroAccessPregeneratedReportsGetOK, error) {
+	res, err := c.sendMunroAccessPregeneratedReportsGet(ctx)
+	return res, err
+}
+
+func (c *Client) sendMunroAccessPregeneratedReportsGet(ctx context.Context) (res *MunroAccessPregeneratedReportsGetOK, err error) {
+	otelAttrs := []attribute.KeyValue{
+		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/munro-access/pregenerated-reports"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, "MunroAccessPregeneratedReportsGet",
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/munro-access/pregenerated-reports"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:Bearer"
+			switch err := c.securityBearer(ctx, "MunroAccessPregeneratedReportsGet", r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"Bearer\"")
+			}
+		}
+		{
+			stage = "Security:Browser"
+			switch err := c.securityBrowser(ctx, "MunroAccessPregeneratedReportsGet", r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"Browser\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{},
+				{0b00000001},
+				{0b00000010},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeMunroAccessPregeneratedReportsGetResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // MunroAccessReportIDGet invokes GET /munro-access/report/{id} operation.
 //
 // Get a report.
@@ -1368,12 +1491,12 @@ func (c *Client) sendMunroAccessReportIDGet(ctx context.Context, params MunroAcc
 // To subscribe to status updates use `new EventSource('/munro-access/report/{id}/status-updates')`.
 //
 // GET /munro-access/report/{id}/status
-func (c *Client) MunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (*MunroAccessReportIDStatusGetOK, error) {
+func (c *Client) MunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (*MunroAccessReportStatus, error) {
 	res, err := c.sendMunroAccessReportIDStatusGet(ctx, params)
 	return res, err
 }
 
-func (c *Client) sendMunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (res *MunroAccessReportIDStatusGetOK, err error) {
+func (c *Client) sendMunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (res *MunroAccessReportStatus, err error) {
 	otelAttrs := []attribute.KeyValue{
 		semconv.HTTPMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/munro-access/report/{id}/status"),

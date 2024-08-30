@@ -1,18 +1,18 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DateTime } from 'luxon';
 
+(window as any).DateTime = DateTime;
 const fmtDate = (iso: string, locale?: string) => {
-  const d = DateTime.fromISO(iso);
-  if (locale) d.setLocale(locale);
+  let d = DateTime.fromISO(iso);
+  if (locale) d = d.setLocale(locale);
   return d.toLocaleString(DateTime.DATE_SHORT);
 };
 
 export function useFormattedDate(iso: string): string {
   const [v, setV] = useState(() => fmtDate(iso, 'en-US'));
-  // TODO:
-  // useEffect(() => {
-  //   setV(DateTime.fromISO(iso).toLocaleString());
-  // }, [iso]);
+  useEffect(() => {
+    setV(fmtDate(iso));
+  }, [iso]);
   return v;
 }
 

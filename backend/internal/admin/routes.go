@@ -34,6 +34,8 @@ func Routes(env *pconfig.Env, repo *prepo.Repo) http.Handler {
 	mux.HandleFunc("GET /admin/authorized-sms-sender/{id}", app.authorizedSMSSenderGet)
 	mux.HandleFunc("GET /admin/mail", app.mailGet)
 	mux.HandleFunc("POST /admin/mail", app.mailPost)
+	mux.HandleFunc("GET /admin/fire-job", app.fireJobGet)
+	mux.HandleFunc("POST /admin/fire-job", app.fireJobPost)
 
 	return app.requireAdminExceptLoginPageMiddleware(mux)
 }

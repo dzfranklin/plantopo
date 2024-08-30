@@ -1,0 +1,14 @@
+{{define "main"}}
+    <div>{{ .Status }}</div>
+    <form method="POST">
+        <label>
+            Kind
+            <input name="Kind" type="text">
+        </label>
+        <label>
+            Args
+            <textarea name="Args">{}</textarea>
+        </label>
+        <button type="submit">Insert job</button>
+    </form>
+{{end}}

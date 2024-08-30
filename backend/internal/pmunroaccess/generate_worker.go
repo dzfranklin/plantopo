@@ -26,8 +26,8 @@ const (
 
 type GenerateArgs struct {
 	ID   string
-	From [2]float64 `json:"from"`
-	Date time.Time  `json:"date"`
+	From [2]float64
+	Date time.Time
 }
 
 func (j GenerateArgs) Kind() string {

@@ -7,8 +7,8 @@ import Skeleton from '@/components/Skeleton';
 import { Layout } from '@/components/Layout';
 import { useQuery } from '@tanstack/react-query';
 import { API_ENDPOINT } from '@/env';
-import { MunroAccessReport } from '@/app/munro-access/report/[id]/MunroAccessReport';
-import { WaitForReportComponent } from '@/app/munro-access/report/[id]/WaitForReportComponent';
+import { MunroAccessReport } from '@/app/munro-access/report/[id]/[slug]/MunroAccessReport';
+import { WaitForReportComponent } from '@/app/munro-access/report/[id]/[slug]/WaitForReportComponent';
 import { useFormattedDate } from '@/components/Date';
 
 export function MunroAccessReportLoader({

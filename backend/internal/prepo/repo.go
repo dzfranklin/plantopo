@@ -1,6 +1,8 @@
 package prepo
 
-import "github.com/dzfranklin/plantopo/backend/internal/pconfig"
+import (
+	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
+)
 
 type Repo struct {
 	AuditLog             *AuditLog

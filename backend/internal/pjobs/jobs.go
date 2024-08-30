@@ -1,4 +1,4 @@
-package main
+package pjobs
 
 import (
 	"github.com/dzfranklin/plantopo/backend/internal/dftbusopendata"
@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-func openRiver(db *pgxpool.Pool, logger *slog.Logger) (*river.Client[pgx.Tx], *river.Workers) {
+func Open(db *pgxpool.Pool, logger *slog.Logger) (*river.Client[pgx.Tx], *river.Workers) {
 	workers := river.NewWorkers()
 	client, err := river.NewClient[pgx.Tx](riverpgxv5.New(db), &river.Config{
 		Queues: map[string]river.QueueConfig{
@@ -37,7 +37,12 @@ func openRiver(db *pgxpool.Pool, logger *slog.Logger) (*river.Client[pgx.Tx], *r
 	return client, workers
 }
 
-func setupRiver(env *pconfig.Env, repo *prepo.Repo, jobs *river.Client[pgx.Tx], workers *river.Workers) {
+func Register(
+	env *pconfig.Env,
+	repo *prepo.Repo,
+	jobs *river.Client[pgx.Tx],
+	workers *river.Workers,
+) {
 	periodic := jobs.PeriodicJobs()
 
 	river.AddWorker[pwebhooks.TwilioJobArgs](workers, pwebhooks.NewTwilioWorker(env, repo))
@@ -48,8 +53,17 @@ func setupRiver(env *pconfig.Env, repo *prepo.Repo, jobs *river.Client[pgx.Tx], 
 	river.AddWorker[dftbusopendata.JobArgs](workers, dftbusopendata.NewWorker(env))
 
 	river.AddWorker[pmunroaccess.GenerateArgs](workers, pmunroaccess.NewGenerateWorker(env))
+	river.AddWorker[pmunroaccess.PregenerationArgs](workers, pmunroaccess.NewPregenerationWorker(env))
 
 	river.AddWorker[pemail.JobArgs](workers, pemail.NewWorker(env))
+
+	periodic.Add(river.NewPeriodicJob(
+		mustParseCron("46 18 * * *"),
+		func() (river.JobArgs, *river.InsertOpts) {
+			return pmunroaccess.PregenerationArgs{}, nil
+		},
+		nil,
+	))
 
 	if env.IsProduction {
 		periodic.Add(river.NewPeriodicJob(

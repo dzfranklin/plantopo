@@ -414,7 +414,7 @@ export interface paths {
           };
           content: {
             'application/json': {
-              id: string;
+              status: components['schemas']['MunroAccessReportStatus'];
             };
           };
         };
@@ -494,27 +494,45 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
+            'application/json': components['schemas']['MunroAccessReportStatus'];
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/munro-access/pregenerated-reports': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get pregenerated reports for common locations */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
             'application/json': {
-              /** @example 1724364326040-0 */
-              id: string;
-              /** Format: date-time */
-              timestamp: string;
-              /** @enum {string} */
-              status: 'received' | 'working' | 'ready';
-              report: {
-                /** @example Edinburgh Waverley Railway Station (EDB) */
-                fromLabel: string;
-                fromPoint: components['schemas']['Point'];
-                /** Format: date-time */
-                date: string;
-                /** Format: date-time */
-                requestTime: string;
-                /**
-                 * @description URL to report JSON
-                 * @example https://...
-                 */
-                url?: string;
-              };
+              reports: components['schemas']['MunroAccessReportMeta'][];
             };
           };
         };
@@ -700,6 +718,32 @@ export interface components {
      *     ]
      */
     Point: number[];
+    MunroAccessReportStatus: {
+      /** @example 1724364326040-0 */
+      id: string;
+      /** Format: date-time */
+      timestamp: string;
+      /** @enum {string} */
+      status: 'received' | 'working' | 'ready';
+      report: components['schemas']['MunroAccessReportMeta'];
+    };
+    MunroAccessReportMeta: {
+      /** @example mar_2gnkznnp7j5ef54jfqgxnxszsc */
+      id: string;
+      slug: string;
+      /** @example Edinburgh Waverley Railway Station (EDB) */
+      fromLabel: string;
+      fromPoint: components['schemas']['Point'];
+      /** Format: date-time */
+      date: string;
+      /** Format: date-time */
+      requestTime: string;
+      /**
+       * @description URL to report JSON
+       * @example https://...
+       */
+      url?: string;
+    };
   };
   responses: {
     /** @description Error */

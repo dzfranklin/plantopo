@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
+	rdbdump "github.com/hdt3213/rdb/helper"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
@@ -12,6 +14,7 @@ import (
 	miniocredentials "github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/neilotoole/slogt"
 	"github.com/redis/go-redis/v9"
+	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
 	"github.com/riverqueue/river/rivermigrate"
 	"github.com/stretchr/testify/require"
@@ -226,6 +229,11 @@ func (te *TestEnv) setupDB() {
 
 	te.dbC = c
 	te.connectDB()
+
+	te.Jobs, err = river.NewClient[pgx.Tx](riverpgxv5.New(te.DB), &river.Config{})
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (te *TestEnv) connectDB() {
@@ -290,6 +298,42 @@ func runMigrations(connString string) {
 	if err := cmd.Run(); err != nil {
 		panic(out.String())
 	}
+}
+
+func (te *TestEnv) DumpRDB() string {
+	rdb := te.RDB
+	ctx := context.Background()
+
+	if err := rdb.Save(ctx).Err(); err != nil {
+		panic(err)
+	}
+	dumpR, err := te.rdbC.CopyFileFromContainer(ctx, "/data/dump.rdb")
+	if err != nil {
+		panic(err)
+	}
+	dumpF, err := os.CreateTemp("", "dump*.rdb")
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = os.Remove(dumpF.Name()) }()
+	if _, err := io.Copy(dumpF, dumpR); err != nil {
+		panic(err)
+	}
+
+	valF, err := os.CreateTemp("", "dump*")
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = os.Remove(valF.Name()) }()
+	if err := rdbdump.ToJsons(dumpF.Name(), valF.Name()); err != nil {
+		panic(err)
+	}
+	val, err := os.ReadFile(valF.Name())
+	if err != nil {
+		panic(err)
+	}
+
+	return string(val)
 }
 
 var (

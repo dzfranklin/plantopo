@@ -91,8 +91,8 @@ func UUIDToID(kind string, v uuid.UUID) string {
 	return kind + "_" + idEncoding.EncodeToString(v[:])
 }
 
-func SecureRandomID(kind string) string {
-	v := make([]byte, 8) // https://owasp.org/www-community/vulnerabilities/Insufficient_Session-ID_Length
+func SecureRandomID(kind string, byteSize int) string {
+	v := make([]byte, byteSize)
 	if _, err := io.ReadFull(rand.Reader, v); err != nil {
 		panic("failed to read random bytes")
 	}

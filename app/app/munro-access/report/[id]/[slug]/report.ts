@@ -1,4 +1,4 @@
-import { paths } from '@/api/v1';
+import { components, paths } from '@/api/v1';
 import { z } from 'zod';
 
 export type MunroList =
@@ -6,6 +6,8 @@ export type MunroList =
 
 export type ReportStatus =
   paths['/munro-access/report/{id}/status']['get']['responses']['200']['content']['application/json'];
+
+export type ReportMeta = components['schemas']['MunroAccessReportMeta'];
 
 const pointSchema = z.tuple([z.number(), z.number()]);
 

@@ -1,7 +1,7 @@
 import {
   ClusterScoreFeatures,
   clusterScoreFeaturesSchema,
-} from '@/app/munro-access/report/[id]/ranking';
+} from '@/app/munro-access/report/[id]/[slug]/ranking';
 import { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/button';
 

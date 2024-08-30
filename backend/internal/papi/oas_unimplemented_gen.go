@@ -94,6 +94,15 @@ func (UnimplementedHandler) MunroAccessMunrosGet(ctx context.Context) (r *MunroA
 	return r, ht.ErrNotImplemented
 }
 
+// MunroAccessPregeneratedReportsGet implements GET /munro-access/pregenerated-reports operation.
+//
+// Get pregenerated reports for common locations.
+//
+// GET /munro-access/pregenerated-reports
+func (UnimplementedHandler) MunroAccessPregeneratedReportsGet(ctx context.Context) (r *MunroAccessPregeneratedReportsGetOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // MunroAccessReportIDGet implements GET /munro-access/report/{id} operation.
 //
 // Get a report.
@@ -108,7 +117,7 @@ func (UnimplementedHandler) MunroAccessReportIDGet(ctx context.Context, params M
 // To subscribe to status updates use `new EventSource('/munro-access/report/{id}/status-updates')`.
 //
 // GET /munro-access/report/{id}/status
-func (UnimplementedHandler) MunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (r *MunroAccessReportIDStatusGetOK, _ error) {
+func (UnimplementedHandler) MunroAccessReportIDStatusGet(ctx context.Context, params MunroAccessReportIDStatusGetParams) (r *MunroAccessReportStatus, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
