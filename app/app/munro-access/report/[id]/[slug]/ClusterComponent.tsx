@@ -41,8 +41,7 @@ export function ClusterComponent({
       >
         <span className="mr-2 text-sm text-gray-500">{i + 1}</span>
         <span className="shrink truncate">
-          {sentenceStartClusterName(cluster.to.name)} for{' '}
-          {munroNames(clusterMunros)}
+          {cluster.to.name} for {munroNames(clusterMunros)}
         </span>
         <div className="ml-auto">
           <ChevronRightIcon className="w-4" />
@@ -75,13 +74,6 @@ export function ClusterComponent({
       )}
     </div>
   );
-}
-
-function sentenceStartClusterName(v: string): string {
-  if (v.startsWith('near ')) {
-    return v.replace(/near /g, 'Near ');
-  }
-  return v;
 }
 
 function munroNames(munros: MunroList['features']): string {
