@@ -1,9 +1,8 @@
-import { getUser } from '@workos-inc/authkit-nextjs';
 import { Layout } from './Layout';
 
 export default async function UnauthorizedScreen() {
   // if we aren't logged in then redirect
-  await getUser({ ensureSignedIn: true });
+  // await getUser({ ensureSignedIn: true }); TODO:
 
   return (
     <Layout className="flex flex-col items-center justify-center h-full gap-4">

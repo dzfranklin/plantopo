@@ -1,11 +1,10 @@
 'use server';
 
-import { getUser } from '@workos-inc/authkit-nextjs';
 import { FetchOptions } from './types';
 import { baseApiFetch } from './baseFetch';
 
 export async function apiFetch<T>(options: FetchOptions<T>): Promise<T> {
-  const user = await getUser();
+  const user: { accessToken?: string } = {}; // TODO
   try {
     return await baseApiFetch({
       ...options,
