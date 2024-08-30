@@ -29,7 +29,7 @@ func Open(db *pgxpool.Pool, logger *slog.Logger) (*river.Client[pgx.Tx], *river.
 			pmunroaccess.QueueMunroAccessGenerator: {MaxWorkers: 1},
 		},
 		Workers: workers,
-		Logger:  plog.Filtered(logger, slog.LevelWarn),
+		Logger:  plog.Filtered(logger.With("app", "river"), slog.LevelWarn),
 	})
 	if err != nil {
 		log.Fatal(err)

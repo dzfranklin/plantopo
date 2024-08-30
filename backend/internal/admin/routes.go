@@ -6,6 +6,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
 	"github.com/go-playground/form"
 	"net/http"
+	"riverqueue.com/riverui"
 )
 
 func Routes(env *pconfig.Env, repo *prepo.Repo) http.Handler {
@@ -36,6 +37,17 @@ func Routes(env *pconfig.Env, repo *prepo.Repo) http.Handler {
 	mux.HandleFunc("POST /admin/mail", app.mailPost)
 	mux.HandleFunc("GET /admin/fire-job", app.fireJobGet)
 	mux.HandleFunc("POST /admin/fire-job", app.fireJobPost)
+
+	riverSrv, err := riverui.NewServer(&riverui.ServerOpts{
+		Client: env.Jobs,
+		DB:     env.DB,
+		Logger: env.Logger.With("app", "riverui"),
+		Prefix: "/admin/river",
+	})
+	if err != nil {
+		panic(err)
+	}
+	mux.Handle("/admin/river/", riverSrv)
 
 	return app.requireAdminExceptLoginPageMiddleware(mux)
 }
