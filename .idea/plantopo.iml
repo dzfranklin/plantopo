@@ -3,6 +3,8 @@
   <component name="Go" enabled="true" />
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
+      <excludeFolder url="file://$MODULE_DIR$/.next" />
+      <excludeFolder url="file://$MODULE_DIR$/app/.next" />
       <excludeFolder url="file://$MODULE_DIR$/backend/internal/pmunroaccess/testdata" />
     </content>
     <orderEntry type="inheritedJdk" />
