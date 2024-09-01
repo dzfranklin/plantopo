@@ -71,6 +71,7 @@ export function MunroAccessReport({
             report={report}
             munros={munros}
             expandedCluster={expandedCluster}
+            setExpandedCluster={setExpandedCluster}
           />
         </div>
         <ul className="lg:col-start-1 lg:row-start-1 max-h-full max-w-full w-full overflow-y-auto overflow-x-clip">

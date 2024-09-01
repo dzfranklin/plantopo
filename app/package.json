@@ -52,6 +52,7 @@
     "react-hot-toast": "^2.4.1",
     "react-lottie-player": "^2.1.0",
     "react18-json-view": "^0.2.8",
+    "smooth-scroll-into-view-if-needed": "^2.0.2",
     "tailwindcss-animate": "^1.0.7",
     "ulid": "^2.3.0",
     "zod": "^3.23.8"

@@ -1,4 +1,4 @@
-import { Dispatch, SetStateAction } from 'react';
+import { Dispatch, SetStateAction, useEffect, useRef } from 'react';
 import { ClusterData, MunroList } from './report';
 import { JourneysComponent } from './JourneysComponent';
 import { scoreCluster } from './ranking';
@@ -6,6 +6,7 @@ import { useDebugMode } from '@/hooks/debugMode';
 import JSONView from '@/components/JSONView';
 import { ChevronRightIcon } from '@heroicons/react/24/solid';
 import { ClusterImages } from './ClusterImages';
+import scrollIntoView from 'scroll-into-view-if-needed';
 
 export function ClusterComponent({
   cluster,
@@ -23,6 +24,7 @@ export function ClusterComponent({
   from: [number, number];
 }) {
   const debugMode = useDebugMode();
+  const ref = useRef<HTMLDivElement>(null);
 
   const clusterMunros = munros.features
     .filter((f) => cluster.to.munros.includes(f.id))
@@ -32,8 +34,21 @@ export function ClusterComponent({
       return bScore - aScore;
     });
 
+  useEffect(() => {
+    if (isExpanded && ref.current) {
+      requestAnimationFrame(() => {
+        scrollIntoView(ref.current!, {
+          behavior: 'smooth',
+          scrollMode: 'if-needed',
+          block: 'nearest',
+          inline: 'nearest',
+        });
+      });
+    }
+  }, [isExpanded]);
+
   return (
-    <div>
+    <div ref={ref}>
       <button
         onClick={() => setIsExpanded((p) => !p)}
         title="Expand"

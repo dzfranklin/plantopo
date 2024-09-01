@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import {
+  Dispatch,
+  SetStateAction,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import { ItineraryData, MunroList, ReportData } from './report';
 import * as ml from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -22,10 +29,12 @@ export function ReportMapComponent({
   report,
   munros,
   expandedCluster,
+  setExpandedCluster,
 }: {
   report: ReportData;
   munros: MunroList;
   expandedCluster: number | null;
+  setExpandedCluster: Dispatch<SetStateAction<number | null>>;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<ml.Map | null>(null);
@@ -115,6 +124,42 @@ export function ReportMapComponent({
       }
 
       map.addControl(new ml.ScaleControl({ unit: 'metric' }));
+
+      let hoveredPolygonId: number | null = null;
+      map.on('mousemove', 'to', (e) => {
+        if (e.features && e.features.length > 0) {
+          if (hoveredPolygonId !== null) {
+            map.setFeatureState(
+              { source: 'report', id: hoveredPolygonId },
+              { hover: false },
+            );
+          }
+
+          const f = e.features[0]!;
+          hoveredPolygonId = f.id as number;
+          map.setFeatureState(
+            { source: 'report', id: hoveredPolygonId },
+            { hover: true },
+          );
+          map.getCanvas().style.cursor = 'pointer';
+        }
+      });
+      map.on('mouseleave', 'to', () => {
+        if (hoveredPolygonId !== null) {
+          map.setFeatureState(
+            { source: 'report', id: hoveredPolygonId },
+            { hover: false },
+          );
+        }
+        hoveredPolygonId = null;
+        map.getCanvas().style.cursor = '';
+      });
+      map.on('click', 'to', (e) => {
+        const f = e?.features?.[0];
+        if (!f) return;
+        const cluster = f.properties!.cluster as number;
+        setExpandedCluster(cluster);
+      });
     });
 
     return () => {
@@ -122,7 +167,7 @@ export function ReportMapComponent({
       map.remove();
       mapEl.remove();
     };
-  }, [report, munros, reportFeature]);
+  }, [report, munros, reportFeature, setExpandedCluster]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -239,7 +284,15 @@ const reportLayers: ml.LayerSpecification[] = [
     ],
     paint: {
       'circle-color': '#FFF',
-      'circle-radius': ['interpolate', ['linear'], ['zoom'], 7, 2, 11, 4],
+      'circle-radius': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        7,
+        ['case', ['boolean', ['feature-state', 'hover'], false], 4.5, 3],
+        11,
+        ['case', ['boolean', ['feature-state', 'hover'], false], 7.5, 5],
+      ],
       'circle-stroke-color': '#475569',
       'circle-stroke-width': 1,
     },
@@ -302,8 +355,12 @@ function reportToGeoJSON(report: ReportData): geojson.FeatureCollection {
   const points: geojson.Feature<geojson.Point>[] = [];
   const lines: geojson.Feature<geojson.LineString>[] = [];
 
+  const idRef = { id: 0 };
+  const nextID = () => ++idRef.id;
+
   points.push({
     type: 'Feature',
+    id: nextID(),
     geometry: {
       type: 'Point',
       coordinates: report.from,
@@ -325,7 +382,12 @@ function reportToGeoJSON(report: ReportData): geojson.FeatureCollection {
       }
 
       for (const itinerary of journeys.itineraries) {
-        for (const leg of itineraryToGeoJSON(cluster.to.id, dir, itinerary)) {
+        for (const leg of itineraryToGeoJSON(
+          cluster.to.id,
+          dir,
+          itinerary,
+          nextID,
+        )) {
           if (computeLength(leg, { units: 'kilometers' }) > arcCutoffKm) {
             const f: geojson.Feature<geojson.LineString> = {
               ...leg,
@@ -357,18 +419,24 @@ function reportToGeoJSON(report: ReportData): geojson.FeatureCollection {
       }
     }
 
-    points.push({
-      type: 'Feature',
-      geometry: {
-        type: 'Point',
-        coordinates: cluster.to.point,
-      },
-      properties: {
-        type: 'to',
-        reachable,
-        cluster: cluster.to.id,
-      },
-    });
+    if (
+      cluster.journeys.out.itineraries.length > 0 ||
+      cluster.journeys.back.itineraries.length > 0
+    ) {
+      points.push({
+        type: 'Feature',
+        id: nextID(),
+        geometry: {
+          type: 'Point',
+          coordinates: cluster.to.point,
+        },
+        properties: {
+          type: 'to',
+          reachable,
+          cluster: cluster.to.id,
+        },
+      });
+    }
   }
 
   return {
@@ -381,9 +449,11 @@ const itineraryToGeoJSON = (
   cluster: number,
   dir: 'out' | 'back',
   itinerary: ItineraryData,
+  nextID: () => number,
 ): Feature<geojson.LineString>[] =>
   itinerary.legs.map((leg) => ({
     type: 'Feature',
+    id: nextID(),
     geometry: decodeLegGeometry(leg.legGeometry.points),
     properties: {
       type: 'leg',

@@ -23,14 +23,23 @@ export const defaultClusterWeights: ClusterScoreFeatures = {
   popularityB: 0.01,
 };
 
+const zeros = Object.fromEntries(
+  Object.entries(defaultClusterWeights).map(([k]) => [k, 0]),
+) as ClusterScoreFeatures;
+
 export function scoreCluster(
   cluster: ClusterData,
 ): ClusterScoreFeatures | undefined {
   if (
-    cluster.journeys.out.itineraries.length === 0 ||
+    cluster.journeys.out.itineraries.length === 0 &&
     cluster.journeys.back.itineraries.length === 0
   ) {
     return;
+  } else if (
+    cluster.journeys.out.itineraries.length === 0 ||
+    cluster.journeys.back.itineraries.length === 0
+  ) {
+    return zeros;
   }
 
   const out = bestOut(cluster.journeys.out.itineraries);
