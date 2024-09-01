@@ -10,6 +10,7 @@ import { API_ENDPOINT } from '@/env';
 import { MunroAccessReport } from '@/app/munro-access/report/[id]/[slug]/MunroAccessReport';
 import { WaitForReportComponent } from '@/app/munro-access/report/[id]/[slug]/WaitForReportComponent';
 import { useFormattedTimestamp } from '@/components/Timestamp';
+import { Button } from '@/components/button';
 
 export function MunroAccessReportLoader({
   id,
@@ -51,7 +52,15 @@ export function MunroAccessReportLoader({
     );
   } else {
     return (
-      <Layout pageTitle={title} wide={true}>
+      <Layout
+        pageTitle={title}
+        wide={true}
+        pageActions={
+          <Button color="secondary" href="/munro-access">
+            Request a new report
+          </Button>
+        }
+      >
         <MunroAccessReport report={report.data} munros={munros} />
       </Layout>
     );
