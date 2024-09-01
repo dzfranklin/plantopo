@@ -128,8 +128,6 @@ export function ReportMapComponent({
     };
   }, [report, munros]);
 
-  // TODO: dyanmically update filters rather than re-rendering
-
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -149,7 +147,7 @@ export function ReportMapComponent({
 }
 
 // prettier-ignore
-const lineColorDef: ml.Expression = [
+const lineColorDef: ml.ExpressionSpecification = [
   'match',
   ['get', 'itineraryHour'],
   ...Object.entries(timeColorScale).flatMap(([h, c]) => [
@@ -160,7 +158,7 @@ const lineColorDef: ml.Expression = [
 ];
 
 // prettier-ignore
-const reportLayers: ml.AnyLayer[] = [
+const reportLayers: ml.LayerSpecification[] = [
   {
     id: 'leg-line',
     type: 'line',
