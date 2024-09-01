@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { ItineraryData, MunroList, ReportData } from './report';
 import * as ml from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -33,6 +33,8 @@ export function ReportMapComponent({
   useEffect(() => {
     expandedClusterRef.current = expandedCluster;
   }, [expandedCluster]);
+
+  const reportFeature = useMemo(() => reportToGeoJSON(report), [report]);
 
   useLayoutEffect(() => {
     if (!ref.current) return;
@@ -93,7 +95,6 @@ export function ReportMapComponent({
       loaded = true;
       map.resize();
 
-      const reportFeature = reportToGeoJSON(report, expandedClusterRef.current);
       const reportBBox = computeBBoxPolygon(computeBBox(reportFeature));
       const boundsFeature = computeBuffer(reportBBox, 20, {
         units: 'kilometers',
@@ -104,7 +105,7 @@ export function ReportMapComponent({
 
       map.addSource('report', {
         type: 'geojson',
-        data: reportFeature,
+        data: updateReportGeoJSON(reportFeature, expandedClusterRef.current),
       });
 
       map.addSource('munros', {
@@ -126,7 +127,7 @@ export function ReportMapComponent({
       map.remove();
       mapEl.remove();
     };
-  }, [report, munros]);
+  }, [report, munros, reportFeature]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -135,8 +136,8 @@ export function ReportMapComponent({
     const reportSrc = map.getSource('report');
     if (!reportSrc) return;
     if (reportSrc.type !== 'geojson') throw new Error('unreachable');
-    reportSrc.setData(reportToGeoJSON(report, expandedCluster));
-  }, [report, expandedCluster]);
+    reportSrc.setData(updateReportGeoJSON(reportFeature, expandedCluster));
+  }, [report, expandedCluster, reportFeature]);
 
   return (
     <div
@@ -280,10 +281,29 @@ const reportLayers: ml.LayerSpecification[] = [
   },
 ];
 
-function reportToGeoJSON(
-  report: ReportData,
+function updateReportGeoJSON(
+  report: geojson.FeatureCollection,
   expandedCluster: number | null,
 ): geojson.FeatureCollection {
+  return {
+    ...report,
+    features: report.features.map((f) => {
+      let expanded: boolean | null = null;
+      if (
+        expandedCluster !== null &&
+        f.properties &&
+        'cluster' in f.properties
+      ) {
+        const cluster = f.properties.cluster as number;
+        expanded = cluster === expandedCluster;
+      }
+
+      return { ...f, properties: { ...f.properties, expanded } };
+    }),
+  };
+}
+
+function reportToGeoJSON(report: ReportData): geojson.FeatureCollection {
   const points: geojson.Feature<geojson.Point>[] = [];
   const lines: geojson.Feature<geojson.LineString>[] = [];
 
@@ -301,9 +321,6 @@ function reportToGeoJSON(
   for (const cluster of report.clusters) {
     let reachable = false;
 
-    const isExpanded =
-      expandedCluster === null ? null : cluster.to.id === expandedCluster;
-
     for (const [dir, journeys] of [
       ['out', cluster.journeys.out],
       ['back', cluster.journeys.back],
@@ -313,7 +330,7 @@ function reportToGeoJSON(
       }
 
       for (const itinerary of journeys.itineraries) {
-        for (const leg of itineraryToGeoJSON(isExpanded, dir, itinerary)) {
+        for (const leg of itineraryToGeoJSON(cluster.to.id, dir, itinerary)) {
           if (computeLength(leg, { units: 'kilometers' }) > arcCutoffKm) {
             const f: geojson.Feature<geojson.LineString> = {
               ...leg,
@@ -354,7 +371,7 @@ function reportToGeoJSON(
       properties: {
         type: 'to',
         reachable,
-        expanded: isExpanded,
+        cluster: cluster.to.id,
       },
     });
   }
@@ -366,7 +383,7 @@ function reportToGeoJSON(
 }
 
 const itineraryToGeoJSON = (
-  expanded: boolean | null,
+  cluster: number,
   dir: 'out' | 'back',
   itinerary: ItineraryData,
 ): Feature<geojson.LineString>[] =>
@@ -377,7 +394,7 @@ const itineraryToGeoJSON = (
       type: 'leg',
       dir,
       mode: leg.mode,
-      expanded,
+      cluster,
       itineraryHour: itineraryHour(itinerary),
     },
   }));
