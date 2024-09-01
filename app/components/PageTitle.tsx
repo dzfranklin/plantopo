@@ -25,10 +25,10 @@ export function PageTitle({
 
   if (title && (inlineTitle ?? true)) {
     return (
-      <h1 className="mb-8 flex items-baseline">
-        <span className="text-2xl font-semibold">{title}</span>
-        <div className="ml-auto flex gap-2">{actions}</div>
-      </h1>
+      <div className="mb-8 flex flex-col md:flex-row gap-2 items-baseline">
+        <h1 className="text-2xl font-semibold">{title}</h1>
+        <div className="md:ml-auto flex gap-2">{actions}</div>
+      </div>
     );
   }
 }

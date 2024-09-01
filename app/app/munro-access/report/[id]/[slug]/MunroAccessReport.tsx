@@ -65,8 +65,8 @@ export function MunroAccessReport({
         <DebugWeightControl value={weights} setValue={setWeights} />
       )}
 
-      <div className="grid gap-5 lg:gap-10 grid-rows-[400px_minmax(0,1fr)] lg:grid-rows-1 lg:grid-cols-[minmax(0,4fr)_minmax(0,6fr)] overflow-x-clip">
-        <div className="lg:relative lg:col-start-2 lg:row-start-1">
+      <div className="grid gap-5 lg:gap-10 grid-rows-[33vh_minmax(0,1fr)] lg:grid-rows-1 lg:grid-cols-[minmax(0,4fr)_minmax(0,6fr)] overflow-x-clip">
+        <div className="lg:relative lg:col-start-2 lg:row-start-1 mx-8 md:mx-0">
           <ReportMapComponent
             report={report}
             munros={munros}

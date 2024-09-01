@@ -84,7 +84,7 @@ function ItineraryComponent({
         <button onClick={() => setExpanded((p) => !p)} className="underline">
           {itinerary.legs.length} steps
         </button>
-        <a href={googleMapsHref} className="underline">
+        <a href={googleMapsHref} className="underline hidden md:inline">
           Google Maps (today)
         </a>
       </span>
