@@ -5,9 +5,6 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { MAPBOX_TOKEN } from '@/env';
 import geojson, { Feature } from 'geojson';
 import { decode as decodePolyline } from '@mapbox/polyline';
-import { bboxPolygon as computeBBoxPolygon } from '@turf/bbox-polygon';
-import { bbox as computeBBox } from '@turf/bbox';
-import { buffer as computeBuffer } from '@turf/buffer';
 import { itineraryHour } from './time';
 import { timeColorScale } from './color';
 import { distance as computeDistance } from '@turf/distance';
@@ -16,6 +13,10 @@ import { bezierSpline } from '@turf/bezier-spline';
 import { lineString } from '@turf/helpers';
 
 const arcCutoffKm = 30;
+const bounds: ml.LngLatBoundsLike = [
+  [-9.094, 55.572],
+  [0.706, 58.606],
+];
 
 export function ReportMapComponent({
   report,
@@ -52,6 +53,8 @@ export function ReportMapComponent({
       container: mapEl,
       accessToken: MAPBOX_TOKEN,
       style: 'mapbox://styles/dzfranklin/clxlno49r00er01qq3ppk4wwo',
+      bounds,
+      maxBounds: bounds,
     });
     mapRef.current = map;
 
@@ -94,14 +97,6 @@ export function ReportMapComponent({
     map.on('load', () => {
       loaded = true;
       map.resize();
-
-      const reportBBox = computeBBoxPolygon(computeBBox(reportFeature));
-      const boundsFeature = computeBuffer(reportBBox, 20, {
-        units: 'kilometers',
-      })!;
-      const bbox = computeBBox(boundsFeature);
-      map.fitBounds([bbox[0], bbox[1], bbox[2], bbox[3]], { animate: false });
-      map.setMaxBounds(map.getBounds()!);
 
       map.addSource('report', {
         type: 'geojson',
