@@ -2880,6 +2880,12 @@
     "repository": "https://github.com/substack/node-commondir"
   },
   {
+    "name": "compute-scroll-into-view@3.1.0",
+    "publisher": "Cody Olsen",
+    "licenses": "MIT",
+    "repository": "https://github.com/scroll-into-view/compute-scroll-into-view"
+  },
+  {
     "name": "concat-map@0.0.1",
     "publisher": "James Halliday",
     "licenses": "MIT",
@@ -6618,6 +6624,12 @@
     "repository": "https://github.com/webpack/schema-utils"
   },
   {
+    "name": "scroll-into-view-if-needed@3.1.0",
+    "publisher": "Cody Olsen",
+    "licenses": "MIT",
+    "repository": "https://github.com/scroll-into-view/scroll-into-view-if-needed"
+  },
+  {
     "name": "semver@5.7.2",
     "publisher": "GitHub Inc.",
     "licenses": "ISC",
@@ -6754,6 +6766,12 @@
     "publisher": "Sindre Sorhus",
     "licenses": "MIT",
     "repository": "https://github.com/sindresorhus/slash"
+  },
+  {
+    "name": "smooth-scroll-into-view-if-needed@2.0.2",
+    "publisher": "Cody Olsen",
+    "licenses": "MIT",
+    "repository": "https://github.com/scroll-into-view/smooth-scroll-into-view-if-needed"
   },
   {
     "name": "source-map-js@1.2.0",

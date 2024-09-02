@@ -3,6 +3,7 @@ package penv
 import (
 	"context"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
+	"github.com/dzfranklin/plantopo/backend/internal/pimg"
 	"github.com/dzfranklin/plantopo/backend/internal/pjobs"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -32,6 +33,7 @@ func Load() (*pconfig.Env, *prepo.Repo) {
 		RDB:          openRDB(cfg),
 		Objects:      openObjects(cfg),
 		Jobs:         jobs,
+		Img:          pimg.New(cfg.Imgproxy.Key, cfg.Imgproxy.Salt),
 	}
 
 	repo, err := prepo.New(env)

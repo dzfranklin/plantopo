@@ -66,6 +66,8 @@ type BritishAndIrishHillPhoto struct {
 	SourceText pgtype.Text
 	SourceLink pgtype.Text
 	Importer   pgtype.Text
+	Rank       int32
+	Reviewed   bool
 }
 
 type PendingEmailConfirmationToken struct {

@@ -1,0 +1,26 @@
+{{define "main"}}
+    {{ if .Done }}
+        No unreviewed photos
+    {{ else }}
+        <form method="POST">
+            <input type="hidden" name="ID" value="{{.Meta.ID}}">
+            <div>
+                <span>{{.Meta.ID}} ({{.DecodedID}})</span>
+                <button type="submit" name="Approve" value="true">Approve</button>
+            </div>
+            <img src="{{.Small.Src}}" width="{{.Small.Width}}" height="{{.Small.Height}}" alt="">
+            <img src="{{.Original.Src}}" width="{{.Original.Width}}" height="{{.Original.Height}}" alt="">
+
+            <p><a href="https://www.google.com/maps/place/{{.Hill.Lat}},{{.Hill.Lng}}">View hill on Google Maps</a></p>
+
+            <div>
+                <h4>Photo</h4>
+                <pre><code>{{ .Meta | marshalIndent }}</code></pre>
+            </div>
+            <div>
+                <h4>Hill</h4>
+                <pre><code>{{ .Hill | marshalIndent }}</code></pre>
+            </div>
+        </form>
+    {{ end }}
+{{end}}

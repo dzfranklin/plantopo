@@ -11,6 +11,23 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const approveBritishAndIrishHillPhoto = `-- name: ApproveBritishAndIrishHillPhoto :exec
+
+UPDATE british_and_irish_hill_photos
+SET reviewed = true
+WHERE id = $1
+`
+
+// ApproveBritishAndIrishHillPhoto
+//
+//	UPDATE british_and_irish_hill_photos
+//	SET reviewed = true
+//	WHERE id = $1
+func (q *Queries) ApproveBritishAndIrishHillPhoto(ctx context.Context, db DBTX, id int64) error {
+	_, err := db.Exec(ctx, approveBritishAndIrishHillPhoto, id)
+	return err
+}
+
 const insertBritishAndIrishHillsPhoto = `-- name: InsertBritishAndIrishHillsPhoto :exec
 
 INSERT INTO british_and_irish_hill_photos
@@ -60,16 +77,18 @@ func (q *Queries) InsertBritishAndIrishHillsPhoto(ctx context.Context, db DBTX, 
 
 const listBritishAndIrishHillPhotosOf = `-- name: ListBritishAndIrishHillPhotosOf :many
 
-SELECT id, hill_id, caption, licenses, source, size, width, height, uploaded_at, author, source_text, source_link, importer
+SELECT id, hill_id, caption, licenses, source, size, width, height, uploaded_at, author, source_text, source_link, importer, rank, reviewed
 FROM british_and_irish_hill_photos
 WHERE hill_id = ANY ($1::int[])
+ORDER BY rank DESC
 `
 
 // ListBritishAndIrishHillPhotosOf
 //
-//	SELECT id, hill_id, caption, licenses, source, size, width, height, uploaded_at, author, source_text, source_link, importer
+//	SELECT id, hill_id, caption, licenses, source, size, width, height, uploaded_at, author, source_text, source_link, importer, rank, reviewed
 //	FROM british_and_irish_hill_photos
 //	WHERE hill_id = ANY ($1::int[])
+//	ORDER BY rank DESC
 func (q *Queries) ListBritishAndIrishHillPhotosOf(ctx context.Context, db DBTX, hills []int32) ([]BritishAndIrishHillPhoto, error) {
 	rows, err := db.Query(ctx, listBritishAndIrishHillPhotosOf, hills)
 	if err != nil {
@@ -93,6 +112,8 @@ func (q *Queries) ListBritishAndIrishHillPhotosOf(ctx context.Context, db DBTX, 
 			&i.SourceText,
 			&i.SourceLink,
 			&i.Importer,
+			&i.Rank,
+			&i.Reviewed,
 		); err != nil {
 			return nil, err
 		}
@@ -222,4 +243,142 @@ func (q *Queries) ListBritishAndIrishHills(ctx context.Context, db DBTX, classif
 		return nil, err
 	}
 	return items, nil
+}
+
+const selectBritishAndIrishHill = `-- name: SelectBritishAndIrishHill :one
+
+SELECT id,
+       ST_X(point) as lng,
+       ST_Y(point) as lat,
+       name,
+       smc_parent_id,
+       classification,
+       map_50k,
+       map_25k,
+       metres,
+       grid_ref,
+       grid_ref_10,
+       drop,
+       col_grid_ref,
+       col_height,
+       feature,
+       observations,
+       survey,
+       country,
+       revision,
+       comments
+FROM british_and_irish_hills
+WHERE id = $1
+`
+
+type SelectBritishAndIrishHillRow struct {
+	ID             int32
+	Lng            pgtype.Float8
+	Lat            pgtype.Float8
+	Name           pgtype.Text
+	SmcParentID    pgtype.Int4
+	Classification []string
+	Map50k         pgtype.Text
+	Map25k         pgtype.Text
+	Metres         pgtype.Float8
+	GridRef        pgtype.Text
+	GridRef10      pgtype.Text
+	Drop           pgtype.Float8
+	ColGridRef     pgtype.Text
+	ColHeight      pgtype.Float8
+	Feature        pgtype.Text
+	Observations   pgtype.Text
+	Survey         pgtype.Text
+	Country        pgtype.Text
+	Revision       pgtype.Text
+	Comments       pgtype.Text
+}
+
+// SelectBritishAndIrishHill
+//
+//	SELECT id,
+//	       ST_X(point) as lng,
+//	       ST_Y(point) as lat,
+//	       name,
+//	       smc_parent_id,
+//	       classification,
+//	       map_50k,
+//	       map_25k,
+//	       metres,
+//	       grid_ref,
+//	       grid_ref_10,
+//	       drop,
+//	       col_grid_ref,
+//	       col_height,
+//	       feature,
+//	       observations,
+//	       survey,
+//	       country,
+//	       revision,
+//	       comments
+//	FROM british_and_irish_hills
+//	WHERE id = $1
+func (q *Queries) SelectBritishAndIrishHill(ctx context.Context, db DBTX, id int32) (SelectBritishAndIrishHillRow, error) {
+	row := db.QueryRow(ctx, selectBritishAndIrishHill, id)
+	var i SelectBritishAndIrishHillRow
+	err := row.Scan(
+		&i.ID,
+		&i.Lng,
+		&i.Lat,
+		&i.Name,
+		&i.SmcParentID,
+		&i.Classification,
+		&i.Map50k,
+		&i.Map25k,
+		&i.Metres,
+		&i.GridRef,
+		&i.GridRef10,
+		&i.Drop,
+		&i.ColGridRef,
+		&i.ColHeight,
+		&i.Feature,
+		&i.Observations,
+		&i.Survey,
+		&i.Country,
+		&i.Revision,
+		&i.Comments,
+	)
+	return i, err
+}
+
+const selectOneUnreviewedBritishAndIrishHillPhoto = `-- name: SelectOneUnreviewedBritishAndIrishHillPhoto :one
+
+SELECT id, hill_id, caption, licenses, source, size, width, height, uploaded_at, author, source_text, source_link, importer, rank, reviewed
+FROM british_and_irish_hill_photos
+WHERE NOT reviewed
+LIMIT 1
+`
+
+// SelectOneUnreviewedBritishAndIrishHillPhoto
+//
+//	SELECT id, hill_id, caption, licenses, source, size, width, height, uploaded_at, author, source_text, source_link, importer, rank, reviewed
+//	FROM british_and_irish_hill_photos
+//	WHERE NOT reviewed
+//	LIMIT 1
+func (q *Queries) SelectOneUnreviewedBritishAndIrishHillPhoto(ctx context.Context, db DBTX) (BritishAndIrishHillPhoto, error) {
+	row := db.QueryRow(ctx, selectOneUnreviewedBritishAndIrishHillPhoto)
+	var i BritishAndIrishHillPhoto
+	err := row.Scan(
+		&i.ID,
+		&i.HillID,
+		&i.Caption,
+		&i.Licenses,
+		&i.Source,
+		&i.Size,
+		&i.Width,
+		&i.Height,
+		&i.UploadedAt,
+		&i.Author,
+		&i.SourceText,
+		&i.SourceLink,
+		&i.Importer,
+		&i.Rank,
+		&i.Reviewed,
+	)
+	return i, err
 }

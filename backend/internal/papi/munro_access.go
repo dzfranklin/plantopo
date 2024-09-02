@@ -53,7 +53,7 @@ func (h *phandler) MunroAccessMunrosGet(_ context.Context) (*MunroAccessMunrosGe
 			width := 333
 			height := 250
 
-			src := h.img.Source(photo.Source).
+			src := h.Img.Source(photo.Source).
 				Width(width).Height(height).ResizingType(pimg.ResizeFill).Dpr(2).Build("jpg")
 
 			props.Photo = NewOptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto(MunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto{

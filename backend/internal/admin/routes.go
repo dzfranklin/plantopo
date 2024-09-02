@@ -27,6 +27,7 @@ func Routes(env *pconfig.Env, repo *prepo.Repo) http.Handler {
 	mux.HandleFunc("GET /admin/login", app.loginGet)
 	mux.HandleFunc("GET /admin/users", app.usersGet)
 	mux.HandleFunc("GET /admin/user/{id}", app.userGet)
+	mux.HandleFunc("GET /admin/tools", app.toolsGet)
 	mux.HandleFunc("GET /admin/sessions", app.sessionsGet)
 	mux.HandleFunc("GET /admin/auditlog", app.auditlogGet)
 	mux.HandleFunc("GET /admin/auditlog/{id}", app.auditlogEntryGet)
@@ -37,6 +38,7 @@ func Routes(env *pconfig.Env, repo *prepo.Repo) http.Handler {
 	mux.HandleFunc("POST /admin/mail", app.mailPost)
 	mux.HandleFunc("GET /admin/fire-job", app.fireJobGet)
 	mux.HandleFunc("POST /admin/fire-job", app.fireJobPost)
+	mux.HandleFunc("/admin/review-british-and-irish-hill-photos", app.reviewBritishAndIrishHillPhotos)
 
 	riverSrv, err := riverui.NewServer(&riverui.ServerOpts{
 		Client: env.Jobs,

@@ -1,6 +1,7 @@
 package pconfig
 
 import (
+	"github.com/dzfranklin/plantopo/backend/internal/pimg"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/minio/minio-go/v7"
@@ -19,6 +20,7 @@ type Env struct {
 	RDB          *redis.Client
 	Objects      *minio.Client
 	Jobs         *river.Client[pgx.Tx]
+	Img          *pimg.Config
 }
 
 type Config struct {

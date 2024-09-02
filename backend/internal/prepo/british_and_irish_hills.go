@@ -1,10 +1,14 @@
 package prepo
 
 import (
+	"errors"
 	"github.com/dzfranklin/plantopo/backend/internal/psqlc"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"time"
 )
+
+const britishAndIrishHillPhotoIDKind = "bihp"
 
 type BritishAndIrishHills struct {
 	db *pgxpool.Pool
@@ -43,6 +47,8 @@ type BritishOrIrishHill struct {
 }
 
 type HillPhoto struct {
+	ID                  string
+	HillID              int32
 	Caption             string
 	Licenses            []string
 	Source              string
@@ -72,34 +78,8 @@ func (s *BritishAndIrishHills) List(opts ListBritishAndIrishHillsOpts) ([]Britis
 	var out []BritishOrIrishHill
 	var ids []int32
 	for _, row := range rows {
-		var smcParentID *int32
-		if row.SmcParentID.Valid {
-			smcParentID = &row.SmcParentID.Int32
-		}
-
 		ids = append(ids, row.ID)
-		out = append(out, BritishOrIrishHill{
-			ID:             row.ID,
-			Name:           row.Name.String,
-			Lng:            row.Lng.Float64,
-			Lat:            row.Lat.Float64,
-			SMCParentID:    smcParentID,
-			Classification: row.Classification,
-			Map50k:         row.Map50k.String,
-			Map25k:         row.Map25k.String,
-			Metres:         row.Metres.Float64,
-			GridRef:        row.GridRef.String,
-			GridRef10:      row.GridRef10.String,
-			Drop:           row.Drop.Float64,
-			ColGridRef:     row.ColGridRef.String,
-			ColHeight:      row.ColHeight.Float64,
-			Feature:        row.Feature.String,
-			Observations:   row.Observations.String,
-			Survey:         row.Survey.String,
-			Country:        row.Country.String,
-			Revision:       row.Revision.String,
-			Comments:       row.Comments.String,
-		})
+		out = append(out, mapBritishIrishHill(row))
 	}
 
 	hillPhotos, err := q.ListBritishAndIrishHillPhotosOf(ctx, s.db, ids)
@@ -109,24 +89,92 @@ func (s *BritishAndIrishHills) List(opts ListBritishAndIrishHillsOpts) ([]Britis
 	for _, photo := range hillPhotos {
 		for i := range out {
 			if out[i].ID == photo.HillID {
-				out[i].Photos = append(out[i].Photos, HillPhoto{
-					Caption:    photo.Caption.String,
-					Licenses:   photo.Licenses,
-					Source:     photo.Source,
-					Size:       int(photo.Size),
-					Width:      int(photo.Width),
-					Height:     int(photo.Height),
-					UploadedAt: photo.UploadedAt.Time,
-					Author:     photo.Author.String,
-					SourceText: photo.SourceText.String,
-					SourceLink: photo.SourceLink.String,
-					Importer:   photo.Importer.String,
-				})
+				out[i].Photos = append(out[i].Photos, mapBritishIrishHillPhoto(photo))
 			}
 		}
 	}
 
 	return out, nil
+}
+
+func (s *BritishAndIrishHills) Get(id int32) (BritishOrIrishHill, error) {
+	ctx, cancel := defaultContext()
+	defer cancel()
+	row, err := q.SelectBritishAndIrishHill(ctx, s.db, id)
+	if err != nil {
+		return BritishOrIrishHill{}, nil
+	}
+	return mapBritishIrishHill(psqlc.ListBritishAndIrishHillsRow(row)), nil
+}
+
+func (s *BritishAndIrishHills) ApproveHillPhoto(id string) error {
+	ctx, cancel := defaultContext()
+	defer cancel()
+	dbID, err := IDToSerial(britishAndIrishHillPhotoIDKind, id)
+	if err != nil {
+		return err
+	}
+	return q.ApproveBritishAndIrishHillPhoto(ctx, s.db, dbID)
+}
+
+func (s *BritishAndIrishHills) GetUnreviewedPhoto() (*HillPhoto, error) {
+	ctx, cancel := defaultContext()
+	defer cancel()
+	row, err := q.SelectOneUnreviewedBritishAndIrishHillPhoto(ctx, s.db)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	p := mapBritishIrishHillPhoto(row)
+	return &p, nil
+}
+
+func mapBritishIrishHill(row psqlc.ListBritishAndIrishHillsRow) BritishOrIrishHill {
+	var smcParentID *int32
+	if row.SmcParentID.Valid {
+		smcParentID = &row.SmcParentID.Int32
+	}
+	return BritishOrIrishHill{
+		ID:             row.ID,
+		Name:           row.Name.String,
+		Lng:            row.Lng.Float64,
+		Lat:            row.Lat.Float64,
+		SMCParentID:    smcParentID,
+		Classification: row.Classification,
+		Map50k:         row.Map50k.String,
+		Map25k:         row.Map25k.String,
+		Metres:         row.Metres.Float64,
+		GridRef:        row.GridRef.String,
+		GridRef10:      row.GridRef10.String,
+		Drop:           row.Drop.Float64,
+		ColGridRef:     row.ColGridRef.String,
+		ColHeight:      row.ColHeight.Float64,
+		Feature:        row.Feature.String,
+		Observations:   row.Observations.String,
+		Survey:         row.Survey.String,
+		Country:        row.Country.String,
+		Revision:       row.Revision.String,
+		Comments:       row.Comments.String,
+	}
+}
+
+func mapBritishIrishHillPhoto(d psqlc.BritishAndIrishHillPhoto) HillPhoto {
+	return HillPhoto{
+		ID:         SerialToID(britishAndIrishHillPhotoIDKind, d.ID),
+		HillID:     d.HillID,
+		Caption:    d.Caption.String,
+		Licenses:   d.Licenses,
+		Source:     d.Source,
+		Size:       int(d.Size),
+		Width:      int(d.Width),
+		Height:     int(d.Height),
+		UploadedAt: d.UploadedAt.Time,
+		Author:     d.Author.String,
+		SourceText: d.SourceText.String,
+		SourceLink: d.SourceLink.String,
+		Importer:   d.Importer.String,
+	}
 }
 
 type InsertBritishOrIrishHillPhotoOpts struct {

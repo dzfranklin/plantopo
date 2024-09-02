@@ -2,6 +2,7 @@ package admin
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"github.com/dzfranklin/plantopo/backend/internal/admin/admintemplates"
 	"github.com/go-playground/form"
@@ -11,6 +12,17 @@ import (
 
 type M map[string]any
 
+var funcs = template.FuncMap{
+	"marshal": func(v any) (string, error) {
+		j, err := json.Marshal(v)
+		return string(j), err
+	},
+	"marshalIndent": func(v any) (string, error) {
+		j, err := json.MarshalIndent(v, "", "  ")
+		return string(j), err
+	},
+}
+
 func (app *adminApp) render(w http.ResponseWriter, r *http.Request, name string, data M) {
 	if data == nil {
 		data = M{}
@@ -19,7 +31,7 @@ func (app *adminApp) render(w http.ResponseWriter, r *http.Request, name string,
 	user := getUser(r.Context())
 	data["SignedInUser"] = user
 
-	tmpl, err := template.ParseFS(admintemplates.FS, "base.tmpl", name)
+	tmpl, err := template.New("base.tmpl").Funcs(funcs).ParseFS(admintemplates.FS, "base.tmpl", name)
 	if err != nil {
 		app.internalServerError(w, r, err)
 		return
@@ -27,7 +39,7 @@ func (app *adminApp) render(w http.ResponseWriter, r *http.Request, name string,
 
 	b := new(bytes.Buffer)
 
-	err = tmpl.Execute(b, data)
+	err = tmpl.ExecuteTemplate(b, "base.tmpl", data)
 	if err != nil {
 		app.internalServerError(w, r, err)
 		return

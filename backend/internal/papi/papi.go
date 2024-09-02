@@ -3,7 +3,6 @@ package papi
 import (
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/pelevation"
-	"github.com/dzfranklin/plantopo/backend/internal/pimg"
 	"github.com/dzfranklin/plantopo/backend/internal/pmunroaccess"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
 	"github.com/dzfranklin/plantopo/backend/internal/pweather"
@@ -16,7 +15,6 @@ type phandler struct {
 	elevation   *pelevation.Service
 	weather     *pweather.Service
 	munroaccess *pmunroaccess.Service
-	img         *pimg.Config
 }
 
 func New(env *pconfig.Env, repo *prepo.Repo) (http.Handler, error) {
@@ -28,7 +26,6 @@ func New(env *pconfig.Env, repo *prepo.Repo) (http.Handler, error) {
 		elevation:   pelevation.New(env),
 		weather:     pweather.New(env),
 		munroaccess: pmunroaccess.New(env),
-		img:         pimg.New(env.Config.Imgproxy.Key, env.Config.Imgproxy.Salt),
 	}
 
 	s := &psecurity{
