@@ -18,6 +18,7 @@ import {
 import { StackedLayout } from '@/components/stacked-layout';
 import Footer from './Footer';
 import cls from '@/cls';
+import { Logo } from '@/components/Logo';
 
 const navItems = [
   { label: 'Home', url: '/' },
@@ -50,7 +51,9 @@ export const Layout = forwardRef(
           navbar={
             <Navbar>
               <NavbarSection>
-                <NavbarLabel>PlanTopo</NavbarLabel>
+                <NavbarLabel>
+                  <Logo />
+                </NavbarLabel>
               </NavbarSection>
               <NavbarSection className="max-lg:hidden">
                 {navItems.map(({ label, url }) => (

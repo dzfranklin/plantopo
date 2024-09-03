@@ -8,6 +8,7 @@ check-all:
     spectral lint ./api/schema/schema.yaml --fail-severity error
 
     cd app && npm run lint
+    cd app && tsc --noEmit --project tsconfig.json
 
     cd ./backend && go test -race ./...
     cd backend && staticcheck ./...
