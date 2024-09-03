@@ -21,7 +21,7 @@ func enableCORS(env *pconfig.Env, next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 		if corsShouldAllow(env, origin) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, PUT, PATCH, DELETE")
+			w.Header().Set("Access-Control-Allow-Methods", "OPTIONS,GET,POST,PUT,PATCH,DELETE")
 			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
 
