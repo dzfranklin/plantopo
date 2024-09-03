@@ -102,6 +102,9 @@ func NewTestEnv(t *testing.T) *TestEnv {
 		}()
 	}
 	wg.Wait()
+
+	te.setupJobs()
+
 	t.Logf("Setup test environment in %fs\n", time.Since(start).Seconds())
 
 	return te
@@ -155,6 +158,8 @@ func (te *TestEnv) Reset() {
 		}()
 	}
 	wg.Wait()
+
+	te.setupJobs()
 }
 
 func (te *TestEnv) setupRDB() {
@@ -241,11 +246,6 @@ func (te *TestEnv) setupDB() {
 
 	te.dbC = c
 	te.connectDB()
-
-	te.Jobs, err = river.NewClient[pgx.Tx](riverpgxv5.New(te.DB), &river.Config{})
-	if err != nil {
-		panic(err)
-	}
 }
 
 func (te *TestEnv) connectDB() {
@@ -259,6 +259,14 @@ func (te *TestEnv) connectDB() {
 		panic(err)
 	}
 	te.DB = db
+}
+
+func (te *TestEnv) setupJobs() {
+	var err error
+	te.Jobs, err = river.NewClient[pgx.Tx](riverpgxv5.New(te.DB), &river.Config{})
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (te *TestEnv) setupMinio() {

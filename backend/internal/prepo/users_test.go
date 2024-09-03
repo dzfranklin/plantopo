@@ -1,10 +1,12 @@
 package prepo
 
 import (
+	"context"
 	"github.com/dzfranklin/plantopo/backend/internal/ptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/throttled/throttled/v2"
+	"strings"
 	"testing"
 )
 
@@ -131,6 +133,22 @@ func TestUsers(t *testing.T) {
 		isAdmin, err := subject.IsAdmin(user.ID)
 		require.NoError(t, err)
 		require.False(t, isAdmin)
+	})
+
+	t.Run("verify email", func(t *testing.T) {
+		env.Reset()
+		_, subject := makeSubject(t)
+
+		user, err := subject.Register(validRegistration)
+		require.NoError(t, err)
+
+		link, err := subject.createEmailVerificationLink(context.Background(), user)
+		require.NoError(t, err)
+		token := strings.TrimPrefix(link, "https://api.plantopo.com/api/v1/complete-registration?token=")
+
+		status, err := subject.VerifyEmail(token)
+		require.NoError(t, err)
+		require.Equal(t, VerificationSuccess, status)
 	})
 }
 

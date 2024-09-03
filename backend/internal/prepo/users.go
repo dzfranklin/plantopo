@@ -1,8 +1,12 @@
 package prepo
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
+	"github.com/dzfranklin/plantopo/backend/internal/pemail"
+	"github.com/dzfranklin/plantopo/backend/internal/prand"
 	"github.com/dzfranklin/plantopo/backend/internal/psqlc"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -12,6 +16,7 @@ import (
 	throttledredisstore "github.com/throttled/throttled/v2/store/goredisstore.v9"
 	"golang.org/x/crypto/bcrypt"
 	"log/slog"
+	"time"
 )
 
 var (
@@ -23,6 +28,8 @@ type Users struct {
 	l             *slog.Logger
 	al            *AuditLog
 	db            *pgxpool.Pool
+	rdb           *redis.Client
+	email         *pemail.Service
 	loginThrottle *throttled.GCRARateLimiterCtx
 }
 
@@ -39,6 +46,8 @@ func newUsers(env *pconfig.Env, al *AuditLog) (*Users, error) {
 		l:             env.Logger,
 		al:            al,
 		db:            env.DB,
+		rdb:           env.RDB,
+		email:         pemail.NewService(env),
 		loginThrottle: loginThrottle,
 	}, nil
 }
@@ -59,13 +68,16 @@ type UserRegistration struct {
 func (r *Users) Get(id string) (User, error) {
 	ctx, cancel := defaultContext()
 	defer cancel()
+	return r.get(ctx, r.db, id)
+}
 
+func (r *Users) get(ctx context.Context, db psqlc.DBTX, id string) (User, error) {
 	dbID, err := IDToUUID(userIDKind, id)
 	if err != nil {
 		return User{}, err
 	}
 
-	row, err := q.SelectUser(ctx, r.db, pgUUID(dbID))
+	row, err := q.SelectUser(ctx, db, pgUUID(dbID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return User{}, ErrNotFound
@@ -133,14 +145,20 @@ func (r *Users) Register(req UserRegistration) (User, error) {
 	}
 	user := mapUser(userRow)
 
-	// WatchStatus: Enqueue to send confirmation email via river
-
 	err = tx.Commit(ctx)
 	if err != nil {
 		return User{}, err
 	}
 
 	r.al.Push(user.ID, user.ID, "Register", map[string]any{"email": user.Email})
+
+	verificationLink, err := r.createEmailVerificationLink(ctx, user)
+	if err != nil {
+		return User{}, err
+	}
+	if err := r.email.Send(pemail.CompleteRegistrationEmail(user.Email, verificationLink)); err != nil {
+		return User{}, err
+	}
 
 	return user, nil
 }
@@ -230,6 +248,104 @@ func (r *Users) List(cursor string) ([]User, string, error) {
 	}
 
 	return page, nextCursor, nil
+}
+
+type VerificationStatus string
+
+const (
+	VerificationSuccess          VerificationStatus = "verified"
+	VerificationTokenExpired     VerificationStatus = "token-expired"
+	VerificationTokenAlreadyUsed VerificationStatus = "token-already-used"
+	VerificationTokenInvalid     VerificationStatus = "token-invalid"
+)
+
+type verificationRecord struct {
+	User   string
+	Email  string
+	Expiry time.Time
+	UsedAt time.Time
+}
+
+func (r verificationRecord) MarshalBinary() ([]byte, error) {
+	return json.Marshal(r)
+}
+func (r *verificationRecord) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, r)
+}
+
+const (
+	verificationTokenExpiry    = time.Hour * 24 * 7
+	verificationRecordDeletion = verificationTokenExpiry * 4
+)
+
+func (r *Users) VerifyEmail(token string) (VerificationStatus, error) {
+	ctx, cancel := defaultContext()
+	defer cancel()
+
+	var record verificationRecord
+	getErr := r.rdb.Get(ctx, emailVerificationTokenKey(token)).Scan(&record)
+	if errors.Is(getErr, redis.Nil) {
+		return VerificationTokenInvalid, nil
+	} else if getErr != nil {
+		return "", getErr
+	}
+
+	if !record.UsedAt.IsZero() {
+		return VerificationTokenAlreadyUsed, nil
+	}
+	if record.Expiry.Before(time.Now()) {
+		return VerificationTokenExpired, nil
+	}
+
+	tx, beginErr := r.db.Begin(ctx)
+	if beginErr != nil {
+		return "", beginErr
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
+	user, getUserErr := r.get(ctx, tx, record.User)
+	if getUserErr != nil {
+		return "", getUserErr
+	}
+
+	if user.Email != record.Email {
+		// If the user has changed their email since we generated the token we silently do nothing.
+		return VerificationSuccess, nil
+	}
+
+	dbID, idErr := IDToUUID(userIDKind, user.ID)
+	if idErr != nil {
+		return "", idErr
+	}
+
+	if err := q.MarkUserEmailConfirmed(ctx, tx, pgUUID(dbID)); err != nil {
+		return "", err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return "", err
+	}
+
+	return VerificationSuccess, nil
+}
+
+func (r *Users) createEmailVerificationLink(ctx context.Context, user User) (string, error) {
+	token := prand.CryptoRandHex(32)
+	key := emailVerificationTokenKey(token)
+	record := verificationRecord{
+		User:   user.ID,
+		Email:  user.Email,
+		Expiry: time.Now().Add(verificationTokenExpiry),
+	}
+	if err := r.rdb.Set(ctx, key, record, verificationRecordDeletion).Err(); err != nil {
+		return "", err
+	}
+	link := "https://api.plantopo.com/api/v1/complete-registration?token=" + token
+	return link, nil
+}
+
+func emailVerificationTokenKey(token string) string {
+	return "email-verification-token:" + token
 }
 
 func mapUser(user psqlc.User) User {

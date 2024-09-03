@@ -1,9 +1,9 @@
 import cls from '@/cls';
 import {
-  XCircleIcon,
-  ExclamationTriangleIcon,
   CheckCircleIcon,
+  ExclamationTriangleIcon,
   InformationCircleIcon,
+  XCircleIcon,
 } from '@heroicons/react/20/solid';
 
 const variants = {
@@ -55,7 +55,7 @@ export default function InlineAlert({
   const values = variants[variant];
   return (
     <div className={cls('my-2 border-l-4 p-4', values.border, values.bg)}>
-      <div className="flex">
+      <div className="flex w-full overflow-auto">
         <div className="flex-shrink-0">{values.Icon}</div>
         <div className={cls('ml-3 text-sm', values.text)}>{children}</div>
       </div>

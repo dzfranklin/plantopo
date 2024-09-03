@@ -39,6 +39,7 @@ func New(env *pconfig.Env, repo *prepo.Repo) (http.Handler, error) {
 	}
 	mux.Handle("/", srv)
 
+	mux.HandleFunc("/complete-registration", h.CompleteRegistrationGet)
 	mux.HandleFunc("/munro-access/report/{id}/status-updates", h.MunroAccessReportIDStatusUpdatesGet)
 
 	return mux, nil
