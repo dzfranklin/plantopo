@@ -26,7 +26,7 @@ export function GeophotosMap() {
         map.addSource('geophotos', {
           type: 'vector',
           tiles: [API_ENDPOINT + 'geophotos/tile/{z}/{x}/{y}.mvt.gz'],
-          minzoom: 6,
+          minzoom: 8,
           maxZoom: 10,
         });
 
