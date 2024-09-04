@@ -13,9 +13,8 @@ import (
 func TestIntegratedSecurity(t *testing.T) {
 	t.Parallel()
 	env := ptest.NewTestEnv(t)
-	repo, err := prepo.New(env.Env)
-	require.NoError(t, err)
-	routes := Routes(env.Env, repo)
+	repo := prepo.New(env.Env)
+	routes := Routes(env.Env)
 
 	srv := httptest.NewServer(routes)
 	t.Cleanup(func() {

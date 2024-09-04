@@ -26,6 +26,14 @@ var (
 	idEncoding = base32.NewEncoding("0123456789abcdefghjkmnpqrstvwxyz").WithPadding(base32.NoPadding)
 )
 
+func pgOptInt4(v int) pgtype.Int4 {
+	if v == 0 {
+		return pgtype.Int4{}
+	} else {
+		return pgtype.Int4{Int32: int32(v), Valid: true}
+	}
+}
+
 func pgText(v string) pgtype.Text {
 	return pgtype.Text{
 		String: v,
@@ -44,12 +52,24 @@ func pgOptText(v string) pgtype.Text {
 	}
 }
 
-func pgOptTime(v time.Time) pgtype.Timestamp {
+func pgOptTimestamp(v time.Time) pgtype.Timestamp {
 	if v.IsZero() {
 		return pgtype.Timestamp{}
 	} else {
 		return pgtype.Timestamp{Valid: true, Time: v}
 	}
+}
+
+func pgOptTimestamptz(v time.Time) pgtype.Timestamptz {
+	if v.IsZero() {
+		return pgtype.Timestamptz{}
+	} else {
+		return pgtype.Timestamptz{Valid: true, Time: v}
+	}
+}
+
+func pgTimestamptz(v time.Time) pgtype.Timestamptz {
+	return pgtype.Timestamptz{Valid: true, Time: v}
 }
 
 func pgTextUnlessEmpty(v string) pgtype.Text {

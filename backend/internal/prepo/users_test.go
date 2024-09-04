@@ -19,8 +19,7 @@ func TestUsers(t *testing.T) {
 	makeSubject := func(t *testing.T) (*AuditLog, *Users) {
 		t.Helper()
 		al := newAuditLog(env.Env)
-		subject, err := newUsers(env.Env, al)
-		require.NoError(t, err)
+		subject := newUsers(env.Env, al)
 		return al, subject
 	}
 
@@ -158,8 +157,7 @@ func TestUsers_CheckLoginIsRateLimited(t *testing.T) {
 	env.Config.Users.LoginThrottle = throttled.RateQuota{MaxRate: throttled.PerMin(1), MaxBurst: 1}
 
 	al := newAuditLog(env.Env)
-	subject, err := newUsers(env.Env, al)
-	require.NoError(t, err)
+	subject := newUsers(env.Env, al)
 
 	password := "01J2MTNRB9ZM7BZBXG5KQ2WQ10"
 	user, err := subject.Register(UserRegistration{

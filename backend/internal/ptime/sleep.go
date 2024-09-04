@@ -24,3 +24,11 @@ func SleepUntil(ctx context.Context, t time.Time) error {
 	diff := t.Sub(now)
 	return Sleep(ctx, diff)
 }
+
+func DayStart(year int, month time.Month, day int) time.Time {
+	return time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
+}
+
+func DayEnd(year int, month time.Month, day int) time.Time {
+	return time.Date(year, month, day, 24, 60, 60, 0, time.UTC)
+}

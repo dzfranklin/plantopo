@@ -73,6 +73,9 @@ func Read() *Config {
 			PrivateToken: getEnvString("MAPBOX_PRIVATE_TOKEN"),
 			PublicToken:  getEnvString("MAPBOX_PUBLIC_TOKEN"),
 		},
+		Flickr: Flickr{
+			APIKey: getEnvString("FLICKR_API_KEY"),
+		},
 	}
 }
 

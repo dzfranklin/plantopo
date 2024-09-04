@@ -9,7 +9,8 @@ import (
 	"riverqueue.com/riverui"
 )
 
-func Routes(env *pconfig.Env, repo *prepo.Repo) http.Handler {
+func Routes(env *pconfig.Env) http.Handler {
+	repo := prepo.New(env)
 	app := adminApp{
 		Env:         env,
 		Repo:        repo,

@@ -202,7 +202,7 @@ func (s *BritishAndIrishHills) InsertPhoto(opts InsertBritishOrIrishHillPhotoOpt
 		Size:       int32(opts.Size),
 		Width:      int32(opts.Width),
 		Height:     int32(opts.Height),
-		UploadedAt: pgOptTime(opts.UploadedAt.UTC()),
+		UploadedAt: pgOptTimestamp(opts.UploadedAt.UTC()),
 		Author:     pgOptText(opts.Author),
 		SourceText: pgOptText(opts.SourceText),
 		SourceLink: pgOptText(opts.SourceLink),

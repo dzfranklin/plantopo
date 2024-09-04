@@ -5,7 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/penv"
+	"github.com/dzfranklin/plantopo/backend/internal/pflickr"
+	"github.com/dzfranklin/plantopo/backend/internal/ptime"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,7 +18,7 @@ import (
 )
 
 func main() {
-	env, repo := penv.Load()
+	env := penv.Load()
 	l := env.Logger
 
 	shouldQuit := make(chan struct{})
@@ -63,7 +66,7 @@ func main() {
 	quitGroup.Add(2)
 	go func() {
 		defer quitGroup.Done()
-		srv := NewServer(env, repo)
+		srv := NewServer(env)
 
 		go func() {
 			defer quitGroup.Done()
@@ -112,6 +115,33 @@ func main() {
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			l.Error("meta server failed", "error", err)
 		}
+	}()
+
+	quitGroup.Add(2)
+	go func() {
+		defer quitGroup.Done()
+		srv := pflickr.NewService(env)
+		indexCtx, cancel := context.WithCancel(context.Background())
+		go func() {
+			defer quitGroup.Done()
+
+			if err := ptime.Sleep(indexCtx, time.Duration(rand.Intn(60))*time.Second); err != nil && !errors.Is(err, context.Canceled) {
+				l.Error("sleep failed", "error", err)
+			}
+
+			for {
+				err := srv.IndexFlickr(indexCtx)
+				if errors.Is(err, context.Canceled) {
+					break
+				} else if err != nil {
+					l.Error("failed to index flickr", "error", err)
+					_ = ptime.Sleep(indexCtx, time.Hour)
+					continue
+				}
+			}
+		}()
+		<-shouldQuit
+		cancel()
 	}()
 
 	quitRequestSignal := make(chan os.Signal, 1)

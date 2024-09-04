@@ -21,9 +21,7 @@ func TestSessions(t *testing.T) {
 		t.Helper()
 
 		al = newAuditLog(env.Env)
-
-		users, err := newUsers(env.Env, al)
-		require.NoError(t, err)
+		users := newUsers(env.Env, al)
 
 		subject := newSessions(env.Env, al, users)
 		return subject

@@ -70,6 +70,56 @@ type BritishAndIrishHillPhoto struct {
 	Reviewed   bool
 }
 
+type FlickrIndexProgress struct {
+	RegionID int32
+	Latest   pgtype.Timestamptz
+}
+
+type FlickrIndexRegion struct {
+	ID     int32
+	Name   string
+	MinLng float64
+	MinLat float64
+	MaxLng float64
+	MaxLat float64
+}
+
+type GeographIndexProgress struct {
+	ID     int32
+	Latest pgtype.Timestamptz
+}
+
+type Geophoto struct {
+	ID              int64
+	Source          pgtype.Int4
+	SourceID        pgtype.Text
+	IndexRegionID   pgtype.Int4
+	IndexedAt       pgtype.Timestamptz
+	AttributionText pgtype.Text
+	AttributionLink pgtype.Text
+	Licenses        []int32
+	Url             string
+	Width           int32
+	Height          int32
+	SmallUrl        pgtype.Text
+	SmallWidth      pgtype.Int4
+	SmallHeight     pgtype.Int4
+	Point           interface{}
+	Title           pgtype.Text
+	DateTaken       pgtype.Timestamptz
+}
+
+type GeophotosLicense struct {
+	ID   int32
+	Name string
+	Url  pgtype.Text
+}
+
+type GeophotosSource struct {
+	ID   int32
+	Name pgtype.Text
+}
+
 type PendingEmailConfirmationToken struct {
 	Email     pgtype.Text
 	Token     string

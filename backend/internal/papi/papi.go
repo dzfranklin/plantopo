@@ -17,9 +17,10 @@ type phandler struct {
 	munroaccess *pmunroaccess.Service
 }
 
-func New(env *pconfig.Env, repo *prepo.Repo) (http.Handler, error) {
+func New(env *pconfig.Env) (http.Handler, error) {
 	mux := http.NewServeMux()
 
+	repo := prepo.New(env)
 	h := &phandler{
 		Env:         env,
 		Repo:        repo,

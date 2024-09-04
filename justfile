@@ -21,6 +21,7 @@ gen:
     cd app && test ! -f .env.local || cat .env.local | cut -d '=' -f 1 | xargs -I {} echo {}= >.env.local.example
 
     cd app && npm run build:dependency-report
+    cd backend && mockery
     just api-schema-gen
     just sqlc-gen
 

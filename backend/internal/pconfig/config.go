@@ -39,6 +39,7 @@ type Config struct {
 	Imgproxy       Imgproxy
 	SMTPRelay      SMTPRelay
 	Mapbox         Mapbox
+	Flickr         Flickr
 }
 
 type Elevation struct {
@@ -110,4 +111,8 @@ type SMTPRelay struct {
 type Mapbox struct {
 	PrivateToken string
 	PublicToken  string
+}
+
+type Flickr struct {
+	APIKey string
 }

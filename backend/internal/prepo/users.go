@@ -33,13 +33,10 @@ type Users struct {
 	loginThrottle *throttled.GCRARateLimiterCtx
 }
 
-func newUsers(env *pconfig.Env, al *AuditLog) (*Users, error) {
+func newUsers(env *pconfig.Env, al *AuditLog) *Users {
 	cfg := &env.Config.Users
 
-	loginThrottle, err := makeLoginThrottle(env.RDB, cfg.LoginThrottle)
-	if err != nil {
-		return nil, err
-	}
+	loginThrottle := makeLoginThrottle(env.RDB, cfg.LoginThrottle)
 
 	return &Users{
 		cfg:           cfg,
@@ -49,7 +46,7 @@ func newUsers(env *pconfig.Env, al *AuditLog) (*Users, error) {
 		rdb:           env.RDB,
 		email:         pemail.NewService(env),
 		loginThrottle: loginThrottle,
-	}, nil
+	}
 }
 
 type User struct {
@@ -357,14 +354,14 @@ func mapUser(user psqlc.User) User {
 	}
 }
 
-func makeLoginThrottle(rdb *redis.Client, quota throttled.RateQuota) (*throttled.GCRARateLimiterCtx, error) {
+func makeLoginThrottle(rdb *redis.Client, quota throttled.RateQuota) *throttled.GCRARateLimiterCtx {
 	store, err := throttledredisstore.NewCtx(rdb, "account_throttle")
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	throttle, err := throttled.NewGCRARateLimiterCtx(store, quota)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	return throttle, nil
+	return throttle
 }

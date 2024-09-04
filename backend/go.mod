@@ -6,6 +6,8 @@ require (
 	cgt.name/pkg/go-mwclient v1.3.0
 	github.com/DataDog/go-sqllexer v0.0.14
 	github.com/andybalholm/cascadia v1.3.2
+	github.com/bsm/redislock v0.9.4
+	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cridenour/go-postgis v1.0.0
 	github.com/go-faster/errors v0.7.1
 	github.com/go-faster/jx v1.1.0
@@ -38,6 +40,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.33.0
 	github.com/throttled/throttled/v2 v2.12.0
+	github.com/tidwall/geojson v1.4.5
 	github.com/tidwall/gjson v1.17.3
 	github.com/tidwall/sjson v1.2.5
 	github.com/trustelem/zxcvbn v1.0.1
@@ -67,7 +70,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/sonic v1.12.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.0 // indirect
-	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
@@ -136,6 +138,7 @@ require (
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/test-go/testify v1.1.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect

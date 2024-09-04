@@ -125,6 +125,11 @@ spec:
                 secretKeyRef:
                   name: mapbox
                   key: public-token
+            - name: FLICKR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: flickr
+                  key: api-key
           livenessProbe:
             httpGet:
               path: /status

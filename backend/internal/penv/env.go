@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func Load() (*pconfig.Env, *prepo.Repo) {
+func Load() *pconfig.Env {
 	_ = godotenv.Load(".env", ".env.local")
 	cfg := pconfig.Read()
 
@@ -36,14 +36,9 @@ func Load() (*pconfig.Env, *prepo.Repo) {
 		Img:          pimg.New(cfg.Imgproxy.Key, cfg.Imgproxy.Salt),
 	}
 
-	repo, err := prepo.New(env)
-	if err != nil {
-		log.Fatal(err)
-	}
+	pjobs.Register(env, jobs, jobWorkers)
 
-	pjobs.Register(env, repo, jobs, jobWorkers)
-
-	return env, repo
+	return env
 }
 
 func openDB(cfg *pconfig.Config, logger *slog.Logger) *pgxpool.Pool {

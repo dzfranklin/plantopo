@@ -9,7 +9,6 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/admin"
 	"github.com/dzfranklin/plantopo/backend/internal/papi"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
-	"github.com/dzfranklin/plantopo/backend/internal/prepo"
 	"github.com/dzfranklin/plantopo/backend/internal/pwebhooks"
 	"github.com/google/uuid"
 	"io"
@@ -24,14 +23,14 @@ import (
 
 // WatchStatus: Integrate prometheus
 
-func NewServer(env *pconfig.Env, repo *prepo.Repo) *http.Server {
-	apiSrv, err := papi.New(env, repo)
+func NewServer(env *pconfig.Env) *http.Server {
+	apiSrv, err := papi.New(env)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	webhookSrv := pwebhooks.Routes(env)
-	adminSrv := admin.Routes(env, repo)
+	adminSrv := admin.Routes(env)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/status", handleStatus(env))

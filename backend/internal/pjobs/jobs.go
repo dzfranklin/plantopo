@@ -39,10 +39,10 @@ func Open(db *pgxpool.Pool, logger *slog.Logger) (*river.Client[pgx.Tx], *river.
 
 func Register(
 	env *pconfig.Env,
-	repo *prepo.Repo,
 	jobs *river.Client[pgx.Tx],
 	workers *river.Workers,
 ) {
+	repo := prepo.New(env)
 	periodic := jobs.PeriodicJobs()
 
 	river.AddWorker[pwebhooks.TwilioJobArgs](workers, pwebhooks.NewTwilioWorker(env, repo))

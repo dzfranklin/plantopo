@@ -10,15 +10,12 @@ type Repo struct {
 	Users                *Users
 	AuthorizedSMSSenders *AuthorizedSMSSenders
 	BritishAndIrishHills *BritishAndIrishHills
+	Geophotos            *Geophotos
 }
 
-func New(env *pconfig.Env) (*Repo, error) {
+func New(env *pconfig.Env) *Repo {
 	al := newAuditLog(env)
-
-	users, err := newUsers(env, al)
-	if err != nil {
-		return nil, err
-	}
+	users := newUsers(env, al)
 
 	return &Repo{
 		AuditLog:             al,
@@ -26,5 +23,6 @@ func New(env *pconfig.Env) (*Repo, error) {
 		Users:                users,
 		AuthorizedSMSSenders: newAuthorizedSMSSenders(env),
 		BritishAndIrishHills: NewBritishAndIrishHills(env.DB),
-	}, nil
+		Geophotos:            newGeophotos(env.DB),
+	}
 }
