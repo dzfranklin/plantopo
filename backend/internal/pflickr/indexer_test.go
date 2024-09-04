@@ -25,8 +25,8 @@ func TestIndexStep(t *testing.T) {
 		Pages:   5,
 		PerPage: 2,
 		Photo: []searchPagePhoto{
-			{DateUpload: flickrDate(target.MinUpload)},
-			{DateUpload: flickrDate(target.MinUpload.AddDate(0, 1, 0))},
+			{DateUpload: fuzzyDate(target.MinUpload)},
+			{DateUpload: fuzzyDate(target.MinUpload.AddDate(0, 1, 0))},
 		},
 	}
 	searcher.EXPECT().searchForIndex(mock.Anything, searchParams{

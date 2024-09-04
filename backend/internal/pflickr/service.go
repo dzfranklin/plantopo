@@ -9,6 +9,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/pslices"
 	"github.com/dzfranklin/plantopo/backend/internal/ptime"
 	"log/slog"
+	"math"
 	"time"
 )
 
@@ -74,9 +75,16 @@ func (s *Service) indexFlickrRegion(ctx context.Context, region prepo.FlickrInde
 
 	count := 0
 	noURL := 0
+	noGeo := 0
 	completed := false
 	defer func() {
-		l = l.With("count", count, "start", startTime, "end", target.MinUpload, "noURL", noURL)
+		l = l.With(
+			"count", count,
+			"start", startTime,
+			"end", target.MinUpload,
+			"noURL", noURL,
+			"noGeo", noGeo,
+		)
 		if completed {
 			l.Info("completed index of region")
 		} else {
@@ -105,6 +113,10 @@ func (s *Service) indexFlickrRegion(ctx context.Context, region prepo.FlickrInde
 
 			if photo.URL == "" {
 				noURL++
+				continue
+			}
+			if math.Abs(photo.Lat) < 0.001 && math.Abs(photo.Lng) < 0.001 {
+				noGeo++
 				continue
 			}
 
@@ -150,8 +162,8 @@ func mapPhoto(photo searchPagePhoto, indexRegionID int) prepo.GeophotoInsertPara
 		SmallURL:        photo.SmallURL,
 		SmallWidth:      photo.OriginalWidth,
 		SmallHeight:     photo.OriginalWidth,
-		Lng:             photo.Longitude,
-		Lat:             photo.Latitude,
+		Lng:             float64(photo.Longitude),
+		Lat:             float64(photo.Latitude),
 		Title:           photo.Title,
 		DateTaken:       time.Time(photo.DateTaken),
 	}

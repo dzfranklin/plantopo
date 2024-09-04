@@ -76,8 +76,8 @@ func TestUnmarshalSearchResponse(t *testing.T) {
 	assert.WithinDuration(t, time.Date(2004, 10, 17, 0, 0, 0, 0, time.UTC),
 		time.Time(gotPhoto.DateTaken), time.Second)
 
-	gotPhoto.DateUpload = flickrDate{}
-	gotPhoto.DateTaken = flickrDate{}
+	gotPhoto.DateUpload = fuzzyDate{}
+	gotPhoto.DateTaken = fuzzyDate{}
 	expected := searchPagePhoto{
 		ID:             "904681",
 		Owner:          "63404131@N00",
@@ -97,4 +97,13 @@ func TestUnmarshalSearchResponse(t *testing.T) {
 		SmallWidth:     240,
 	}
 	assert.Equal(t, expected, gotPhoto)
+}
+
+func TestParsePhotoWithFuzzyFloat(t *testing.T) {
+	data := `{"latitude":1,"longitude":2}`
+	var got searchPagePhoto
+	err := json.Unmarshal([]byte(data), &got)
+	require.NoError(t, err)
+	assert.Equal(t, float64(1), float64(got.Latitude))
+	assert.Equal(t, float64(2), float64(got.Longitude))
 }

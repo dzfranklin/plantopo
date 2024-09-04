@@ -75,10 +75,10 @@ type searchPagePhoto struct {
 	Owner          string     `json:"owner,omitempty"`
 	License        int        `json:"license,string,omitempty"`
 	OwnerName      string     `json:"ownername,omitempty"`
-	Longitude      float64    `json:"longitude,string,omitempty"`
-	Latitude       float64    `json:"latitude,string,omitempty"`
-	DateUpload     flickrDate `json:"dateupload"`
-	DateTaken      flickrDate `json:"datetaken"`
+	Longitude      fuzzyFloat `json:"longitude"`
+	Latitude       fuzzyFloat `json:"latitude"`
+	DateUpload     fuzzyDate  `json:"dateupload"`
+	DateTaken      fuzzyDate  `json:"datetaken"`
 	Title          string     `json:"title,omitempty"`
 	OriginalURL    string     `json:"url_o,omitempty"`
 	OriginalWidth  int        `json:"width_o,omitempty"`
@@ -157,13 +157,13 @@ func (a *API) call(ctx context.Context, method string, resp any, params map[stri
 	}, backoff.WithContext(backoff.NewExponentialBackOff(), ctx))
 }
 
-type flickrDate time.Time
+type fuzzyDate time.Time
 
-func (f flickrDate) MarshalJSON() ([]byte, error) {
+func (f fuzzyDate) MarshalJSON() ([]byte, error) {
 	return time.Time(f).UTC().MarshalJSON()
 }
 
-func (f *flickrDate) UnmarshalJSON(data []byte) error {
+func (f *fuzzyDate) UnmarshalJSON(data []byte) error {
 	if !utf8.Valid(data) {
 		return errors.New("non utf-8")
 	}
@@ -179,9 +179,34 @@ func (f *flickrDate) UnmarshalJSON(data []byte) error {
 	} else if asTime, timeErr := time.Parse("2006-01-02 15:04:05", value); timeErr == nil {
 		t = asTime
 	} else {
-		return fmt.Errorf("cannot parse \"%s\" as flickrDate", string(data))
+		return fmt.Errorf("cannot parse \"%s\" as fuzzyDate", string(data))
 	}
 
-	*f = flickrDate(t.UTC())
+	*f = fuzzyDate(t.UTC())
 	return nil
+}
+
+type fuzzyFloat float64
+
+func (f fuzzyFloat) MarshalJSON() ([]byte, error) {
+	return json.Marshal(float64(f))
+}
+
+func (f *fuzzyFloat) UnmarshalJSON(data []byte) error {
+	var numericValue float64
+	if err := json.Unmarshal(data, &numericValue); err == nil {
+		*f = fuzzyFloat(numericValue)
+		return nil
+	}
+
+	var stringValue string
+	if unmarshalErr := json.Unmarshal(data, &stringValue); unmarshalErr == nil {
+		v, parseErr := strconv.ParseFloat(stringValue, 64)
+		if parseErr == nil {
+			*f = fuzzyFloat(v)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("cannot parse \"%s\" as fuzzyFloat", string(data))
 }
