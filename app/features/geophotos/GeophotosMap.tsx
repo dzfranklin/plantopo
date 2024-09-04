@@ -14,8 +14,8 @@ export function GeophotosMap() {
       container: ref.current,
       accessToken: MAPBOX_TOKEN,
       style: 'mapbox://styles/dzfranklin/clxlno49r00er01qq3ppk4wwo',
-      center: [0, 0],
-      zoom: 6,
+      center: [0, 51],
+      zoom: 2,
     });
 
     map.on('style.load', () => {
@@ -25,9 +25,11 @@ export function GeophotosMap() {
 
         map.addSource('geophotos', {
           type: 'vector',
-          tiles: [API_ENDPOINT + 'geophotos/tile/{z}/{x}/{y}.mvt.gz'],
-          minzoom: 8,
-          maxZoom: 10,
+          tiles: [
+            'https://api.plantopo.com/api/v1/geophotos/tile/{z}/{x}/{y}.mvt.gz',
+          ],
+          minzoom: 10,
+          maxZoom: 14,
         });
 
         map.addLayer({
@@ -35,9 +37,10 @@ export function GeophotosMap() {
           type: 'symbol',
           source: 'geophotos',
           'source-layer': 'default',
+          filter: ['>', ['zoom'], 10],
           layout: {
             'icon-image': 'geophoto',
-            'icon-size': ['interpolate', ['linear'], ['zoom'], 6, 0.5, 11, 1],
+            'icon-size': ['interpolate', ['linear'], ['zoom'], 9, 0.5, 11, 1],
             'icon-allow-overlap': true,
           },
         });
