@@ -791,6 +791,7 @@ export interface components {
     /** @description OK */
     MVTTile: {
       headers: {
+        'Content-Encoding'?: string;
         [name: string]: unknown;
       };
       content: {

@@ -144,6 +144,10 @@ func (r *Geophotos) GetTile(ctx context.Context, z, x, y int) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
+	if z < 6 || z > 10 {
+		return nil, errors.New("zoom outside bounds")
+	}
+
 	params := psqlc.SelectGeophotoTileParams{Z: int32(z), X: int32(x), Y: int32(y)}
 	uncompressed, selectErr := q.SelectGeophotoTile(ctx, r.db, params)
 	if selectErr != nil {

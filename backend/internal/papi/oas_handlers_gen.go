@@ -1617,7 +1617,7 @@ func (s *Server) handleGeophotosTileZXYMvtGzGetRequest(args [3]string, argsEscap
 		return
 	}
 
-	var response MVTTile
+	var response *MVTTileHeaders
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
@@ -1645,7 +1645,7 @@ func (s *Server) handleGeophotosTileZXYMvtGzGetRequest(args [3]string, argsEscap
 		type (
 			Request  = struct{}
 			Params   = GeophotosTileZXYMvtGzGetParams
-			Response = MVTTile
+			Response = *MVTTileHeaders
 		)
 		response, err = middleware.HookMiddleware[
 			Request,

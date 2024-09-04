@@ -61,7 +61,7 @@ type Handler interface {
 	// Get Mapbox Vector Tile.
 	//
 	// GET /geophotos/tile/{z}/{x}/{y}.mvt.gz
-	GeophotosTileZXYMvtGzGet(ctx context.Context, params GeophotosTileZXYMvtGzGetParams) (MVTTile, error)
+	GeophotosTileZXYMvtGzGet(ctx context.Context, params GeophotosTileZXYMvtGzGetParams) (*MVTTileHeaders, error)
 	// MunroAccessMunrosGet implements GET /munro-access/munros operation.
 	//
 	// List munros.

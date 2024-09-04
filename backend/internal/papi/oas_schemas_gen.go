@@ -338,6 +338,32 @@ func (s MVTTile) Read(p []byte) (n int, err error) {
 	return s.Data.Read(p)
 }
 
+// MVTTileHeaders wraps MVTTile with response headers.
+type MVTTileHeaders struct {
+	ContentEncoding OptString
+	Response        MVTTile
+}
+
+// GetContentEncoding returns the value of ContentEncoding.
+func (s *MVTTileHeaders) GetContentEncoding() OptString {
+	return s.ContentEncoding
+}
+
+// GetResponse returns the value of Response.
+func (s *MVTTileHeaders) GetResponse() MVTTile {
+	return s.Response
+}
+
+// SetContentEncoding sets the value of ContentEncoding.
+func (s *MVTTileHeaders) SetContentEncoding(val OptString) {
+	s.ContentEncoding = val
+}
+
+// SetResponse sets the value of Response.
+func (s *MVTTileHeaders) SetResponse(val MVTTile) {
+	s.Response = val
+}
+
 type MunroAccessMunrosGetOK struct {
 	Munros MunroAccessMunrosGetOKMunros `json:"munros"`
 }

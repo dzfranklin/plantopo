@@ -90,7 +90,7 @@ func (UnimplementedHandler) ElevationPost(ctx context.Context, req *ElevationPos
 // Get Mapbox Vector Tile.
 //
 // GET /geophotos/tile/{z}/{x}/{y}.mvt.gz
-func (UnimplementedHandler) GeophotosTileZXYMvtGzGet(ctx context.Context, params GeophotosTileZXYMvtGzGetParams) (r MVTTile, _ error) {
+func (UnimplementedHandler) GeophotosTileZXYMvtGzGet(ctx context.Context, params GeophotosTileZXYMvtGzGetParams) (r *MVTTileHeaders, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

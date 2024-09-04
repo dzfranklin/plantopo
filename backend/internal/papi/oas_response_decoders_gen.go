@@ -824,7 +824,7 @@ func decodeElevationPostResponse(resp *http.Response) (res *ElevationPostOK, _ e
 	return res, errors.Wrap(defRes, "error")
 }
 
-func decodeGeophotosTileZXYMvtGzGetResponse(resp *http.Response) (res MVTTile, _ error) {
+func decodeGeophotosTileZXYMvtGzGetResponse(resp *http.Response) (res *MVTTileHeaders, _ error) {
 	switch resp.StatusCode {
 	case 200:
 		// Code 200.
@@ -841,7 +841,47 @@ func decodeGeophotosTileZXYMvtGzGetResponse(resp *http.Response) (res MVTTile, _
 			}
 
 			response := MVTTile{Data: bytes.NewReader(b)}
-			return response, nil
+			var wrapper MVTTileHeaders
+			wrapper.Response = response
+			h := uri.NewHeaderDecoder(resp.Header)
+			// Parse "Content-Encoding" header.
+			{
+				cfg := uri.HeaderParameterDecodingConfig{
+					Name:    "Content-Encoding",
+					Explode: false,
+				}
+				if err := func() error {
+					if err := h.HasParam(cfg); err == nil {
+						if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+							var wrapperDotContentEncodingVal string
+							if err := func() error {
+								val, err := d.DecodeValue()
+								if err != nil {
+									return err
+								}
+
+								c, err := conv.ToString(val)
+								if err != nil {
+									return err
+								}
+
+								wrapperDotContentEncodingVal = c
+								return nil
+							}(); err != nil {
+								return err
+							}
+							wrapper.ContentEncoding.SetTo(wrapperDotContentEncodingVal)
+							return nil
+						}); err != nil {
+							return err
+						}
+					}
+					return nil
+				}(); err != nil {
+					return res, errors.Wrap(err, "parse Content-Encoding header")
+				}
+			}
+			return &wrapper, nil
 		default:
 			return res, validate.InvalidContentType(ct)
 		}

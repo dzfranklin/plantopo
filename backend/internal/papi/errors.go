@@ -63,6 +63,11 @@ func HandleDefaultErrorResponse(env *pconfig.Env, _ context.Context, err error) 
 				Message: "invalid session token",
 			},
 		}
+	} else if errors.Is(err, context.Canceled) {
+		return &DefaultErrorResponseStatusCode{
+			StatusCode: http.StatusRequestTimeout,
+			Response:   DefaultError{Message: "request timed out"},
+		}
 	} else {
 		stack := string(debug.Stack())
 		userFacingMessage := fmt.Sprintf("internal server error (correlation id %s)", correlationID)

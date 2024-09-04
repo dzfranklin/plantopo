@@ -398,6 +398,11 @@ components:
           schema: { $ref: "#/components/schemas/DefaultError" }
     MVTTile:
       description: "OK"
+      headers:
+        Content-Encoding:
+          schema:
+            type: string
+            example: gzip
       content:
         "application/vnd.mapbox-vector-tile":
           schema:

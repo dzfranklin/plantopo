@@ -76,7 +76,7 @@ type Invoker interface {
 	// Get Mapbox Vector Tile.
 	//
 	// GET /geophotos/tile/{z}/{x}/{y}.mvt.gz
-	GeophotosTileZXYMvtGzGet(ctx context.Context, params GeophotosTileZXYMvtGzGetParams) (MVTTile, error)
+	GeophotosTileZXYMvtGzGet(ctx context.Context, params GeophotosTileZXYMvtGzGetParams) (*MVTTileHeaders, error)
 	// MunroAccessMunrosGet invokes GET /munro-access/munros operation.
 	//
 	// List munros.
@@ -1128,12 +1128,12 @@ func (c *Client) sendElevationPost(ctx context.Context, request *ElevationPostRe
 // Get Mapbox Vector Tile.
 //
 // GET /geophotos/tile/{z}/{x}/{y}.mvt.gz
-func (c *Client) GeophotosTileZXYMvtGzGet(ctx context.Context, params GeophotosTileZXYMvtGzGetParams) (MVTTile, error) {
+func (c *Client) GeophotosTileZXYMvtGzGet(ctx context.Context, params GeophotosTileZXYMvtGzGetParams) (*MVTTileHeaders, error) {
 	res, err := c.sendGeophotosTileZXYMvtGzGet(ctx, params)
 	return res, err
 }
 
-func (c *Client) sendGeophotosTileZXYMvtGzGet(ctx context.Context, params GeophotosTileZXYMvtGzGetParams) (res MVTTile, err error) {
+func (c *Client) sendGeophotosTileZXYMvtGzGet(ctx context.Context, params GeophotosTileZXYMvtGzGetParams) (res *MVTTileHeaders, err error) {
 	otelAttrs := []attribute.KeyValue{
 		semconv.HTTPMethodKey.String("GET"),
 		semconv.HTTPRouteKey.String("/geophotos/tile/{z}/{x}/{y}.mvt.gz"),

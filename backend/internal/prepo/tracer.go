@@ -2,6 +2,7 @@ package prepo
 
 import (
 	"context"
+	"errors"
 	"github.com/DataDog/go-sqllexer"
 	"github.com/jackc/pgx/v5"
 	"log/slog"
@@ -53,7 +54,7 @@ func (tl *Tracer) TraceQueryEnd(ctx context.Context, _ *pgx.Conn, data pgx.Trace
 	endTime := time.Now()
 	interval := endTime.Sub(queryData.startTime)
 
-	if data.Err != nil {
+	if data.Err != nil && !errors.Is(data.Err, context.Canceled) {
 		tl.l.Error("trace error", "err", data.Err, "sql", queryData.sql, "interval", interval)
 		return
 	}
