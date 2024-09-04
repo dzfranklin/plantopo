@@ -36,7 +36,7 @@ func TestIndexStep(t *testing.T) {
 		Page:          1,
 	}).Return(returnPage, nil)
 
-	gotPhotos, gotTarget, gotErr := indexStep(ctx, target, searcher)
+	gotPhotos, gotTarget, done, gotErr := indexStep(ctx, target, searcher)
 	require.NoError(t, gotErr)
 
 	expectedTarget := targetInfo{
@@ -45,6 +45,8 @@ func TestIndexStep(t *testing.T) {
 		MaxUpload: target.MaxUpload,
 	}
 	require.Equal(t, expectedTarget, gotTarget)
+
+	require.Equal(t, false, done)
 
 	require.Len(t, gotPhotos, 2)
 }
@@ -72,8 +74,9 @@ func TestIndexStepZero(t *testing.T) {
 		Page:          1,
 	}).Return(returnPage, nil)
 
-	gotPhotos, gotTarget, gotErr := indexStep(ctx, target, searcher)
+	gotPhotos, gotTarget, done, gotErr := indexStep(ctx, target, searcher)
 	require.NoError(t, gotErr)
 	require.Equal(t, target, gotTarget)
+	require.Equal(t, true, done)
 	require.Len(t, gotPhotos, 0)
 }

@@ -23,7 +23,7 @@ func indexStep(
 	ctx context.Context,
 	target targetInfo,
 	searcher flickrSearcher,
-) ([]searchPagePhoto, targetInfo, error) {
+) ([]searchPagePhoto, targetInfo, bool, error) {
 	page, err := searcher.searchForIndex(ctx, searchParams{
 		BBox:          target.Region,
 		MinUploadDate: target.MinUpload,
@@ -31,15 +31,17 @@ func indexStep(
 		Page:          1,
 	})
 	if err != nil {
-		return nil, target, err
+		return nil, target, false, err
 	}
 
+	done := page.Page >= page.Pages
+
 	if len(page.Photo) == 0 {
-		return nil, target, nil
+		return nil, target, done, nil
 	}
 
 	newTarget := target
 	newTarget.MinUpload = time.Time(page.Photo[len(page.Photo)-1].DateUpload)
 
-	return page.Photo, newTarget, nil
+	return page.Photo, newTarget, done, nil
 }
