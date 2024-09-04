@@ -10,6 +10,12 @@ export default function Page() {
         <h2>Data</h2>
         <ul>
           <li>
+            Images from <a href="https://www.geograph.org.uk/">Geograph</a>
+          </li>
+          <li>
+            Images from <a href="https://flickr.com/">flickr</a>
+          </li>
+          <li>
             Map data from{' '}
             <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> ©
             OpenStreetMap contributors
@@ -28,14 +34,24 @@ export default function Page() {
             </a>
           </li>
           <li>
+            Elevation data from the{' '}
+            <a href="https://earth.jaxa.jp/en/data/policy/">
+              Japan Aerospace Exploration Agency
+            </a>
+          </li>
+          <li>
             Data from{' '}
             <a href="https://www.hills-database.co.uk">
               The Database of British and Irish Hills
-            </a>
+            </a>{' '}
             licensed under a{' '}
             <a href="http://creativecommons.org/licenses/by/4.0/">
               Creative Commons Attribution 4.0 International Licence
             </a>
+          </li>
+          <li>
+            Data from{' '}
+            <a href="https://www.geoboundaries.org/">geoboundaries.org</a>
           </li>
           <li>
             Data from <a href="https://en.wikipedia.org">Wikipedia</a>
@@ -65,30 +81,6 @@ export default function Page() {
             </li>
           ))}
         </ul>
-
-        <h2>API</h2>
-        <p>
-          See{' '}
-          <a href="https://github.com/dzfranklin/plantopo-api/blob/main/go.mod">
-            github.com/dzfranklin/plantopo-api/blob/main/go.mod
-          </a>
-        </p>
-
-        <h2>Elevation API</h2>
-        <p>
-          See{' '}
-          <a href="https://github.com/dzfranklin/elevation-api/blob/main/Cargo.toml">
-            github.com/dzfranklin/elevation-api/blob/main/Cargo.toml
-          </a>
-        </p>
-
-        <h2>ToGeoJSON API</h2>
-        <p>
-          See{' '}
-          <a href="https://github.com/dzfranklin/togeojson-server/blob/main/deno.lock">
-            github.com/dzfranklin/togeojson-server/blob/main/deno.lock
-          </a>
-        </p>
       </section>
     </Layout>
   );

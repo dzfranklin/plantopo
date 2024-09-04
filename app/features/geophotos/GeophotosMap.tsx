@@ -41,6 +41,11 @@ export function GeophotosMap() {
             'icon-allow-overlap': true,
           },
         });
+
+        map.on('click', 'geophoto', (evt) => {
+          // TODO: set to the currently loading images. fire an http request to load. show in sidebar. window so that only a few are rendered at once to reduce load amplification
+          console.log(evt.features);
+        });
       });
     });
   }, []);

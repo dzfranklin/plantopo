@@ -71,10 +71,12 @@ export function StackedLayout({
   sidebar,
   children,
   wide,
+  fullBleed,
 }: React.PropsWithChildren<{
   navbar: React.ReactNode;
   sidebar: React.ReactNode;
   wide?: boolean;
+  fullBleed?: boolean;
 }>) {
   const [showSidebar, setShowSidebar] = useState(false);
 
@@ -99,12 +101,17 @@ export function StackedLayout({
       </header>
 
       {/* Content */}
-      <main className="flex flex-1 flex-col pb-2 lg:px-2">
-        <div className="grow p-6 lg:rounded-lg lg:bg-white lg:p-10 lg:shadow-sm lg:ring-1 lg:ring-zinc-950/5 ">
+      <main className={cls('flex flex-1 flex-col pb-2 lg:px-2')}>
+        <div
+          className={cls(
+            'grow lg:rounded-lg lg:bg-white lg:shadow-sm lg:ring-1 lg:ring-zinc-950/5',
+            fullBleed ? 'overflow-clip' : 'p-6 lg:p-10',
+          )}
+        >
           <div
             className={cls(
               'mx-auto h-full max-h-full flex flex-col',
-              wide ? 'mx-5' : 'max-w-6xl',
+              fullBleed ? '' : wide ? 'mx-5' : 'max-w-6xl',
             )}
           >
             {children}

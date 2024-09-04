@@ -141,7 +141,7 @@ func (r *Geophotos) UpdateGeographIndexProgress(latest time.Time) error {
 }
 
 func (r *Geophotos) GetTile(ctx context.Context, z, x, y int) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	if z < 6 || z > 10 {

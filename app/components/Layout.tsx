@@ -34,11 +34,13 @@ export const Layout = forwardRef(
       pageActions,
       wide,
       inlineTitle,
+      fullBleed,
       ...props
     }: {
       children?: React.ReactNode;
       pageTitle?: string;
       inlineTitle?: boolean;
+      fullBleed?: boolean;
       pageActions?: React.ReactNode;
       wide?: boolean;
     } & React.ComponentPropsWithoutRef<'div'>,
@@ -48,6 +50,7 @@ export const Layout = forwardRef(
       <div className="grid grid-cols-1 grid-rows-[minmax(0,1fr)_min-content] min-h-svh">
         <StackedLayout
           wide={wide}
+          fullBleed={fullBleed}
           navbar={
             <Navbar>
               <NavbarSection>
