@@ -54,16 +54,20 @@ type searchParams struct {
 	Page          int
 }
 
-type searchResponse struct {
-	Photos searchPage `json:"photos"`
-}
-
 type searchPage struct {
 	Page    int               `json:"page"`
 	Pages   int               `json:"pages"`
 	PerPage int               `json:"perpage"`
 	Total   int               `json:"total"`
 	Photo   []searchPagePhoto `json:"photo"`
+}
+
+type partialSearchPage struct {
+	Page    int               `json:"page"`
+	Pages   int               `json:"pages"`
+	PerPage int               `json:"perpage"`
+	Total   int               `json:"total"`
+	Photo   []json.RawMessage `json:"photo"`
 }
 
 type searchPagePhoto struct {
@@ -88,10 +92,10 @@ type searchPagePhoto struct {
 }
 
 func (a *API) searchForIndex(ctx context.Context, params searchParams) (searchPage, error) {
-	var out struct {
-		Photos searchPage `json:"photos"`
+	var container struct {
+		Photos partialSearchPage `json:"photos"`
 	}
-	err := a.call(ctx, "flickr.photos.search", &out, map[string]string{
+	callErr := a.call(ctx, "flickr.photos.search", &container, map[string]string{
 		"bbox":            fmt.Sprintf("%.6f,%.6f,%.6f,%.6f", params.BBox.Min.X, params.BBox.Min.Y, params.BBox.Max.X, params.BBox.Max.Y),
 		"min_upload_date": fmt.Sprintf("%d", params.MinUploadDate.Unix()),
 		"max_upload_date": fmt.Sprintf("%d", params.MaxUploadDate.Unix()),
@@ -100,7 +104,29 @@ func (a *API) searchForIndex(ctx context.Context, params searchParams) (searchPa
 		"content_types":   "0",
 		"extras":          "owner_name,license,date_taken,date_upload,geo,url_o,url_l,url_s",
 	})
-	return out.Photos, err
+	if callErr != nil {
+		return searchPage{}, callErr
+	}
+	resp := container.Photos
+
+	photos := make([]searchPagePhoto, 0, len(resp.Photo))
+	for _, entry := range resp.Photo {
+		var photo searchPagePhoto
+		photoErr := json.Unmarshal(entry, &photo)
+		if photoErr != nil {
+			a.l.Error("failed to deserialize flickr photo",
+				"entry", string(entry), "error", photoErr)
+			return searchPage{}, photoErr
+		}
+	}
+
+	return searchPage{
+		Page:    resp.Page,
+		Pages:   resp.Pages,
+		PerPage: resp.PerPage,
+		Total:   resp.Total,
+		Photo:   photos,
+	}, nil
 }
 
 func (a *API) call(ctx context.Context, method string, resp any, params map[string]string) error {

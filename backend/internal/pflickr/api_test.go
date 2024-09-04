@@ -57,7 +57,9 @@ var sampleSearchResp = `{
 }`
 
 func TestUnmarshalSearchResponse(t *testing.T) {
-	var got searchResponse
+	var got struct {
+		Photos searchPage `json:"photos"`
+	}
 	err := json.Unmarshal([]byte(sampleSearchResp), &got)
 	require.NoError(t, err)
 
