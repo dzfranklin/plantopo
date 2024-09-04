@@ -118,6 +118,7 @@ func (a *API) searchForIndex(ctx context.Context, params searchParams) (searchPa
 				"entry", string(entry), "error", photoErr)
 			return searchPage{}, photoErr
 		}
+		photos = append(photos, photo)
 	}
 
 	return searchPage{

@@ -104,6 +104,9 @@ func (s *Service) indexFlickrRegion(ctx context.Context, region prepo.FlickrInde
 		}
 
 		if len(stepPhotos) == 0 {
+			if err := s.repo.UpdateFlickrIndexProgress(region.ID, time.Now().Add(-time.Hour)); err != nil {
+				return err
+			}
 			completed = true
 			return nil
 		}
