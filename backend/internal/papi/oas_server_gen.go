@@ -56,6 +56,12 @@ type Handler interface {
 	//
 	// POST /elevation
 	ElevationPost(ctx context.Context, req *ElevationPostReq) (*ElevationPostOK, error)
+	// GeophotosTileZXYMvtGzGet implements GET /geophotos/tile/{z}/{x}/{y}.mvt.gz operation.
+	//
+	// Get Mapbox Vector Tile.
+	//
+	// GET /geophotos/tile/{z}/{x}/{y}.mvt.gz
+	GeophotosTileZXYMvtGzGet(ctx context.Context, params GeophotosTileZXYMvtGzGetParams) (MVTTile, error)
 	// MunroAccessMunrosGet implements GET /munro-access/munros operation.
 	//
 	// List munros.

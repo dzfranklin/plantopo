@@ -40,6 +40,7 @@ func Routes(env *pconfig.Env) http.Handler {
 	mux.HandleFunc("GET /admin/fire-job", app.fireJobGet)
 	mux.HandleFunc("POST /admin/fire-job", app.fireJobPost)
 	mux.HandleFunc("/admin/review-british-and-irish-hill-photos", app.reviewBritishAndIrishHillPhotos)
+	mux.HandleFunc("GET /admin/geophotos/flickr-regions", app.geophotosFlickrRegionsGet)
 
 	riverSrv, err := riverui.NewServer(&riverui.ServerOpts{
 		Client: env.Jobs,

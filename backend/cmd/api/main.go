@@ -117,32 +117,35 @@ func main() {
 		}
 	}()
 
-	quitGroup.Add(2)
-	go func() {
-		defer quitGroup.Done()
-		srv := pflickr.NewService(env)
-		indexCtx, cancel := context.WithCancel(context.Background())
+	// Flickr indexer
+	if env.IsProduction {
+		quitGroup.Add(2)
 		go func() {
 			defer quitGroup.Done()
+			srv := pflickr.NewService(env)
+			indexCtx, cancel := context.WithCancel(context.Background())
+			go func() {
+				defer quitGroup.Done()
 
-			if err := ptime.Sleep(indexCtx, time.Duration(rand.Intn(60))*time.Second); err != nil && !errors.Is(err, context.Canceled) {
-				l.Error("sleep failed", "error", err)
-			}
-
-			for {
-				err := srv.IndexFlickr(indexCtx)
-				if errors.Is(err, context.Canceled) {
-					break
-				} else if err != nil {
-					l.Error("failed to index flickr", "error", err)
-					_ = ptime.Sleep(indexCtx, time.Hour)
-					continue
+				if err := ptime.Sleep(indexCtx, time.Duration(rand.Intn(60))*time.Second); err != nil && !errors.Is(err, context.Canceled) {
+					l.Error("sleep failed", "error", err)
 				}
-			}
+
+				for {
+					err := srv.IndexFlickr(indexCtx)
+					if errors.Is(err, context.Canceled) {
+						break
+					} else if err != nil {
+						l.Error("failed to index flickr", "error", err)
+						_ = ptime.Sleep(indexCtx, time.Hour)
+						continue
+					}
+				}
+			}()
+			<-shouldQuit
+			cancel()
 		}()
-		<-shouldQuit
-		cancel()
-	}()
+	}
 
 	quitRequestSignal := make(chan os.Signal, 1)
 	signal.Notify(quitRequestSignal, syscall.SIGINT, syscall.SIGTERM)

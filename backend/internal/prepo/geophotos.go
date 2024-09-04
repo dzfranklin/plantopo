@@ -1,6 +1,9 @@
 package prepo
 
 import (
+	"bytes"
+	"compress/gzip"
+	"context"
 	"errors"
 	"github.com/dzfranklin/plantopo/backend/internal/pslices"
 	"github.com/dzfranklin/plantopo/backend/internal/psqlc"
@@ -135,4 +138,22 @@ func (r *Geophotos) UpdateGeographIndexProgress(latest time.Time) error {
 	ctx, cancel := defaultContext()
 	defer cancel()
 	return q.UpdateGeographIndexProgress(ctx, r.db, pgTimestamptz(latest))
+}
+
+func (r *Geophotos) GetTile(ctx context.Context, z, x, y int) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+
+	params := psqlc.SelectGeophotoTileParams{Z: int32(z), X: int32(x), Y: int32(y)}
+	uncompressed, selectErr := q.SelectGeophotoTile(ctx, r.db, params)
+	if selectErr != nil {
+		return nil, selectErr
+	}
+
+	var compressed bytes.Buffer
+	w := gzip.NewWriter(&compressed)
+	_, _ = w.Write(uncompressed)
+	_ = w.Close()
+
+	return compressed.Bytes(), nil
 }

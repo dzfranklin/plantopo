@@ -324,6 +324,20 @@ func (s *ElevationPostReq) SetCoordinates(val [][]float64) {
 	s.Coordinates = val
 }
 
+type MVTTile struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s MVTTile) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
 type MunroAccessMunrosGetOK struct {
 	Munros MunroAccessMunrosGetOKMunros `json:"munros"`
 }

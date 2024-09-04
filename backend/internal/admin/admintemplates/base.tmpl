@@ -2,6 +2,24 @@
 <html lang="en" class="min-h-screen bg-white">
 <head>
     <title>Admin</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <script>
+        function newMap(el) {
+          const map = L.map(el).setView([53.5142, -6.3062], 5);
+          L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          }).addTo(map);
+          return map;
+        }
+    </script>
+
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
     <style type="text/tailwindcss">
         header ul {
@@ -66,17 +84,17 @@
 </main>
 
 <script>
-    for (const el of document.querySelectorAll("header a")) {
-        const hrefPath = new URL(el.href).pathname
-        if (hrefPath === location.pathname) {
-            el.classList.add("currentPage");
-        }
+  for (const el of document.querySelectorAll('header a')) {
+    const hrefPath = new URL(el.href).pathname;
+    if (hrefPath === location.pathname) {
+      el.classList.add('currentPage');
     }
+  }
 
-    document.querySelector("#logoutBtn").addEventListener("click", async () => {
-        await fetch("/api/v1/auth/revoke-browser", {method: "POST"});
-        location.reload();
-    })
+  document.querySelector('#logoutBtn').addEventListener('click', async () => {
+    await fetch('/api/v1/auth/revoke-browser', { method: 'POST' });
+    location.reload();
+  });
 </script>
 </body>
 </html>

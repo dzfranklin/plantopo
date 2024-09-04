@@ -18,6 +18,7 @@ tags:
   - name: "elevation"
   - name: "weather"
   - name: "munro-access-reports"
+  - name: "geophotos"
 paths:
   /auth/check:
     post:
@@ -346,6 +347,18 @@ paths:
                     required: [ "type", "features" ]
                 required: [ "munros" ]
         default: { $ref: "#/components/responses/DefaultErrorResponse" }
+
+  /geophotos/tile/{z}/{x}/{y}.mvt.gz:
+    get:
+      tags: [ "geophotos" ]
+      summary: Get Mapbox Vector Tile
+      parameters:
+        - $ref: "#/components/parameters/SlippyZ"
+        - $ref: "#/components/parameters/SlippyX"
+        - $ref: "#/components/parameters/SlippyY"
+      responses:
+        "200": { $ref: "#/components/responses/MVTTile" }
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
 components:
   securitySchemes:
     bearer:
@@ -355,12 +368,41 @@ components:
       type: apiKey
       in: cookie
       name: "session"
+  parameters:
+    SlippyZ:
+      name: z
+      in: path
+      required: true
+      schema:
+        type: integer
+        example: 0
+    SlippyX:
+      name: x
+      in: path
+      required: true
+      schema:
+        type: integer
+        example: 0
+    SlippyY:
+      name: y
+      in: path
+      required: true
+      schema:
+        type: integer
+        example: 0
   responses:
     DefaultErrorResponse:
       description: "Error"
       content:
         application/json:
           schema: { $ref: "#/components/schemas/DefaultError" }
+    MVTTile:
+      description: "OK"
+      content:
+        "application/vnd.mapbox-vector-tile":
+          schema:
+            type: string
+            format: binary
   schemas:
     AuthRegisterRequest:
       type: object

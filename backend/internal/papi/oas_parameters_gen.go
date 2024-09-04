@@ -15,6 +15,177 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
+// GeophotosTileZXYMvtGzGetParams is parameters of GET /geophotos/tile/{z}/{x}/{y}.mvt.gz operation.
+type GeophotosTileZXYMvtGzGetParams struct {
+	Z int
+	X int
+	Y int
+}
+
+func unpackGeophotosTileZXYMvtGzGetParams(packed middleware.Parameters) (params GeophotosTileZXYMvtGzGetParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "z",
+			In:   "path",
+		}
+		params.Z = packed[key].(int)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "x",
+			In:   "path",
+		}
+		params.X = packed[key].(int)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "y",
+			In:   "path",
+		}
+		params.Y = packed[key].(int)
+	}
+	return params
+}
+
+func decodeGeophotosTileZXYMvtGzGetParams(args [3]string, argsEscaped bool, r *http.Request) (params GeophotosTileZXYMvtGzGetParams, _ error) {
+	// Decode path: z.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "z",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt(val)
+				if err != nil {
+					return err
+				}
+
+				params.Z = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "z",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: x.
+	if err := func() error {
+		param := args[1]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[1])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "x",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt(val)
+				if err != nil {
+					return err
+				}
+
+				params.X = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "x",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	// Decode path: y.
+	if err := func() error {
+		param := args[2]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[2])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "y",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt(val)
+				if err != nil {
+					return err
+				}
+
+				params.Y = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "y",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // MunroAccessReportIDGetParams is parameters of GET /munro-access/report/{id} operation.
 type MunroAccessReportIDGetParams struct {
 	ID string

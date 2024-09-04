@@ -98,12 +98,13 @@ func (s *Service) indexFlickrRegion(ctx context.Context, region prepo.FlickrInde
 		}
 		var stepErr error
 		var stepPhotos []searchPagePhoto
-		stepPhotos, target, stepErr = indexStep(ctx, target, s.api)
+		var done bool
+		stepPhotos, target, done, stepErr = indexStep(ctx, target, s.api)
 		if stepErr != nil {
 			return stepErr
 		}
 
-		if len(stepPhotos) == 0 {
+		if done {
 			if err := s.repo.UpdateFlickrIndexProgress(region.ID, time.Now().Add(-time.Hour)); err != nil {
 				return err
 			}

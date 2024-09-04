@@ -40,7 +40,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.notFound(w, r)
 		return
 	}
-	args := [1]string{}
+	args := [3]string{}
 
 	// Static code generated router with unwrapped path search.
 	switch {
@@ -262,6 +262,103 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 
 				elem = origElem
+			case 'g': // Prefix: "geophotos/tile/"
+				origElem := elem
+				if l := len("geophotos/tile/"); len(elem) >= l && elem[0:l] == "geophotos/tile/" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				// Param: "z"
+				// Match until "/"
+				idx := strings.IndexByte(elem, '/')
+				if idx < 0 {
+					idx = len(elem)
+				}
+				args[0] = elem[:idx]
+				elem = elem[idx:]
+
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case '/': // Prefix: "/"
+					origElem := elem
+					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					// Param: "x"
+					// Match until "/"
+					idx := strings.IndexByte(elem, '/')
+					if idx < 0 {
+						idx = len(elem)
+					}
+					args[1] = elem[:idx]
+					elem = elem[idx:]
+
+					if len(elem) == 0 {
+						break
+					}
+					switch elem[0] {
+					case '/': // Prefix: "/"
+						origElem := elem
+						if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						// Param: "y"
+						// Match until "."
+						idx := strings.IndexByte(elem, '.')
+						if idx < 0 {
+							idx = len(elem)
+						}
+						args[2] = elem[:idx]
+						elem = elem[idx:]
+
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case '.': // Prefix: ".mvt.gz"
+							origElem := elem
+							if l := len(".mvt.gz"); len(elem) >= l && elem[0:l] == ".mvt.gz" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "GET":
+									s.handleGeophotosTileZXYMvtGzGetRequest([3]string{
+										args[0],
+										args[1],
+										args[2],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, "GET")
+								}
+
+								return
+							}
+
+							elem = origElem
+						}
+
+						elem = origElem
+					}
+
+					elem = origElem
+				}
+
+				elem = origElem
 			case 'm': // Prefix: "munro-access/"
 				origElem := elem
 				if l := len("munro-access/"); len(elem) >= l && elem[0:l] == "munro-access/" {
@@ -447,7 +544,7 @@ type Route struct {
 	operationID string
 	pathPattern string
 	count       int
-	args        [1]string
+	args        [3]string
 }
 
 // Name returns ogen operation name.
@@ -757,6 +854,103 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					default:
 						return
 					}
+				}
+
+				elem = origElem
+			case 'g': // Prefix: "geophotos/tile/"
+				origElem := elem
+				if l := len("geophotos/tile/"); len(elem) >= l && elem[0:l] == "geophotos/tile/" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				// Param: "z"
+				// Match until "/"
+				idx := strings.IndexByte(elem, '/')
+				if idx < 0 {
+					idx = len(elem)
+				}
+				args[0] = elem[:idx]
+				elem = elem[idx:]
+
+				if len(elem) == 0 {
+					break
+				}
+				switch elem[0] {
+				case '/': // Prefix: "/"
+					origElem := elem
+					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					// Param: "x"
+					// Match until "/"
+					idx := strings.IndexByte(elem, '/')
+					if idx < 0 {
+						idx = len(elem)
+					}
+					args[1] = elem[:idx]
+					elem = elem[idx:]
+
+					if len(elem) == 0 {
+						break
+					}
+					switch elem[0] {
+					case '/': // Prefix: "/"
+						origElem := elem
+						if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						// Param: "y"
+						// Match until "."
+						idx := strings.IndexByte(elem, '.')
+						if idx < 0 {
+							idx = len(elem)
+						}
+						args[2] = elem[:idx]
+						elem = elem[idx:]
+
+						if len(elem) == 0 {
+							break
+						}
+						switch elem[0] {
+						case '.': // Prefix: ".mvt.gz"
+							origElem := elem
+							if l := len(".mvt.gz"); len(elem) >= l && elem[0:l] == ".mvt.gz" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "GET":
+									r.name = "GeophotosTileZXYMvtGzGet"
+									r.summary = "Get Mapbox Vector Tile"
+									r.operationID = ""
+									r.pathPattern = "/geophotos/tile/{z}/{x}/{y}.mvt.gz"
+									r.args = args
+									r.count = 3
+									return r, true
+								default:
+									return
+								}
+							}
+
+							elem = origElem
+						}
+
+						elem = origElem
+					}
+
+					elem = origElem
 				}
 
 				elem = origElem

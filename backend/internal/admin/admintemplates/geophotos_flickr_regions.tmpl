@@ -1,0 +1,18 @@
+{{define "main"}}
+    <div class="h-full max-h-full w-full max-w-full flex flex-col">
+        <div id="map" class="grow"></div>
+    </div>
+
+    <script>
+      const list = JSON.parse(`{{ .List | marshal }}`);
+      const map = newMap('map');
+
+      for (const r of list) {
+        const poly = L.polygon([
+          [r.Rect.Min.Y, r.Rect.Min.X], [r.Rect.Min.Y, r.Rect.Max.X], [r.Rect.Max.Y, r.Rect.Max.X],
+          [r.Rect.Max.Y, r.Rect.Min.X], [r.Rect.Min.Y, r.Rect.Min.X]]
+        ).addTo(map);
+        poly.bindPopup(L.popup({content: '<pre><code>'+JSON.stringify(r, null, 2)+'</code></pre>'}))
+      }
+    </script>
+{{end}}

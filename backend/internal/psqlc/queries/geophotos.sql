@@ -43,3 +43,29 @@ WHERE region_id = @region_id;
 UPDATE geograph_index_progress
 SET latest = @latest
 WHERE id = 0;
+
+-- name: SelectGeophotoTile :one
+WITH mvtgeom AS
+         (SELECT ST_AsMVTGeom(
+                         point,
+                         ST_TileEnvelope(@z, @x, @y),
+                         extent => 4096,
+                         buffer => 256,
+                         clip_geom => true
+                 ) AS geom,
+                 id,
+                 source,
+                 attribution_text,
+                 attribution_link,
+                 url,
+                 width,
+                 height,
+                 small_url,
+                 small_width,
+                 small_height,
+                 title,
+                 date_taken
+          FROM geophotos
+          WHERE point && ST_TileEnvelope(@z, @x, @y, margin => (64.0 / 4096)))
+SELECT ST_AsMVT(mvtgeom.*, 'default', 4096, 'geom', 'id')
+FROM mvtgeom;

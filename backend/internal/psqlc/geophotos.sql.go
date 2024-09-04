@@ -51,12 +51,16 @@ func (q *Queries) CreateFlickrIndexRegion(ctx context.Context, db DBTX, arg Crea
 }
 
 const getFlickrIndexProgress = `-- name: GetFlickrIndexProgress :one
-SELECT latest FROM flickr_index_progress WHERE region_id = $1
+SELECT latest
+FROM flickr_index_progress
+WHERE region_id = $1
 `
 
 // GetFlickrIndexProgress
 //
-//	SELECT latest FROM flickr_index_progress WHERE region_id = $1
+//	SELECT latest
+//	FROM flickr_index_progress
+//	WHERE region_id = $1
 func (q *Queries) GetFlickrIndexProgress(ctx context.Context, db DBTX, regionID int32) (pgtype.Timestamptz, error) {
 	row := db.QueryRow(ctx, getFlickrIndexProgress, regionID)
 	var latest pgtype.Timestamptz
@@ -153,12 +157,14 @@ func (q *Queries) InsertGeophoto(ctx context.Context, db DBTX, arg InsertGeophot
 }
 
 const listFlickrIndexRegions = `-- name: ListFlickrIndexRegions :many
-SELECT id, name, min_lng, min_lat, max_lng, max_lat FROM flickr_index_regions
+SELECT id, name, min_lng, min_lat, max_lng, max_lat
+FROM flickr_index_regions
 `
 
 // ListFlickrIndexRegions
 //
-//	SELECT id, name, min_lng, min_lat, max_lng, max_lat FROM flickr_index_regions
+//	SELECT id, name, min_lng, min_lat, max_lng, max_lat
+//	FROM flickr_index_regions
 func (q *Queries) ListFlickrIndexRegions(ctx context.Context, db DBTX) ([]FlickrIndexRegion, error) {
 	rows, err := db.Query(ctx, listFlickrIndexRegions)
 	if err != nil {
@@ -184,6 +190,72 @@ func (q *Queries) ListFlickrIndexRegions(ctx context.Context, db DBTX) ([]Flickr
 		return nil, err
 	}
 	return items, nil
+}
+
+const selectGeophotoTile = `-- name: SelectGeophotoTile :one
+WITH mvtgeom AS
+         (SELECT ST_AsMVTGeom(
+                         point,
+                         ST_TileEnvelope($1, $2, $3),
+                         extent => 4096,
+                         buffer => 256,
+                         clip_geom => true
+                 ) AS geom,
+                 id,
+                 source,
+                 attribution_text,
+                 attribution_link,
+                 url,
+                 width,
+                 height,
+                 small_url,
+                 small_width,
+                 small_height,
+                 title,
+                 date_taken
+          FROM geophotos
+          WHERE point && ST_TileEnvelope($1, $2, $3, margin => (64.0 / 4096)))
+SELECT ST_AsMVT(mvtgeom.*, 'default', 4096, 'geom', 'id')
+FROM mvtgeom
+`
+
+type SelectGeophotoTileParams struct {
+	Z int32
+	X int32
+	Y int32
+}
+
+// SelectGeophotoTile
+//
+//	WITH mvtgeom AS
+//	         (SELECT ST_AsMVTGeom(
+//	                         point,
+//	                         ST_TileEnvelope($1, $2, $3),
+//	                         extent => 4096,
+//	                         buffer => 256,
+//	                         clip_geom => true
+//	                 ) AS geom,
+//	                 id,
+//	                 source,
+//	                 attribution_text,
+//	                 attribution_link,
+//	                 url,
+//	                 width,
+//	                 height,
+//	                 small_url,
+//	                 small_width,
+//	                 small_height,
+//	                 title,
+//	                 date_taken
+//	          FROM geophotos
+//	          WHERE point && ST_TileEnvelope($1, $2, $3, margin => (64.0 / 4096)))
+//	SELECT ST_AsMVT(mvtgeom.*, 'default', 4096, 'geom', 'id')
+//	FROM mvtgeom
+func (q *Queries) SelectGeophotoTile(ctx context.Context, db DBTX, arg SelectGeophotoTileParams) ([]byte, error) {
+	row := db.QueryRow(ctx, selectGeophotoTile, arg.Z, arg.X, arg.Y)
+	var st_asmvt []byte
+	err := row.Scan(&st_asmvt)
+	return st_asmvt, err
 }
 
 const updateFlickrIndexProgress = `-- name: UpdateFlickrIndexProgress :exec
