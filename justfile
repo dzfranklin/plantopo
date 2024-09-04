@@ -73,6 +73,9 @@ migrate-prod-up:
     river migrate-up --database-url "$PROD_DATABASE_URL"
     tern migrate --conn-string "$PROD_DATABASE_URL" --migrations migrations
 
+prod-psql:
+    psql $(op read "op://plantopo/plantopo-prod/plantopo_prod/url")
+
 pre-commit:
     just check-all
 
