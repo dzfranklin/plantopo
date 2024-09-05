@@ -25,6 +25,9 @@ export default function Example() {
             </Link>
           </div>
         ))}
+        <div className="text-xs leading-6 text-gray-600 hover:text-gray-900">
+          by Daniel Franklin (daniel@plantopo.com)
+        </div>
       </nav>
     </footer>
   );

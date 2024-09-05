@@ -18,6 +18,7 @@ export function GeophotosMap({
       style: 'mapbox://styles/dzfranklin/clxlno49r00er01qq3ppk4wwo',
       center: [0, 51],
       zoom: 2,
+      logoPosition: 'top-right',
     });
 
     map.on('style.load', () => {
@@ -67,7 +68,7 @@ export function GeophotosMap({
         });
 
         map.on('zoom', () => {
-          console.log(map.getZoom());
+          // TODO: show message to zoom in
         });
 
         let selected: number[] = [];
@@ -76,7 +77,8 @@ export function GeophotosMap({
             [e.point.x - 5, e.point.y - 5],
             [e.point.x + 5, e.point.y + 5],
           ];
-          const fs = map.queryRenderedFeatures(bbox, { layers: ['geophoto'] });
+          let fs = map.queryRenderedFeatures(bbox, { layers: ['geophoto'] });
+          fs = fs.slice(0, Math.min(fs.length, 25));
 
           for (const f of selected) {
             map.setFeatureState(
@@ -93,6 +95,6 @@ export function GeophotosMap({
         });
       });
     });
-  }, []);
+  }, [onSelect]);
   return <div className="w-full h-full" ref={ref}></div>;
 }

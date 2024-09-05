@@ -15,11 +15,13 @@ export function GeophotosComponent() {
       </div>
       <div
         className={cls(
-          'absolute left-4 right-4 bottom-4 h-[200px] rounded-lg bg-white overflow-clip transition-opacity',
+          'absolute left-4 right-4 bottom-6 h-[200px] transition-opacity pointer-events-none',
           selected.length > 0 ? 'opacity-100' : 'opacity-0',
         )}
       >
-        <GeophotosPaneLoader photos={selected} />
+        <div className="inline-block max-w-full bg-gray-200 bg-opacity-50 overflow-clip pointer-events-auto">
+          <GeophotosPaneLoader photos={selected} />
+        </div>
       </div>
     </div>
   );
