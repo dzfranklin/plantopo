@@ -139,7 +139,7 @@ func (s *Service) indexFlickrRegion(ctx context.Context, region prepo.FlickrInde
 	}
 }
 
-func mapPhoto(photo searchPagePhoto, indexRegionID int) prepo.GeophotoInsertParams {
+func mapPhoto(photo searchPagePhoto, indexRegionID int) prepo.Geophoto {
 	var url string
 	var width, height int
 	if photo.OriginalURL != "" {
@@ -152,7 +152,7 @@ func mapPhoto(photo searchPagePhoto, indexRegionID int) prepo.GeophotoInsertPara
 		height = photo.LargeHeight
 	}
 
-	return prepo.GeophotoInsertParams{
+	return prepo.Geophoto{
 		Source:          flickrSource,
 		SourceID:        photo.ID,
 		IndexRegionID:   indexRegionID,
@@ -164,8 +164,8 @@ func mapPhoto(photo searchPagePhoto, indexRegionID int) prepo.GeophotoInsertPara
 		Width:           width,
 		Height:          height,
 		SmallURL:        photo.SmallURL,
-		SmallWidth:      photo.OriginalWidth,
-		SmallHeight:     photo.OriginalWidth,
+		SmallWidth:      photo.SmallWidth,
+		SmallHeight:     photo.SmallHeight,
 		Lng:             float64(photo.Longitude),
 		Lat:             float64(photo.Latitude),
 		Title:           photo.Title,

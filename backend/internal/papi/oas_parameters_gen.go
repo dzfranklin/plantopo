@@ -15,6 +15,72 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
+// GeophotosGetParams is parameters of GET /geophotos operation.
+type GeophotosGetParams struct {
+	ID []int
+}
+
+func unpackGeophotosGetParams(packed middleware.Parameters) (params GeophotosGetParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.ID = v.([]int)
+		}
+	}
+	return params
+}
+
+func decodeGeophotosGetParams(args [0]string, argsEscaped bool, r *http.Request) (params GeophotosGetParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: id.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "id",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				return d.DecodeArray(func(d uri.Decoder) error {
+					var paramsDotIDVal int
+					if err := func() error {
+						val, err := d.DecodeValue()
+						if err != nil {
+							return err
+						}
+
+						c, err := conv.ToInt(val)
+						if err != nil {
+							return err
+						}
+
+						paramsDotIDVal = c
+						return nil
+					}(); err != nil {
+						return err
+					}
+					params.ID = append(params.ID, paramsDotIDVal)
+					return nil
+				})
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // GeophotosTileZXYMvtGzGetParams is parameters of GET /geophotos/tile/{z}/{x}/{y}.mvt.gz operation.
 type GeophotosTileZXYMvtGzGetParams struct {
 	Z int

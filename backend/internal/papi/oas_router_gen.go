@@ -262,42 +262,40 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 
 				elem = origElem
-			case 'g': // Prefix: "geophotos/tile/"
+			case 'g': // Prefix: "geophotos"
 				origElem := elem
-				if l := len("geophotos/tile/"); len(elem) >= l && elem[0:l] == "geophotos/tile/" {
+				if l := len("geophotos"); len(elem) >= l && elem[0:l] == "geophotos" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
-				// Param: "z"
-				// Match until "/"
-				idx := strings.IndexByte(elem, '/')
-				if idx < 0 {
-					idx = len(elem)
-				}
-				args[0] = elem[:idx]
-				elem = elem[idx:]
-
 				if len(elem) == 0 {
-					break
+					switch r.Method {
+					case "GET":
+						s.handleGeophotosGetRequest([0]string{}, elemIsEscaped, w, r)
+					default:
+						s.notAllowed(w, r, "GET")
+					}
+
+					return
 				}
 				switch elem[0] {
-				case '/': // Prefix: "/"
+				case '/': // Prefix: "/tile/"
 					origElem := elem
-					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+					if l := len("/tile/"); len(elem) >= l && elem[0:l] == "/tile/" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
-					// Param: "x"
+					// Param: "z"
 					// Match until "/"
 					idx := strings.IndexByte(elem, '/')
 					if idx < 0 {
 						idx = len(elem)
 					}
-					args[1] = elem[:idx]
+					args[0] = elem[:idx]
 					elem = elem[idx:]
 
 					if len(elem) == 0 {
@@ -312,41 +310,65 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							break
 						}
 
-						// Param: "y"
-						// Match until "."
-						idx := strings.IndexByte(elem, '.')
+						// Param: "x"
+						// Match until "/"
+						idx := strings.IndexByte(elem, '/')
 						if idx < 0 {
 							idx = len(elem)
 						}
-						args[2] = elem[:idx]
+						args[1] = elem[:idx]
 						elem = elem[idx:]
 
 						if len(elem) == 0 {
 							break
 						}
 						switch elem[0] {
-						case '.': // Prefix: ".mvt.gz"
+						case '/': // Prefix: "/"
 							origElem := elem
-							if l := len(".mvt.gz"); len(elem) >= l && elem[0:l] == ".mvt.gz" {
+							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 								elem = elem[l:]
 							} else {
 								break
 							}
 
+							// Param: "y"
+							// Match until "."
+							idx := strings.IndexByte(elem, '.')
+							if idx < 0 {
+								idx = len(elem)
+							}
+							args[2] = elem[:idx]
+							elem = elem[idx:]
+
 							if len(elem) == 0 {
-								// Leaf node.
-								switch r.Method {
-								case "GET":
-									s.handleGeophotosTileZXYMvtGzGetRequest([3]string{
-										args[0],
-										args[1],
-										args[2],
-									}, elemIsEscaped, w, r)
-								default:
-									s.notAllowed(w, r, "GET")
+								break
+							}
+							switch elem[0] {
+							case '.': // Prefix: ".mvt.gz"
+								origElem := elem
+								if l := len(".mvt.gz"); len(elem) >= l && elem[0:l] == ".mvt.gz" {
+									elem = elem[l:]
+								} else {
+									break
 								}
 
-								return
+								if len(elem) == 0 {
+									// Leaf node.
+									switch r.Method {
+									case "GET":
+										s.handleGeophotosTileZXYMvtGzGetRequest([3]string{
+											args[0],
+											args[1],
+											args[2],
+										}, elemIsEscaped, w, r)
+									default:
+										s.notAllowed(w, r, "GET")
+									}
+
+									return
+								}
+
+								elem = origElem
 							}
 
 							elem = origElem
@@ -857,42 +879,44 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				}
 
 				elem = origElem
-			case 'g': // Prefix: "geophotos/tile/"
+			case 'g': // Prefix: "geophotos"
 				origElem := elem
-				if l := len("geophotos/tile/"); len(elem) >= l && elem[0:l] == "geophotos/tile/" {
+				if l := len("geophotos"); len(elem) >= l && elem[0:l] == "geophotos" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
-				// Param: "z"
-				// Match until "/"
-				idx := strings.IndexByte(elem, '/')
-				if idx < 0 {
-					idx = len(elem)
-				}
-				args[0] = elem[:idx]
-				elem = elem[idx:]
-
 				if len(elem) == 0 {
-					break
+					switch method {
+					case "GET":
+						r.name = "GeophotosGet"
+						r.summary = "Get metadata by ID"
+						r.operationID = ""
+						r.pathPattern = "/geophotos"
+						r.args = args
+						r.count = 0
+						return r, true
+					default:
+						return
+					}
 				}
 				switch elem[0] {
-				case '/': // Prefix: "/"
+				case '/': // Prefix: "/tile/"
 					origElem := elem
-					if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
+					if l := len("/tile/"); len(elem) >= l && elem[0:l] == "/tile/" {
 						elem = elem[l:]
 					} else {
 						break
 					}
 
-					// Param: "x"
+					// Param: "z"
 					// Match until "/"
 					idx := strings.IndexByte(elem, '/')
 					if idx < 0 {
 						idx = len(elem)
 					}
-					args[1] = elem[:idx]
+					args[0] = elem[:idx]
 					elem = elem[idx:]
 
 					if len(elem) == 0 {
@@ -907,41 +931,65 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							break
 						}
 
-						// Param: "y"
-						// Match until "."
-						idx := strings.IndexByte(elem, '.')
+						// Param: "x"
+						// Match until "/"
+						idx := strings.IndexByte(elem, '/')
 						if idx < 0 {
 							idx = len(elem)
 						}
-						args[2] = elem[:idx]
+						args[1] = elem[:idx]
 						elem = elem[idx:]
 
 						if len(elem) == 0 {
 							break
 						}
 						switch elem[0] {
-						case '.': // Prefix: ".mvt.gz"
+						case '/': // Prefix: "/"
 							origElem := elem
-							if l := len(".mvt.gz"); len(elem) >= l && elem[0:l] == ".mvt.gz" {
+							if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 								elem = elem[l:]
 							} else {
 								break
 							}
 
+							// Param: "y"
+							// Match until "."
+							idx := strings.IndexByte(elem, '.')
+							if idx < 0 {
+								idx = len(elem)
+							}
+							args[2] = elem[:idx]
+							elem = elem[idx:]
+
 							if len(elem) == 0 {
-								// Leaf node.
-								switch method {
-								case "GET":
-									r.name = "GeophotosTileZXYMvtGzGet"
-									r.summary = "Get Mapbox Vector Tile"
-									r.operationID = ""
-									r.pathPattern = "/geophotos/tile/{z}/{x}/{y}.mvt.gz"
-									r.args = args
-									r.count = 3
-									return r, true
-								default:
-									return
+								break
+							}
+							switch elem[0] {
+							case '.': // Prefix: ".mvt.gz"
+								origElem := elem
+								if l := len(".mvt.gz"); len(elem) >= l && elem[0:l] == ".mvt.gz" {
+									elem = elem[l:]
+								} else {
+									break
 								}
+
+								if len(elem) == 0 {
+									// Leaf node.
+									switch method {
+									case "GET":
+										r.name = "GeophotosTileZXYMvtGzGet"
+										r.summary = "Get Mapbox Vector Tile"
+										r.operationID = ""
+										r.pathPattern = "/geophotos/tile/{z}/{x}/{y}.mvt.gz"
+										r.args = args
+										r.count = 3
+										return r, true
+									default:
+										return
+									}
+								}
+
+								elem = origElem
 							}
 
 							elem = origElem

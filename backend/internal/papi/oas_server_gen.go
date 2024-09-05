@@ -56,6 +56,12 @@ type Handler interface {
 	//
 	// POST /elevation
 	ElevationPost(ctx context.Context, req *ElevationPostReq) (*ElevationPostOK, error)
+	// GeophotosGet implements GET /geophotos operation.
+	//
+	// Get metadata by ID.
+	//
+	// GET /geophotos
+	GeophotosGet(ctx context.Context, params GeophotosGetParams) (*GeophotosGetOK, error)
 	// GeophotosTileZXYMvtGzGet implements GET /geophotos/tile/{z}/{x}/{y}.mvt.gz operation.
 	//
 	// Get Mapbox Vector Tile.

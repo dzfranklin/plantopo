@@ -1,5 +1,5 @@
 import { Layout } from '@/components/Layout';
-import { GeophotosMap } from '@/features/geophotos/GeophotosMap';
+import { GeophotosComponent } from '@/features/geophotos/GeophotosComponent';
 
 export default function Page() {
   return (
@@ -9,7 +9,7 @@ export default function Page() {
       wide={true}
       fullBleed={true}
     >
-      <GeophotosMap />
+      <GeophotosComponent />
     </Layout>
   );
 }

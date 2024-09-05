@@ -324,6 +324,194 @@ func (s *ElevationPostReq) SetCoordinates(val [][]float64) {
 	s.Coordinates = val
 }
 
+// Ref: #/components/schemas/Geophoto
+type Geophoto struct {
+	ID     int    `json:"id"`
+	Source OptInt `json:"source"`
+	// The source's id for this image.
+	SourceID        OptString   `json:"sourceID"`
+	IndexedAt       OptDateTime `json:"indexedAt"`
+	AttributionText OptString   `json:"attributionText"`
+	AttributionLink OptString   `json:"attributionLink"`
+	Licenses        []int       `json:"licenses"`
+	Image           Image       `json:"image"`
+	SmallImage      OptImage    `json:"smallImage"`
+	Point           Point       `json:"point"`
+	Title           OptString   `json:"title"`
+	DateTaken       OptDateTime `json:"dateTaken"`
+}
+
+// GetID returns the value of ID.
+func (s *Geophoto) GetID() int {
+	return s.ID
+}
+
+// GetSource returns the value of Source.
+func (s *Geophoto) GetSource() OptInt {
+	return s.Source
+}
+
+// GetSourceID returns the value of SourceID.
+func (s *Geophoto) GetSourceID() OptString {
+	return s.SourceID
+}
+
+// GetIndexedAt returns the value of IndexedAt.
+func (s *Geophoto) GetIndexedAt() OptDateTime {
+	return s.IndexedAt
+}
+
+// GetAttributionText returns the value of AttributionText.
+func (s *Geophoto) GetAttributionText() OptString {
+	return s.AttributionText
+}
+
+// GetAttributionLink returns the value of AttributionLink.
+func (s *Geophoto) GetAttributionLink() OptString {
+	return s.AttributionLink
+}
+
+// GetLicenses returns the value of Licenses.
+func (s *Geophoto) GetLicenses() []int {
+	return s.Licenses
+}
+
+// GetImage returns the value of Image.
+func (s *Geophoto) GetImage() Image {
+	return s.Image
+}
+
+// GetSmallImage returns the value of SmallImage.
+func (s *Geophoto) GetSmallImage() OptImage {
+	return s.SmallImage
+}
+
+// GetPoint returns the value of Point.
+func (s *Geophoto) GetPoint() Point {
+	return s.Point
+}
+
+// GetTitle returns the value of Title.
+func (s *Geophoto) GetTitle() OptString {
+	return s.Title
+}
+
+// GetDateTaken returns the value of DateTaken.
+func (s *Geophoto) GetDateTaken() OptDateTime {
+	return s.DateTaken
+}
+
+// SetID sets the value of ID.
+func (s *Geophoto) SetID(val int) {
+	s.ID = val
+}
+
+// SetSource sets the value of Source.
+func (s *Geophoto) SetSource(val OptInt) {
+	s.Source = val
+}
+
+// SetSourceID sets the value of SourceID.
+func (s *Geophoto) SetSourceID(val OptString) {
+	s.SourceID = val
+}
+
+// SetIndexedAt sets the value of IndexedAt.
+func (s *Geophoto) SetIndexedAt(val OptDateTime) {
+	s.IndexedAt = val
+}
+
+// SetAttributionText sets the value of AttributionText.
+func (s *Geophoto) SetAttributionText(val OptString) {
+	s.AttributionText = val
+}
+
+// SetAttributionLink sets the value of AttributionLink.
+func (s *Geophoto) SetAttributionLink(val OptString) {
+	s.AttributionLink = val
+}
+
+// SetLicenses sets the value of Licenses.
+func (s *Geophoto) SetLicenses(val []int) {
+	s.Licenses = val
+}
+
+// SetImage sets the value of Image.
+func (s *Geophoto) SetImage(val Image) {
+	s.Image = val
+}
+
+// SetSmallImage sets the value of SmallImage.
+func (s *Geophoto) SetSmallImage(val OptImage) {
+	s.SmallImage = val
+}
+
+// SetPoint sets the value of Point.
+func (s *Geophoto) SetPoint(val Point) {
+	s.Point = val
+}
+
+// SetTitle sets the value of Title.
+func (s *Geophoto) SetTitle(val OptString) {
+	s.Title = val
+}
+
+// SetDateTaken sets the value of DateTaken.
+func (s *Geophoto) SetDateTaken(val OptDateTime) {
+	s.DateTaken = val
+}
+
+type GeophotosGetOK struct {
+	Photos []Geophoto `json:"photos"`
+}
+
+// GetPhotos returns the value of Photos.
+func (s *GeophotosGetOK) GetPhotos() []Geophoto {
+	return s.Photos
+}
+
+// SetPhotos sets the value of Photos.
+func (s *GeophotosGetOK) SetPhotos(val []Geophoto) {
+	s.Photos = val
+}
+
+// Ref: #/components/schemas/Image
+type Image struct {
+	Src    string `json:"src"`
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
+}
+
+// GetSrc returns the value of Src.
+func (s *Image) GetSrc() string {
+	return s.Src
+}
+
+// GetWidth returns the value of Width.
+func (s *Image) GetWidth() int {
+	return s.Width
+}
+
+// GetHeight returns the value of Height.
+func (s *Image) GetHeight() int {
+	return s.Height
+}
+
+// SetSrc sets the value of Src.
+func (s *Image) SetSrc(val string) {
+	s.Src = val
+}
+
+// SetWidth sets the value of Width.
+func (s *Image) SetWidth(val int) {
+	s.Width = val
+}
+
+// SetHeight sets the value of Height.
+func (s *Image) SetHeight(val int) {
+	s.Height = val
+}
+
 type MVTTile struct {
 	Data io.Reader
 }
@@ -979,6 +1167,98 @@ func (o OptBool) Get() (v bool, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptBool) Or(d bool) bool {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptDateTime returns new OptDateTime with value set to v.
+func NewOptDateTime(v time.Time) OptDateTime {
+	return OptDateTime{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptDateTime is optional time.Time.
+type OptDateTime struct {
+	Value time.Time
+	Set   bool
+}
+
+// IsSet returns true if OptDateTime was set.
+func (o OptDateTime) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptDateTime) Reset() {
+	var v time.Time
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptDateTime) SetTo(v time.Time) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptDateTime) Get() (v time.Time, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptDateTime) Or(d time.Time) time.Time {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptImage returns new OptImage with value set to v.
+func NewOptImage(v Image) OptImage {
+	return OptImage{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptImage is optional Image.
+type OptImage struct {
+	Value Image
+	Set   bool
+}
+
+// IsSet returns true if OptImage was set.
+func (o OptImage) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptImage) Reset() {
+	var v Image
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptImage) SetTo(v Image) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptImage) Get() (v Image, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptImage) Or(d Image) Image {
 	if v, ok := o.Get(); ok {
 		return v
 	}

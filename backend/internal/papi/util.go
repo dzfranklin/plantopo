@@ -1,10 +1,28 @@
 package papi
 
+import "time"
+
 func omitEmptyString(v string) OptString {
 	if v == "" {
 		return OptString{}
 	} else {
 		return OptString{Value: v, Set: true}
+	}
+}
+
+func omitEmptyInt(v int) OptInt {
+	if v == 0 {
+		return OptInt{}
+	} else {
+		return OptInt{Value: v, Set: true}
+	}
+}
+
+func omitEmptyDateTime(v time.Time) OptDateTime {
+	if v.IsZero() {
+		return OptDateTime{}
+	} else {
+		return OptDateTime{Value: v, Set: true}
 	}
 }
 

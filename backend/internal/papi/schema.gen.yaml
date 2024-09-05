@@ -359,6 +359,29 @@ paths:
       responses:
         "200": { $ref: "#/components/responses/MVTTile" }
         default: { $ref: "#/components/responses/DefaultErrorResponse" }
+  /geophotos:
+    get:
+      tags: [ "geophotos" ]
+      summary: Get metadata by ID
+      parameters:
+        - name: id
+          in: query
+          schema:
+            type: array
+            items: { type: integer }
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  photos:
+                    type: array
+                    items: { $ref: "#/components/schemas/Geophoto" }
+                required: [ photos ]
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
 components:
   securitySchemes:
     bearer:
@@ -566,3 +589,28 @@ components:
           description: URL to report JSON
           example: https://...
       required: [ "id", "slug", "fromLabel", "fromPoint", "date", "requestTime" ]
+    Geophoto:
+      type: object
+      properties:
+        id: { type: integer }
+        source: { type: integer }
+        sourceID: { type: string, description: "The source's id for this image" }
+        indexedAt: { type: string, format: date-time }
+        attributionText: { type: string }
+        attributionLink: { type: string }
+        licenses:
+          type: array
+          items: { type: integer }
+        image: { $ref: "#/components/schemas/Image" }
+        smallImage: { $ref: "#/components/schemas/Image" }
+        point: { $ref: "#/components/schemas/Point" }
+        title: { type: string }
+        dateTaken: { type: string, format: date-time }
+      required: [ id, image, point ]
+    Image:
+      type: object
+      properties:
+        src: { type: string }
+        width: { type: integer }
+        height: { type: integer }
+      required: [ src, width, height ]

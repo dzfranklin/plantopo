@@ -236,6 +236,111 @@ func (q *Queries) SelectGeophotoTile(ctx context.Context, db DBTX, arg SelectGeo
 	return st_asmvt, err
 }
 
+const selectGeophotosByID = `-- name: SelectGeophotosByID :many
+SELECT id,
+       source,
+       source_id,
+       index_region_id,
+       indexed_at,
+       attribution_text,
+       attribution_link,
+       licenses,
+       url,
+       width,
+       height,
+       small_url,
+       small_width,
+       small_height,
+       ST_X(point) as lng,
+       ST_Y(point) as lat,
+       title,
+       date_taken
+FROM geophotos
+WHERE id = any($1::bigint[])
+`
+
+type SelectGeophotosByIDRow struct {
+	ID              int64
+	Source          pgtype.Int4
+	SourceID        pgtype.Text
+	IndexRegionID   pgtype.Int4
+	IndexedAt       pgtype.Timestamptz
+	AttributionText pgtype.Text
+	AttributionLink pgtype.Text
+	Licenses        []int32
+	Url             string
+	Width           int32
+	Height          int32
+	SmallUrl        pgtype.Text
+	SmallWidth      pgtype.Int4
+	SmallHeight     pgtype.Int4
+	Lng             pgtype.Float8
+	Lat             pgtype.Float8
+	Title           pgtype.Text
+	DateTaken       pgtype.Timestamptz
+}
+
+// SelectGeophotosByID
+//
+//	SELECT id,
+//	       source,
+//	       source_id,
+//	       index_region_id,
+//	       indexed_at,
+//	       attribution_text,
+//	       attribution_link,
+//	       licenses,
+//	       url,
+//	       width,
+//	       height,
+//	       small_url,
+//	       small_width,
+//	       small_height,
+//	       ST_X(point) as lng,
+//	       ST_Y(point) as lat,
+//	       title,
+//	       date_taken
+//	FROM geophotos
+//	WHERE id = any($1::bigint[])
+func (q *Queries) SelectGeophotosByID(ctx context.Context, db DBTX, ids []int64) ([]SelectGeophotosByIDRow, error) {
+	rows, err := db.Query(ctx, selectGeophotosByID, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SelectGeophotosByIDRow
+	for rows.Next() {
+		var i SelectGeophotosByIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Source,
+			&i.SourceID,
+			&i.IndexRegionID,
+			&i.IndexedAt,
+			&i.AttributionText,
+			&i.AttributionLink,
+			&i.Licenses,
+			&i.Url,
+			&i.Width,
+			&i.Height,
+			&i.SmallUrl,
+			&i.SmallWidth,
+			&i.SmallHeight,
+			&i.Lng,
+			&i.Lat,
+			&i.Title,
+			&i.DateTaken,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateFlickrIndexProgress = `-- name: UpdateFlickrIndexProgress :exec
 INSERT INTO flickr_index_progress (region_id, latest)
 VALUES ($1, $2)

@@ -21,7 +21,8 @@ func newGeophotos(db *pgxpool.Pool) *Geophotos {
 	return &Geophotos{db: db}
 }
 
-type GeophotoInsertParams struct {
+type Geophoto struct {
+	ID              int
 	Source          int
 	SourceID        string
 	IndexRegionID   int
@@ -41,27 +42,31 @@ type GeophotoInsertParams struct {
 	DateTaken       time.Time
 }
 
-func (r *Geophotos) Insert(params GeophotoInsertParams) error {
+func (r *Geophotos) Insert(photo Geophoto) error {
+	if photo.ID != 0 {
+		return errors.New("cannot specify ID for create")
+	}
+
 	ctx, cancel := defaultContext()
 	defer cancel()
 	return q.InsertGeophoto(ctx, r.db, psqlc.InsertGeophotoParams{
-		Source:          pgOptInt4(params.Source),
-		SourceID:        pgOptText(params.SourceID),
-		IndexRegionID:   pgOptInt4(params.IndexRegionID),
-		IndexedAt:       pgOptTimestamptz(params.IndexedAt),
-		AttributionText: pgOptText(params.AttributionText),
-		AttributionLink: pgOptText(params.AttributionLink),
-		Licenses:        pslices.Map(params.Licenses, func(t int) int32 { return int32(t) }),
-		Url:             params.URL,
-		Width:           int32(params.Width),
-		Height:          int32(params.Height),
-		SmallUrl:        pgOptText(params.SmallURL),
-		SmallWidth:      pgOptInt4(params.SmallWidth),
-		SmallHeight:     pgOptInt4(params.SmallHeight),
-		Lng:             params.Lng,
-		Lat:             params.Lat,
-		Title:           pgOptText(params.Title),
-		DateTaken:       pgOptTimestamptz(params.DateTaken),
+		Source:          pgOptInt4(photo.Source),
+		SourceID:        pgOptText(photo.SourceID),
+		IndexRegionID:   pgOptInt4(photo.IndexRegionID),
+		IndexedAt:       pgOptTimestamptz(photo.IndexedAt),
+		AttributionText: pgOptText(photo.AttributionText),
+		AttributionLink: pgOptText(photo.AttributionLink),
+		Licenses:        pslices.Map(photo.Licenses, func(t int) int32 { return int32(t) }),
+		Url:             photo.URL,
+		Width:           int32(photo.Width),
+		Height:          int32(photo.Height),
+		SmallUrl:        pgOptText(photo.SmallURL),
+		SmallWidth:      pgOptInt4(photo.SmallWidth),
+		SmallHeight:     pgOptInt4(photo.SmallHeight),
+		Lng:             photo.Lng,
+		Lat:             photo.Lat,
+		Title:           pgOptText(photo.Title),
+		DateTaken:       pgOptTimestamptz(photo.DateTaken),
 	})
 }
 
@@ -160,4 +165,44 @@ func (r *Geophotos) GetTile(ctx context.Context, z, x, y int) ([]byte, error) {
 	_ = w.Close()
 
 	return compressed.Bytes(), nil
+}
+
+func (r *Geophotos) GetMany(ctx context.Context, ids []int) ([]Geophoto, error) {
+	if len(ids) > 1000 {
+		return nil, errors.New("too many ids")
+	}
+
+	rows, err := q.SelectGeophotosByID(ctx, r.db, pslices.Map(ids, func(n int) int64 { return int64(n) }))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(rows) != len(ids) {
+		return nil, ErrNotFound
+	}
+
+	return pslices.Map(rows, mapGeophoto), nil
+}
+
+func mapGeophoto(row psqlc.SelectGeophotosByIDRow) Geophoto {
+	return Geophoto{
+		ID:              int(row.ID),
+		Source:          int(row.Source.Int32),
+		SourceID:        row.SourceID.String,
+		IndexRegionID:   int(row.IndexRegionID.Int32),
+		IndexedAt:       row.IndexedAt.Time,
+		AttributionText: row.AttributionText.String,
+		AttributionLink: row.AttributionLink.String,
+		Licenses:        pslices.Map(row.Licenses, func(n int32) int { return int(n) }),
+		URL:             row.Url,
+		Width:           int(row.Width),
+		Height:          int(row.Height),
+		SmallURL:        row.SmallUrl.String,
+		SmallHeight:     int(row.SmallHeight.Int32),
+		SmallWidth:      int(row.SmallWidth.Int32),
+		Lng:             row.Lng.Float64,
+		Lat:             row.Lat.Float64,
+		Title:           row.Title.String,
+		DateTaken:       row.DateTaken.Time,
+	}
 }

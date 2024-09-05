@@ -85,6 +85,15 @@ func (UnimplementedHandler) ElevationPost(ctx context.Context, req *ElevationPos
 	return r, ht.ErrNotImplemented
 }
 
+// GeophotosGet implements GET /geophotos operation.
+//
+// Get metadata by ID.
+//
+// GET /geophotos
+func (UnimplementedHandler) GeophotosGet(ctx context.Context, params GeophotosGetParams) (r *GeophotosGetOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GeophotosTileZXYMvtGzGet implements GET /geophotos/tile/{z}/{x}/{y}.mvt.gz operation.
 //
 // Get Mapbox Vector Tile.

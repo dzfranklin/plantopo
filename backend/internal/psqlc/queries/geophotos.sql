@@ -58,3 +58,25 @@ WITH mvtgeom AS
           WHERE ST_Transform(point, 3857) && ST_TileEnvelope(@z, @x, @y, margin => (64.0 / 4096)))
 SELECT ST_AsMVT(mvtgeom.*, 'default', 4096, 'geom', 'id')
 FROM mvtgeom;
+
+-- name: SelectGeophotosByID :many
+SELECT id,
+       source,
+       source_id,
+       index_region_id,
+       indexed_at,
+       attribution_text,
+       attribution_link,
+       licenses,
+       url,
+       width,
+       height,
+       small_url,
+       small_width,
+       small_height,
+       ST_X(point) as lng,
+       ST_Y(point) as lat,
+       title,
+       date_taken
+FROM geophotos
+WHERE id = any (@ids::bigint[]);

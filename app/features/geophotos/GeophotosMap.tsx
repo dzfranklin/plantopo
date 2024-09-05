@@ -1,11 +1,13 @@
-'use client';
-
 import { useEffect, useRef } from 'react';
 import * as ml from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { API_ENDPOINT, MAPBOX_TOKEN } from '@/env';
 
-export function GeophotosMap() {
+export function GeophotosMap({
+  onSelect,
+}: {
+  onSelect: (ids: number[]) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
@@ -19,35 +21,75 @@ export function GeophotosMap() {
     });
 
     map.on('style.load', () => {
-      map.loadImage('/geophotos/icon.png', (error, image) => {
+      map.loadImage('/marker.png', (error, image) => {
         if (error) throw error;
-        map.addImage('geophoto', image as any, { pixelRatio: 2 });
+        map.addImage('pmarker', image as any, { sdf: true, pixelRatio: 2 });
 
         map.addSource('geophotos', {
           type: 'vector',
-          tiles: [
-            'https://api.plantopo.com/api/v1/geophotos/tile/{z}/{x}/{y}.mvt.gz',
-          ],
-          minzoom: 10,
-          maxZoom: 14,
+          tiles: [API_ENDPOINT + 'geophotos/tile/{z}/{x}/{y}.mvt.gz'],
+          minzoom: 9,
+          maxZoom: 16,
         });
 
+        // prettier-ignore
         map.addLayer({
           id: 'geophoto',
           type: 'symbol',
           source: 'geophotos',
           'source-layer': 'default',
-          filter: ['>', ['zoom'], 10],
+          filter: ['>=', ['zoom'], 9],
           layout: {
-            'icon-image': 'geophoto',
-            'icon-size': ['interpolate', ['linear'], ['zoom'], 9, 0.5, 11, 1],
+            'icon-image': 'pmarker',
+            'icon-size': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              11,
+              0.25,
+              15,
+              0.5,
+              20,
+              1,
+            ],
+            'icon-padding': 0,
             'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+          },
+          paint: {
+            'icon-color': [
+              'case',
+              ['coalesce', ['feature-state', 'selected'], false],
+              '#7c3aed',
+              '#3b82f6',
+            ],
           },
         });
 
-        map.on('click', 'geophoto', (evt) => {
-          // TODO: set to the currently loading images. fire an http request to load. show in sidebar. window so that only a few are rendered at once to reduce load amplification
-          console.log(evt.features);
+        map.on('zoom', () => {
+          console.log(map.getZoom());
+        });
+
+        let selected: number[] = [];
+        map.on('click', (e) => {
+          const bbox: [ml.PointLike, ml.PointLike] = [
+            [e.point.x - 5, e.point.y - 5],
+            [e.point.x + 5, e.point.y + 5],
+          ];
+          const fs = map.queryRenderedFeatures(bbox, { layers: ['geophoto'] });
+
+          for (const f of selected) {
+            map.setFeatureState(
+              { source: 'geophotos', sourceLayer: 'default', id: f },
+              { selected: false },
+            );
+          }
+
+          for (const f of fs) {
+            map.setFeatureState(f, { selected: true });
+          }
+          selected = fs.map((f) => f.id as number);
+          onSelect(selected);
         });
       });
     });

@@ -657,6 +657,47 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/geophotos': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get metadata by ID */
+    get: {
+      parameters: {
+        query?: {
+          id?: number[];
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              photos: components['schemas']['Geophoto'][];
+            };
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -776,6 +817,28 @@ export interface components {
        * @example https://...
        */
       url?: string;
+    };
+    Geophoto: {
+      id: number;
+      source?: number;
+      /** @description The source's id for this image */
+      sourceID?: string;
+      /** Format: date-time */
+      indexedAt?: string;
+      attributionText?: string;
+      attributionLink?: string;
+      licenses?: number[];
+      image: components['schemas']['Image'];
+      smallImage?: components['schemas']['Image'];
+      point: components['schemas']['Point'];
+      title?: string;
+      /** Format: date-time */
+      dateTaken?: string;
+    };
+    Image: {
+      src: string;
+      width: number;
+      height: number;
     };
   };
   responses: {
