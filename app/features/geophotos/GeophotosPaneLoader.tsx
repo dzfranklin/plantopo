@@ -27,7 +27,7 @@ export function GeophotosPaneLoader(params: { photos: number[] }) {
 
 export function GeophotosPane({ photos }: { photos: Geophoto[] }) {
   return (
-    <ul className="max-h-full flex gap-2 overflow-auto">
+    <ul className="max-h-full flex items-end gap-2 overflow-auto">
       {photos
         .slice(0, Math.min(photos.length, maxPhotosRendered))
         .map((photo) => (
@@ -66,7 +66,7 @@ function PaneItem({ photo }: { photo: Geophoto }) {
               rgba(0, 0, 0, 0) 80%,
               rgba(0, 0, 0, 0.6) 100%
             ),
-            url(${image.src})`,
+            url("${encodeURI(image.src)}")`,
         }}
         className="absolute inset-0 rounded bg-cover"
       />
