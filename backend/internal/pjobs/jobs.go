@@ -5,6 +5,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/osm"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/pemail"
+	"github.com/dzfranklin/plantopo/backend/internal/pgeograph"
 	"github.com/dzfranklin/plantopo/backend/internal/plog"
 	"github.com/dzfranklin/plantopo/backend/internal/pmunroaccess"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
@@ -57,6 +58,8 @@ func Register(
 
 	river.AddWorker[pemail.JobArgs](workers, pemail.NewWorker(env))
 
+	river.AddWorker[pgeograph.JobArgs](workers, pgeograph.NewWorker(env))
+
 	periodic.Add(river.NewPeriodicJob(
 		mustParseCron("46 18 * * *"),
 		func() (river.JobArgs, *river.InsertOpts) {
@@ -87,6 +90,14 @@ func Register(
 				nil,
 			))
 		}
+
+		periodic.Add(river.NewPeriodicJob(
+			mustParseCron("31 6 6 * *"),
+			func() (river.JobArgs, *river.InsertOpts) {
+				return pgeograph.JobArgs{}, nil
+			},
+			nil,
+		))
 	}
 }
 

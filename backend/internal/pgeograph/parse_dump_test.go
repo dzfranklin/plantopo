@@ -19,8 +19,6 @@ var sampleGridimageBase []byte
 var sampleGridimageSize []byte
 
 func TestParseSample(t *testing.T) {
-	// TODO:
-	t.Skip("TODO")
 	l := ptest.NewTestLogger(t)
 	baseR := bytes.NewReader(sampleGridimageBase)
 	sizeR := bytes.NewReader(sampleGridimageSize)
@@ -39,6 +37,8 @@ func TestParseSample(t *testing.T) {
 		ImageTaken:     ptime.DayStart(2004, 6, 29),
 		WGS84Lat:       51.711956,
 		WGS84Long:      -2.254684,
+		Width:          640,
+		Height:         480,
 		OriginalWidth:  1024,
 		OriginalHeight: 1024,
 	}
@@ -48,15 +48,13 @@ func TestParseSample(t *testing.T) {
 }
 
 func TestParseWithCutoff(t *testing.T) {
-	// TODO:
-	t.Skip("TODO")
 	l := ptest.NewTestLogger(t)
 	baseR := bytes.NewReader(sampleGridimageBase)
 	sizeR := bytes.NewReader(sampleGridimageSize)
 
-	nextCutoff, gridimages, err := parseDump(l, 1014, baseR, sizeR)
+	nextCutoff, gridimages, err := parseDump(l, 10, baseR, sizeR)
 	require.NoError(t, err)
 
-	assert.Equal(t, 1015, nextCutoff)
-	assert.Len(t, gridimages, 1)
+	assert.Equal(t, 12, nextCutoff)
+	assert.Len(t, gridimages, 2)
 }

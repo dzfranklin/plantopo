@@ -223,15 +223,26 @@ func floatNodeValue(node ast.ExprNode) float64 {
 func dateNodeValue(node ast.ExprNode) time.Time {
 	v := stringNodeValue(node)
 
-	if v == "0000-00-00" {
+	parts := strings.Split(v, "-")
+	if len(parts) != 3 {
+		panic("malformed time: " + v)
+	}
+	y := parts[0]
+	m := parts[1]
+	d := parts[2]
+
+	if y == "0000" {
 		return time.Time{}
-	} else if strings.HasSuffix(v, "-00-00") {
-		v = strings.TrimSuffix(v, "-00-00") + "-01-01"
-	} else if strings.HasSuffix(v, "-00") {
-		v = strings.TrimSuffix(v, "-00") + "-01"
 	}
 
-	t, err := time.Parse("2006-01-02", v)
+	if m == "00" {
+		m = "01"
+	}
+	if d == "00" {
+		d = "01"
+	}
+
+	t, err := time.Parse("2006-01-02", fmt.Sprintf("%s-%s-%s", y, m, d))
 
 	if err != nil {
 		panic(err)
