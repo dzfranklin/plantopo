@@ -16,7 +16,7 @@ import (
 
 func enableCORS(env *pconfig.Env, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Vary", "Origin")
+		w.Header().Add("Vary", "Origin, Cookie")
 
 		origin := r.Header.Get("Origin")
 		if corsShouldAllow(env, origin) {
