@@ -43,6 +43,7 @@ func TestIndexStep(t *testing.T) {
 	expectedTarget := targetInfo{
 		Region:    target.Region,
 		MinUpload: target.MinUpload,
+		MaxUpload: target.MaxUpload,
 		Page:      2,
 	}
 	require.Equal(t, expectedTarget, gotTarget)
