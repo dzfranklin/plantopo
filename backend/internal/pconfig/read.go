@@ -76,6 +76,9 @@ func Read() *Config {
 		Flickr: Flickr{
 			APIKey: getEnvString("FLICKR_API_KEY"),
 		},
+		Geograph: Geograph{
+			ImageSecret: getEnvString("GEOGRAPH_IMAGE_SECRET"),
+		},
 	}
 }
 

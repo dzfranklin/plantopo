@@ -2,6 +2,7 @@ package pflickr
 
 import (
 	"context"
+	"github.com/dzfranklin/plantopo/backend/internal/ptest"
 	"github.com/dzfranklin/plantopo/backend/internal/ptime"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -12,6 +13,7 @@ import (
 
 func TestIndexStep(t *testing.T) {
 	ctx := context.Background()
+	l := ptest.NewTestLogger(t)
 
 	target := targetInfo{
 		Region:    geometry.Rect{Min: geometry.Point{X: 1, Y: 1}, Max: geometry.Point{X: 2, Y: 2}},
@@ -36,7 +38,7 @@ func TestIndexStep(t *testing.T) {
 		Page:          1,
 	}).Return(returnPage, nil)
 
-	gotPhotos, gotTarget, done, gotErr := indexStep(ctx, target, searcher)
+	gotPhotos, gotTarget, done, gotErr := indexStep(ctx, l, target, searcher)
 	require.NoError(t, gotErr)
 
 	expectedTarget := targetInfo{
@@ -53,6 +55,7 @@ func TestIndexStep(t *testing.T) {
 
 func TestIndexStepZero(t *testing.T) {
 	ctx := context.Background()
+	l := ptest.NewTestLogger(t)
 
 	target := targetInfo{
 		Region:    geometry.Rect{Min: geometry.Point{X: 1, Y: 1}, Max: geometry.Point{X: 2, Y: 2}},
@@ -74,7 +77,7 @@ func TestIndexStepZero(t *testing.T) {
 		Page:          1,
 	}).Return(returnPage, nil)
 
-	gotPhotos, gotTarget, done, gotErr := indexStep(ctx, target, searcher)
+	gotPhotos, gotTarget, done, gotErr := indexStep(ctx, l, target, searcher)
 	require.NoError(t, gotErr)
 	require.Equal(t, target, gotTarget)
 	require.Equal(t, true, done)

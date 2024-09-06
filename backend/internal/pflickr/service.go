@@ -99,7 +99,7 @@ func (s *Service) indexFlickrRegion(ctx context.Context, region prepo.FlickrInde
 		var stepErr error
 		var stepPhotos []searchPagePhoto
 		var done bool
-		stepPhotos, target, done, stepErr = indexStep(ctx, target, s.api)
+		stepPhotos, target, done, stepErr = indexStep(ctx, l, target, s.api)
 		if stepErr != nil {
 			return stepErr
 		}
@@ -124,7 +124,7 @@ func (s *Service) indexFlickrRegion(ctx context.Context, region prepo.FlickrInde
 				continue
 			}
 
-			if err := s.repo.Insert(photo); err != nil {
+			if err := s.repo.ImportIfNotPresent(photo); err != nil {
 				return err
 			}
 			count++

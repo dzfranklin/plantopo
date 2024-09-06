@@ -8,3 +8,6 @@ packages:
   github.com/dzfranklin/plantopo/backend/internal/pflickr:
     interfaces:
       flickrSearcher:
+  github.com/dzfranklin/plantopo/backend/internal/pgeograph:
+    interfaces:
+      ImportRepo:

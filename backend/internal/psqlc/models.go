@@ -86,7 +86,7 @@ type FlickrIndexRegion struct {
 
 type GeographIndexProgress struct {
 	ID     int32
-	Latest pgtype.Timestamptz
+	Cutoff pgtype.Int4
 }
 
 type Geophoto struct {

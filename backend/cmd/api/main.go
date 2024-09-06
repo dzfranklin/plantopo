@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/penv"
-	"github.com/dzfranklin/plantopo/backend/internal/pflickr"
+	"github.com/dzfranklin/plantopo/backend/internal/pgeophotos"
 	"github.com/dzfranklin/plantopo/backend/internal/ptime"
 	"log"
 	"math/rand"
@@ -117,12 +117,12 @@ func main() {
 		}
 	}()
 
-	// Flickr indexer
+	// Geophotos indexer
 	if env.IsProduction {
 		quitGroup.Add(2)
 		go func() {
 			defer quitGroup.Done()
-			srv := pflickr.NewService(env)
+			srv := pgeophotos.New(env)
 			indexCtx, cancel := context.WithCancel(context.Background())
 			go func() {
 				defer quitGroup.Done()
@@ -132,12 +132,16 @@ func main() {
 				}
 
 				for {
-					err := srv.IndexFlickr(indexCtx)
-					if errors.Is(err, context.Canceled) {
+					l.Info("running geophotos indexer")
+					runErr := srv.RunIndexer(indexCtx)
+					if errors.Is(runErr, context.Canceled) {
 						break
-					} else if err != nil {
-						l.Error("failed to index flickr", "error", err)
-						_ = ptime.Sleep(indexCtx, time.Hour)
+					} else if runErr != nil {
+						l.Error("geophotos indexer failed", "error", runErr)
+						sleepErr := ptime.Sleep(indexCtx, time.Hour)
+						if errors.Is(sleepErr, context.Canceled) {
+							break
+						}
 						continue
 					}
 				}

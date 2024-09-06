@@ -40,6 +40,7 @@ type Config struct {
 	SMTPRelay      SMTPRelay
 	Mapbox         Mapbox
 	Flickr         Flickr
+	Geograph       Geograph
 }
 
 type Elevation struct {
@@ -115,4 +116,8 @@ type Mapbox struct {
 
 type Flickr struct {
 	APIKey string
+}
+
+type Geograph struct {
+	ImageSecret string
 }

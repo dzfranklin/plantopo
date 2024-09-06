@@ -3,6 +3,7 @@ package pflickr
 import (
 	"context"
 	"github.com/tidwall/geojson/geometry"
+	"log/slog"
 	"time"
 )
 
@@ -21,15 +22,18 @@ type targetInfo struct {
 // This will return some duplicate photos on successive invocations.
 func indexStep(
 	ctx context.Context,
+	l *slog.Logger,
 	target targetInfo,
 	searcher flickrSearcher,
 ) ([]searchPagePhoto, targetInfo, bool, error) {
-	page, err := searcher.searchForIndex(ctx, searchParams{
+	params := searchParams{
 		BBox:          target.Region,
 		MinUploadDate: target.MinUpload,
 		MaxUploadDate: target.MaxUpload,
 		Page:          1,
-	})
+	}
+	l.Info("searchForIndex", "params", params)
+	page, err := searcher.searchForIndex(ctx, params)
 	if err != nil {
 		return nil, target, false, err
 	}

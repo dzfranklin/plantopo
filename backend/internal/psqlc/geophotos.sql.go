@@ -68,30 +68,35 @@ func (q *Queries) GetFlickrIndexProgress(ctx context.Context, db DBTX, regionID 
 	return latest, err
 }
 
-const insertGeophoto = `-- name: InsertGeophoto :exec
+const getGeographIndexProgress = `-- name: GetGeographIndexProgress :one
+SELECT cutoff
+FROM geograph_index_progress
+WHERE id = 0
+`
+
+// GetGeographIndexProgress
+//
+//	SELECT cutoff
+//	FROM geograph_index_progress
+//	WHERE id = 0
+func (q *Queries) GetGeographIndexProgress(ctx context.Context, db DBTX) (pgtype.Int4, error) {
+	row := db.QueryRow(ctx, getGeographIndexProgress)
+	var cutoff pgtype.Int4
+	err := row.Scan(&cutoff)
+	return cutoff, err
+}
+
+const importGeophotoIfNotPresent = `-- name: ImportGeophotoIfNotPresent :exec
 INSERT INTO geophotos (source, source_id, index_region_id, indexed_at, attribution_text,
                        attribution_link, licenses, url, width, height,
                        small_url, small_width, small_height, point, title, date_taken)
 VALUES ($1, $2, $3, $4, $5,
         $6, $7, $8, $9, $10,
         $11, $12, $13, st_makepoint($14, $15), $16, $17)
-ON CONFLICT (source, source_id) DO UPDATE SET index_region_id  = $3,
-                                              indexed_at       = $4,
-                                              attribution_text = $5,
-                                              attribution_link = $6,
-                                              licenses         = $7,
-                                              url              = $8,
-                                              width            = $9,
-                                              height           = $10,
-                                              small_url        = $11,
-                                              small_width      = $12,
-                                              small_height     = $13,
-                                              point            = st_makepoint($14, $15),
-                                              title            = $16,
-                                              date_taken       = $17
+ON CONFLICT (source, source_id) DO NOTHING
 `
 
-type InsertGeophotoParams struct {
+type ImportGeophotoIfNotPresentParams struct {
 	Source          pgtype.Int4
 	SourceID        pgtype.Text
 	IndexRegionID   pgtype.Int4
@@ -111,7 +116,7 @@ type InsertGeophotoParams struct {
 	DateTaken       pgtype.Timestamptz
 }
 
-// InsertGeophoto
+// ImportGeophotoIfNotPresent
 //
 //	INSERT INTO geophotos (source, source_id, index_region_id, indexed_at, attribution_text,
 //	                       attribution_link, licenses, url, width, height,
@@ -119,22 +124,9 @@ type InsertGeophotoParams struct {
 //	VALUES ($1, $2, $3, $4, $5,
 //	        $6, $7, $8, $9, $10,
 //	        $11, $12, $13, st_makepoint($14, $15), $16, $17)
-//	ON CONFLICT (source, source_id) DO UPDATE SET index_region_id  = $3,
-//	                                              indexed_at       = $4,
-//	                                              attribution_text = $5,
-//	                                              attribution_link = $6,
-//	                                              licenses         = $7,
-//	                                              url              = $8,
-//	                                              width            = $9,
-//	                                              height           = $10,
-//	                                              small_url        = $11,
-//	                                              small_width      = $12,
-//	                                              small_height     = $13,
-//	                                              point            = st_makepoint($14, $15),
-//	                                              title            = $16,
-//	                                              date_taken       = $17
-func (q *Queries) InsertGeophoto(ctx context.Context, db DBTX, arg InsertGeophotoParams) error {
-	_, err := db.Exec(ctx, insertGeophoto,
+//	ON CONFLICT (source, source_id) DO NOTHING
+func (q *Queries) ImportGeophotoIfNotPresent(ctx context.Context, db DBTX, arg ImportGeophotoIfNotPresentParams) error {
+	_, err := db.Exec(ctx, importGeophotoIfNotPresent,
 		arg.Source,
 		arg.SourceID,
 		arg.IndexRegionID,
@@ -195,7 +187,7 @@ func (q *Queries) ListFlickrIndexRegions(ctx context.Context, db DBTX) ([]Flickr
 const selectGeophotoTile = `-- name: SelectGeophotoTile :one
 WITH mvtgeom AS
          (SELECT ST_AsMVTGeom(
-                         ST_Transform(point, 3857),
+                         ST_Transform(point::geometry, 3857),
                          ST_TileEnvelope($1, $2, $3),
                          extent => 4096,
                          buffer => 256,
@@ -203,7 +195,7 @@ WITH mvtgeom AS
                  ) AS geom,
                  id
           FROM geophotos
-          WHERE ST_Transform(point, 3857) && ST_TileEnvelope($1, $2, $3, margin => (64.0 / 4096)))
+          WHERE ST_Transform(point::geometry, 3857) && ST_TileEnvelope($1, $2, $3, margin => (64.0 / 4096)))
 SELECT ST_AsMVT(mvtgeom.*, 'default', 4096, 'geom', 'id')
 FROM mvtgeom
 `
@@ -218,7 +210,7 @@ type SelectGeophotoTileParams struct {
 //
 //	WITH mvtgeom AS
 //	         (SELECT ST_AsMVTGeom(
-//	                         ST_Transform(point, 3857),
+//	                         ST_Transform(point::geometry, 3857),
 //	                         ST_TileEnvelope($1, $2, $3),
 //	                         extent => 4096,
 //	                         buffer => 256,
@@ -226,7 +218,7 @@ type SelectGeophotoTileParams struct {
 //	                 ) AS geom,
 //	                 id
 //	          FROM geophotos
-//	          WHERE ST_Transform(point, 3857) && ST_TileEnvelope($1, $2, $3, margin => (64.0 / 4096)))
+//	          WHERE ST_Transform(point::geometry, 3857) && ST_TileEnvelope($1, $2, $3, margin => (64.0 / 4096)))
 //	SELECT ST_AsMVT(mvtgeom.*, 'default', 4096, 'geom', 'id')
 //	FROM mvtgeom
 func (q *Queries) SelectGeophotoTile(ctx context.Context, db DBTX, arg SelectGeophotoTileParams) ([]byte, error) {
@@ -251,12 +243,12 @@ SELECT id,
        small_url,
        small_width,
        small_height,
-       ST_X(point) as lng,
-       ST_Y(point) as lat,
+       ST_X(point::geometry) as lng,
+       ST_Y(point::geometry) as lat,
        title,
        date_taken
 FROM geophotos
-WHERE id = any($1::bigint[])
+WHERE id = any ($1::bigint[])
 `
 
 type SelectGeophotosByIDRow struct {
@@ -296,12 +288,12 @@ type SelectGeophotosByIDRow struct {
 //	       small_url,
 //	       small_width,
 //	       small_height,
-//	       ST_X(point) as lng,
-//	       ST_Y(point) as lat,
+//	       ST_X(point::geometry) as lng,
+//	       ST_Y(point::geometry) as lat,
 //	       title,
 //	       date_taken
 //	FROM geophotos
-//	WHERE id = any($1::bigint[])
+//	WHERE id = any ($1::bigint[])
 func (q *Queries) SelectGeophotosByID(ctx context.Context, db DBTX, ids []int64) ([]SelectGeophotosByIDRow, error) {
 	rows, err := db.Query(ctx, selectGeophotosByID, ids)
 	if err != nil {
@@ -359,16 +351,16 @@ func (q *Queries) UpdateFlickrIndexProgress(ctx context.Context, db DBTX, region
 
 const updateGeographIndexProgress = `-- name: UpdateGeographIndexProgress :exec
 UPDATE geograph_index_progress
-SET latest = $1
+SET cutoff = $1
 WHERE id = 0
 `
 
 // UpdateGeographIndexProgress
 //
 //	UPDATE geograph_index_progress
-//	SET latest = $1
+//	SET cutoff = $1
 //	WHERE id = 0
-func (q *Queries) UpdateGeographIndexProgress(ctx context.Context, db DBTX, latest pgtype.Timestamptz) error {
-	_, err := db.Exec(ctx, updateGeographIndexProgress, latest)
+func (q *Queries) UpdateGeographIndexProgress(ctx context.Context, db DBTX, cutoff pgtype.Int4) error {
+	_, err := db.Exec(ctx, updateGeographIndexProgress, cutoff)
 	return err
 }

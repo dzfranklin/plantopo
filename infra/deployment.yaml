@@ -130,6 +130,11 @@ spec:
                 secretKeyRef:
                   name: flickr
                   key: api-key
+            - name: GEOGRAPH_IMAGE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: geograph
+                  key: image_secret
           livenessProbe:
             httpGet:
               path: /status

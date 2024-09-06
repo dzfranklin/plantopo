@@ -42,14 +42,14 @@ type Geophoto struct {
 	DateTaken       time.Time
 }
 
-func (r *Geophotos) Insert(photo Geophoto) error {
+func (r *Geophotos) ImportIfNotPresent(photo Geophoto) error {
 	if photo.ID != 0 {
 		return errors.New("cannot specify ID for create")
 	}
 
 	ctx, cancel := defaultContext()
 	defer cancel()
-	return q.InsertGeophoto(ctx, r.db, psqlc.InsertGeophotoParams{
+	return q.ImportGeophotoIfNotPresent(ctx, r.db, psqlc.ImportGeophotoIfNotPresentParams{
 		Source:          pgOptInt4(photo.Source),
 		SourceID:        pgOptText(photo.SourceID),
 		IndexRegionID:   pgOptInt4(photo.IndexRegionID),
@@ -139,10 +139,20 @@ func (r *Geophotos) GetFlickrIndexProgress(region int) (time.Time, error) {
 	return row.Time, nil
 }
 
-func (r *Geophotos) UpdateGeographIndexProgress(latest time.Time) error {
+func (r *Geophotos) UpdateGeographIndexProgress(cutoff int) error {
 	ctx, cancel := defaultContext()
 	defer cancel()
-	return q.UpdateGeographIndexProgress(ctx, r.db, pgTimestamptz(latest))
+	return q.UpdateGeographIndexProgress(ctx, r.db, pgOptInt4(cutoff))
+}
+
+func (r *Geophotos) GetGeographIndexProgress() (int, error) {
+	ctx, cancel := defaultContext()
+	defer cancel()
+	row, err := q.GetGeographIndexProgress(ctx, r.db)
+	if err != nil {
+		return 0, err
+	}
+	return int(row.Int32), err
 }
 
 func (r *Geophotos) GetTile(ctx context.Context, z, x, y int) ([]byte, error) {
