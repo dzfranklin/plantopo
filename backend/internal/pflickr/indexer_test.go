@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/geojson/geometry"
 	"testing"
-	"time"
 )
 
 func TestIndexStep(t *testing.T) {
@@ -18,6 +17,7 @@ func TestIndexStep(t *testing.T) {
 	target := targetInfo{
 		Region:    geometry.Rect{Min: geometry.Point{X: 1, Y: 1}, Max: geometry.Point{X: 2, Y: 2}},
 		MinUpload: ptime.DayStart(2020, 1, 1),
+		MaxUpload: ptime.DayStart(2024, 1, 1),
 	}
 
 	searcher := NewMockflickrSearcher(t)
@@ -33,6 +33,7 @@ func TestIndexStep(t *testing.T) {
 	searcher.EXPECT().searchForIndex(mock.Anything, searchParams{
 		BBox:          target.Region,
 		MinUploadDate: target.MinUpload,
+		MaxUploadDate: target.MaxUpload,
 		Page:          1,
 	}).Return(returnPage, nil)
 
@@ -41,7 +42,8 @@ func TestIndexStep(t *testing.T) {
 
 	expectedTarget := targetInfo{
 		Region:    target.Region,
-		MinUpload: time.Time(returnPage.Photo[len(returnPage.Photo)-1].DateUpload),
+		MinUpload: target.MinUpload,
+		Page:      2,
 	}
 	require.Equal(t, expectedTarget, gotTarget)
 
@@ -57,6 +59,8 @@ func TestIndexStepZero(t *testing.T) {
 	target := targetInfo{
 		Region:    geometry.Rect{Min: geometry.Point{X: 1, Y: 1}, Max: geometry.Point{X: 2, Y: 2}},
 		MinUpload: ptime.DayStart(2020, 1, 1),
+		MaxUpload: ptime.DayStart(2024, 1, 1),
+		Page:      1,
 	}
 
 	searcher := NewMockflickrSearcher(t)
@@ -69,6 +73,7 @@ func TestIndexStepZero(t *testing.T) {
 	searcher.EXPECT().searchForIndex(mock.Anything, searchParams{
 		BBox:          target.Region,
 		MinUploadDate: target.MinUpload,
+		MaxUploadDate: target.MaxUpload,
 		Page:          1,
 	}).Return(returnPage, nil)
 
