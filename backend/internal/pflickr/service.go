@@ -57,7 +57,7 @@ func (s *Service) IndexFlickr(ctx context.Context) error {
 func (s *Service) indexFlickrRegion(ctx context.Context, region prepo.FlickrIndexRegion) error {
 	l := s.l.With("region", region.Name, "regionID", region.ID)
 
-	startTime, startErr := s.repo.GetFlickrIndexProgress(region.ID)
+	startTime, startPage, startErr := s.repo.GetFlickrIndexProgress(region.ID)
 	if startErr != nil {
 		return startErr
 	}
@@ -69,8 +69,9 @@ func (s *Service) indexFlickrRegion(ctx context.Context, region prepo.FlickrInde
 
 	target := targetInfo{
 		Region:    region.Rect,
+		MaxUpload: time.Now().Add(-reindexAfterElapsed),
 		MinUpload: startTime,
-		MaxUpload: time.Now(),
+		Page:      startPage,
 	}
 
 	count := 0
@@ -105,7 +106,13 @@ func (s *Service) indexFlickrRegion(ctx context.Context, region prepo.FlickrInde
 		}
 
 		if done {
-			if err := s.repo.UpdateFlickrIndexProgress(region.ID, time.Now().Add(-time.Hour)); err != nil {
+			latestTime := target.MinUpload
+			clampTime := time.Now().Add(-time.Hour)
+			if latestTime.Before(clampTime) {
+				latestTime = clampTime
+			}
+			if err := s.repo.UpdateFlickrIndexProgress(region.ID, latestTime, 0); err != nil {
+
 				return err
 			}
 			completed = true
@@ -130,12 +137,13 @@ func (s *Service) indexFlickrRegion(ctx context.Context, region prepo.FlickrInde
 			count++
 		}
 
-		if err := s.repo.UpdateFlickrIndexProgress(region.ID, target.MinUpload); err != nil {
+		if err := s.repo.UpdateFlickrIndexProgress(region.ID, target.MinUpload, target.Page); err != nil {
 			return err
 		}
 
 		l.Info("index step",
-			"totalCount", count, "stepCount", len(stepPhotos), "start", startTime, "reached", target.MinUpload)
+			"totalCount", count, "stepCount", len(stepPhotos), "start", startTime,
+			"reachedTime", target.MinUpload, "reachedPage", target.Page)
 	}
 }
 
@@ -146,7 +154,7 @@ func mapPhoto(photo searchPagePhoto, indexRegionID int) prepo.Geophoto {
 		url = photo.OriginalURL
 		width = photo.OriginalWidth
 		height = photo.OriginalHeight
-	} else {
+	} else if photo.LargeURL != "" {
 		url = photo.LargeURL
 		width = photo.LargeWidth
 		height = photo.LargeHeight

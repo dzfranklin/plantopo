@@ -49,8 +49,8 @@ func NewAPI(env *pconfig.Env) *API {
 
 type searchParams struct {
 	BBox          geometry.Rect
-	MinUploadDate time.Time // inclusive
 	MaxUploadDate time.Time // inclusive
+	MinUploadDate time.Time // inclusive
 	Page          int
 }
 
@@ -87,8 +87,8 @@ type searchPagePhoto struct {
 	SmallWidth     int        `json:"width_s,omitempty"`
 	SmallHeight    int        `json:"height_s,omitempty"`
 	LargeURL       string     `json:"url_l,omitempty"`
-	LargeWidth     int        `json:"width_l"`
-	LargeHeight    int        `json:"height_l"`
+	LargeWidth     int        `json:"width_l,omitempty"`
+	LargeHeight    int        `json:"height_l,omitempty"`
 }
 
 func (a *API) searchForIndex(ctx context.Context, params searchParams) (searchPage, error) {
@@ -99,6 +99,7 @@ func (a *API) searchForIndex(ctx context.Context, params searchParams) (searchPa
 		"bbox":            fmt.Sprintf("%.6f,%.6f,%.6f,%.6f", params.BBox.Min.X, params.BBox.Min.Y, params.BBox.Max.X, params.BBox.Max.Y),
 		"min_upload_date": fmt.Sprintf("%d", params.MinUploadDate.Unix()),
 		"max_upload_date": fmt.Sprintf("%d", params.MaxUploadDate.Unix()),
+		"page":            fmt.Sprintf("%d", params.Page),
 		"sort":            "date-posted-asc",
 		"safe_search":     "1",
 		"content_types":   "0",

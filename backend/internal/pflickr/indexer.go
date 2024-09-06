@@ -13,8 +13,9 @@ type flickrSearcher interface {
 
 type targetInfo struct {
 	Region    geometry.Rect
-	MinUpload time.Time // inclusive
 	MaxUpload time.Time // inclusive
+	MinUpload time.Time // inclusive
+	Page      int
 }
 
 // indexStep searches and advances target.
@@ -26,11 +27,15 @@ func indexStep(
 	target targetInfo,
 	searcher flickrSearcher,
 ) ([]searchPagePhoto, targetInfo, bool, error) {
+	if target.Page == 0 {
+		target.Page = 1
+	}
+
 	params := searchParams{
 		BBox:          target.Region,
-		MinUploadDate: target.MinUpload,
 		MaxUploadDate: target.MaxUpload,
-		Page:          1,
+		MinUploadDate: target.MinUpload,
+		Page:          target.Page,
 	}
 	l.Info("searchForIndex", "params", params)
 	page, err := searcher.searchForIndex(ctx, params)
@@ -45,7 +50,17 @@ func indexStep(
 	}
 
 	newTarget := target
-	newTarget.MinUpload = time.Time(page.Photo[len(page.Photo)-1].DateUpload)
+	newTarget.Page = target.Page + 1
+
+	if page.PerPage*newTarget.Page >= 3000 {
+		newTarget.MinUpload = time.Time(page.Photo[len(page.Photo)-1].DateUpload)
+		newTarget.Page = 1
+
+		if newTarget.MinUpload.Before(target.MinUpload) || newTarget.MinUpload.Equal(target.MinUpload) {
+			l.Warn("skipping to prevent an infinite loop")
+			newTarget.MinUpload = target.MinUpload.Add(time.Minute)
+		}
+	}
 
 	return page.Photo, newTarget, done, nil
 }
