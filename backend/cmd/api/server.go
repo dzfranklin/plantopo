@@ -3,7 +3,6 @@ package main
 import (
 	"cmp"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/admin"
@@ -11,12 +10,9 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/pwebhooks"
 	"github.com/google/uuid"
-	"io"
 	"log"
 	"net/http"
 	"slices"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 )
@@ -38,7 +34,6 @@ func NewServer(env *pconfig.Env) *http.Server {
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiSrv))
 	mux.Handle("/webhooks/", webhookSrv)
 	mux.Handle("/admin/", adminSrv)
-	mux.HandleFunc("/httpbin/", handleHTTPBin)
 
 	srv := &http.Server{
 		Handler: instrumentRequests(recoverPanic(env, papi.AssignRequestID(enableCORS(env, mux)))),
@@ -143,59 +138,4 @@ func handleStatus(env *pconfig.Env) http.HandlerFunc {
 			}
 		}
 	}
-}
-
-func handleHTTPBin(w http.ResponseWriter, r *http.Request) {
-	longpollParam := r.URL.Query().Get("longpoll")
-	if longpollParam != "" {
-		longpoll, err := strconv.ParseInt(longpollParam, 10, 64)
-		if err != nil {
-			http.Error(w, "Bad longpoll param", http.StatusBadRequest)
-			return
-		}
-		time.Sleep(time.Duration(longpoll) * time.Minute)
-	}
-
-	w.Header().Set("Content-Type", "text/plain")
-
-	err := r.ParseForm()
-	if err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
-	}
-
-	fmt.Fprintf(w, "Method: %s\n", r.Method)
-
-	encodedURL, err := json.MarshalIndent(r.URL, "    ", "    ")
-	if err != nil {
-		panic(err)
-	}
-	fmt.Fprintf(w, "RequestURI: %s\n", r.RequestURI)
-	fmt.Fprintf(w, "URL:\n%s\n", encodedURL)
-
-	fmt.Fprintf(w, "Proto: %s\n", r.Proto)
-
-	fmt.Fprintln(w, "Header:")
-	for k, v := range r.Header {
-		fmt.Fprintf(w, "    %s: %s\n", k, v)
-	}
-
-	fmt.Fprintf(w, "ContentLength: %d\n", r.ContentLength)
-	fmt.Fprintf(w, "TransferEncoding: %s\n", strings.Join(r.TransferEncoding, ", "))
-	fmt.Fprintf(w, "Host: %s\n", r.Host)
-
-	fmt.Fprintln(w, "Form:")
-	for k, v := range r.Form {
-		fmt.Fprintf(w, "    %s: %s\n", k, v)
-	}
-
-	fmt.Fprintf(w, "RemoteAddr: %s\n", r.RemoteAddr)
-
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Error reading body", http.StatusBadRequest)
-		return
-	}
-	fmt.Fprintln(w, "Body:")
-	fmt.Println(body)
 }
