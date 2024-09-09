@@ -105,7 +105,7 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 		i.l.Info("searched", "len", len(page.Photo),
 			"min", params.MinUploadDate, "max", params.MaxUploadDate, "page", params.Page,
 			"searchWindow", fmt.Sprintf("%dd", searchWindow/(24*time.Hour)),
-			"latestSeen", latestSeen, "searchElapsed", searchElapsed,
+			"latestSeen", latestSeen, "searchElapsed", searchElapsed.Seconds(),
 			"count", count, "noURL", noURL, "noGeo", noGeo)
 
 		if page.Page <= page.Pages {
