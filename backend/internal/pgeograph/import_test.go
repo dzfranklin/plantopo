@@ -1,56 +1,35 @@
 package pgeograph
 
 import (
-	"bytes"
+	"context"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
 	"github.com/dzfranklin/plantopo/backend/internal/ptest"
 	"github.com/dzfranklin/plantopo/backend/internal/ptime"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"os"
 	"testing"
 )
 
 var sampleSecret = []byte("sample_secret")
 
-func TestImportFull(t *testing.T) {
-	t.Skip()
-
-	baseR, err := os.Open("/tmp/gridimage_base.mysql.gz")
-	if err != nil {
-		panic(err)
-	}
-
-	sizeR, err := os.Open("/tmp/gridimage_size.mysql.gz")
-	if err != nil {
-		panic(err)
-	}
+func Test_importFiles(t *testing.T) {
+	baseFile := compressedReader(sampleGridimageBase)
+	sizeFile := compressedReader(sampleGridimageSize)
 
 	l := ptest.NewTestLogger(t)
-
 	repo := NewMockImportRepo(t)
-	repo.EXPECT().GetGeographIndexProgress().Once().Return(0, nil)
-	repo.EXPECT().UpdateGeographIndexProgress(mock.Anything).Return(nil)
+
+	cutoff := 0
+	repo.EXPECT().GetGeographIndexProgress().RunAndReturn(func() (int, error) {
+		return cutoff, nil
+	})
+	repo.EXPECT().UpdateGeographIndexProgress(mock.Anything).Run(func(newCutoff int) {
+		cutoff = newCutoff
+	}).Return(nil)
 	repo.EXPECT().ImportIfNotPresent(mock.Anything).Return(nil)
 
-	err = importFiles(l, sampleSecret, repo, baseR, sizeR)
-	require.NoError(t, err)
-}
-
-func Test_importFiles(t *testing.T) {
-	l := ptest.NewTestLogger(t)
-
-	baseR := bytes.NewReader(sampleGridimageBase)
-	sizeR := bytes.NewReader(sampleGridimageSize)
-
-	repo := NewMockImportRepo(t)
-
-	repo.EXPECT().GetGeographIndexProgress().Once().Return(0, nil)
-	repo.EXPECT().UpdateGeographIndexProgress(12).Once().Return(nil)
-	repo.EXPECT().ImportIfNotPresent(mock.Anything).Times(9).Return(nil)
-
-	err := importFiles(l, sampleSecret, repo, baseR, sizeR)
+	err := importFiles(context.Background(), l, sampleSecret, repo, baseFile, sizeFile)
 	require.NoError(t, err)
 }
 

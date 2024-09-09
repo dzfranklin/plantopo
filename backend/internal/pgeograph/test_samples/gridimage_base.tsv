@@ -1,0 +1,23 @@
+gridimage_id	user_id	realname	title	moderation_status	imagetaken	grid_reference	x	y	wgs84_lat	wgs84_long	reference_index
+4	5	Helena Downton	Woodchester Mansion	geograph	2004-06-29	SO8001	586	201	51.710646	-2.277400	1
+5	5	Helena Downton	Lake at Woodchester Park	geograph	2004-06-29	SO8201	588	201	51.711956	-2.254684	1
+6	5	Helena Downton	Arches near Gloucester Cathedral	geograph	2005-02-28	SO8318	589	218	51.868237	-2.246562	1
+7	5	Helena Downton	Minchinhampton Common	geograph	2005-03-01	SO8500	591	200	51.703051	-2.211223	1
+8	5	Helena Downton	The Footpath near Cuckoo Row	accepted	2005-02-27	SO8600	592	200	51.704885	-2.190393	1
+9	5	Helena Downton	Burleigh Lane	geograph	2005-02-24	SO8601	592	201	51.713059	-2.195059	1
+10	5	Helena Downton	Friday Street allotments	geograph	2005-02-27	SO8700	593	200	51.703728	-2.183152	1
+11	5	Helena Downton	The Park, Minchinhampton	geograph	2005-02-27	SO8701	593	201	51.712091	-2.182318	1
+12	5	Helena Downton	Roath Park	geograph	2004-02-27	ST1879	524	179	51.508529	-3.175732	1
+149	12	Paul Allison	"Beggars Bridge" Glaisdale.	geograph	0000-00-00	NZ7805	684	505	54.438859	-0.791182	1
+655	66	Alan Simkins	Chûn Quoit	geograph	2003-03-09	SW4033	346	33	50.148112	-5.637954	1
+7870825	39302	Jaggery	NNW along Ty Coch Lane, Cwmbran	geograph	2024-09-08	ST2993	535	193	51.637792	-3.026476	1
+7870826	3546	Rob Farrow	Kilmory Knap Chapel - Grave slabs 30,31,32 & 33	accepted	2024-08-27	NR7075	376	675	55.913973	-5.677875	1
+7870827	7056	Eric Jones	Moneyscalp Wood from the Tullyree Road/B180 junction	geograph	2024-08-30	J3232	342	481	54.226329	-5.972917	2
+7870828	32682	Roy Hughes	The railway heading westbound from Gretna Green	geograph	2024-09-07	NY3167	537	567	55.000037	-3.072519	1
+7870829	78549	Richard Vince	Carbrook tram stop, Sheffield Supertram	geograph	2024-06-22	SK3990	645	390	53.405545	-1.410925	1
+7870830	32682	Roy Hughes	National Cycle Route 7 signpost in Gretna Green	accepted	2024-09-07	NY3267	538	567	55.000927	-3.063319	1
+7870831	34784	Stephen Richards	Star Inn, Back Hope Street, Salford	geograph	2017-05-30	SD8201	588	401	53.506926	-2.264121	1
+7870832	32682	Roy Hughes	Gretna Green at Glasgow Road junction	geograph	2024-09-07	NY3168	537	568	55.002515	-3.066644	1
+7870833	123467	Brian Deegan	St Oswald Detached (200m) Bell Tower, Kirkoswald	geograph	2024-08-13	NY5540	561	540	54.761685	-2.692603	1
+7870834	26362	Jim Barton	Waulkmill and Queen Mary's Bridge, Minnigaff	geograph	2024-09-03	NX4166	447	566	54.971828	-4.480424	1
+6246853	35313	JThomas	The \tRattlebone Inn, Sherston	geograph	2019-07-14	ST8585	591	185	51.572226	-2.212202	1

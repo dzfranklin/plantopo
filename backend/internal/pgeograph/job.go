@@ -26,6 +26,6 @@ func (w *Worker) Timeout(_ *river.Job[JobArgs]) time.Duration {
 	return time.Hour * 4
 }
 
-func (w *Worker) Work(_ context.Context, _ *river.Job[JobArgs]) error {
-	return importLatest(w.env)
+func (w *Worker) Work(ctx context.Context, _ *river.Job[JobArgs]) error {
+	return importLatest(ctx, w.env)
 }

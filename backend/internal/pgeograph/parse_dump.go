@@ -1,17 +1,15 @@
 package pgeograph
 
 import (
+	"bufio"
 	"compress/gzip"
 	_ "embed"
 	"errors"
 	"fmt"
-	"github.com/pingcap/tidb/pkg/parser"
-	"github.com/pingcap/tidb/pkg/parser/ast"
-	"github.com/pingcap/tidb/pkg/parser/test_driver"
 	"golang.org/x/text/encoding/charmap"
 	"io"
-	"log/slog"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -36,57 +34,7 @@ type gridimage struct {
 	OriginalHeight int
 }
 
-/*
-CREATE TABLE `gridimage_base` (
-0:  `gridimage_id` int(11) NOT NULL DEFAULT 0,
-1:  `user_id` int(11) NOT NULL DEFAULT 0,
-2:  `realname` varchar(128) NOT NULL DEFAULT '',
-3:  `title` varchar(128) NOT NULL,
-4:  `moderation_status` enum('rejected','pending','accepted','geograph') NOT NULL DEFAULT 'pending',
-5:  `imagetaken` date NOT NULL DEFAULT '0000-00-00',
-6:  `grid_reference` varchar(6) NOT NULL DEFAULT '',
-7:  `x` smallint(3) NOT NULL DEFAULT 0,
-8:  `y` smallint(4) NOT NULL DEFAULT 0,
-9:  `wgs84_lat` decimal(10,6) NOT NULL DEFAULT 0.000000,
-10:  `wgs84_long` decimal(10,6) NOT NULL DEFAULT 0.000000,
-11:  `reference_index` tinyint(1) NOT NULL DEFAULT 0,
-  PRIMARY KEY (`gridimage_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
-*/
-
-const (
-	baseIndexGridimageID = 0
-	baseIndexUserID      = 1
-	baseIndexRealname    = 2
-	baseIndexTitle       = 3
-	baseIndexImageTaken  = 5
-	baseIndexWGS84Lat    = 9
-	baseIndexWGS84Long   = 10
-)
-
-/*
-DROP TABLE IF EXISTS `gridimage_size`;
-CREATE TABLE `gridimage_size` (
-  0: `gridimage_id` int(10) unsigned NOT NULL,
-  1: `width` smallint(5) unsigned NOT NULL,
-  2: `height` smallint(5) unsigned NOT NULL,
-  3: `original_width` mediumint(8) unsigned NOT NULL DEFAULT 0,
-  4: `original_height` mediumint(8) unsigned NOT NULL DEFAULT 0,
-  5: `original_diff` enum('unknown','no','yes') DEFAULT 'unknown',
-  PRIMARY KEY (`gridimage_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
-*/
-
-const (
-	sizeIndexGridimageID    = 0
-	sizeIndexWidth          = 1
-	sizeIndexHeight         = 2
-	sizeIndexOriginalWidth  = 3
-	sizeIndexOriginalHeight = 4
-)
-
 func parseDump(
-	l *slog.Logger,
 	cutoff int,
 	baseFile, sizeFile io.Reader,
 ) (nextCutoff int, gridimages map[int]*gridimage, err error) {
@@ -103,13 +51,9 @@ func parseDump(
 		}
 	}()
 
-	p := parser.New()
+	gridimages = parseBaseDump(cutoff, baseFile)
 
-	baseNodes := parseDumpFile(l, p, baseFile)
-	gridimages = parseBaseDump(cutoff, baseNodes)
-
-	sizeNodes := parseDumpFile(l, p, sizeFile)
-	parseSizeDump(cutoff, sizeNodes, gridimages)
+	parseSizeDump(cutoff, sizeFile, gridimages)
 
 	nextCutoff = cutoff
 	for id := range gridimages {
@@ -119,100 +63,140 @@ func parseDump(
 	return
 }
 
-func parseBaseDump(cutoff int, nodes []ast.StmtNode) map[int]*gridimage {
+func parseBaseDump(cutoff int, baseFile io.Reader) map[int]*gridimage {
+	r := readDumpFile(baseFile)
+
+	header, headerErr := r.Read()
+	if headerErr != nil {
+		panic(headerErr)
+	}
+
+	idI := colIndex(header, "gridimage_id")
+	userIDI := colIndex(header, "user_id")
+	realnameI := colIndex(header, "realname")
+	titleI := colIndex(header, "title")
+	takenI := colIndex(header, "imagetaken")
+	latI := colIndex(header, "wgs84_lat")
+	lngI := colIndex(header, "wgs84_long")
+
 	out := make(map[int]*gridimage)
-	for _, node := range nodes {
-		if stmt, ok := node.(*ast.InsertStmt); ok {
-			for _, list := range stmt.Lists {
-				gridimageID := intNodeValue(list[baseIndexGridimageID])
-				if gridimageID <= cutoff {
-					continue
-				}
-				entry := &gridimage{
-					GridimageID: gridimageID,
-					UserID:      intNodeValue(list[baseIndexUserID]),
-					Realname:    stringNodeValue(list[baseIndexRealname]),
-					Title:       stringNodeValue(list[baseIndexTitle]),
-					ImageTaken:  dateNodeValue(list[baseIndexImageTaken]),
-					WGS84Lat:    floatNodeValue(list[baseIndexWGS84Lat]),
-					WGS84Long:   floatNodeValue(list[baseIndexWGS84Long]),
-				}
-				out[entry.GridimageID] = entry
+	for {
+		row, rowErr := r.Read()
+		if errors.Is(rowErr, io.EOF) {
+			break
+		} else if rowErr != nil {
+			panic(rowErr)
+		}
+
+		id := intValue(row[idI])
+
+		if id > cutoff {
+			out[id] = &gridimage{
+				GridimageID: id,
+				UserID:      intValue(row[userIDI]),
+				Realname:    stringValue(row[realnameI]),
+				Title:       stringValue(row[titleI]),
+				ImageTaken:  dateValue(row[takenI]),
+				WGS84Lat:    floatValue(row[latI]),
+				WGS84Long:   floatValue(row[lngI]),
 			}
 		}
 	}
 	return out
 }
 
-func parseSizeDump(cutoff int, nodes []ast.StmtNode, gridimages map[int]*gridimage) {
-	for _, node := range nodes {
-		if stmt, ok := node.(*ast.InsertStmt); ok {
-			for _, list := range stmt.Lists {
-				gridimageID := intNodeValue(list[sizeIndexGridimageID])
+func parseSizeDump(cutoff int, sizeFile io.Reader, gridimages map[int]*gridimage) {
+	r := readDumpFile(sizeFile)
 
-				if gridimageID <= cutoff {
-					continue
-				}
+	header, headerErr := r.Read()
+	if headerErr != nil {
+		panic(headerErr)
+	}
 
-				entry, gridimageOk := gridimages[gridimageID]
-				if !gridimageOk {
-					continue
-				}
+	idI := colIndex(header, "gridimage_id")
+	widthI := colIndex(header, "width")
+	heightI := colIndex(header, "height")
+	originalWidthI := colIndex(header, "original_width")
+	originalHeightI := colIndex(header, "original_height")
 
-				entry.Width = intNodeValue(list[sizeIndexWidth])
-				entry.Height = intNodeValue(list[sizeIndexHeight])
-				entry.OriginalWidth = intNodeValue(list[sizeIndexOriginalWidth])
-				entry.OriginalHeight = intNodeValue(list[sizeIndexOriginalHeight])
-			}
+	for {
+		row, rowErr := r.Read()
+		if errors.Is(rowErr, io.EOF) {
+			break
+		} else if rowErr != nil {
+			panic(rowErr)
 		}
+
+		id := intValue(row[idI])
+
+		if id <= cutoff {
+			continue
+		}
+
+		entry, hasEntry := gridimages[id]
+		if !hasEntry {
+			continue
+		}
+
+		entry.Width = intValue(row[widthI])
+		entry.Height = intValue(row[heightI])
+		entry.OriginalWidth = intValue(row[originalWidthI])
+		entry.OriginalHeight = intValue(row[originalHeightI])
 	}
 }
 
-func parseDumpFile(l *slog.Logger, p *parser.Parser, r io.Reader) []ast.StmtNode {
-	unzippedR, unzipErr := gzip.NewReader(r)
+func readDumpFile(input io.Reader) *dumpFileReader {
+	unzipped, unzipErr := gzip.NewReader(input)
 	if unzipErr != nil {
 		panic(unzipErr)
 	}
+	decoded := charmap.ISO8859_1.NewDecoder().Reader(unzipped)
 
-	decodedR := charmap.ISO8859_1.NewDecoder().Reader(unzippedR)
-	decodedBytes, decodeErr := io.ReadAll(decodedR)
-	if decodeErr != nil {
-		panic(decodeErr)
-	}
-
-	nodes, warns, parseErr := p.Parse(string(decodedBytes), "latin1", "latin1_swedish_ci")
-	if parseErr != nil {
-		panic(parseErr)
-	}
-	for _, warn := range warns {
-		l.Warn("parse dump file warning", "warning", warn)
-	}
-
-	return nodes
+	return &dumpFileReader{bufio.NewReader(decoded)}
 }
 
-func intNodeValue(node ast.ExprNode) int {
-	stmt := node.(*test_driver.ValueExpr)
-	if stmt.Kind() != test_driver.KindInt64 {
-		panic("wrong kind")
-	}
-	v := stmt.GetInt64()
-	if v > math.MaxInt {
-		panic("int too big")
-	}
-	return int(v)
+type dumpFileReader struct {
+	inner *bufio.Reader
 }
 
-func stringNodeValue(node ast.ExprNode) string {
-	stmt := node.(*test_driver.ValueExpr)
-	if stmt.Kind() != test_driver.KindString {
-		panic("wrong kind")
+func (r *dumpFileReader) Read() ([]string, error) {
+	s, readErr := r.inner.ReadString('\n')
+	if readErr != nil {
+		return nil, readErr
 	}
-	return stmt.GetString()
+
+	parts := strings.Split(s, "\t")
+	for i, part := range parts {
+		parts[i] = strings.ReplaceAll(strings.ReplaceAll(part, "\\t", "\t"), "\\n", "\n")
+	}
+
+	return parts, nil
 }
 
-func floatNodeValue(node ast.ExprNode) float64 {
-	v := stringNodeValue(node)
+func colIndex(header []string, col string) int {
+	i := slices.Index(header, col)
+	if i < 0 {
+		panic(col + " not in header")
+	}
+	return i
+}
+
+func intValue(v string) int {
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	if n > math.MaxInt {
+		panic("n too big")
+	}
+	return int(n)
+}
+
+func stringValue(v string) string {
+	return strings.TrimSpace(v)
+}
+
+func floatValue(v string) float64 {
 	f, err := strconv.ParseFloat(v, 64)
 	if err != nil {
 		panic(err)
@@ -220,10 +204,10 @@ func floatNodeValue(node ast.ExprNode) float64 {
 	return f
 }
 
-func dateNodeValue(node ast.ExprNode) time.Time {
-	v := stringNodeValue(node)
+func dateValue(v string) time.Time {
+	s := stringValue(v)
 
-	parts := strings.Split(v, "-")
+	parts := strings.Split(s, "-")
 	if len(parts) != 3 {
 		panic("malformed time: " + v)
 	}

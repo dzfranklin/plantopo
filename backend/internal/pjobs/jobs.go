@@ -69,6 +69,8 @@ func Register(
 	))
 
 	if env.IsProduction {
+		env.Logger.Info("registering production periodic jobs")
+
 		periodic.Add(river.NewPeriodicJob(
 			river.PeriodicInterval(time.Hour),
 			func() (river.JobArgs, *river.InsertOpts) {

@@ -149,7 +149,9 @@ func (r *Geophotos) GetGeographIndexProgress() (int, error) {
 	ctx, cancel := defaultContext()
 	defer cancel()
 	row, err := q.GetGeographIndexProgress(ctx, r.db)
-	if err != nil {
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil
+	} else if err != nil {
 		return 0, err
 	}
 	return int(row.Int32), err

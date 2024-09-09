@@ -2,59 +2,90 @@ package pgeograph
 
 import (
 	"bytes"
+	"compress/gzip"
 	_ "embed"
-	"github.com/dzfranklin/plantopo/backend/internal/ptest"
 	"github.com/dzfranklin/plantopo/backend/internal/ptime"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io"
 	"testing"
 )
 
 // NOTE: I hand-edited the sample files
 
-//go:embed test_samples/gridimage_base_sample.mysql.gz
+//go:embed test_samples/gridimage_base.tsv
 var sampleGridimageBase []byte
 
-//go:embed test_samples/gridimage_size_sample.mysql.gz
+//go:embed test_samples/gridimage_size.tsv
 var sampleGridimageSize []byte
 
-func TestParseSample(t *testing.T) {
-	l := ptest.NewTestLogger(t)
-	baseR := bytes.NewReader(sampleGridimageBase)
-	sizeR := bytes.NewReader(sampleGridimageSize)
+func compressedReader(v []byte) io.Reader {
+	var b bytes.Buffer
+	w, err := gzip.NewWriterLevel(&b, gzip.NoCompression)
+	if err != nil {
+		panic(err)
+	}
+	if _, wErr := w.Write(v); wErr != nil {
+		panic(wErr)
+	}
+	if wErr := w.Close(); wErr != nil {
+		panic(wErr)
+	}
 
-	nextCutoff, gridimages, err := parseDump(l, -1, baseR, sizeR)
+	return &b
+}
+
+func TestParseSample(t *testing.T) {
+	baseFile := compressedReader(sampleGridimageBase)
+	sizeFile := compressedReader(sampleGridimageSize)
+
+	_, gridimages, err := parseDump(-1, baseFile, sizeFile)
 	require.NoError(t, err)
 
-	assert.Equal(t, 12, nextCutoff)
-	assert.Len(t, gridimages, 9)
-
-	expected := gridimage{
-		GridimageID:    5,
+	earlyExpected := gridimage{
+		GridimageID:    4,
 		UserID:         5,
 		Realname:       "Helena Downton",
-		Title:          "Lake at Woodchester Park",
-		ImageTaken:     ptime.DayStart(2004, 6, 29),
-		WGS84Lat:       51.711956,
-		WGS84Long:      -2.254684,
+		Title:          "Woodchester Mansion",
+		ImageTaken:     ptime.DayStart(2004, 06, 29),
+		WGS84Lat:       51.710646,
+		WGS84Long:      -2.277400,
 		Width:          640,
 		Height:         480,
-		OriginalWidth:  1024,
-		OriginalHeight: 1024,
+		OriginalWidth:  0,
+		OriginalHeight: 0,
 	}
-	got := *gridimages[5]
+	assert.Equal(t, earlyExpected, *gridimages[4])
 
-	assert.Equal(t, expected, got)
+	lateExpected := gridimage{
+		GridimageID:    7870834,
+		UserID:         26362,
+		Realname:       "Jim Barton",
+		Title:          "Waulkmill and Queen Mary's Bridge, Minnigaff",
+		ImageTaken:     ptime.DayStart(2024, 9, 3),
+		WGS84Lat:       54.971828,
+		WGS84Long:      -4.480424,
+		Width:          640,
+		Height:         424,
+		OriginalWidth:  1600,
+		OriginalHeight: 1060,
+	}
+	assert.Equal(t, lateExpected, *gridimages[7870834])
+
+	assert.Equal(t, "Chûn Quoit", gridimages[655].Title, "non-ascii")
+
+	assert.Equal(t, `"Beggars Bridge" Glaisdale.`, gridimages[149].Title, "internal quotes")
+
+	assert.Equal(t, "The \tRattlebone Inn, Sherston", gridimages[6246853].Title, "escaped tab")
 }
 
 func TestParseWithCutoff(t *testing.T) {
-	l := ptest.NewTestLogger(t)
-	baseR := bytes.NewReader(sampleGridimageBase)
-	sizeR := bytes.NewReader(sampleGridimageSize)
+	baseFile := compressedReader(sampleGridimageBase)
+	sizeFile := compressedReader(sampleGridimageSize)
 
-	nextCutoff, gridimages, err := parseDump(l, 10, baseR, sizeR)
+	nextCutoff, gridimages, err := parseDump(7870832, baseFile, sizeFile)
 	require.NoError(t, err)
 
-	assert.Equal(t, 12, nextCutoff)
+	assert.Equal(t, 7870834, nextCutoff)
 	assert.Len(t, gridimages, 2)
 }
