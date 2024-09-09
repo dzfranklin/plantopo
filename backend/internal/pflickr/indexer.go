@@ -102,7 +102,7 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 			return pageErr
 		}
 
-		i.l.Info("searched", "len", len(page.Photo),
+		i.l.Info("searched", "region", region.ID, "len", len(page.Photo),
 			"min", params.MinUploadDate, "max", params.MaxUploadDate, "page", params.Page,
 			"searchWindow", fmt.Sprintf("%dd", searchWindow/(24*time.Hour)),
 			"latestSeen", latestSeen, "searchElapsed", searchElapsed.Seconds(),
