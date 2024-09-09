@@ -6,7 +6,6 @@ require (
 	cgt.name/pkg/go-mwclient v1.3.0
 	github.com/DataDog/go-sqllexer v0.0.14
 	github.com/andybalholm/cascadia v1.3.2
-	github.com/bsm/redislock v0.9.4
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cridenour/go-postgis v1.0.0
 	github.com/go-faster/errors v0.7.1
@@ -103,6 +102,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect

@@ -121,26 +121,22 @@ func (r *Geophotos) FlickrIndexRegions() ([]FlickrIndexRegion, error) {
 	}), nil
 }
 
-func (r *Geophotos) UpdateFlickrIndexProgress(region int, latest time.Time, page int) error {
+func (r *Geophotos) UpdateFlickrIndexProgress(region int, latest time.Time) error {
 	ctx, cancel := defaultContext()
 	defer cancel()
-	return q.UpdateFlickrIndexProgress(ctx, r.db, psqlc.UpdateFlickrIndexProgressParams{
-		RegionID: int32(region),
-		Latest:   pgTimestamptz(latest),
-		Page:     pgOptInt4(page),
-	})
+	return q.UpdateFlickrIndexProgress(ctx, r.db, int32(region), pgTimestamptz(latest))
 }
 
-func (r *Geophotos) GetFlickrIndexProgress(region int) (time.Time, int, error) {
+func (r *Geophotos) GetFlickrIndexProgress(region int) (time.Time, error) {
 	ctx, cancel := defaultContext()
 	defer cancel()
 	row, err := q.GetFlickrIndexProgress(ctx, r.db, int32(region))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return time.Time{}, 0, nil
+		return time.Time{}, nil
 	} else if err != nil {
-		return time.Time{}, 0, err
+		return time.Time{}, err
 	}
-	return row.Latest.Time, int(row.Page.Int32), nil
+	return row.Time, nil
 }
 
 func (r *Geophotos) UpdateGeographIndexProgress(cutoff int) error {

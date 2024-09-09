@@ -51,26 +51,21 @@ func (q *Queries) CreateFlickrIndexRegion(ctx context.Context, db DBTX, arg Crea
 }
 
 const getFlickrIndexProgress = `-- name: GetFlickrIndexProgress :one
-SELECT latest, page
+SELECT latest
 FROM flickr_index_progress
 WHERE region_id = $1
 `
 
-type GetFlickrIndexProgressRow struct {
-	Latest pgtype.Timestamptz
-	Page   pgtype.Int4
-}
-
 // GetFlickrIndexProgress
 //
-//	SELECT latest, page
+//	SELECT latest
 //	FROM flickr_index_progress
 //	WHERE region_id = $1
-func (q *Queries) GetFlickrIndexProgress(ctx context.Context, db DBTX, regionID int32) (GetFlickrIndexProgressRow, error) {
+func (q *Queries) GetFlickrIndexProgress(ctx context.Context, db DBTX, regionID int32) (pgtype.Timestamptz, error) {
 	row := db.QueryRow(ctx, getFlickrIndexProgress, regionID)
-	var i GetFlickrIndexProgressRow
-	err := row.Scan(&i.Latest, &i.Page)
-	return i, err
+	var latest pgtype.Timestamptz
+	err := row.Scan(&latest)
+	return latest, err
 }
 
 const getGeographIndexProgress = `-- name: GetGeographIndexProgress :one
@@ -339,24 +334,18 @@ func (q *Queries) SelectGeophotosByID(ctx context.Context, db DBTX, ids []int64)
 }
 
 const updateFlickrIndexProgress = `-- name: UpdateFlickrIndexProgress :exec
-INSERT INTO flickr_index_progress (region_id, latest, page)
-VALUES ($1, $2, $3)
-ON CONFLICT (region_id) DO UPDATE set latest = $2, page = $3
+INSERT INTO flickr_index_progress (region_id, latest)
+VALUES ($1, $2)
+ON CONFLICT (region_id) DO UPDATE set latest = $2
 `
-
-type UpdateFlickrIndexProgressParams struct {
-	RegionID int32
-	Latest   pgtype.Timestamptz
-	Page     pgtype.Int4
-}
 
 // UpdateFlickrIndexProgress
 //
-//	INSERT INTO flickr_index_progress (region_id, latest, page)
-//	VALUES ($1, $2, $3)
-//	ON CONFLICT (region_id) DO UPDATE set latest = $2, page = $3
-func (q *Queries) UpdateFlickrIndexProgress(ctx context.Context, db DBTX, arg UpdateFlickrIndexProgressParams) error {
-	_, err := db.Exec(ctx, updateFlickrIndexProgress, arg.RegionID, arg.Latest, arg.Page)
+//	INSERT INTO flickr_index_progress (region_id, latest)
+//	VALUES ($1, $2)
+//	ON CONFLICT (region_id) DO UPDATE set latest = $2
+func (q *Queries) UpdateFlickrIndexProgress(ctx context.Context, db DBTX, regionID int32, latest pgtype.Timestamptz) error {
+	_, err := db.Exec(ctx, updateFlickrIndexProgress, regionID, latest)
 	return err
 }
 

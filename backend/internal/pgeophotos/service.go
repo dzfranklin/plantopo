@@ -2,17 +2,22 @@ package pgeophotos
 
 import (
 	"context"
+	"errors"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/pflickr"
+	"github.com/dzfranklin/plantopo/backend/internal/ptime"
 	"golang.org/x/sync/errgroup"
+	"log/slog"
+	"time"
 )
 
 type Service struct {
-	flickr *pflickr.Service
+	l      *slog.Logger
+	flickr *pflickr.Indexer
 }
 
 func New(env *pconfig.Env) *Service {
-	return &Service{flickr: pflickr.NewService(env)}
+	return &Service{flickr: pflickr.NewIndexer(env), l: env.Logger}
 }
 
 func (s *Service) RunIndexer(ctx context.Context) error {
@@ -27,7 +32,18 @@ func (s *Service) RunIndexer(ctx context.Context) error {
 	}()
 
 	group.Go(func() error {
-		return s.flickr.IndexFlickr(ctx)
+		for {
+			if err := s.flickr.IndexOnce(ctx); err != nil {
+				if errors.Is(err, context.Canceled) {
+					return err
+				}
+				s.l.Error("failed to index flickr", "error", err)
+			}
+
+			if err := ptime.Sleep(ctx, time.Minute*15); err != nil {
+				return err
+			}
+		}
 	})
 
 	return group.Wait()

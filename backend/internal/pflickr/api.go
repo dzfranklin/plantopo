@@ -31,8 +31,6 @@ type API struct {
 
 func NewAPI(env *pconfig.Env) *API {
 	c := phttp.NewJSONClient("https://www.flickr.com/services/rest/")
-	c.AddCommonQueryParam("format", "json")
-	c.AddCommonQueryParam("nojsoncallback", "1")
 	c.AddCommonQueryParam("api_key", env.Config.Flickr.APIKey)
 
 	throttleStore, err := throttledredisstore.NewCtx(env.RDB, "flickr_throttle")
@@ -96,6 +94,8 @@ func (a *API) searchForIndex(ctx context.Context, params searchParams) (searchPa
 		Photos partialSearchPage `json:"photos"`
 	}
 	callErr := a.call(ctx, "flickr.photos.search", &container, map[string]string{
+		"format":          "json",
+		"nojsoncallback":  "1",
 		"bbox":            fmt.Sprintf("%.6f,%.6f,%.6f,%.6f", params.BBox.Min.X, params.BBox.Min.Y, params.BBox.Max.X, params.BBox.Max.Y),
 		"min_upload_date": fmt.Sprintf("%d", params.MinUploadDate.Unix()),
 		"max_upload_date": fmt.Sprintf("%d", params.MaxUploadDate.Unix()),
@@ -148,6 +148,7 @@ func (a *API) call(ctx context.Context, method string, resp any, params map[stri
 				return err
 			}
 		}
+		a.l.Info("requesting", "query", query.Encode())
 		err := a.c.Get(ctx, resp, "?"+query.Encode())
 		if err != nil {
 			if !errors.Is(err, context.Canceled) {

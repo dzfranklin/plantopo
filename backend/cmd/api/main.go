@@ -46,7 +46,7 @@ func main() {
 			return
 		}
 
-		hardStopCtx, hardStopCtxCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		hardStopCtx, hardStopCtxCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer hardStopCtxCancel()
 
 		// As long as all jobs respect context cancellation, StopAndCancel will

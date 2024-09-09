@@ -7,7 +7,7 @@ filename: "mock_{{.InterfaceName}}_test.go"
 packages:
   github.com/dzfranklin/plantopo/backend/internal/pflickr:
     interfaces:
-      flickrSearcher:
+      indexerRepo:
   github.com/dzfranklin/plantopo/backend/internal/pgeograph:
     interfaces:
       ImportRepo:

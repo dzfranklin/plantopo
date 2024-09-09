@@ -17,13 +17,12 @@ SELECT *
 FROM flickr_index_regions;
 
 -- name: UpdateFlickrIndexProgress :exec
-INSERT INTO flickr_index_progress (region_id, latest, page)
-VALUES (@region_id, @latest, @page)
-ON CONFLICT (region_id) DO UPDATE set latest = @latest,
-                                      page   = @page;
+INSERT INTO flickr_index_progress (region_id, latest)
+VALUES (@region_id, @latest)
+ON CONFLICT (region_id) DO UPDATE set latest = @latest;
 
 -- name: GetFlickrIndexProgress :one
-SELECT latest, page
+SELECT latest
 FROM flickr_index_progress
 WHERE region_id = @region_id;
 

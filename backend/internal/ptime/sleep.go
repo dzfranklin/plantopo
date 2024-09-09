@@ -32,3 +32,17 @@ func DayStart(year int, month time.Month, day int) time.Time {
 func DayEnd(year int, month time.Month, day int) time.Time {
 	return time.Date(year, month, day, 24, 60, 60, 0, time.UTC)
 }
+
+func Min(a, b time.Time) time.Time {
+	if a.Before(b) {
+		return a
+	}
+	return b
+}
+
+func Max(a, b time.Time) time.Time {
+	if a.After(b) {
+		return a
+	}
+	return b
+}

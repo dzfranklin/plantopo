@@ -73,7 +73,6 @@ type BritishAndIrishHillPhoto struct {
 type FlickrIndexProgress struct {
 	RegionID int32
 	Latest   pgtype.Timestamptz
-	Page     pgtype.Int4
 }
 
 type FlickrIndexRegion struct {
