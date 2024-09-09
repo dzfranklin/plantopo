@@ -85,6 +85,7 @@ func MustGet(url string) []byte {
 	if err != nil {
 		panic(err)
 	}
+	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		panic(err)
@@ -127,6 +128,8 @@ func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, err
 	}
 
 	if c.opts.ErrOnStatus && resp.StatusCode >= 400 {
+		defer resp.Body.Close()
+
 		body := ""
 		bodyReader := NewMaxBytesReader(resp.Body, 10*1024)
 		if bodyBytes, err := io.ReadAll(bodyReader); err == nil {
