@@ -20,36 +20,15 @@ import (
 	"time"
 )
 
-func mockSingleRegionIndexer(t *testing.T, initialTime time.Time) (*MockindexerRepo, *Indexer) {
-	t.Helper()
-	l := ptest.NewTestLogger(t)
-	repo := NewMockindexerRepo(t)
-	flickr := newMockFlickr()
-
-	indexer := &Indexer{l: l, flickr: flickr, repo: repo}
-
-	rect := geometry.Rect{Min: geometry.Point{X: 1, Y: 1}, Max: geometry.Point{X: 2, Y: 2}}
-	region := prepo.FlickrIndexRegion{ID: 1, Name: "region", Rect: rect}
-	repo.EXPECT().FlickrIndexRegions().Return([]prepo.FlickrIndexRegion{region}, nil)
-
-	progressTime := initialTime
-	repo.EXPECT().GetFlickrIndexProgress(1).Return(progressTime, nil)
-	repo.EXPECT().UpdateFlickrIndexProgress(1, mock.Anything).
-		Run(func(_ int, latest time.Time) {
-			progressTime = latest
-		}).
-		Return(nil)
-
-	return repo, indexer
-}
-
 type mockFlickr struct {
-	photos []searchPagePhoto
+	photos   []searchPagePhoto
+	searches int
 }
 
 const mockPhotoCount = 5000
 
 var mockPhotos []searchPagePhoto
+var mockTime time.Time
 
 func init() {
 	t := flickrFounding.Add(12 * time.Hour)
@@ -76,6 +55,8 @@ func init() {
 		nextID++
 	}
 
+	mockTime = time.Time(mockPhotos[len(mockPhotos)-1].DateUpload).Add(time.Hour * 24)
+
 	if len(mockPhotos) != mockPhotoCount {
 		panic("assertion failed")
 	}
@@ -85,7 +66,37 @@ func newMockFlickr() *mockFlickr {
 	return &mockFlickr{photos: mockPhotos}
 }
 
+func mockSingleRegionIndexer(t *testing.T, initialTime time.Time) (*MockindexerRepo, *Indexer) {
+	t.Helper()
+	l := ptest.NewTestLogger(t)
+	repo := NewMockindexerRepo(t)
+	flickr := newMockFlickr()
+	clock := NewMockclockProvider(t)
+
+	indexer := &Indexer{l: l, flickr: flickr, repo: repo, clock: clock}
+
+	clock.EXPECT().Now().Return(mockTime)
+
+	rect := geometry.Rect{Min: geometry.Point{X: 1, Y: 1}, Max: geometry.Point{X: 2, Y: 2}}
+	region := prepo.FlickrIndexRegion{ID: 1, Name: "region", Rect: rect}
+	repo.EXPECT().FlickrIndexRegions().Return([]prepo.FlickrIndexRegion{region}, nil)
+
+	progressTime := initialTime
+	repo.EXPECT().GetFlickrIndexProgress(1).RunAndReturn(func(_ int) (time.Time, error) {
+		return progressTime, nil
+	})
+	repo.EXPECT().UpdateFlickrIndexProgress(1, mock.Anything).
+		Run(func(_ int, latest time.Time) {
+			progressTime = latest
+		}).
+		Return(nil)
+
+	return repo, indexer
+}
+
 func (m *mockFlickr) searchForIndex(_ context.Context, params searchParams) (searchPage, error) {
+	m.searches++
+
 	pageSize := 250
 	matching := pslices.Filter(m.photos, func(photo searchPagePhoto) bool {
 		du := time.Time(photo.DateUpload)
@@ -119,7 +130,11 @@ func expectPhotosToBeImported(t *testing.T, repo *MockindexerRepo, cutoff time.T
 	t.Cleanup(func() {
 		excess := 0
 		for _, photo := range mockPhotos {
-			if time.Time(photo.DateUpload).Before(cutoff) {
+			du := time.Time(photo.DateUpload)
+			if du.Before(cutoff) || du.After(mockTime.Add(-indexUploadedSince)) {
+				if expecting[photo.ID] != 0 {
+					t.Error("expected photo not to be imported", photo.ID)
+				}
 				continue
 			}
 
@@ -150,6 +165,19 @@ func TestPartialIndex(t *testing.T) {
 
 	err := indexer.IndexOnce(context.Background())
 	require.NoError(t, err)
+}
+
+func TestSettles(t *testing.T) {
+	repo, indexer := mockSingleRegionIndexer(t, time.Time{})
+	expectPhotosToBeImported(t, repo, time.Time{})
+
+	require.NoError(t, indexer.IndexOnce(context.Background()))
+
+	searchesPre := indexer.flickr.(*mockFlickr).searches
+	require.NoError(t, indexer.IndexOnce(context.Background()))
+	searchesPost := indexer.flickr.(*mockFlickr).searches
+
+	assert.Equal(t, searchesPre, searchesPost)
 }
 
 func TestSmoke(t *testing.T) {

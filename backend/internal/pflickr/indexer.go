@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	flickrSource        = 1
-	reindexAfterElapsed = time.Hour * 24 * 30
+	flickrSource         = 1
+	indexUploadedSince   = time.Hour * 24 * 90
+	waitBeforeReindexing = time.Hour * 24 * 7
 )
 
 var flickrFounding = ptime.DayStart(2005, time.July, 27)
@@ -29,10 +30,15 @@ type indexerRepo interface {
 	UpdateFlickrIndexProgress(region int, latest time.Time) error
 }
 
+type clockProvider interface {
+	Now() time.Time
+}
+
 type Indexer struct {
 	l      *slog.Logger
 	flickr indexerSearcher
 	repo   indexerRepo
+	clock  clockProvider
 }
 
 func NewIndexer(env *pconfig.Env) *Indexer {
@@ -40,6 +46,7 @@ func NewIndexer(env *pconfig.Env) *Indexer {
 		l:      env.Logger,
 		flickr: NewAPI(env),
 		repo:   prepo.New(env).Geophotos,
+		clock:  systemClockProvider{},
 	}
 }
 
@@ -67,12 +74,12 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 		startTime = flickrFounding
 	}
 
-	if time.Since(startTime) < reindexAfterElapsed {
+	if i.clock.Now().Sub(startTime) < indexUploadedSince+waitBeforeReindexing {
 		i.l.Debug("not ready for reindex")
 		return nil
 	}
 
-	cutoff := time.Now().Add(-reindexAfterElapsed)
+	cutoff := i.clock.Now().Add(-indexUploadedSince)
 	searchWindow := time.Hour * 24 * 100
 	maxSearchWindow := time.Hour * 24 * 365
 	minSearchWindow := time.Hour
@@ -114,7 +121,7 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 					return err
 				}
 
-				photo := mapPhoto(entry, region.ID)
+				photo := i.mapPhoto(entry, region.ID)
 
 				if photo.URL == "" {
 					noURL++
@@ -142,6 +149,9 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 		wouldHaveSeenLast := params.Page >= page.Pages &&
 			(params.MaxUploadDate.Equal(cutoff) || params.MaxUploadDate.After(cutoff))
 		if passedCutoff || wouldHaveSeenLast {
+			if err := i.repo.UpdateFlickrIndexProgress(region.ID, latestSeen); err != nil {
+				return err
+			}
 			return nil
 		}
 
@@ -167,7 +177,7 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 	}
 }
 
-func mapPhoto(photo searchPagePhoto, indexRegionID int) prepo.Geophoto {
+func (i *Indexer) mapPhoto(photo searchPagePhoto, indexRegionID int) prepo.Geophoto {
 	var url string
 	var width, height int
 	if photo.OriginalURL != "" {
@@ -184,7 +194,7 @@ func mapPhoto(photo searchPagePhoto, indexRegionID int) prepo.Geophoto {
 		Source:          flickrSource,
 		SourceID:        photo.ID,
 		IndexRegionID:   indexRegionID,
-		IndexedAt:       time.Now(),
+		IndexedAt:       i.clock.Now(),
 		AttributionText: fmt.Sprintf("%s (flickr)", photo.OwnerName),
 		AttributionLink: fmt.Sprintf("https://flickr.com/photos/%s/%s", photo.Owner, photo.ID),
 		Licenses:        []int{photo.License},
@@ -199,4 +209,10 @@ func mapPhoto(photo searchPagePhoto, indexRegionID int) prepo.Geophoto {
 		Title:           photo.Title,
 		DateTaken:       time.Time(photo.DateTaken),
 	}
+}
+
+type systemClockProvider struct{}
+
+func (p systemClockProvider) Now() time.Time {
+	return time.Now()
 }

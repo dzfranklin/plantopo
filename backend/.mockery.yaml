@@ -8,6 +8,7 @@ packages:
   github.com/dzfranklin/plantopo/backend/internal/pflickr:
     interfaces:
       indexerRepo:
+      clockProvider:
   github.com/dzfranklin/plantopo/backend/internal/pgeograph:
     interfaces:
       ImportRepo:
