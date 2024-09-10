@@ -29,7 +29,6 @@ export function GeophotosMap({
         map.addSource('geophotos', {
           type: 'vector',
           tiles: [API_ENDPOINT + 'geophotos/tile/{z}/{x}/{y}.mvt.gz'],
-          minzoom: 9,
           maxZoom: 16,
         });
 
@@ -39,20 +38,43 @@ export function GeophotosMap({
           type: 'symbol',
           source: 'geophotos',
           'source-layer': 'default',
-          filter: ['>=', ['zoom'], 9],
           layout: {
             'icon-image': 'pmarker',
             'icon-size': [
               'interpolate',
               ['linear'],
               ['zoom'],
-              11,
-              0.25,
-              15,
-              0.5,
-              20,
               1,
+              [
+                '*',
+                0.05,
+                ['min', ['^', 1.001, ['coalesce', ['get', 'count'], 1]], 10],
+              ],
+              11,
+              [
+                '*',
+                0.25,
+                ['min', ['^', 1.001, ['coalesce', ['get', 'count'], 1]], 10],
+              ],
+              20,
+              [
+                '*',
+                1,
+                ['min', ['^', 1.001, ['coalesce', ['get', 'count'], 1]], 10],
+              ],
             ],
+            /*
+            'icon-size': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              11,
+              ['*', 0.25, ['coalesce', ['get', 'count'], 1]],
+              15,
+              ['*', 0.5, ['coalesce', ['get', 'count'], 1]],
+              20,
+              ['*', 1, ['coalesce', ['get', 'count'], 1]],
+            ],*/
             'icon-padding': 0,
             'icon-allow-overlap': true,
             'icon-ignore-placement': true,
@@ -79,6 +101,8 @@ export function GeophotosMap({
           ];
           let fs = map.queryRenderedFeatures(bbox, { layers: ['geophoto'] });
           fs = fs.slice(0, Math.min(fs.length, 25));
+          console.log(fs);
+          return; // TODO;
 
           for (const f of selected) {
             map.setFeatureState(

@@ -1,6 +1,6 @@
 module github.com/dzfranklin/plantopo/backend
 
-go 1.22.5
+go 1.23.0
 
 require (
 	cgt.name/pkg/go-mwclient v1.3.0
@@ -8,9 +8,11 @@ require (
 	github.com/andybalholm/cascadia v1.3.2
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cridenour/go-postgis v1.0.0
+	github.com/flatgeobuf/flatgeobuf/src/go v0.0.0-20240906191217-1d3647cec277
 	github.com/go-faster/errors v0.7.1
 	github.com/go-faster/jx v1.1.0
 	github.com/go-playground/form v3.1.4+incompatible
+	github.com/google/flatbuffers v24.3.25+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.14.0
 	github.com/hasura/go-graphql-client v0.13.0

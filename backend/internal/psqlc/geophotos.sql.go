@@ -184,20 +184,68 @@ func (q *Queries) ListFlickrIndexRegions(ctx context.Context, db DBTX) ([]Flickr
 	return items, nil
 }
 
+const selectAllGeophotos = `-- name: SelectAllGeophotos :many
+SELECT id, ST_X(point::geometry) as lng, ST_Y(point::geometry) as lat
+FROM geophotos
+WHERE id > $1
+ORDER BY id
+LIMIT 1000
+`
+
+type SelectAllGeophotosRow struct {
+	ID  int64
+	Lng pgtype.Float8
+	Lat pgtype.Float8
+}
+
+// SelectAllGeophotos
+//
+//	SELECT id, ST_X(point::geometry) as lng, ST_Y(point::geometry) as lat
+//	FROM geophotos
+//	WHERE id > $1
+//	ORDER BY id
+//	LIMIT 1000
+func (q *Queries) SelectAllGeophotos(ctx context.Context, db DBTX, cursor int64) ([]SelectAllGeophotosRow, error) {
+	rows, err := db.Query(ctx, selectAllGeophotos, cursor)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SelectAllGeophotosRow
+	for rows.Next() {
+		var i SelectAllGeophotosRow
+		if err := rows.Scan(&i.ID, &i.Lng, &i.Lat); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const selectGeophotoTile = `-- name: SelectGeophotoTile :one
-WITH mvtgeom AS
-         (SELECT ST_AsMVTGeom(
-                         ST_Transform(point::geometry, 3857),
-                         ST_TileEnvelope($1, $2, $3),
-                         extent => 4096,
-                         buffer => 256,
-                         clip_geom => true
-                 ) AS geom,
-                 id
-          FROM geophotos
-          WHERE ST_Transform(point::geometry, 3857) && ST_TileEnvelope($1, $2, $3, margin => (64.0 / 4096)))
-SELECT ST_AsMVT(mvtgeom.*, 'default', 4096, 'geom', 'id')
-FROM mvtgeom
+SELECT ST_AsMVT(tile.*, 'default', 4096, 'geom') as tile
+FROM (SELECT ST_AsMVTGeom(
+                     ST_Transform(center::geometry, 3857),
+                     ST_TileEnvelope($1::integer, $2::integer, $3::integer),
+                     extent => 4096,
+                     buffer => 256,
+                     clip_geom => true
+             ) AS geom,
+             count
+      FROM (SELECT ST_Centroid(ST_Collect(ST_Transform(point::geometry, 3857))) as center,
+                   count(cluster_id)                                            as count
+            FROM (SELECT ST_ClusterDBSCAN(ST_Transform(point::geometry, 3857),
+                         (40075017.0 / (256 * 2 ^ $1)),
+                         1) OVER () AS cluster_id,
+                         point
+                  FROM geophotos
+                  WHERE ST_Transform(point::geometry, 3857) &&
+                        ST_TileEnvelope($1::integer, $2::integer, $3::integer,
+                                        margin => (64.0 / 4096))) AS cluster
+            GROUP BY cluster_id) AS clusters) AS tile
 `
 
 type SelectGeophotoTileParams struct {
@@ -208,24 +256,97 @@ type SelectGeophotoTileParams struct {
 
 // SelectGeophotoTile
 //
-//	WITH mvtgeom AS
-//	         (SELECT ST_AsMVTGeom(
-//	                         ST_Transform(point::geometry, 3857),
-//	                         ST_TileEnvelope($1, $2, $3),
-//	                         extent => 4096,
-//	                         buffer => 256,
-//	                         clip_geom => true
-//	                 ) AS geom,
-//	                 id
-//	          FROM geophotos
-//	          WHERE ST_Transform(point::geometry, 3857) && ST_TileEnvelope($1, $2, $3, margin => (64.0 / 4096)))
-//	SELECT ST_AsMVT(mvtgeom.*, 'default', 4096, 'geom', 'id')
-//	FROM mvtgeom
+//	SELECT ST_AsMVT(tile.*, 'default', 4096, 'geom') as tile
+//	FROM (SELECT ST_AsMVTGeom(
+//	                     ST_Transform(center::geometry, 3857),
+//	                     ST_TileEnvelope($1::integer, $2::integer, $3::integer),
+//	                     extent => 4096,
+//	                     buffer => 256,
+//	                     clip_geom => true
+//	             ) AS geom,
+//	             count
+//	      FROM (SELECT ST_Centroid(ST_Collect(ST_Transform(point::geometry, 3857))) as center,
+//	                   count(cluster_id)                                            as count
+//	            FROM (SELECT ST_ClusterDBSCAN(ST_Transform(point::geometry, 3857),
+//	                         (40075017.0 / (256 * 2 ^ $1)),
+//	                         1) OVER () AS cluster_id,
+//	                         point
+//	                  FROM geophotos
+//	                  WHERE ST_Transform(point::geometry, 3857) &&
+//	                        ST_TileEnvelope($1::integer, $2::integer, $3::integer,
+//	                                        margin => (64.0 / 4096))) AS cluster
+//	            GROUP BY cluster_id) AS clusters) AS tile
 func (q *Queries) SelectGeophotoTile(ctx context.Context, db DBTX, arg SelectGeophotoTileParams) ([]byte, error) {
 	row := db.QueryRow(ctx, selectGeophotoTile, arg.Z, arg.X, arg.Y)
-	var st_asmvt []byte
-	err := row.Scan(&st_asmvt)
-	return st_asmvt, err
+	var tile []byte
+	err := row.Scan(&tile)
+	return tile, err
+}
+
+const selectGeophotoTileSampled = `-- name: SelectGeophotoTileSampled :one
+SELECT ST_AsMVT(tile.*, 'default', 4096, 'geom') as tile
+FROM (SELECT ST_AsMVTGeom(
+                     ST_Transform(center::geometry, 3857),
+                     ST_TileEnvelope($1::integer, $2::integer, $3::integer),
+                     extent => 4096,
+                     buffer => 256,
+                     clip_geom => true
+             ) AS geom,
+             count
+      FROM (SELECT ST_Centroid(ST_Collect(ST_Transform(point::geometry, 3857))) as center,
+                   count(cluster_id) * (100 / $4)                         as count
+            FROM (SELECT ST_ClusterDBSCAN(ST_Transform(point::geometry, 3857),
+                         (40075017.0 / (256 * 2 ^ $1)),
+                         1) OVER () AS cluster_id,
+                         point
+                  FROM geophotos
+                           TABLESAMPLE system ($4)
+                  WHERE ST_Transform(point::geometry, 3857) &&
+                        ST_TileEnvelope($1::integer, $2::integer, $3::integer,
+                                        margin => (64.0 / 4096))) AS cluster
+            GROUP BY cluster_id) AS clusters) AS tile
+`
+
+type SelectGeophotoTileSampledParams struct {
+	Z       int32
+	X       int32
+	Y       int32
+	Percent pgtype.Float4
+}
+
+// SelectGeophotoTileSampled
+//
+//	SELECT ST_AsMVT(tile.*, 'default', 4096, 'geom') as tile
+//	FROM (SELECT ST_AsMVTGeom(
+//	                     ST_Transform(center::geometry, 3857),
+//	                     ST_TileEnvelope($1::integer, $2::integer, $3::integer),
+//	                     extent => 4096,
+//	                     buffer => 256,
+//	                     clip_geom => true
+//	             ) AS geom,
+//	             count
+//	      FROM (SELECT ST_Centroid(ST_Collect(ST_Transform(point::geometry, 3857))) as center,
+//	                   count(cluster_id) * (100 / $4)                         as count
+//	            FROM (SELECT ST_ClusterDBSCAN(ST_Transform(point::geometry, 3857),
+//	                         (40075017.0 / (256 * 2 ^ $1)),
+//	                         1) OVER () AS cluster_id,
+//	                         point
+//	                  FROM geophotos
+//	                           TABLESAMPLE system ($4)
+//	                  WHERE ST_Transform(point::geometry, 3857) &&
+//	                        ST_TileEnvelope($1::integer, $2::integer, $3::integer,
+//	                                        margin => (64.0 / 4096))) AS cluster
+//	            GROUP BY cluster_id) AS clusters) AS tile
+func (q *Queries) SelectGeophotoTileSampled(ctx context.Context, db DBTX, arg SelectGeophotoTileSampledParams) ([]byte, error) {
+	row := db.QueryRow(ctx, selectGeophotoTileSampled,
+		arg.Z,
+		arg.X,
+		arg.Y,
+		arg.Percent,
+	)
+	var tile []byte
+	err := row.Scan(&tile)
+	return tile, err
 }
 
 const selectGeophotosByID = `-- name: SelectGeophotosByID :many

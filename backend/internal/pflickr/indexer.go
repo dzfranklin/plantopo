@@ -50,25 +50,31 @@ func NewIndexer(env *pconfig.Env) *Indexer {
 	}
 }
 
-func (i *Indexer) IndexOnce(ctx context.Context) error {
+func (i *Indexer) IndexOnce(ctx context.Context) (bool, error) {
 	regions, regionsErr := i.repo.FlickrIndexRegions()
 	if regionsErr != nil {
-		return regionsErr
+		return false, regionsErr
 	}
 
+	didIndex := false
 	for _, region := range regions {
-		if err := i.indexRegion(ctx, region); err != nil {
-			return err
+		didIndexRegion, regionErr := i.indexRegion(ctx, region)
+		if regionErr != nil {
+			return false, regionErr
+		}
+
+		if didIndexRegion {
+			didIndex = true
 		}
 	}
 
-	return nil
+	return didIndex, nil
 }
 
-func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegion) error {
+func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegion) (bool, error) {
 	startTime, startErr := i.repo.GetFlickrIndexProgress(region.ID)
 	if startErr != nil {
-		return startErr
+		return false, startErr
 	}
 	if startTime.IsZero() {
 		startTime = flickrFounding
@@ -76,7 +82,7 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 
 	if i.clock.Now().Sub(startTime) < indexUploadedSince+waitBeforeReindexing {
 		i.l.Debug("not ready for reindex")
-		return nil
+		return false, nil
 	}
 
 	cutoff := i.clock.Now().Add(-indexUploadedSince)
@@ -99,14 +105,14 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 
 	for {
 		if err := ctx.Err(); err != nil {
-			return err
+			return false, err
 		}
 
 		searchStart := time.Now()
 		page, pageErr := i.flickr.searchForIndex(ctx, params)
 		searchElapsed := time.Since(searchStart)
 		if pageErr != nil {
-			return pageErr
+			return false, pageErr
 		}
 
 		i.l.Info("searched", "region", region.ID, "len", len(page.Photo),
@@ -118,7 +124,7 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 		if page.Page <= page.Pages {
 			for _, entry := range page.Photo {
 				if err := ctx.Err(); err != nil {
-					return err
+					return false, err
 				}
 
 				photo := i.mapPhoto(entry, region.ID)
@@ -137,7 +143,7 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 				}
 
 				if err := i.repo.ImportIfNotPresent(photo); err != nil {
-					return err
+					return false, err
 				}
 
 				count++
@@ -150,16 +156,16 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 			(params.MaxUploadDate.Equal(cutoff) || params.MaxUploadDate.After(cutoff))
 		if passedCutoff || wouldHaveSeenLast {
 			if err := i.repo.UpdateFlickrIndexProgress(region.ID, latestSeen); err != nil {
-				return err
+				return false, err
 			}
-			return nil
+			return count > 0, nil
 		}
 
 		pastEffectivePaginationWindow := (params.Page+1)*page.PerPage > 3000
 		wouldBePastFinalPage := page.Page+1 > page.Pages
 		if pastEffectivePaginationWindow || wouldBePastFinalPage {
 			if err := i.repo.UpdateFlickrIndexProgress(region.ID, latestSeen); err != nil {
-				return err
+				return false, err
 			}
 
 			if params.Page > 10 {

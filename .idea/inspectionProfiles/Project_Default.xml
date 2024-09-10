@@ -29,6 +29,7 @@
         <method importPath="bytes" receiver="*Buffer" name="WriteRune" />
         <method importPath="github.com/jackc/pgx/v5" receiver="Tx" name="Rollback" />
         <method importPath="io" receiver="ReadCloser" name="Close" />
+        <method importPath="os" receiver="*File" name="Close" />
       </methods>
     </inspection_tool>
     <inspection_tool class="HttpUrlsUsage" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
@@ -48,6 +49,7 @@
         </list>
       </option>
     </inspection_tool>
+    <inspection_tool class="SqlResolveInspection" enabled="true" level="WARNING" enabled_by_default="true" editorAttributes="WARNING_ATTRIBUTES" />
     <inspection_tool class="TypeScriptUMDGlobal" enabled="false" level="WEAK WARNING" enabled_by_default="false" />
   </profile>
 </component>

@@ -154,8 +154,9 @@ func TestIndexFromScratch(t *testing.T) {
 	repo, indexer := mockSingleRegionIndexer(t, time.Time{})
 	expectPhotosToBeImported(t, repo, time.Time{})
 
-	err := indexer.IndexOnce(context.Background())
+	didIndex, err := indexer.IndexOnce(context.Background())
 	require.NoError(t, err)
+	assert.True(t, didIndex)
 }
 
 func TestPartialIndex(t *testing.T) {
@@ -163,18 +164,23 @@ func TestPartialIndex(t *testing.T) {
 	repo, indexer := mockSingleRegionIndexer(t, cutoffTime)
 	expectPhotosToBeImported(t, repo, cutoffTime)
 
-	err := indexer.IndexOnce(context.Background())
+	didIndex, err := indexer.IndexOnce(context.Background())
 	require.NoError(t, err)
+	assert.True(t, didIndex)
 }
 
 func TestSettles(t *testing.T) {
 	repo, indexer := mockSingleRegionIndexer(t, time.Time{})
 	expectPhotosToBeImported(t, repo, time.Time{})
 
-	require.NoError(t, indexer.IndexOnce(context.Background()))
+	didIndex1, err := indexer.IndexOnce(context.Background())
+	require.NoError(t, err)
+	assert.True(t, didIndex1)
 
 	searchesPre := indexer.flickr.(*mockFlickr).searches
-	require.NoError(t, indexer.IndexOnce(context.Background()))
+	didIndex2, err := indexer.IndexOnce(context.Background())
+	require.NoError(t, err)
+	require.False(t, didIndex2)
 	searchesPost := indexer.flickr.(*mockFlickr).searches
 
 	assert.Equal(t, searchesPre, searchesPost)
@@ -217,7 +223,8 @@ func TestSmoke(t *testing.T) {
 
 	// RUN
 
-	require.NoError(t, indexer.IndexOnce(context.Background()))
+	_, err := indexer.IndexOnce(context.Background())
+	require.NoError(t, err)
 
 	// CHECK
 
@@ -276,7 +283,8 @@ func TestSmokeFromScratch(t *testing.T) {
 
 	// RUN
 
-	require.NoError(t, indexer.IndexOnce(context.Background()))
+	_, err := indexer.IndexOnce(context.Background())
+	require.NoError(t, err)
 
 	assert.NotEmpty(t, got)
 }

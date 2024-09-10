@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pmtiles
+  namespace: pt
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pmtiles
+  template:
+    metadata:
+      labels:
+        app: pmtiles
+      annotations:
+        k8s.grafana.com/scrape: "true"
+        k8s.grafana.com/metrics.portName: "admin"
+    spec:
+      containers:
+        - name: pmtiles
+          image: protomaps/go-pmtiles:v1.21.0
+          args:
+            - serve
+            - "--public-url=https://pmtiles.plantopo.com"
+            - "--bucket=s3://pmtiles-public?endpoint=https://minio.dfranklin.dev&s3ForcePathStyle=true"
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: admin
+              containerPort: 8081
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: pmtiles-serve
+                  key: minio-username
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pmtiles-serve
+                  key: minio-password
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pmtiles
+  namespace: pt
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      name: http
+      targetPort: http
+  selector:
+    app: pmtiles
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pmtiles-ingress
+  namespace: pt
+  labels:
+    app: pmtiles
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  rules:
+    - host: pmtiles.plantopo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pmtiles
+                port: { name: http }
+  tls:
+    - secretName: wildcard-prod
+      hosts:
+        - pmtiles.plantopo.com

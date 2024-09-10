@@ -5,11 +5,14 @@ import (
 	"compress/gzip"
 	"context"
 	"errors"
+	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/pslices"
 	"github.com/dzfranklin/plantopo/backend/internal/psqlc"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tidwall/geojson/geometry"
+	"iter"
 	"time"
 )
 
@@ -161,14 +164,31 @@ func (r *Geophotos) GetTile(ctx context.Context, z, x, y int) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	if z < 6 {
-		return nil, ErrTileOutsideBounds
+	var uncompressed []byte
+	var selectErr error
+	if z < 5 {
+		percent := float32(z)*2 + 1
+		params := psqlc.SelectGeophotoTileSampledParams{
+			Z: int32(z),
+			X: int32(x),
+			Y: int32(y),
+			Percent: pgtype.Float4{
+				Float32: percent,
+				Valid:   true,
+			},
+		}
+		uncompressed, selectErr = q.SelectGeophotoTileSampled(ctx, r.db, params)
+	} else {
+		params := psqlc.SelectGeophotoTileParams{
+			Z: int32(z),
+			X: int32(x),
+			Y: int32(y),
+		}
+		uncompressed, selectErr = q.SelectGeophotoTile(ctx, r.db, params)
 	}
 
-	params := psqlc.SelectGeophotoTileParams{Z: int32(z), X: int32(x), Y: int32(y)}
-	uncompressed, selectErr := q.SelectGeophotoTile(ctx, r.db, params)
 	if selectErr != nil {
-		return nil, selectErr
+		return nil, fmt.Errorf("get %d/%d/%d: %w", z, x, y, selectErr)
 	}
 
 	var compressed bytes.Buffer
@@ -194,6 +214,42 @@ func (r *Geophotos) GetMany(ctx context.Context, ids []int) ([]Geophoto, error) 
 	}
 
 	return pslices.Map(rows, mapGeophoto), nil
+}
+
+type GeophotoPoint struct {
+	ID    int
+	Point geometry.Point
+}
+
+func (r *Geophotos) All(ctx context.Context) iter.Seq2[GeophotoPoint, error] {
+	return func(yield func(GeophotoPoint, error) bool) {
+		var cursor int64
+
+		for {
+			rows, err := q.SelectAllGeophotos(ctx, r.db, cursor)
+			if err != nil {
+				if !yield(GeophotoPoint{}, err) {
+					return
+				}
+			}
+
+			for _, row := range rows {
+				v := GeophotoPoint{
+					ID:    int(row.ID),
+					Point: geometry.Point{X: row.Lng.Float64, Y: row.Lat.Float64},
+				}
+				if !yield(v, nil) {
+					return
+				}
+			}
+
+			if len(rows) == 0 {
+				break
+			}
+
+			cursor = rows[len(rows)-1].ID
+		}
+	}
 }
 
 func mapGeophoto(row psqlc.SelectGeophotosByIDRow) Geophoto {

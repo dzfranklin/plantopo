@@ -6,6 +6,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/pemail"
 	"github.com/dzfranklin/plantopo/backend/internal/pgeograph"
+	"github.com/dzfranklin/plantopo/backend/internal/pgeophotos"
 	"github.com/dzfranklin/plantopo/backend/internal/plog"
 	"github.com/dzfranklin/plantopo/backend/internal/pmunroaccess"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
@@ -57,6 +58,8 @@ func Register(
 	river.AddWorker[pmunroaccess.PregenerationArgs](workers, pmunroaccess.NewPregenerationWorker(env))
 
 	river.AddWorker[pemail.JobArgs](workers, pemail.NewWorker(env))
+
+	river.AddWorker[pgeophotos.DeployJobArgs](workers, pgeophotos.NewDeployWorker(env))
 
 	river.AddWorker[pgeograph.JobArgs](workers, pgeograph.NewWorker(env))
 
