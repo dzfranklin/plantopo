@@ -68,7 +68,7 @@ func (s *Service) buildFlatGeobuf(ctx context.Context, f io.Writer) error {
 
 			count++
 
-			if count%100_000 == 0 {
+			if count%1_000_000 == 0 {
 				s.l.Info("loading data", "count", count)
 			}
 		}
