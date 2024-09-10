@@ -21,8 +21,9 @@ spec:
           image: protomaps/go-pmtiles:v1.21.0
           args:
             - serve
+            - .
             - "--public-url=https://pmtiles.plantopo.com"
-            - "--bucket=s3://pmtiles-public?endpoint=https://minio.dfranklin.dev&s3ForcePathStyle=true"
+            - "--bucket=s3://pmtiles-public?endpoint=https://minio.dfranklin.dev&s3ForcePathStyle=true&region=auto"
           ports:
             - name: http
               containerPort: 8080
