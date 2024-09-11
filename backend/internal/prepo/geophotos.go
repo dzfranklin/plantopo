@@ -209,10 +209,6 @@ func (r *Geophotos) GetMany(ctx context.Context, ids []int) ([]Geophoto, error) 
 		return nil, err
 	}
 
-	if len(rows) != len(ids) {
-		return nil, ErrNotFound
-	}
-
 	return pslices.Map(rows, mapGeophoto), nil
 }
 

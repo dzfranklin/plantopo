@@ -2,27 +2,32 @@ import { $api } from '@/api/client';
 import { components } from '@/api/v1';
 import { Timestamp } from '@/components/Timestamp';
 import Skeleton from '@/components/Skeleton';
-import { SelectedBounds } from '@/features/geophotos/GeophotosComponent';
+import { GeophotoSelection } from '@/features/geophotos/GeophotosComponent';
 
 type Geophoto = components['schemas']['Geophoto'];
 
 const maxPhotosRendered = 8; // To limit load on upstream
 
-export function GeophotosPaneLoader({ bounds }: { bounds: SelectedBounds }) {
+export function GeophotosPaneLoader({
+  selection,
+}: {
+  selection: GeophotoSelection;
+}) {
   const query = $api.useQuery(
     'get',
     '/geophotos',
     {
       params: {
         query: {
-          minLng: bounds?.minLng,
-          minLat: bounds?.minLat,
-          maxLng: bounds?.maxLng,
-          maxLat: bounds?.maxLat,
+          id: selection?.ids,
+          minLng: selection?.minLng,
+          minLat: selection?.minLat,
+          maxLng: selection?.maxLng,
+          maxLat: selection?.maxLat,
         },
       },
     },
-    { enabled: bounds !== null },
+    { enabled: selection !== null },
   );
   if (query.error) throw query.error;
 
@@ -48,9 +53,6 @@ export function GeophotosPane({ photos }: { photos: Geophoto[] }) {
         <div className="w-[200px] min-w-[200px] min-h-[200px] rounded bg-gray-200 flex flex-col p-5">
           <div className="grow flex items-center justify-center text-6xl text-gray-500 font-bold text-center">
             ...
-          </div>
-          <div className="text-xs mt-auto text-gray-700">
-            Select fewer images to see them all.
           </div>
         </div>
       )}
