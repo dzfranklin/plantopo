@@ -25,40 +25,53 @@ type mockFlickr struct {
 	searches int
 }
 
-const mockPhotoCount = 5000
-
 var mockPhotos []searchPagePhoto
 var mockTime time.Time
 
+const mockPhotosUnableToBeIndexed = 1000
+
 func init() {
-	t := flickrFounding.Add(12 * time.Hour)
+	t := ptime.DayStart(2018, 1, 1)
 	nextID := 1
-	for len(mockPhotos) < mockPhotoCount {
-		t = t.AddDate(0, 0, 1)
-		mockPhotos = append(mockPhotos, searchPagePhoto{
-			ID:             fmt.Sprintf("%d", nextID),
-			Owner:          "owner",
-			License:        1,
-			OwnerName:      "Owner Name",
-			Longitude:      1.5,
-			Latitude:       1.5,
-			DateUpload:     fuzzyDate(t),
-			DateTaken:      fuzzyDate(t),
-			Title:          fmt.Sprintf("Title %d", nextID),
-			OriginalURL:    "https://mock.plantopo.com/original...",
-			OriginalWidth:  1024,
-			OriginalHeight: 675,
-			SmallURL:       "https://mock.plantopo.com/small...",
-			SmallWidth:     512,
-			SmallHeight:    338,
-		})
+
+	for t.Before(ptime.DayStart(2020, 1, 1)) {
+		for range 5000 { // intentionally a little more than the max search window
+			t = t.Add(time.Second)
+			mockPhotos = append(mockPhotos, mockPhoto(nextID, t))
+			nextID++
+			// intentionally a simultaneous upload time
+			mockPhotos = append(mockPhotos, mockPhoto(nextID, t))
+			nextID++
+		}
+		t = t.AddDate(1, 0, 0)
+	}
+
+	// intentionally more than the max search window with no separating time
+	for range 3000 + mockPhotosUnableToBeIndexed {
+		mockPhotos = append(mockPhotos, mockPhoto(nextID, t))
 		nextID++
 	}
 
-	mockTime = time.Time(mockPhotos[len(mockPhotos)-1].DateUpload).Add(time.Hour * 24)
+	mockTime = t.Add(indexUploadedSince + time.Hour)
+}
 
-	if len(mockPhotos) != mockPhotoCount {
-		panic("assertion failed")
+func mockPhoto(id int, date time.Time) searchPagePhoto {
+	return searchPagePhoto{
+		ID:             fmt.Sprintf("%d", id),
+		Owner:          "owner",
+		License:        1,
+		OwnerName:      "Owner Name",
+		Longitude:      1.5,
+		Latitude:       1.5,
+		DateUpload:     fuzzyDate(date),
+		DateTaken:      fuzzyDate(date),
+		Title:          fmt.Sprintf("Title %d", id),
+		OriginalURL:    "https://mock.plantopo.com/original...",
+		OriginalWidth:  1024,
+		OriginalHeight: 675,
+		SmallURL:       "https://mock.plantopo.com/small...",
+		SmallWidth:     512,
+		SmallHeight:    338,
 	}
 }
 
@@ -121,32 +134,34 @@ func (m *mockFlickr) searchForIndex(_ context.Context, params searchParams) (sea
 }
 
 func expectPhotosToBeImported(t *testing.T, repo *MockindexerRepo, cutoff time.Time) {
-	expecting := make(map[string]int)
+	got := make(map[string]int)
 
 	repo.EXPECT().ImportIfNotPresent(mock.Anything).Run(func(photo prepo.Geophoto) {
-		expecting[photo.SourceID]++
+		got[photo.SourceID]++
 	}).Return(nil)
 
 	t.Cleanup(func() {
 		excess := 0
+		missing := 0
 		for _, photo := range mockPhotos {
 			du := time.Time(photo.DateUpload)
-			if du.Before(cutoff) || du.After(mockTime.Add(-indexUploadedSince)) {
-				if expecting[photo.ID] != 0 {
+			if du.Before(cutoff) {
+				if got[photo.ID] != 0 {
 					t.Error("expected photo not to be imported", photo.ID)
 				}
 				continue
 			}
 
-			if expecting[photo.ID] == 0 {
-				t.Error("expected photo to be imported", photo.ID)
+			if got[photo.ID] == 0 {
+				missing++
 			}
 
-			if expecting[photo.ID] > 1 {
-				excess += expecting[photo.ID] - 1
+			if got[photo.ID] > 1 {
+				excess += got[photo.ID] - 1
 			}
 		}
-		assert.Lessf(t, excess, len(mockPhotos)/50, "expected not too many excess imports")
+		assert.Lessf(t, excess, len(mockPhotos)/3, "expected not too many excess imports")
+		assert.Equal(t, mockPhotosUnableToBeIndexed, missing)
 	})
 }
 
@@ -160,7 +175,7 @@ func TestIndexFromScratch(t *testing.T) {
 }
 
 func TestPartialIndex(t *testing.T) {
-	cutoffTime := time.Time(mockPhotos[len(mockPhotos)-500].DateUpload)
+	cutoffTime := mockTime.AddDate(-1, 0, 0)
 	repo, indexer := mockSingleRegionIndexer(t, cutoffTime)
 	expectPhotosToBeImported(t, repo, cutoffTime)
 

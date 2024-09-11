@@ -174,7 +174,14 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 				searchWindow = min(maxSearchWindow, searchWindow*2)
 			}
 
-			params.MinUploadDate = params.MaxUploadDate
+			if params.Page == 1 && len(page.Photo) == 0 {
+				params.MinUploadDate = params.MaxUploadDate
+			} else if len(page.Photo) != 0 && !latestSeen.After(params.MinUploadDate) {
+				// we are stuck in a run of more than our window with the same upload date, skip
+				params.MinUploadDate = latestSeen.Add(time.Second)
+			} else {
+				params.MinUploadDate = latestSeen
+			}
 			params.MaxUploadDate = ptime.Min(params.MinUploadDate.Add(searchWindow), cutoff)
 			params.Page = 1
 			continue
