@@ -9,6 +9,7 @@ import (
 	flatbuffers "github.com/google/flatbuffers/go"
 	"golang.org/x/sync/errgroup"
 	"io"
+	"math"
 	"time"
 )
 
@@ -17,6 +18,7 @@ type flatGeobufMeta struct {
 }
 
 func (s *Service) buildFlatGeobuf(ctx context.Context, f io.Writer) error {
+	l := s.l.WithGroup("buildFlatGeobuf")
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -30,7 +32,8 @@ func (s *Service) buildFlatGeobuf(ctx context.Context, f io.Writer) error {
 		SetName("geophotos").
 		SetGeometryType(flattypes.GeometryTypePoint)
 
-	idCol := writer.NewColumn(headerB).SetName("id").SetType(flattypes.ColumnTypeUInt)
+	// TODO: change to integer column when https://github.com/felt/tippecanoe/issues/262 fixed
+	idCol := writer.NewColumn(headerB).SetName("id").SetType(flattypes.ColumnTypeDouble)
 	header.SetColumns([]*writer.Column{idCol})
 
 	meta := flatGeobufMeta{
@@ -57,8 +60,8 @@ func (s *Service) buildFlatGeobuf(ctx context.Context, f io.Writer) error {
 				return err
 			}
 
-			props := make([]byte, 6)
-			binary.LittleEndian.PutUint32(props[2:], uint32(photo.ID))
+			props := make([]byte, 2+8)
+			binary.LittleEndian.PutUint64(props[2:], math.Float64bits(float64(photo.ID)))
 
 			b := flatbuffers.NewBuilder(0)
 			geo := writer.NewGeometry(b).SetXY([]float64{photo.Point.X, photo.Point.Y})
@@ -69,7 +72,7 @@ func (s *Service) buildFlatGeobuf(ctx context.Context, f io.Writer) error {
 			count++
 
 			if count%1_000_000 == 0 {
-				s.l.Info("loading data", "count", count)
+				l.Info("loading data", "count", count)
 			}
 		}
 		return nil

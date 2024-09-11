@@ -1,14 +1,17 @@
 package pgeophotos
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/dzfranklin/plantopo/backend/internal/pstrings"
+	"io"
 	"os/exec"
 )
 
 func (s *Service) tilePoints(ctx context.Context, input string, out string) error {
+	l := s.l.WithGroup("tilePoints").With("input", input, "out", out)
+
 	cmd := exec.CommandContext(ctx, "tippecanoe",
 		"--output", out,
 		"--layer=default",
@@ -18,15 +21,38 @@ func (s *Service) tilePoints(ctx context.Context, input string, out string) erro
 		"--base-zoom=g",
 		"--minimum-zoom=0",
 		"--maximum-zoom=14",
+		"--use-attribute-for-id=id",
+		"--progress-interval=30",
+		"--json-progress",
 		input)
-
-	runOut, runErr := cmd.CombinedOutput()
-	if errors.Is(runErr, context.Canceled) {
-		return runErr
-	} else if runErr != nil {
-		msg := pstrings.TruncateASCIIFromEnd(string(runOut), 500)
-		return fmt.Errorf("tippecanoe: %s", msg)
+	stderr, stderrErr := cmd.StderrPipe()
+	if stderrErr != nil {
+		return stderrErr
 	}
 
-	return nil
+	go func() {
+		br := bufio.NewReader(stderr)
+		for {
+			line, readErr := br.ReadString('\n')
+			if errors.Is(readErr, io.EOF) {
+				break
+			} else if readErr != nil {
+				l.Error("failed to read from stderr", "error", readErr)
+				break
+			}
+
+			var update struct {
+				Progress float64 `json:"progress"`
+			}
+
+			if err := json.Unmarshal([]byte(line), &update); err != nil {
+				// if it fails to unmarshal it is probably a plaintext warning
+				l.Warn(line)
+			} else {
+				l.Info("working", "progress", update.Progress)
+			}
+		}
+	}()
+
+	return cmd.Run()
 }
