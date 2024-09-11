@@ -348,17 +348,6 @@ paths:
                 required: [ "munros" ]
         default: { $ref: "#/components/responses/DefaultErrorResponse" }
 
-  /geophotos/tile/{z}/{x}/{y}.mvt.gz:
-    get:
-      tags: [ "geophotos" ]
-      summary: Get Mapbox Vector Tile
-      parameters:
-        - $ref: "#/components/parameters/SlippyZ"
-        - $ref: "#/components/parameters/SlippyX"
-        - $ref: "#/components/parameters/SlippyY"
-      responses:
-        "200": { $ref: "#/components/responses/MVTTile" }
-        default: { $ref: "#/components/responses/DefaultErrorResponse" }
   /geophotos:
     get:
       tags: [ "geophotos" ]
@@ -369,6 +358,18 @@ paths:
           schema:
             type: array
             items: { type: integer }
+        - name: minLng
+          in: query
+          schema: { type: number }
+        - name: minLat
+          in: query
+          schema: { type: number }
+        - name: maxLng
+          in: query
+          schema: { type: number }
+        - name: maxLat
+          in: query
+          schema: { type: number }
       responses:
         "200":
           description: "OK"

@@ -5,8 +5,15 @@ import { useState } from 'react';
 import cls from '@/cls';
 import { GeophotosPaneLoader } from '@/features/geophotos/GeophotosPaneLoader';
 
+export type SelectedBounds = null | {
+  minLng: number;
+  minLat: number;
+  maxLng: number;
+  maxLat: number;
+};
+
 export function GeophotosComponent() {
-  const [selected, setSelected] = useState<number[]>([]);
+  const [selected, setSelected] = useState<SelectedBounds>(null);
 
   return (
     <div className="h-full w-full relative">
@@ -16,11 +23,11 @@ export function GeophotosComponent() {
       <div
         className={cls(
           'absolute left-4 right-4 bottom-6 h-[200px] transition-opacity pointer-events-none',
-          selected.length > 0 ? 'opacity-100' : 'opacity-0',
+          selected ? 'opacity-100' : 'opacity-0',
         )}
       >
-        <div className="inline-block max-w-full bg-gray-200 bg-opacity-50 overflow-clip pointer-events-auto">
-          <GeophotosPaneLoader photos={selected} />
+        <div className="inline-block max-w-full overflow-clip pointer-events-auto">
+          <GeophotosPaneLoader bounds={selected} />
         </div>
       </div>
     </div>

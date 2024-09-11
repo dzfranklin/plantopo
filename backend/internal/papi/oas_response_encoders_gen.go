@@ -205,38 +205,6 @@ func encodeGeophotosGetResponse(response *GeophotosGetOK, w http.ResponseWriter,
 	return nil
 }
 
-func encodeGeophotosTileZXYMvtGzGetResponse(response *MVTTileHeaders, w http.ResponseWriter, span trace.Span) error {
-	w.Header().Set("Content-Type", "application/vnd.mapbox-vector-tile")
-	// Encoding response headers.
-	{
-		h := uri.NewHeaderEncoder(w.Header())
-		// Encode "Content-Encoding" header.
-		{
-			cfg := uri.HeaderParameterEncodingConfig{
-				Name:    "Content-Encoding",
-				Explode: false,
-			}
-			if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-				if val, ok := response.ContentEncoding.Get(); ok {
-					return e.EncodeValue(conv.StringToString(val))
-				}
-				return nil
-			}); err != nil {
-				return errors.Wrap(err, "encode Content-Encoding header")
-			}
-		}
-	}
-	w.WriteHeader(200)
-	span.SetStatus(codes.Ok, http.StatusText(200))
-
-	writer := w
-	if _, err := io.Copy(writer, response.Response); err != nil {
-		return errors.Wrap(err, "write")
-	}
-
-	return nil
-}
-
 func encodeMunroAccessMunrosGetResponse(response *MunroAccessMunrosGetOK, w http.ResponseWriter, span trace.Span) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(200)

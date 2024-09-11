@@ -216,6 +216,23 @@ func (r *Geophotos) GetMany(ctx context.Context, ids []int) ([]Geophoto, error) 
 	return pslices.Map(rows, mapGeophoto), nil
 }
 
+func (r *Geophotos) GetWithin(ctx context.Context, bbox geometry.Rect) ([]Geophoto, error) {
+	rows, err := q.SelectGeophotosWithin(ctx, r.db, psqlc.SelectGeophotosWithinParams{
+		Minlng:  bbox.Min.X,
+		Minlat:  bbox.Min.Y,
+		Maxlng:  bbox.Max.X,
+		Maxlat:  bbox.Max.Y,
+		MaxRows: 20,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return pslices.Map(rows, func(row psqlc.SelectGeophotosWithinRow) Geophoto {
+		return mapGeophoto(psqlc.SelectGeophotosByIDRow(row))
+	}), nil
+}
+
 type GeophotoPoint struct {
 	ID    int
 	Point geometry.Point

@@ -512,46 +512,6 @@ func (s *Image) SetHeight(val int) {
 	s.Height = val
 }
 
-type MVTTile struct {
-	Data io.Reader
-}
-
-// Read reads data from the Data reader.
-//
-// Kept to satisfy the io.Reader interface.
-func (s MVTTile) Read(p []byte) (n int, err error) {
-	if s.Data == nil {
-		return 0, io.EOF
-	}
-	return s.Data.Read(p)
-}
-
-// MVTTileHeaders wraps MVTTile with response headers.
-type MVTTileHeaders struct {
-	ContentEncoding OptString
-	Response        MVTTile
-}
-
-// GetContentEncoding returns the value of ContentEncoding.
-func (s *MVTTileHeaders) GetContentEncoding() OptString {
-	return s.ContentEncoding
-}
-
-// GetResponse returns the value of Response.
-func (s *MVTTileHeaders) GetResponse() MVTTile {
-	return s.Response
-}
-
-// SetContentEncoding sets the value of ContentEncoding.
-func (s *MVTTileHeaders) SetContentEncoding(val OptString) {
-	s.ContentEncoding = val
-}
-
-// SetResponse sets the value of Response.
-func (s *MVTTileHeaders) SetResponse(val MVTTile) {
-	s.Response = val
-}
-
 type MunroAccessMunrosGetOK struct {
 	Munros MunroAccessMunrosGetOKMunros `json:"munros"`
 }
@@ -1213,6 +1173,52 @@ func (o OptDateTime) Get() (v time.Time, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptDateTime) Or(d time.Time) time.Time {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptFloat64 returns new OptFloat64 with value set to v.
+func NewOptFloat64(v float64) OptFloat64 {
+	return OptFloat64{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptFloat64 is optional float64.
+type OptFloat64 struct {
+	Value float64
+	Set   bool
+}
+
+// IsSet returns true if OptFloat64 was set.
+func (o OptFloat64) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptFloat64) Reset() {
+	var v float64
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptFloat64) SetTo(v float64) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptFloat64) Get() (v float64, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptFloat64) Or(d float64) float64 {
 	if v, ok := o.Get(); ok {
 		return v
 	}

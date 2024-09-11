@@ -94,15 +94,6 @@ func (UnimplementedHandler) GeophotosGet(ctx context.Context, params GeophotosGe
 	return r, ht.ErrNotImplemented
 }
 
-// GeophotosTileZXYMvtGzGet implements GET /geophotos/tile/{z}/{x}/{y}.mvt.gz operation.
-//
-// Get Mapbox Vector Tile.
-//
-// GET /geophotos/tile/{z}/{x}/{y}.mvt.gz
-func (UnimplementedHandler) GeophotosTileZXYMvtGzGet(ctx context.Context, params GeophotosTileZXYMvtGzGetParams) (r *MVTTileHeaders, _ error) {
-	return r, ht.ErrNotImplemented
-}
-
 // MunroAccessMunrosGet implements GET /munro-access/munros operation.
 //
 // List munros.

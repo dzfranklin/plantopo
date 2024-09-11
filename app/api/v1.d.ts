@@ -624,39 +624,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/geophotos/tile/{z}/{x}/{y}.mvt.gz': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get Mapbox Vector Tile */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          z: components['parameters']['SlippyZ'];
-          x: components['parameters']['SlippyX'];
-          y: components['parameters']['SlippyY'];
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        200: components['responses']['MVTTile'];
-        default: components['responses']['DefaultErrorResponse'];
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/geophotos': {
     parameters: {
       query?: never;
@@ -669,6 +636,10 @@ export interface paths {
       parameters: {
         query?: {
           id?: number[];
+          minLng?: number;
+          minLat?: number;
+          maxLng?: number;
+          maxLat?: number;
         };
         header?: never;
         path?: never;

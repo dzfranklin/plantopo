@@ -2,19 +2,27 @@ import { $api } from '@/api/client';
 import { components } from '@/api/v1';
 import { Timestamp } from '@/components/Timestamp';
 import Skeleton from '@/components/Skeleton';
+import { SelectedBounds } from '@/features/geophotos/GeophotosComponent';
 
 type Geophoto = components['schemas']['Geophoto'];
 
 const maxPhotosRendered = 8; // To limit load on upstream
 
-export function GeophotosPaneLoader(params: { photos: number[] }) {
+export function GeophotosPaneLoader({ bounds }: { bounds: SelectedBounds }) {
   const query = $api.useQuery(
     'get',
     '/geophotos',
     {
-      params: { query: { id: params.photos } },
+      params: {
+        query: {
+          minLng: bounds?.minLng,
+          minLat: bounds?.minLat,
+          maxLng: bounds?.maxLng,
+          maxLat: bounds?.maxLat,
+        },
+      },
     },
-    { enabled: params.photos.length > 0 },
+    { enabled: bounds !== null },
   );
   if (query.error) throw query.error;
 

@@ -1,6 +1,9 @@
 package papi
 
-import "time"
+import (
+	"net/http"
+	"time"
+)
 
 func omitEmptyString(v string) OptString {
 	if v == "" {
@@ -28,4 +31,11 @@ func omitEmptyDateTime(v time.Time) OptDateTime {
 
 func NewPoint(v [2]float64) Point {
 	return Point{v[0], v[1]}
+}
+
+func badRequest(msg string) *DefaultErrorResponseStatusCode {
+	return &DefaultErrorResponseStatusCode{
+		StatusCode: http.StatusBadRequest,
+		Response:   DefaultError{Message: msg},
+	}
 }

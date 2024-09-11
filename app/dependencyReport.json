@@ -4968,6 +4968,12 @@
     "repository": "https://github.com/jsx-eslint/jsx-ast-utils"
   },
   {
+    "name": "k6@0.0.0",
+    "publisher": "Emily Ekberg",
+    "licenses": "AGPL-3.0",
+    "repository": "https://github.com/loadimpact/k6"
+  },
+  {
     "name": "kdbush@4.0.2",
     "publisher": "Vladimir Agafonkin",
     "licenses": "ISC",

@@ -17,7 +17,11 @@ import (
 
 // GeophotosGetParams is parameters of GET /geophotos operation.
 type GeophotosGetParams struct {
-	ID []int
+	ID     []int
+	MinLng OptFloat64
+	MinLat OptFloat64
+	MaxLng OptFloat64
+	MaxLat OptFloat64
 }
 
 func unpackGeophotosGetParams(packed middleware.Parameters) (params GeophotosGetParams) {
@@ -28,6 +32,42 @@ func unpackGeophotosGetParams(packed middleware.Parameters) (params GeophotosGet
 		}
 		if v, ok := packed[key]; ok {
 			params.ID = v.([]int)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "minLng",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.MinLng = v.(OptFloat64)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "minLat",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.MinLat = v.(OptFloat64)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "maxLng",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.MaxLng = v.(OptFloat64)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "maxLat",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.MaxLat = v.(OptFloat64)
 		}
 	}
 	return params
@@ -78,174 +118,227 @@ func decodeGeophotosGetParams(args [0]string, argsEscaped bool, r *http.Request)
 			Err:  err,
 		}
 	}
-	return params, nil
-}
-
-// GeophotosTileZXYMvtGzGetParams is parameters of GET /geophotos/tile/{z}/{x}/{y}.mvt.gz operation.
-type GeophotosTileZXYMvtGzGetParams struct {
-	Z int
-	X int
-	Y int
-}
-
-func unpackGeophotosTileZXYMvtGzGetParams(packed middleware.Parameters) (params GeophotosTileZXYMvtGzGetParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "z",
-			In:   "path",
-		}
-		params.Z = packed[key].(int)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "x",
-			In:   "path",
-		}
-		params.X = packed[key].(int)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "y",
-			In:   "path",
-		}
-		params.Y = packed[key].(int)
-	}
-	return params
-}
-
-func decodeGeophotosTileZXYMvtGzGetParams(args [3]string, argsEscaped bool, r *http.Request) (params GeophotosTileZXYMvtGzGetParams, _ error) {
-	// Decode path: z.
+	// Decode query: minLng.
 	if err := func() error {
-		param := args[0]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[0])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "minLng",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
 		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "z",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
 
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotMinLngVal float64
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToFloat64(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotMinLngVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.MinLng.SetTo(paramsDotMinLngVal)
+				return nil
+			}); err != nil {
+				return err
+			}
 			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
+				if value, ok := params.MinLng.Get(); ok {
+					if err := func() error {
+						if err := (validate.Float{}).Validate(float64(value)); err != nil {
+							return errors.Wrap(err, "float")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
 				}
-
-				c, err := conv.ToInt(val)
-				if err != nil {
-					return err
-				}
-
-				params.Z = c
 				return nil
 			}(); err != nil {
 				return err
 			}
-		} else {
-			return validate.ErrFieldRequired
 		}
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "z",
-			In:   "path",
+			Name: "minLng",
+			In:   "query",
 			Err:  err,
 		}
 	}
-	// Decode path: x.
+	// Decode query: minLat.
 	if err := func() error {
-		param := args[1]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "minLat",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
 		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "x",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
 
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotMinLatVal float64
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToFloat64(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotMinLatVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.MinLat.SetTo(paramsDotMinLatVal)
+				return nil
+			}); err != nil {
+				return err
+			}
 			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
+				if value, ok := params.MinLat.Get(); ok {
+					if err := func() error {
+						if err := (validate.Float{}).Validate(float64(value)); err != nil {
+							return errors.Wrap(err, "float")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
 				}
-
-				c, err := conv.ToInt(val)
-				if err != nil {
-					return err
-				}
-
-				params.X = c
 				return nil
 			}(); err != nil {
 				return err
 			}
-		} else {
-			return validate.ErrFieldRequired
 		}
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "x",
-			In:   "path",
+			Name: "minLat",
+			In:   "query",
 			Err:  err,
 		}
 	}
-	// Decode path: y.
+	// Decode query: maxLng.
 	if err := func() error {
-		param := args[2]
-		if argsEscaped {
-			unescaped, err := url.PathUnescape(args[2])
-			if err != nil {
-				return errors.Wrap(err, "unescape path")
-			}
-			param = unescaped
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "maxLng",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
 		}
-		if len(param) > 0 {
-			d := uri.NewPathDecoder(uri.PathDecoderConfig{
-				Param:   "y",
-				Value:   param,
-				Style:   uri.PathStyleSimple,
-				Explode: false,
-			})
 
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotMaxLngVal float64
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToFloat64(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotMaxLngVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.MaxLng.SetTo(paramsDotMaxLngVal)
+				return nil
+			}); err != nil {
+				return err
+			}
 			if err := func() error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
+				if value, ok := params.MaxLng.Get(); ok {
+					if err := func() error {
+						if err := (validate.Float{}).Validate(float64(value)); err != nil {
+							return errors.Wrap(err, "float")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
 				}
-
-				c, err := conv.ToInt(val)
-				if err != nil {
-					return err
-				}
-
-				params.Y = c
 				return nil
 			}(); err != nil {
 				return err
 			}
-		} else {
-			return validate.ErrFieldRequired
 		}
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "y",
-			In:   "path",
+			Name: "maxLng",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: maxLat.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "maxLat",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotMaxLatVal float64
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToFloat64(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotMaxLatVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.MaxLat.SetTo(paramsDotMaxLatVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.MaxLat.Get(); ok {
+					if err := func() error {
+						if err := (validate.Float{}).Validate(float64(value)); err != nil {
+							return errors.Wrap(err, "float")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "maxLat",
+			In:   "query",
 			Err:  err,
 		}
 	}

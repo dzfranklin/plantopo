@@ -103,6 +103,29 @@ SELECT id,
 FROM geophotos
 WHERE id = any (@ids::bigint[]);
 
+-- name: SelectGeophotosWithin :many
+SELECT id,
+       source,
+       source_id,
+       index_region_id,
+       indexed_at,
+       attribution_text,
+       attribution_link,
+       licenses,
+       url,
+       width,
+       height,
+       small_url,
+       small_width,
+       small_height,
+       ST_X(point::geometry) as lng,
+       ST_Y(point::geometry) as lat,
+       title,
+       date_taken
+FROM geophotos
+WHERE ST_Intersects(point, ST_MakeEnvelope(@minLng, @minLat, @maxLng, @maxLat, 4326)::geography)
+LIMIT @max_rows;
+
 -- name: SelectAllGeophotos :many
 SELECT id, ST_X(point::geometry) as lng, ST_Y(point::geometry) as lat
 FROM geophotos

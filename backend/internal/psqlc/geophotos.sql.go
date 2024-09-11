@@ -454,6 +454,127 @@ func (q *Queries) SelectGeophotosByID(ctx context.Context, db DBTX, ids []int64)
 	return items, nil
 }
 
+const selectGeophotosWithin = `-- name: SelectGeophotosWithin :many
+SELECT id,
+       source,
+       source_id,
+       index_region_id,
+       indexed_at,
+       attribution_text,
+       attribution_link,
+       licenses,
+       url,
+       width,
+       height,
+       small_url,
+       small_width,
+       small_height,
+       ST_X(point::geometry) as lng,
+       ST_Y(point::geometry) as lat,
+       title,
+       date_taken
+FROM geophotos
+WHERE ST_Intersects(point, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
+LIMIT $5
+`
+
+type SelectGeophotosWithinParams struct {
+	Minlng  float64
+	Minlat  float64
+	Maxlng  float64
+	Maxlat  float64
+	MaxRows int64
+}
+
+type SelectGeophotosWithinRow struct {
+	ID              int64
+	Source          pgtype.Int4
+	SourceID        pgtype.Text
+	IndexRegionID   pgtype.Int4
+	IndexedAt       pgtype.Timestamptz
+	AttributionText pgtype.Text
+	AttributionLink pgtype.Text
+	Licenses        []int32
+	Url             string
+	Width           int32
+	Height          int32
+	SmallUrl        pgtype.Text
+	SmallWidth      pgtype.Int4
+	SmallHeight     pgtype.Int4
+	Lng             pgtype.Float8
+	Lat             pgtype.Float8
+	Title           pgtype.Text
+	DateTaken       pgtype.Timestamptz
+}
+
+// SelectGeophotosWithin
+//
+//	SELECT id,
+//	       source,
+//	       source_id,
+//	       index_region_id,
+//	       indexed_at,
+//	       attribution_text,
+//	       attribution_link,
+//	       licenses,
+//	       url,
+//	       width,
+//	       height,
+//	       small_url,
+//	       small_width,
+//	       small_height,
+//	       ST_X(point::geometry) as lng,
+//	       ST_Y(point::geometry) as lat,
+//	       title,
+//	       date_taken
+//	FROM geophotos
+//	WHERE ST_Intersects(point, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
+//	LIMIT $5
+func (q *Queries) SelectGeophotosWithin(ctx context.Context, db DBTX, arg SelectGeophotosWithinParams) ([]SelectGeophotosWithinRow, error) {
+	rows, err := db.Query(ctx, selectGeophotosWithin,
+		arg.Minlng,
+		arg.Minlat,
+		arg.Maxlng,
+		arg.Maxlat,
+		arg.MaxRows,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SelectGeophotosWithinRow
+	for rows.Next() {
+		var i SelectGeophotosWithinRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Source,
+			&i.SourceID,
+			&i.IndexRegionID,
+			&i.IndexedAt,
+			&i.AttributionText,
+			&i.AttributionLink,
+			&i.Licenses,
+			&i.Url,
+			&i.Width,
+			&i.Height,
+			&i.SmallUrl,
+			&i.SmallWidth,
+			&i.SmallHeight,
+			&i.Lng,
+			&i.Lat,
+			&i.Title,
+			&i.DateTaken,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateFlickrIndexProgress = `-- name: UpdateFlickrIndexProgress :exec
 INSERT INTO flickr_index_progress (region_id, latest)
 VALUES ($1, $2)
