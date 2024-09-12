@@ -50,12 +50,13 @@ func (s *Service) RunIndexer(ctx context.Context) error {
 		for {
 			didIndex, indexErr := s.flickr.IndexOnce(ctx)
 			if errors.Is(indexErr, context.Canceled) {
-				return os.ErrExist
+				return indexErr
 			} else if indexErr != nil {
 				s.l.Error("failed to index flickr", "error", indexErr)
 			}
 
 			if didIndex {
+				s.l.Info("indexed flickr")
 				if _, err := s.jobs.Insert(ctx, DeployJobArgs{}, nil); err != nil {
 					s.l.Error("insert error", "error", err)
 				}
