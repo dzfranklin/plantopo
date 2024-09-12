@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/riverqueue/river"
+	"github.com/riverqueue/river/rivertype"
 	"time"
 )
 
@@ -16,7 +17,12 @@ func (a DeployJobArgs) Kind() string {
 func (a DeployJobArgs) InsertOpts() river.InsertOpts {
 	return river.InsertOpts{
 		UniqueOpts: river.UniqueOpts{
-			ByArgs: true,
+			ByState: []rivertype.JobState{
+				rivertype.JobStateAvailable,
+				rivertype.JobStateRunning,
+				rivertype.JobStateRetryable,
+				rivertype.JobStateScheduled,
+			},
 		},
 	}
 }
