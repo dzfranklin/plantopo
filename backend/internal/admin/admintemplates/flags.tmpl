@@ -1,0 +1,34 @@
+{{define "main"}}
+    <h3>Boolean flags</h3>
+
+    <form method="post">
+        <input type="hidden" name="Action" value="set">
+        <label>Key: <input name="Key"></label>
+        <label>Value: <input type="checkbox" name="Value"></label>
+        <button type="submit">Set</button>
+    </form>
+
+    <table>
+        <thead>
+        <tr>
+            <td>Key</td>
+            <td>Value</td>
+        </tr>
+        </thead>
+        <tbody>
+        {{range $key, $value := .BoolFlags}}
+            <tr>
+                <td>{{$key}}</td>
+                <td>{{$value}}</td>
+                <td>
+                    <form method="post">
+                        <input type="hidden" name="Action" value="delete">
+                        <input type="hidden" name="Key" value="{{$key}}">
+                        <button type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        {{end}}
+        </tbody>
+    </table>
+{{end}}

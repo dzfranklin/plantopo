@@ -21,6 +21,14 @@ type Env struct {
 	Objects      *minio.Client
 	Jobs         *river.Client[pgx.Tx]
 	Img          *pimg.Config
+	FlagProvider
+}
+
+type FlagProvider interface {
+	BoolFlag(key string) bool
+	SetBoolFlag(key string, value bool) error
+	DeleteBoolFlag(key string) error
+	ListBoolFlags() map[string]bool
 }
 
 type Config struct {

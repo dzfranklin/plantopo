@@ -82,7 +82,8 @@ func NewTestEnv(t *testing.T) *TestEnv {
 					SessionIdleExpiry: 24 * time.Hour * 365,
 				},
 			},
-			Logger: NewTestLogger(t),
+			Logger:       NewTestLogger(t),
+			FlagProvider: &TestFlagProvider{},
 		},
 		t: t,
 	}
@@ -113,6 +114,8 @@ func NewTestEnv(t *testing.T) *TestEnv {
 func (te *TestEnv) Reset() {
 	t := te.t
 	ctx := context.Background()
+
+	te.Env.FlagProvider.(*TestFlagProvider).Reset()
 
 	resetPostgres := func() {
 		te.DB.Close()
@@ -414,4 +417,51 @@ func LoadDevEnv(t *testing.T) *pconfig.Config {
 	root := gitRoot()
 	_ = godotenv.Load(root+"/backend/.env", root+"/backend/.env.local")
 	return pconfig.Read()
+}
+
+type TestFlagProvider struct {
+	boolFlags map[string]bool
+	mu        sync.Mutex
+}
+
+func (p *TestFlagProvider) BoolFlag(key string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.boolFlags[key]
+}
+
+func (p *TestFlagProvider) SetBoolFlag(key string, value bool) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.boolFlags == nil {
+		p.boolFlags = make(map[string]bool)
+	}
+
+	p.boolFlags[key] = value
+
+	return nil
+}
+
+func (p *TestFlagProvider) DeleteBoolFlag(key string) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	delete(p.boolFlags, key)
+	return nil
+}
+
+func (p *TestFlagProvider) ListBoolFlags() map[string]bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	out := make(map[string]bool, len(p.boolFlags))
+	for k, v := range p.boolFlags {
+		out[k] = v
+	}
+	return out
+}
+
+func (p *TestFlagProvider) Reset() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.boolFlags = nil
 }

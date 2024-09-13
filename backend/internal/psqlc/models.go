@@ -30,6 +30,11 @@ type AuthorizedSmsSender struct {
 	Comment    pgtype.Text
 }
 
+type BooleanFlag struct {
+	Key   string
+	Value bool
+}
+
 type BritishAndIrishHill struct {
 	ID             int32
 	Name           pgtype.Text

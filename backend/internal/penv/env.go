@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+const flagUpdateInterval = time.Second * 15
+
 func Load() *pconfig.Env {
 	_ = godotenv.Load(".env", ".env.local")
 	cfg := pconfig.Read()
@@ -34,6 +36,7 @@ func Load() *pconfig.Env {
 		Objects:      openObjects(cfg),
 		Jobs:         jobs,
 		Img:          pimg.New(cfg.Imgproxy.Key, cfg.Imgproxy.Salt),
+		FlagProvider: StartFlagRepo(logger, db, flagUpdateInterval),
 	}
 
 	pjobs.Register(env, jobs, jobWorkers)
