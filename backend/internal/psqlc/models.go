@@ -112,6 +112,7 @@ type Geophoto struct {
 	Point           interface{}
 	Title           pgtype.Text
 	DateTaken       pgtype.Timestamptz
+	DateUploaded    pgtype.Timestamptz
 }
 
 type GeophotosLicense struct {

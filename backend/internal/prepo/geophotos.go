@@ -43,6 +43,7 @@ type Geophoto struct {
 	Lat             float64
 	Title           string
 	DateTaken       time.Time
+	DateUploaded    time.Time
 }
 
 func (r *Geophotos) ImportIfNotPresent(photo Geophoto) error {
@@ -69,6 +70,7 @@ func (r *Geophotos) ImportIfNotPresent(photo Geophoto) error {
 		Lng:             photo.Lng,
 		Lat:             photo.Lat,
 		Title:           pgOptText(photo.Title),
+		DateUploaded:    pgOptTimestamptz(photo.DateUploaded),
 		DateTaken:       pgOptTimestamptz(photo.DateTaken),
 	})
 }
@@ -284,6 +286,7 @@ func mapGeophoto(row psqlc.SelectGeophotosByIDRow) Geophoto {
 		Lng:             row.Lng.Float64,
 		Lat:             row.Lat.Float64,
 		Title:           row.Title.String,
+		DateUploaded:    row.DateUploaded.Time,
 		DateTaken:       row.DateTaken.Time,
 	}
 }

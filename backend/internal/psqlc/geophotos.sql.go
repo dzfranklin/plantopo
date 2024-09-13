@@ -89,10 +89,11 @@ func (q *Queries) GetGeographIndexProgress(ctx context.Context, db DBTX) (pgtype
 const importGeophotoIfNotPresent = `-- name: ImportGeophotoIfNotPresent :exec
 INSERT INTO geophotos (source, source_id, index_region_id, indexed_at, attribution_text,
                        attribution_link, licenses, url, width, height,
-                       small_url, small_width, small_height, point, title, date_taken)
+                       small_url, small_width, small_height, point, title, date_uploaded, date_taken)
 VALUES ($1, $2, $3, $4, $5,
         $6, $7, $8, $9, $10,
-        $11, $12, $13, st_makepoint($14, $15), $16, $17)
+        $11, $12, $13, st_makepoint($14, $15),
+        $16, $17, $18)
 ON CONFLICT (source, source_id) DO NOTHING
 `
 
@@ -113,6 +114,7 @@ type ImportGeophotoIfNotPresentParams struct {
 	Lng             float64
 	Lat             float64
 	Title           pgtype.Text
+	DateUploaded    pgtype.Timestamptz
 	DateTaken       pgtype.Timestamptz
 }
 
@@ -120,10 +122,11 @@ type ImportGeophotoIfNotPresentParams struct {
 //
 //	INSERT INTO geophotos (source, source_id, index_region_id, indexed_at, attribution_text,
 //	                       attribution_link, licenses, url, width, height,
-//	                       small_url, small_width, small_height, point, title, date_taken)
+//	                       small_url, small_width, small_height, point, title, date_uploaded, date_taken)
 //	VALUES ($1, $2, $3, $4, $5,
 //	        $6, $7, $8, $9, $10,
-//	        $11, $12, $13, st_makepoint($14, $15), $16, $17)
+//	        $11, $12, $13, st_makepoint($14, $15),
+//	        $16, $17, $18)
 //	ON CONFLICT (source, source_id) DO NOTHING
 func (q *Queries) ImportGeophotoIfNotPresent(ctx context.Context, db DBTX, arg ImportGeophotoIfNotPresentParams) error {
 	_, err := db.Exec(ctx, importGeophotoIfNotPresent,
@@ -143,6 +146,7 @@ func (q *Queries) ImportGeophotoIfNotPresent(ctx context.Context, db DBTX, arg I
 		arg.Lng,
 		arg.Lat,
 		arg.Title,
+		arg.DateUploaded,
 		arg.DateTaken,
 	)
 	return err
@@ -367,6 +371,7 @@ SELECT id,
        ST_X(point::geometry) as lng,
        ST_Y(point::geometry) as lat,
        title,
+       date_uploaded,
        date_taken
 FROM geophotos
 WHERE id = any ($1::bigint[])
@@ -390,6 +395,7 @@ type SelectGeophotosByIDRow struct {
 	Lng             pgtype.Float8
 	Lat             pgtype.Float8
 	Title           pgtype.Text
+	DateUploaded    pgtype.Timestamptz
 	DateTaken       pgtype.Timestamptz
 }
 
@@ -412,6 +418,7 @@ type SelectGeophotosByIDRow struct {
 //	       ST_X(point::geometry) as lng,
 //	       ST_Y(point::geometry) as lat,
 //	       title,
+//	       date_uploaded,
 //	       date_taken
 //	FROM geophotos
 //	WHERE id = any ($1::bigint[])
@@ -442,6 +449,7 @@ func (q *Queries) SelectGeophotosByID(ctx context.Context, db DBTX, ids []int64)
 			&i.Lng,
 			&i.Lat,
 			&i.Title,
+			&i.DateUploaded,
 			&i.DateTaken,
 		); err != nil {
 			return nil, err
@@ -472,6 +480,7 @@ SELECT id,
        ST_X(point::geometry) as lng,
        ST_Y(point::geometry) as lat,
        title,
+       date_uploaded,
        date_taken
 FROM geophotos
 WHERE ST_Intersects(point, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
@@ -504,6 +513,7 @@ type SelectGeophotosWithinRow struct {
 	Lng             pgtype.Float8
 	Lat             pgtype.Float8
 	Title           pgtype.Text
+	DateUploaded    pgtype.Timestamptz
 	DateTaken       pgtype.Timestamptz
 }
 
@@ -526,6 +536,7 @@ type SelectGeophotosWithinRow struct {
 //	       ST_X(point::geometry) as lng,
 //	       ST_Y(point::geometry) as lat,
 //	       title,
+//	       date_uploaded,
 //	       date_taken
 //	FROM geophotos
 //	WHERE ST_Intersects(point, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
@@ -563,6 +574,7 @@ func (q *Queries) SelectGeophotosWithin(ctx context.Context, db DBTX, arg Select
 			&i.Lng,
 			&i.Lat,
 			&i.Title,
+			&i.DateUploaded,
 			&i.DateTaken,
 		); err != nil {
 			return nil, err

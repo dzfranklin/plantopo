@@ -225,6 +225,7 @@ func (i *Indexer) mapPhoto(photo searchPagePhoto, indexRegionID int) prepo.Geoph
 		Lng:             float64(photo.Longitude),
 		Lat:             float64(photo.Latitude),
 		Title:           photo.Title,
+		DateUploaded:    time.Time(photo.DateUpload),
 		DateTaken:       time.Time(photo.DateTaken),
 	}
 }

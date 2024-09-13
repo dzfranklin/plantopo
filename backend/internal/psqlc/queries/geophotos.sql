@@ -1,10 +1,11 @@
 -- name: ImportGeophotoIfNotPresent :exec
 INSERT INTO geophotos (source, source_id, index_region_id, indexed_at, attribution_text,
                        attribution_link, licenses, url, width, height,
-                       small_url, small_width, small_height, point, title, date_taken)
+                       small_url, small_width, small_height, point, title, date_uploaded, date_taken)
 VALUES (@source, @source_id, @index_region_id, @indexed_at, @attribution_text,
         @attribution_link, @licenses, @url, @width, @height,
-        @small_url, @small_width, @small_height, st_makepoint(@lng, @lat), @title, @date_taken)
+        @small_url, @small_width, @small_height, st_makepoint(@lng, @lat),
+        @title, @date_uploaded, @date_taken)
 ON CONFLICT (source, source_id) DO NOTHING;
 
 -- name: CreateFlickrIndexRegion :one
@@ -99,6 +100,7 @@ SELECT id,
        ST_X(point::geometry) as lng,
        ST_Y(point::geometry) as lat,
        title,
+       date_uploaded,
        date_taken
 FROM geophotos
 WHERE id = any (@ids::bigint[]);
@@ -121,6 +123,7 @@ SELECT id,
        ST_X(point::geometry) as lng,
        ST_Y(point::geometry) as lat,
        title,
+       date_uploaded,
        date_taken
 FROM geophotos
 WHERE ST_Intersects(point, ST_MakeEnvelope(@minLng, @minLat, @maxLng, @maxLat, 4326)::geography)

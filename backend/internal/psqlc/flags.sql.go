@@ -10,13 +10,15 @@ import (
 )
 
 const deleteBoolFlag = `-- name: DeleteBoolFlag :exec
-DELETE FROM boolean_flags
+DELETE
+FROM boolean_flags
 WHERE key = $1
 `
 
 // DeleteBoolFlag
 //
-//	DELETE FROM boolean_flags
+//	DELETE
+//	FROM boolean_flags
 //	WHERE key = $1
 func (q *Queries) DeleteBoolFlag(ctx context.Context, db DBTX, key string) error {
 	_, err := db.Exec(ctx, deleteBoolFlag, key)
