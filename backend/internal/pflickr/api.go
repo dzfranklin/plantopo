@@ -27,6 +27,7 @@ type API struct {
 	l        *slog.Logger
 	c        *phttp.JSONClient
 	throttle *throttled.GCRARateLimiterCtx
+	flags    pconfig.FlagProvider
 }
 
 func NewAPI(env *pconfig.Env) *API {
@@ -42,7 +43,7 @@ func NewAPI(env *pconfig.Env) *API {
 		panic(err)
 	}
 
-	return &API{l: env.Logger, c: c, throttle: throttle}
+	return &API{l: env.Logger, c: c, throttle: throttle, flags: env.FlagProvider}
 }
 
 type searchParams struct {
@@ -138,6 +139,7 @@ func (a *API) call(ctx context.Context, method string, resp any, params map[stri
 	}
 	query.Set("method", method)
 	return backoff.Retry(func() error {
+		// check rate limit
 		limited, limit, limitErr := a.throttle.RateLimitCtx(ctx, "call", 1)
 		if limitErr != nil {
 			return limitErr
@@ -148,6 +150,13 @@ func (a *API) call(ctx context.Context, method string, resp any, params map[stri
 				return err
 			}
 		}
+
+		// check flag
+		if !a.flags.BoolFlag("permit_flickr_call") {
+			return backoff.Permanent(errors.New("flag permit_flickr_call not set"))
+		}
+
+		// make request
 		a.l.Info("requesting", "query", query.Encode())
 		err := a.c.Get(ctx, resp, "?"+query.Encode())
 		if err != nil {
