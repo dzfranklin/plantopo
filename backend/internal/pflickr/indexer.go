@@ -86,9 +86,14 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 	}
 
 	cutoff := i.clock.Now().Add(-indexUploadedSince)
-	searchWindow := time.Hour * 24 * 100
-	maxSearchWindow := time.Hour * 24 * 365
-	minSearchWindow := time.Hour
+
+	// TODO: fix this hack
+	//   When we as flickr for too much we sometimes get an empty result. We respond to empty results by increasing the
+	//   search window leading to an infinite loop. Hopefully with a low maxSearchWindow and searchWindow this issue
+	//   won't show up?
+	maxSearchWindow := time.Hour * 24 * 14
+	minSearchWindow := time.Minute
+	searchWindow := time.Hour
 
 	params := searchParams{
 		BBox:          region.Rect,
@@ -182,7 +187,7 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 			} else {
 				params.MinUploadDate = latestSeen
 			}
-			params.MaxUploadDate = ptime.Min(params.MinUploadDate.Add(searchWindow), cutoff)
+			params.MaxUploadDate = params.MinUploadDate.Add(searchWindow)
 			params.Page = 1
 			continue
 		}
