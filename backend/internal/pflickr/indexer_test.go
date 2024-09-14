@@ -21,8 +21,9 @@ import (
 )
 
 type mockFlickr struct {
-	photos   []searchPagePhoto
-	searches int
+	photos                []searchPagePhoto
+	searches              int
+	spuriousZeroCountdown int
 }
 
 var mockPhotos []searchPagePhoto
@@ -76,7 +77,7 @@ func mockPhoto(id int, date time.Time) searchPagePhoto {
 }
 
 func newMockFlickr() *mockFlickr {
-	return &mockFlickr{photos: mockPhotos}
+	return &mockFlickr{photos: mockPhotos, spuriousZeroCountdown: 3}
 }
 
 func mockSingleRegionIndexer(t *testing.T, initialTime time.Time) (*MockindexerRepo, *Indexer) {
@@ -121,6 +122,17 @@ func (m *mockFlickr) searchForIndex(_ context.Context, params searchParams) (sea
 	offset := (params.Page - 1) * pageSize
 	if offset < len(matching) {
 		photo = matching[offset:min(len(matching), offset+pageSize)]
+	}
+
+	// Sometimes flickr sends a zero page incorrectly. It seems to happen in more popular areas with wider date ranges.
+	// We mock it arbitrarily so we can check we handle it.
+	if len(photo) > 0 && params.Page == 1 {
+		if m.spuriousZeroCountdown > 0 {
+			m.spuriousZeroCountdown--
+			if m.spuriousZeroCountdown == 0 {
+				return searchPage{Page: 1, PerPage: 100}, nil
+			}
+		}
 	}
 
 	page := searchPage{

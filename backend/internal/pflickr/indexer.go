@@ -2,6 +2,7 @@ package pflickr
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
@@ -43,7 +44,7 @@ type Indexer struct {
 
 func NewIndexer(env *pconfig.Env) *Indexer {
 	return &Indexer{
-		l:      env.Logger,
+		l:      env.Logger.With("app", "pflickr"),
 		flickr: NewAPI(env),
 		repo:   prepo.New(env).Geophotos,
 		clock:  systemClockProvider{},
@@ -87,11 +88,7 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 
 	cutoff := i.clock.Now().Add(-indexUploadedSince)
 
-	// TODO: fix this hack
-	//   When we as flickr for too much we sometimes get an empty result. We respond to empty results by increasing the
-	//   search window leading to an infinite loop. Hopefully with a low maxSearchWindow and searchWindow this issue
-	//   won't show up?
-	maxSearchWindow := time.Hour * 24 * 14
+	maxSearchWindow := time.Hour * 24 * 90
 	minSearchWindow := time.Minute
 	searchWindow := time.Hour
 
@@ -103,6 +100,7 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 	}
 
 	latestSeen := startTime
+	escapingRun := false
 
 	count := 0
 	noURL := 0
@@ -120,11 +118,9 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 			return false, pageErr
 		}
 
-		i.l.Info("searched", "region", region.ID, "len", len(page.Photo),
-			"min", params.MinUploadDate, "max", params.MaxUploadDate, "page", params.Page,
-			"searchWindow", fmt.Sprintf("%dd", searchWindow/(24*time.Hour)),
-			"latestSeen", latestSeen, "searchElapsed", searchElapsed.Seconds(),
-			"count", count, "noURL", noURL, "noGeo", noGeo)
+		if len(page.Photo) > 0 {
+			escapingRun = false
+		}
 
 		if page.Page <= page.Pages {
 			for _, entry := range page.Photo {
@@ -156,6 +152,28 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 			}
 		}
 
+		i.l.Info("searched", "region", region.ID, "len", len(page.Photo),
+			"min", params.MinUploadDate, "max", params.MaxUploadDate, "page", params.Page,
+			"searchWindow", fmt.Sprintf("%dd", searchWindow/(24*time.Hour)),
+			"latestSeen", latestSeen, "searchElapsed", searchElapsed.Seconds(), "escapingRun", escapingRun,
+			"count", count, "noURL", noURL, "noGeo", noGeo)
+
+		if len(page.Photo) == 0 && latestSeen != startTime && !escapingRun && latestSeen.Before(cutoff) {
+			// Sometimes flickr spuriously returns no results. Using a smaller date window seems to resolve the issue.
+			// Since the date range is inclusive we should have gotten an overlap with at least the latestSeen photo.
+			//
+			// To resolve the issue we try re-running the previous request with a smaller window. We hope we've picked
+			// a small enough initial search window that this issue won't show up because we have no way to detect it
+			// until we see our first photo (the prev latestSeen could have been deleted).
+			if searchWindow == minSearchWindow {
+				return count > 0, errors.New("zero page but searchWindow already min")
+			}
+			searchWindow = max(searchWindow/2, minSearchWindow)
+			params.MaxUploadDate = params.MinUploadDate.Add(searchWindow)
+			i.l.Info("reduced searchWindow to try and fix zero page", "newSearchWindow", searchWindow)
+			continue
+		}
+
 		passedCutoff := latestSeen.Equal(cutoff) || latestSeen.After(cutoff)
 		wouldHaveSeenLast := params.Page >= page.Pages &&
 			(params.MaxUploadDate.Equal(cutoff) || params.MaxUploadDate.After(cutoff))
@@ -183,7 +201,11 @@ func (i *Indexer) indexRegion(ctx context.Context, region prepo.FlickrIndexRegio
 				params.MinUploadDate = params.MaxUploadDate
 			} else if len(page.Photo) != 0 && !latestSeen.After(params.MinUploadDate) {
 				// we are stuck in a run of more than our window with the same upload date, skip
+				// Since we won't be able to detect a spurious zero reduce the window to try and avoid
+				i.l.Info("stuck in run, bumping min to escape")
 				params.MinUploadDate = latestSeen.Add(time.Second)
+				searchWindow = minSearchWindow
+				escapingRun = true
 			} else {
 				params.MinUploadDate = latestSeen
 			}
