@@ -1,29 +1,16 @@
-import { Dialog } from '@/components/dialog';
+'use client';
+
 import {
   useSettingsMutation,
   useSettingsQuery,
 } from '@/features/settings/useSettings';
-import Skeleton from '@/components/Skeleton';
-import { toast } from 'react-hot-toast';
 import { Field, Fieldset, Label } from '@/components/fieldset';
 import { Select } from '@/components/select';
 import { Button } from '@/components/button';
+import { toast } from 'react-hot-toast';
+import Skeleton from '@/components/Skeleton';
 
-export default function UnitSettingsDialog({
-  isOpen,
-  close,
-}: {
-  isOpen: boolean;
-  close: () => void;
-}) {
-  return (
-    <Dialog open={isOpen} onClose={close}>
-      <UnitSettingsForm onDone={close} />
-    </Dialog>
-  );
-}
-
-function UnitSettingsForm({ onDone }: { onDone: () => void }) {
+export function SettingsForm() {
   const mutation = useSettingsMutation();
   const query = useSettingsQuery();
 
@@ -47,10 +34,7 @@ function UnitSettingsForm({ onDone }: { onDone: () => void }) {
             },
           },
           {
-            onSuccess: () => {
-              toast.success('Saved settings');
-              onDone();
-            },
+            onSuccess: () => toast.success('Saved settings'),
           },
         );
       }}
@@ -64,7 +48,7 @@ function UnitSettingsForm({ onDone }: { onDone: () => void }) {
           </Select>
         </Field>
 
-        <div>
+        <div className="mt-4">
           <Button type="submit" disableWith={mutation.isPending && 'Saving...'}>
             Save
           </Button>

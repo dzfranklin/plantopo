@@ -8,7 +8,7 @@ import { MAPBOX_TOKEN } from '@/env';
 import { bbox as computeBBox } from '@turf/bbox';
 import { along as computeAlong } from '@turf/along';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { useUnitSettings } from '../units/useUnitSettings';
+import { useSettings } from '@/features/settings/useSettings';
 
 export default function TrackMapComponent({
   track,
@@ -17,16 +17,16 @@ export default function TrackMapComponent({
   track: Track;
   markDistance?: number;
 }) {
-  const [unitSettings] = useUnitSettings();
   const [showSkeleton, setShowSkeleton] = useState(true);
 
   const ref = useRef<HTMLDivElement>(null);
 
-  const initialUnitSettings = useRef(unitSettings);
+  const { units } = useSettings();
+  const initialUnits = useRef(units);
   const scaleRef = useRef<ml.ScaleControl | null>(null);
   useEffect(() => {
-    initialUnitSettings.current = unitSettings;
-  }, [unitSettings]);
+    initialUnits.current = units;
+  }, [units]);
 
   const initialMarkDistance = useRef(markDistance);
   const markDistanceMarkerRef = useRef<ml.Marker | null>(null);
@@ -59,9 +59,9 @@ export default function TrackMapComponent({
 
       const scaleControl = new ml.ScaleControl({
         unit:
-          initialUnitSettings.current.distance === 'metric'
-            ? 'metric'
-            : 'imperial',
+          initialUnits.current === 'customary'
+            ? 'imperial'
+            : initialUnits.current,
       });
       map.addControl(scaleControl);
       scaleRef.current = scaleControl;
@@ -103,10 +103,12 @@ export default function TrackMapComponent({
 
   useEffect(() => {
     if (!scaleRef.current) return;
-    scaleRef.current.setUnit(
-      unitSettings.distance === 'metric' ? 'metric' : 'imperial',
-    );
-  }, [unitSettings.distance]);
+    if (units === 'customary') {
+      scaleRef.current.setUnit('imperial');
+    } else {
+      scaleRef.current.setUnit('metric');
+    }
+  }, [units]);
 
   useEffect(() => {
     syncMarkDistanceMarker(markDistanceMarkerRef, track.geojson, markDistance);

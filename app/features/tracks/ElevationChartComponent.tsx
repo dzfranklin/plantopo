@@ -4,16 +4,16 @@ import InlineAlert from '@/components/InlineAlert';
 import * as Plot from '@observablehq/plot';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  elevationUnitLabel,
-  elevationInUnit,
-  formatUnitless,
   distanceInUnit,
+  elevationInUnit,
+  elevationUnitLabel,
   formatDistance,
   formatElevation,
+  formatUnitless,
 } from '@/features/units/format';
-import { useUnitSettings } from '@/features/units/useUnitSettings';
 import Skeleton from '@/components/Skeleton';
 import { distance as _computeDistance } from '@turf/distance';
+import { useSettings } from '@/features/settings/useSettings';
 
 function computeDistance(a: [number, number], b: [number, number]): number {
   return _computeDistance(a, b, { units: 'meters' });
@@ -40,7 +40,7 @@ export default function ElevationChartComponent({
 }) {
   const [isMalformed, setIsMalformed] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const [settings] = useUnitSettings();
+  const { units } = useSettings();
   const [loaded, setLoaded] = useState(false);
 
   const onMarkDistanceRef = useRef(onMarkDistance);
@@ -107,20 +107,17 @@ export default function ElevationChartComponent({
       height,
       marginLeft: 0, // don’t need left-margin since labels are inset
       x: {
-        transform: (x) => distanceInUnit(x, settings.distance),
+        transform: (x) => distanceInUnit(x, units),
       },
       y: {
         domain: [
-          elevationInUnit(
-            Math.min(...points.map((p) => p.elevation)),
-            settings.elevation,
-          ),
+          elevationInUnit(Math.min(...points.map((p) => p.elevation)), units),
           elevationInUnit(
             Math.max(...points.map((p) => p.elevation)) + 100,
-            settings.elevation,
+            units,
           ),
         ] as const,
-        transform: (y) => elevationInUnit(y, settings.elevation),
+        transform: (y) => elevationInUnit(y, units),
       },
       marks: [
         Plot.gridY({
@@ -137,7 +134,7 @@ export default function ElevationChartComponent({
           tickFormat: ((value: number, i: number, axis: number[]) => {
             let formatted = formatUnitless(value, 0);
             if (i === axis.length - 1) {
-              const unit = elevationUnitLabel(settings.elevation);
+              const unit = elevationUnitLabel(units);
               formatted += ` ${unit}`;
             }
             return formatted;
@@ -165,8 +162,8 @@ export default function ElevationChartComponent({
             y: 'elevation',
             title(p: PointEntry, _i: number) {
               return [
-                `Distance: ${formatDistance(p.distance, settings.distance).join(' ')}`,
-                `Elevation: ${formatElevation(p.elevation, settings.elevation).join(' ')}`,
+                `Distance: ${formatDistance(p.distance, units).join(' ')}`,
+                `Elevation: ${formatElevation(p.elevation, units).join(' ')}`,
               ].join('\n\n');
             },
           }),
@@ -185,7 +182,7 @@ export default function ElevationChartComponent({
     return () => {
       plot.remove();
     };
-  }, [coordinates, elevations, settings, width]);
+  }, [coordinates, elevations, units, width]);
   return (
     <div ref={ref} style={{ height }}>
       {!loaded && <Skeleton />}

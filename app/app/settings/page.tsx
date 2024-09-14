@@ -1,12 +1,10 @@
 import { Layout } from '@/components/Layout';
-import UnitSettingsForm from '@/features/units/UnitSettingsForm';
+import { SettingsForm } from '@/features/settings/SettingsForm';
 
 export default function Page() {
   return (
     <Layout pageTitle="Settings">
-      <div className="w-full max-w-3xl space-y-6">
-        <UnitSettingsForm />
-      </div>
+      <SettingsForm />
     </Layout>
   );
 }

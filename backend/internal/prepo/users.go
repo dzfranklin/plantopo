@@ -98,6 +98,58 @@ func (r *Users) getByEmailWithPasswordHash(email string) (User, []byte, error) {
 	return mapUser(row), row.PasswordHash, nil
 }
 
+type UserSettings struct {
+	UserID    string
+	Value     json.RawMessage
+	UpdatedAt time.Time
+}
+
+func (r *Users) GetSettings(id string) (UserSettings, error) {
+	ctx, cancel := defaultContext()
+	defer cancel()
+
+	dbID, err := IDToUUID(userIDKind, id)
+	if err != nil {
+		return UserSettings{}, err
+	}
+
+	row, err := q.SelectSettings(ctx, r.db, pgUUID(dbID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return UserSettings{
+			UserID:    id,
+			Value:     []byte("{}"),
+			UpdatedAt: time.Time{},
+		}, nil
+	} else if err != nil {
+		return UserSettings{}, err
+	}
+	return mapUserSettings(row), nil
+}
+
+func (r *Users) UpdateSettings(value UserSettings) (UserSettings, error) {
+	ctx, cancel := defaultContext()
+	defer cancel()
+
+	dbID, err := IDToUUID(userIDKind, value.UserID)
+	if err != nil {
+		return UserSettings{}, err
+	}
+
+	row, err := q.UpsertSettings(ctx, r.db, pgUUID(dbID), value.Value)
+	if err != nil {
+		return UserSettings{}, err
+	}
+	return mapUserSettings(row), nil
+}
+
+func mapUserSettings(row psqlc.UserSetting) UserSettings {
+	return UserSettings{
+		UserID:    UUIDToID(userIDKind, row.UserID.Bytes),
+		Value:     row.Value,
+		UpdatedAt: row.UpdatedAt.Time,
+	}
+}
+
 func (r *Users) Register(req UserRegistration) (User, error) {
 	ctx, cancel := defaultContext()
 	defer cancel()

@@ -139,6 +139,24 @@ func (UnimplementedHandler) MunroAccessRequestPost(ctx context.Context, req *Mun
 	return r, ht.ErrNotImplemented
 }
 
+// SettingsGet implements GET /settings operation.
+//
+// Get settings.
+//
+// GET /settings
+func (UnimplementedHandler) SettingsGet(ctx context.Context) (r *SettingsGetOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// SettingsPut implements PUT /settings operation.
+//
+// Update settings.
+//
+// PUT /settings
+func (UnimplementedHandler) SettingsPut(ctx context.Context, req *SettingsPutReq) (r *SettingsPutOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // WeatherShortUkGet implements GET /weather/short-uk operation.
 //
 // Find short format weather forecasts for a place in the UK.

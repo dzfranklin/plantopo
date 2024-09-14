@@ -39,3 +39,10 @@ func badRequest(msg string) *DefaultErrorResponseStatusCode {
 		Response:   DefaultError{Message: msg},
 	}
 }
+
+func unauthorized(msg string) *DefaultErrorResponseStatusCode {
+	return &DefaultErrorResponseStatusCode{
+		StatusCode: http.StatusUnauthorized,
+		Response:   DefaultError{Message: msg},
+	}
+}

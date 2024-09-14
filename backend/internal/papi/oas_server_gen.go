@@ -92,6 +92,18 @@ type Handler interface {
 	//
 	// POST /munro-access/request
 	MunroAccessRequestPost(ctx context.Context, req *MunroAccessRequestPostReq) (*MunroAccessRequestPostOK, error)
+	// SettingsGet implements GET /settings operation.
+	//
+	// Get settings.
+	//
+	// GET /settings
+	SettingsGet(ctx context.Context) (*SettingsGetOK, error)
+	// SettingsPut implements PUT /settings operation.
+	//
+	// Update settings.
+	//
+	// PUT /settings
+	SettingsPut(ctx context.Context, req *SettingsPutReq) (*SettingsPutOK, error)
 	// WeatherShortUkGet implements GET /weather/short-uk operation.
 	//
 	// Find short format weather forecasts for a place in the UK.

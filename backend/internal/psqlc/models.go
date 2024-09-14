@@ -155,3 +155,9 @@ type User struct {
 	PasswordHash   []byte
 	CreatedAt      pgtype.Timestamp
 }
+
+type UserSetting struct {
+	UserID    pgtype.UUID
+	Value     []byte
+	UpdatedAt pgtype.Timestamptz
+}

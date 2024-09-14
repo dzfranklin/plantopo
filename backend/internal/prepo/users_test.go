@@ -59,6 +59,55 @@ func TestUsers(t *testing.T) {
 		assert.Equal(t, true, user.EmailConfirmed)
 	})
 
+	t.Run("initial settings is empty object", func(t *testing.T) {
+		env.Reset()
+
+		_, subject := makeSubject(t)
+
+		got, err := subject.GetSettings(userID)
+		require.NoError(t, err)
+		require.Equal(t, userID, got.UserID)
+		require.JSONEq(t, "{}", string(got.Value))
+		require.Zero(t, got.UpdatedAt)
+	})
+
+	t.Run("updates settings", func(t *testing.T) {
+		env.Reset()
+
+		_, subject := makeSubject(t)
+
+		before, err := subject.GetSettings(userID)
+		require.NoError(t, err)
+
+		// insert for the first time
+
+		got1, err := subject.UpdateSettings(UserSettings{
+			UserID: userID,
+			Value:  []byte(`{"key": "value"}`),
+		})
+		require.NoError(t, err)
+
+		assert.JSONEq(t, `{"key":"value"}`, string(got1.Value))
+		assert.NotEqual(t, got1.Value, before.Value)
+		assert.Greater(t, got1.UpdatedAt, before.UpdatedAt)
+
+		got2, err := subject.GetSettings(userID)
+		require.NoError(t, err)
+		assert.Equal(t, got1.Value, got2.Value)
+		assert.Equal(t, got1.UpdatedAt, got2.UpdatedAt)
+
+		// update
+
+		got3, err := subject.UpdateSettings(UserSettings{
+			UserID: userID,
+			Value:  []byte(`{"key": "value2", "otherkey": "othervalue"}`),
+		})
+		require.NoError(t, err)
+
+		assert.JSONEq(t, `{"key":"value2","otherkey":"othervalue"}`, string(got3.Value))
+		assert.Greater(t, got3.UpdatedAt, got2.UpdatedAt)
+	})
+
 	t.Run("Register then CheckLogin", func(t *testing.T) {
 		env.Reset()
 		al, subject := makeSubject(t)

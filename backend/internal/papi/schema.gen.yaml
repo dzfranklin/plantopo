@@ -19,7 +19,47 @@ tags:
   - name: "weather"
   - name: "munro-access-reports"
   - name: "geophotos"
+  - name: "settings"
 paths:
+  /settings:
+    get:
+      tags: [ settings ]
+      summary: "Get settings"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settings: { $ref: "#/components/schemas/Settings" }
+                required: [ settings ]
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
+    put:
+      tags: [ settings ]
+      summary: "Update settings"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                settings: { $ref: "#/components/schemas/Settings" }
+              required: [ settings ]
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settings: { $ref: "#/components/schemas/Settings" }
+                required: [ settings ]
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
+
   /auth/check:
     post:
       tags: [ "auth" ]
@@ -433,6 +473,12 @@ components:
             type: string
             format: binary
   schemas:
+    Settings:
+      type: object
+      properties:
+        units:
+          type: string
+          enum: [ metric, customary ]
     AuthRegisterRequest:
       type: object
       properties:

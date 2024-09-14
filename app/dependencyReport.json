@@ -1362,13 +1362,25 @@
     "repository": "https://github.com/tailwindlabs/tailwindcss-typography"
   },
   {
-    "name": "@tanstack/query-core@5.52.0",
+    "name": "@tanstack/query-core@5.56.2",
     "publisher": "tannerlinsley",
     "licenses": "MIT",
     "repository": "https://github.com/TanStack/query"
   },
   {
-    "name": "@tanstack/react-query@5.52.1",
+    "name": "@tanstack/query-devtools@5.56.1",
+    "publisher": "tannerlinsley",
+    "licenses": "MIT",
+    "repository": "https://github.com/TanStack/query"
+  },
+  {
+    "name": "@tanstack/react-query-devtools@5.56.2",
+    "publisher": "tannerlinsley",
+    "licenses": "MIT",
+    "repository": "https://github.com/TanStack/query"
+  },
+  {
+    "name": "@tanstack/react-query@5.56.2",
     "publisher": "tannerlinsley",
     "licenses": "MIT",
     "repository": "https://github.com/TanStack/query"

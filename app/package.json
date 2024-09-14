@@ -68,6 +68,7 @@
     "@storybook/nextjs": "^8.2.9",
     "@storybook/react": "^8.2.9",
     "@storybook/test": "^8.2.9",
+    "@tanstack/react-query-devtools": "^5.56.2",
     "@types/geojson": "^7946.0.14",
     "@types/luxon": "^3.4.2",
     "@types/mapbox__polyline": "^1.0.5",

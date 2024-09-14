@@ -1409,6 +1409,52 @@ func (o OptSetSessionCookieHeader) Or(d SetSessionCookieHeader) SetSessionCookie
 	return d
 }
 
+// NewOptSettingsUnits returns new OptSettingsUnits with value set to v.
+func NewOptSettingsUnits(v SettingsUnits) OptSettingsUnits {
+	return OptSettingsUnits{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSettingsUnits is optional SettingsUnits.
+type OptSettingsUnits struct {
+	Value SettingsUnits
+	Set   bool
+}
+
+// IsSet returns true if OptSettingsUnits was set.
+func (o OptSettingsUnits) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSettingsUnits) Reset() {
+	var v SettingsUnits
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSettingsUnits) SetTo(v SettingsUnits) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSettingsUnits) Get() (v SettingsUnits, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSettingsUnits) Or(d SettingsUnits) SettingsUnits {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptString returns new OptString with value set to v.
 func NewOptString(v string) OptString {
 	return OptString{
@@ -1550,6 +1596,104 @@ func (o OptValidationErrorsFieldErrors) Or(d ValidationErrorsFieldErrors) Valida
 type Point []float64
 
 type SetSessionCookieHeader string
+
+// Ref: #/components/schemas/Settings
+type Settings struct {
+	Units OptSettingsUnits `json:"units"`
+}
+
+// GetUnits returns the value of Units.
+func (s *Settings) GetUnits() OptSettingsUnits {
+	return s.Units
+}
+
+// SetUnits sets the value of Units.
+func (s *Settings) SetUnits(val OptSettingsUnits) {
+	s.Units = val
+}
+
+type SettingsGetOK struct {
+	Settings Settings `json:"settings"`
+}
+
+// GetSettings returns the value of Settings.
+func (s *SettingsGetOK) GetSettings() Settings {
+	return s.Settings
+}
+
+// SetSettings sets the value of Settings.
+func (s *SettingsGetOK) SetSettings(val Settings) {
+	s.Settings = val
+}
+
+type SettingsPutOK struct {
+	Settings Settings `json:"settings"`
+}
+
+// GetSettings returns the value of Settings.
+func (s *SettingsPutOK) GetSettings() Settings {
+	return s.Settings
+}
+
+// SetSettings sets the value of Settings.
+func (s *SettingsPutOK) SetSettings(val Settings) {
+	s.Settings = val
+}
+
+type SettingsPutReq struct {
+	Settings Settings `json:"settings"`
+}
+
+// GetSettings returns the value of Settings.
+func (s *SettingsPutReq) GetSettings() Settings {
+	return s.Settings
+}
+
+// SetSettings sets the value of Settings.
+func (s *SettingsPutReq) SetSettings(val Settings) {
+	s.Settings = val
+}
+
+type SettingsUnits string
+
+const (
+	SettingsUnitsMetric    SettingsUnits = "metric"
+	SettingsUnitsCustomary SettingsUnits = "customary"
+)
+
+// AllValues returns all SettingsUnits values.
+func (SettingsUnits) AllValues() []SettingsUnits {
+	return []SettingsUnits{
+		SettingsUnitsMetric,
+		SettingsUnitsCustomary,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SettingsUnits) MarshalText() ([]byte, error) {
+	switch s {
+	case SettingsUnitsMetric:
+		return []byte(s), nil
+	case SettingsUnitsCustomary:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SettingsUnits) UnmarshalText(data []byte) error {
+	switch SettingsUnits(data) {
+	case SettingsUnitsMetric:
+		*s = SettingsUnitsMetric
+		return nil
+	case SettingsUnitsCustomary:
+		*s = SettingsUnitsCustomary
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 type Token string
 

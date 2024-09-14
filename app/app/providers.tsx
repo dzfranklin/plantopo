@@ -8,8 +8,8 @@ import {
 } from '@tanstack/react-query';
 import { ReactNode } from 'react';
 import { Toaster } from 'react-hot-toast';
-import { UnitSettingsProvider } from '@/features/units/UnitSettingsProvider';
 import { DebugModeProvider } from '@/hooks/debugMode';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
 function makeQueryClient() {
   return new QueryClient({
@@ -48,11 +48,10 @@ export default function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ReactQueryDevtools initialIsOpen={false} />
       <DebugModeProvider>
-        <UnitSettingsProvider>
-          <Toaster position="bottom-right" />
-          {children}
-        </UnitSettingsProvider>
+        <Toaster position="bottom-right" />
+        {children}
       </DebugModeProvider>
     </QueryClientProvider>
   );
