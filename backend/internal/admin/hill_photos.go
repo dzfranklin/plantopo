@@ -54,7 +54,7 @@ func (app *adminApp) reviewBritishAndIrishHillPhotos(w http.ResponseWriter, r *h
 		Src:    p.Source,
 	}
 
-	decodedID, err := prepo.IDToSerial("bihp", p.ID)
+	decodedID, err := prepo.IDToInt("bihp", p.ID)
 	if err != nil {
 		panic(err)
 	}

@@ -11,11 +11,6 @@ import (
 	"time"
 )
 
-const (
-	auditLogIDKind     = "al"
-	auditLogCursorKind = "alcur"
-)
-
 type AuditLog struct {
 	l  *slog.Logger
 	db *pgxpool.Pool
@@ -70,7 +65,7 @@ func (al *AuditLog) Get(id string) (AuditLogEntry, error) {
 	ctx, cancel := defaultContext()
 	defer cancel()
 
-	dbID, err := IDToSerial(auditLogIDKind, id)
+	dbID, err := IDToInt(auditLogIDKind, id)
 	if err != nil {
 		return AuditLogEntry{}, err
 	}
@@ -103,7 +98,7 @@ func (al *AuditLog) list(
 
 	var cursorID int64
 	if cursor != nil {
-		parsed, err := IDToSerial(auditLogCursorKind, *cursor)
+		parsed, err := IDToInt(auditLogCursorKind, *cursor)
 		if err != nil {
 			return nil, "", ErrInvalidCursor
 		}
@@ -142,7 +137,7 @@ func (al *AuditLog) list(
 			nextCursorID = rows[len(rows)-1].ID
 		}
 	}
-	nextCursor := SerialToID(auditLogCursorKind, nextCursorID)
+	nextCursor := IntToID(auditLogCursorKind, nextCursorID)
 
 	return entries, nextCursor, err
 }
@@ -156,7 +151,7 @@ func (al *AuditLog) UpToNow() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return SerialToID(auditLogCursorKind, val.Int64), nil
+	return IntToID(auditLogCursorKind, val.Int64), nil
 }
 
 func mapAuditLog(row psqlc.AuditLog) (AuditLogEntry, error) {
@@ -167,7 +162,7 @@ func mapAuditLog(row psqlc.AuditLog) (AuditLogEntry, error) {
 	}
 
 	return AuditLogEntry{
-		ID:      SerialToID(auditLogIDKind, row.ID),
+		ID:      IntToID(auditLogIDKind, row.ID),
 		Time:    row.Time.Time,
 		Subject: row.Subject,
 		Object:  row.Object,

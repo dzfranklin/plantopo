@@ -19,10 +19,6 @@ import (
 	"time"
 )
 
-var (
-	userIDKind = "u"
-)
-
 type Users struct {
 	cfg           *pconfig.Users
 	l             *slog.Logger

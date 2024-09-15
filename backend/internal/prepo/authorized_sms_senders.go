@@ -8,10 +8,6 @@ import (
 	"time"
 )
 
-const (
-	authorizedSMSSenderIDKind = "asmss"
-)
-
 type AuthorizedSMSSenders struct {
 	l  *slog.Logger
 	db *pgxpool.Pool

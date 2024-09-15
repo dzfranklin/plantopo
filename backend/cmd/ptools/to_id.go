@@ -30,7 +30,7 @@ var toIDCmd = &cobra.Command{
 				fmt.Println("Expected <value> to be a valid base-10 number")
 				os.Exit(1)
 			}
-			fmt.Println(prepo.SerialToID(toIDKind, v))
+			fmt.Println(prepo.IntToID(toIDKind, v))
 		default:
 			fmt.Println("Invalid --kind")
 			os.Exit(1)

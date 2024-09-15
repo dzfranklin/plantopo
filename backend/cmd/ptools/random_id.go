@@ -29,7 +29,7 @@ var randomIDCmd = &cobra.Command{
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println(prepo.SerialToID(randomIDKind, v.Int64()))
+			fmt.Println(prepo.IntToID(randomIDKind, v.Int64()))
 		default:
 			fmt.Println("Invalid --kind")
 			os.Exit(1)

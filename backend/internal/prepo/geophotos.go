@@ -1,15 +1,11 @@
 package prepo
 
 import (
-	"bytes"
-	"compress/gzip"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/pslices"
 	"github.com/dzfranklin/plantopo/backend/internal/psqlc"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tidwall/geojson/geometry"
 	"iter"
@@ -160,45 +156,6 @@ func (r *Geophotos) GetGeographIndexProgress() (int, error) {
 		return 0, err
 	}
 	return int(row.Int32), err
-}
-
-func (r *Geophotos) GetTile(ctx context.Context, z, x, y int) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	var uncompressed []byte
-	var selectErr error
-	if z < 5 {
-		percent := float32(z)*2 + 1
-		params := psqlc.SelectGeophotoTileSampledParams{
-			Z: int32(z),
-			X: int32(x),
-			Y: int32(y),
-			Percent: pgtype.Float4{
-				Float32: percent,
-				Valid:   true,
-			},
-		}
-		uncompressed, selectErr = q.SelectGeophotoTileSampled(ctx, r.db, params)
-	} else {
-		params := psqlc.SelectGeophotoTileParams{
-			Z: int32(z),
-			X: int32(x),
-			Y: int32(y),
-		}
-		uncompressed, selectErr = q.SelectGeophotoTile(ctx, r.db, params)
-	}
-
-	if selectErr != nil {
-		return nil, fmt.Errorf("get %d/%d/%d: %w", z, x, y, selectErr)
-	}
-
-	var compressed bytes.Buffer
-	w := gzip.NewWriter(&compressed)
-	_, _ = w.Write(uncompressed)
-	_ = w.Close()
-
-	return compressed.Bytes(), nil
 }
 
 func (r *Geophotos) GetMany(ctx context.Context, ids []int) ([]Geophoto, error) {

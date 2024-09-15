@@ -23,7 +23,7 @@ var fromIDCmd = &cobra.Command{
 			}
 			fmt.Println(v.String())
 		case "serial":
-			v, err := prepo.IDToSerial(fromIDKind, args[0])
+			v, err := prepo.IDToInt(fromIDKind, args[0])
 			if err != nil {
 				fmt.Println("invalid id")
 				os.Exit(1)

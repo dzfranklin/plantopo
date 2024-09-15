@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-const britishAndIrishHillPhotoIDKind = "bihp"
-
 type BritishAndIrishHills struct {
 	db *pgxpool.Pool
 }
@@ -110,7 +108,7 @@ func (s *BritishAndIrishHills) Get(id int32) (BritishOrIrishHill, error) {
 func (s *BritishAndIrishHills) ApproveHillPhoto(id string) error {
 	ctx, cancel := defaultContext()
 	defer cancel()
-	dbID, err := IDToSerial(britishAndIrishHillPhotoIDKind, id)
+	dbID, err := IDToInt(britishAndIrishHillPhotoIDKind, id)
 	if err != nil {
 		return err
 	}
@@ -161,7 +159,7 @@ func mapBritishIrishHill(row psqlc.ListBritishAndIrishHillsRow) BritishOrIrishHi
 
 func mapBritishIrishHillPhoto(d psqlc.BritishAndIrishHillPhoto) HillPhoto {
 	return HillPhoto{
-		ID:         SerialToID(britishAndIrishHillPhotoIDKind, d.ID),
+		ID:         IntToID(britishAndIrishHillPhotoIDKind, d.ID),
 		HillID:     d.HillID,
 		Caption:    d.Caption.String,
 		Licenses:   d.Licenses,
