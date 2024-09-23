@@ -1,3 +1,27 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-just pre-commit
+# API
+spectral lint ./api/schema/schema.yaml --fail-severity error &
+
+# APP
+cd app && npm run lint &
+cd app && tsc --noEmit --project tsconfig.json &
+cd app && npm run test -- run &
+
+# BACKEND
+cd ./backend && go test -race -short ./... &
+cd backend && staticcheck ./... &
+cd backend && go vet ./... &
+cd backend && go mod tidy && git diff --exit-code -- go.mod go.sum &
+cd backend && (test -z "$(gofmt -l .)" || echo 'GOFMT: would change file(s)' && exit 1) &
+
+FAIL=0
+for job in $(jobs -p); do
+  wait "$job" || ((FAIL+=1))
+done
+if [ "$FAIL" == "0" ]; then
+  echo "All checks passed"
+else
+  echo "$FAIL checks failed"
+fi
