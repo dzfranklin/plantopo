@@ -1,27 +1,30 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
-# API
-spectral lint ./api/schema/schema.yaml --fail-severity error &
+cd "$(git rev-parse --show-toplevel)" || exit
 
-# APP
-cd app && npm run lint &
-cd app && tsc --noEmit --project tsconfig.json &
-cd app && npm run test -- run &
+# First, stash index and work dir, keeping only the
+# to-be-committed changes in the working directory.
+old_stash=$(git rev-parse -q --verify refs/stash)
+git stash push -q --include-untracked --keep-index || exit 1
+new_stash=$(git rev-parse -q --verify refs/stash)
 
-# BACKEND
-cd ./backend && go test -race -short ./... &
-cd backend && staticcheck ./... &
-cd backend && go vet ./... &
-cd backend && go mod tidy && git diff --exit-code -- go.mod go.sum &
-cd backend && (test -z "$(gofmt -l .)" || echo 'GOFMT: would change file(s)' && exit 1) &
-
-FAIL=0
-for job in $(jobs -p); do
-  wait "$job" || ((FAIL+=1))
-done
-if [ "$FAIL" == "0" ]; then
-  echo "All checks passed"
-else
-  echo "$FAIL checks failed"
+# If there were no changes (e.g., `--amend` or `--allow-empty`)
+# then nothing was stashed, and we should skip everything,
+# including the tests themselves.  (Presumably the tests passed
+# on the previous commit, so there is no need to re-run them.)
+if [ "$old_stash" = "$new_stash" ]; then
+    echo "pre-commit script: no changes to test"
+    exit 0
 fi
+
+just gen || exit
+git add -A || exit
+
+SHORT_CHECK=1 ./scripts/check-all.sh
+status=$?
+
+# Restore changes
+git reset --hard -q && git stash apply --index -q && git stash drop -q || exit 1
+
+# Exit with status from test-run: nonzero prevents commit
+exit "$status"

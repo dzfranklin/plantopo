@@ -34,9 +34,6 @@ fi
 
 tools_dir=$(mktemp -d)
 
-curl --proto '=https' --tlsv1.2 -sLSf https://just.systems/install.sh | bash -s -- --to "$tools_dir"
-just="$tools_dir/just"
-
 SPECTRAL_ARCH="$ARCH"
 if [ "$SPECTRAL_ARCH" = "amd64" ]; then
   SPECTRAL_ARCH="x64"
@@ -65,4 +62,4 @@ pushd app && npm ci --include=dev && popd
 
 # Run checks
 
-PATH="$tools_dir:$PATH" $just check-all
+PATH="$tools_dir:$PATH" ./scripts/check-all.sh
