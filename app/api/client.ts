@@ -1,7 +1,7 @@
 'use client';
 
-import createClient from './query';
 import { fetchClient } from './base';
+import createClient from 'openapi-react-query';
 
 export { fetchClient } from './base';
 

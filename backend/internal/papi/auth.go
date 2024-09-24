@@ -11,14 +11,21 @@ const sessionCookieName = "session"
 func (h *phandler) AuthCheckPost(ctx context.Context) (*AuthCheckPostOK, error) {
 	userID, ok := getAuthenticatedUser(ctx)
 	if !ok {
-		return nil, &DefaultErrorResponseStatusCode{
-			StatusCode: http.StatusUnauthorized,
-			Response: DefaultError{
-				Message: "you are not logged in",
-			},
-		}
+		return nil, ErrNotLoggedIn
 	}
 	return &AuthCheckPostOK{UserID: UserID(userID)}, nil
+}
+
+func (h *phandler) AuthMeGet(ctx context.Context) (*AuthMeGetOK, error) {
+	userID, ok := getAuthenticatedUser(ctx)
+	if !ok {
+		return nil, ErrNotLoggedIn
+	}
+	user, err := h.Users.Get(userID)
+	if err != nil {
+		return nil, err
+	}
+	return &AuthMeGetOK{User: mapUser(user)}, nil
 }
 
 func (h *phandler) AuthAuthenticatePost(ctx context.Context, req *AuthenticateReq) (*AuthenticateOK, error) {

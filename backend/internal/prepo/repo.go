@@ -11,6 +11,7 @@ type Repo struct {
 	AuthorizedSMSSenders *AuthorizedSMSSenders
 	BritishAndIrishHills *BritishAndIrishHills
 	Geophotos            *Geophotos
+	Tracks               *Tracks
 }
 
 func New(env *pconfig.Env) *Repo {
@@ -24,5 +25,6 @@ func New(env *pconfig.Env) *Repo {
 		AuthorizedSMSSenders: newAuthorizedSMSSenders(env),
 		BritishAndIrishHills: NewBritishAndIrishHills(env.DB),
 		Geophotos:            newGeophotos(env.DB),
+		Tracks:               NewTracks(env),
 	}
 }

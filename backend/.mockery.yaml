@@ -12,3 +12,6 @@ packages:
   github.com/dzfranklin/plantopo/backend/internal/pgeograph:
     interfaces:
       ImportRepo:
+  github.com/dzfranklin/plantopo/backend/internal/pelevation:
+    interfaces:
+      lookuper:

@@ -24,7 +24,7 @@ func New(env *pconfig.Env) (http.Handler, error) {
 	h := &phandler{
 		Env:         env,
 		Repo:        repo,
-		elevation:   pelevation.New(env),
+		elevation:   pelevation.Singleton(env),
 		weather:     pweather.New(env),
 		munroaccess: pmunroaccess.New(env),
 	}
@@ -34,7 +34,7 @@ func New(env *pconfig.Env) (http.Handler, error) {
 		Repo: repo,
 	}
 
-	srv, err := NewServer(h, s, WithMiddleware(h.setClientInfoMiddleware))
+	srv, err := NewServer(h, s, WithMiddleware(h.requestInfoMiddleware))
 	if err != nil {
 		return nil, err
 	}

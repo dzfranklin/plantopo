@@ -27,7 +27,6 @@ function UnitSettingsForm({ onDone }: { onDone: () => void }) {
   const mutation = useSettingsMutation();
   const query = useSettingsQuery();
 
-  if (query.error) throw query.error;
   if (!query.data) {
     return <Skeleton />;
   }
@@ -65,7 +64,11 @@ function UnitSettingsForm({ onDone }: { onDone: () => void }) {
         </Field>
 
         <div>
-          <Button type="submit" disableWith={mutation.isPending && 'Saving...'}>
+          <Button
+            type="submit"
+            disableWith={mutation.isPending && 'Saving...'}
+            color="dark/zinc"
+          >
             Save
           </Button>
         </div>

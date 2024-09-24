@@ -29,7 +29,6 @@ export function GeophotosPaneLoader({
     },
     { enabled: selection !== null },
   );
-  if (query.error) throw query.error;
 
   if (!query.data) {
     return <Skeleton height={200} width={200} />;

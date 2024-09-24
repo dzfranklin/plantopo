@@ -1,21 +1,18 @@
 'use client';
 
 import Skeleton from '@/components/Skeleton';
-import { Track } from './api';
-import { RefObject, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as ml from 'mapbox-gl';
 import { MAPBOX_TOKEN } from '@/env';
 import { bbox as computeBBox } from '@turf/bbox';
-import { along as computeAlong } from '@turf/along';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useSettings } from '@/features/settings/useSettings';
+import { featureCollection, lineString } from '@turf/helpers';
 
 export default function TrackMapComponent({
-  track,
-  markDistance,
+  line,
 }: {
-  track: Track;
-  markDistance?: number;
+  line: [number, number][];
 }) {
   const [showSkeleton, setShowSkeleton] = useState(true);
 
@@ -28,11 +25,12 @@ export default function TrackMapComponent({
     initialUnits.current = units;
   }, [units]);
 
-  const initialMarkDistance = useRef(markDistance);
-  const markDistanceMarkerRef = useRef<ml.Marker | null>(null);
+  const initialLine = useRef(line);
   useEffect(() => {
-    initialMarkDistance.current = markDistance;
-  }, [markDistance]);
+    initialLine.current = line;
+  }, [line]);
+
+  const mapRef = useRef<ml.Map | null>(null);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -40,20 +38,21 @@ export default function TrackMapComponent({
 
     setShowSkeleton(false);
 
-    const bbox = computeBBox(track.geojson);
-
     const map = new ml.Map({
       container: el,
       accessToken: MAPBOX_TOKEN,
       style: 'mapbox://styles/dzfranklin/clxlno49r00er01qq3ppk4wwo',
-      bounds: bbox as ml.LngLatBoundsLike,
-      logoPosition: 'bottom-right',
-      fitBoundsOptions: {
-        padding: 50,
-      },
+      logoPosition: 'top-right',
     });
 
+    const observer = new ResizeObserver(() => {
+      map.resize();
+    });
+    observer.observe(el);
+
     map.on('style.load', () => {
+      mapRef.current = map;
+
       map.addControl(new ml.FullscreenControl());
       map.addControl(new ml.NavigationControl());
 
@@ -68,7 +67,7 @@ export default function TrackMapComponent({
 
       map.addSource('track', {
         type: 'geojson',
-        data: track.geojson,
+        data: { type: 'FeatureCollection', features: [] },
       });
 
       map.addLayer({
@@ -85,21 +84,19 @@ export default function TrackMapComponent({
         },
       });
 
-      const markDistanceMarker = new ml.Marker({});
-      markDistanceMarker.setLngLat([0, 0]);
-      markDistanceMarker.addTo(map);
-      markDistanceMarkerRef.current = markDistanceMarker;
-      syncMarkDistanceMarker(
-        markDistanceMarkerRef,
-        track.geojson,
-        initialMarkDistance.current,
-      );
+      setTrack(map, initialLine.current);
     });
 
     return () => {
+      observer.disconnect();
       map.remove();
     };
-  }, [track.geojson]);
+  }, []);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    setTrack(mapRef.current, line);
+  }, [line]);
 
   useEffect(() => {
     if (!scaleRef.current) return;
@@ -110,37 +107,27 @@ export default function TrackMapComponent({
     }
   }, [units]);
 
-  useEffect(() => {
-    syncMarkDistanceMarker(markDistanceMarkerRef, track.geojson, markDistance);
-  }, [markDistance, track.geojson]);
-
   return (
-    <div className="h-[400px] relative">
+    <div className="h-full w-full max-h-full max-w-full relative">
       {showSkeleton && (
         <div className="absolute inset-0">
           <Skeleton />
         </div>
       )}
-      <div className="absolute inset-0">
-        <div ref={ref} className="h-full w-full" />
+      <div className="absolute inset-0 overflow-clip rounded">
+        <div ref={ref} className="h-full w-full max-h-full max-w-full" />
       </div>
     </div>
   );
 }
 
-function syncMarkDistanceMarker(
-  marker: RefObject<ml.Marker>,
-  geojson: Track['geojson'],
-  markDistance?: number,
-) {
-  if (!marker.current) return;
-  const el = marker.current.getElement();
-  if (markDistance === undefined) {
-    el.style.display = 'none';
+function setTrack(map: ml.Map, line: [number, number][]) {
+  if (line.length >= 2) {
+    const geojson = lineString(line);
+    const bbox = computeBBox(geojson);
+    (map.getSource('track') as ml.GeoJSONSource).setData(geojson);
+    map.fitBounds(bbox as ml.LngLatBoundsLike, { padding: 50, animate: false });
   } else {
-    el.style.display = 'block';
-    const p = computeAlong(geojson, markDistance, { units: 'meters' }).geometry
-      .coordinates;
-    marker.current.setLngLat(p as ml.LngLatLike);
+    (map.getSource('track') as ml.GeoJSONSource).setData(featureCollection([]));
   }
 }

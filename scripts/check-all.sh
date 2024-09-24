@@ -1,27 +1,39 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
 # INPUTS:
 # Environment variables: SHORT_CHECK
 
+chronic() {
+  tmp=$(mktemp) || exit 1
+  "$@" >"$tmp" 2>&1
+  ret=$?
+  if [ "$ret" -ne 0 ]; then
+    printf -- '-----------\nFAIL: %s\n-----------\n' "$*"
+    cat "$tmp"
+  fi
+  rm -f "$tmp"
+  return "$ret"
+}
+
 # API
-spectral lint ./api/schema/schema.yaml --fail-severity error &
+(chronic spectral lint ./api/schema/schema.yaml --fail-severity error) &
 
 # APP
-cd app && npm run lint &
-cd app && tsc --noEmit --project tsconfig.json &
-cd app && npm run test -- run &
+(cd app && chronic npx prettier . --check) &
+(cd app && chronic npx next lint --max-warnings 0) &
+(cd app && chronic tsc --noEmit --project tsconfig.json) &
+(cd app && chronic npm run test -- run) &
 
 # BACKEND
 if [[ -z "${SHORT_CHECK+x}" ]]; then
-  cd ./backend && go test -race ./... &
+  (cd ./backend && chronic go test -race ./...) &
 else
-  cd ./backend && go test -race -short ./... &
+  (cd ./backend && chronic go test -race -short ./...) &
 fi
-cd backend && staticcheck ./... &
-cd backend && go vet ./... &
-cd backend && (test -z "$(gofmt -l .)" || echo 'GOFMT: would change file(s)' && exit 1) &
-cd backend && go mod tidy -diff || echo 'GO MOD TIDY: would change file(s)' &
+(cd backend && chronic staticcheck ./...) &
+(cd backend && chronic test -z "$(gofmt -l .)")  &
+(cd backend && chronic go mod tidy -diff) &
 
 FAIL=0
 for job in $(jobs -p); do
@@ -31,4 +43,5 @@ if [ "$FAIL" == "0" ]; then
   echo "All checks passed"
 else
   echo "$FAIL checks failed"
+  exit 1
 fi

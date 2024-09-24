@@ -21,6 +21,10 @@ var (
 	idEncoding = base32.NewEncoding("0123456789abcdefghjkmnpqrstvwxyz").WithPadding(base32.NoPadding)
 )
 
+func pgBool(v bool) pgtype.Bool {
+	return pgtype.Bool{Bool: v, Valid: true}
+}
+
 func pgOptInt4(v int) pgtype.Int4 {
 	if v == 0 {
 		return pgtype.Int4{}
@@ -102,4 +106,14 @@ func isUniqueViolationErr(err error, constraint string) bool {
 		return false
 	}
 	return pgErr.Code == pgerrcode.UniqueViolation && pgErr.ConstraintName == constraint
+}
+
+func trueCount(arg ...bool) int {
+	c := 0
+	for _, v := range arg {
+		if v {
+			c++
+		}
+	}
+	return c
 }

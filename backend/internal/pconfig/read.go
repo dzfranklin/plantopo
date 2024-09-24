@@ -22,7 +22,7 @@ func Read() *Config {
 			CORSAllowHosts: getEnvStrings("CORS_ALLOW_HOSTS"),
 		},
 		Elevation: Elevation{
-			Endpoint: getEnvString("ELEVATION_API_ENDPOINT"),
+			DEMDataset: getEnvString("ELEVATION_DEM_DATASET"),
 		},
 		Postgres: Postgres{
 			URL: getEnvString("DATABASE_URL"),
@@ -79,6 +79,9 @@ func Read() *Config {
 		Geograph: Geograph{
 			ImageSecret: getEnvString("GEOGRAPH_IMAGE_SECRET"),
 		},
+		DemoUser: DemoUser{
+			SampleTracksURL: getOptionalEnvString("DEMO_USER_SAMPLE_TRACKS_URL", "https://minio.dfranklin.dev/plantopo-samples/tracks.ndjson"),
+		},
 	}
 }
 
@@ -110,6 +113,14 @@ func getEnvString(key string) string {
 	v := os.Getenv(key)
 	if v == "" {
 		panic(fmt.Sprintf("Missing environment variable %s", key))
+	}
+	return v
+}
+
+func getOptionalEnvString(key string, defaultValue string) string {
+	v := os.Getenv(key)
+	if v == "" {
+		return defaultValue
 	}
 	return v
 }

@@ -10,3 +10,11 @@ ON CONFLICT (user_id)
     DO UPDATE SET value      = user_settings.value || @new_value,
                   updated_at = now()
 RETURNING *;
+
+-- name: SetSettings :exec
+INSERT INTO user_settings (user_id, value, updated_at)
+VALueS (@user_id, @new_value, now())
+ON CONFLICT (user_id)
+    DO UPDATE SET value      = @new_value,
+                  updated_at = now()
+RETURNING *;

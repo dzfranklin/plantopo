@@ -9,7 +9,7 @@ import (
 func (h *phandler) SettingsGet(ctx context.Context) (*SettingsGetOK, error) {
 	user, hasUser := getAuthenticatedUser(ctx)
 	if !hasUser {
-		return nil, unauthorized("you must be logged in to use settings")
+		return nil, ErrNotLoggedIn
 	}
 
 	record, getErr := h.Users.GetSettings(user)
@@ -28,7 +28,7 @@ func (h *phandler) SettingsGet(ctx context.Context) (*SettingsGetOK, error) {
 func (h *phandler) SettingsPut(ctx context.Context, req *SettingsPutReq) (*SettingsPutOK, error) {
 	user, hasUser := getAuthenticatedUser(ctx)
 	if !hasUser {
-		return nil, unauthorized("you must be logged in to use settings")
+		return nil, ErrNotLoggedIn
 	}
 
 	input, marshalErr := req.Settings.MarshalJSON()

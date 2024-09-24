@@ -26,6 +26,12 @@ type Handler interface {
 	//
 	// POST /auth/check
 	AuthCheckPost(ctx context.Context) (*AuthCheckPostOK, error)
+	// AuthMeGet implements GET /auth/me operation.
+	//
+	// Get the authenticated user.
+	//
+	// GET /auth/me
+	AuthMeGet(ctx context.Context) (*AuthMeGetOK, error)
 	// AuthRegisterBrowserPost implements POST /auth/register-browser operation.
 	//
 	// Register a new account and store the token in the requesting browser's cookie jar.
@@ -104,6 +110,42 @@ type Handler interface {
 	//
 	// PUT /settings
 	SettingsPut(ctx context.Context, req *SettingsPutReq) (*SettingsPutOK, error)
+	// TracksGet implements GET /tracks operation.
+	//
+	// List tracks.
+	//
+	// GET /tracks
+	TracksGet(ctx context.Context, params TracksGetParams) (*TracksGetOK, error)
+	// TracksPost implements POST /tracks operation.
+	//
+	// Create track.
+	//
+	// POST /tracks
+	TracksPost(ctx context.Context, req *TracksPostReq) (*TracksPostOK, error)
+	// TracksTileZXYMvtGet implements GET /tracks/tile/{z}/{x}/{y}.mvt operation.
+	//
+	// Get MVT tile.
+	//
+	// GET /tracks/tile/{z}/{x}/{y}.mvt
+	TracksTileZXYMvtGet(ctx context.Context, params TracksTileZXYMvtGetParams) (*MVTTileHeaders, error)
+	// TracksTrackIDDelete implements DELETE /tracks/track/{id} operation.
+	//
+	// Delete track.
+	//
+	// DELETE /tracks/track/{id}
+	TracksTrackIDDelete(ctx context.Context, params TracksTrackIDDeleteParams) error
+	// TracksTrackIDGet implements GET /tracks/track/{id} operation.
+	//
+	// Get track.
+	//
+	// GET /tracks/track/{id}
+	TracksTrackIDGet(ctx context.Context, params TracksTrackIDGetParams) (*TracksTrackIDGetOK, error)
+	// TracksTrackIDPatch implements PATCH /tracks/track/{id} operation.
+	//
+	// Update track.
+	//
+	// PATCH /tracks/track/{id}
+	TracksTrackIDPatch(ctx context.Context, req *TracksTrackIDPatchReq, params TracksTrackIDPatchParams) (*TracksTrackIDPatchOK, error)
 	// WeatherShortUkGet implements GET /weather/short-uk operation.
 	//
 	// Find short format weather forecasts for a place in the UK.

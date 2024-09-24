@@ -8,8 +8,8 @@ gen:
     cd backend && test ! -f .env.local || cat .env.local | cut -d '=' -f 1 | xargs -I {} echo {}= >.env.local.example
     cd app && test ! -f .env.local || cat .env.local | cut -d '=' -f 1 | xargs -I {} echo {}= >.env.local.example
 
-    cd app && npm run build:dependency-report
-    cd backend && mockery
+    cd app && npm run --silent build:dependency-report
+    cd backend && mockery --log-level=warn
     just api-schema-gen
     just sqlc-gen
 

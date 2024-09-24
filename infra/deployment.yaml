@@ -33,7 +33,7 @@ spec:
             - name: META_PORT
               value: "4001"
             - name: CORS_ALLOW_HOSTS
-              value: "plantopo.com,localhost"
+              value: "plantopo.com,localhost,pt.internal"
             - name: ELEVATION_API_ENDPOINT
               value: "http://elevation.pt.svc.cluster.local"
             - name: DATABASE_URL
@@ -135,6 +135,11 @@ spec:
                 secretKeyRef:
                   name: geograph
                   key: image_secret
+            - name: ELEVATION_DEM_DATASET
+              valueFrom:
+                secretKeyRef:
+                  name: elevation
+                  key: dem_dataset
           livenessProbe:
             httpGet:
               path: /status

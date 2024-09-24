@@ -14,12 +14,13 @@ security:
   - bearer: [ ]
   - browser: [ ]
 tags:
+  - name: "settings"
   - name: "auth"
+  - name: "tracks"
   - name: "elevation"
   - name: "weather"
   - name: "munro-access-reports"
   - name: "geophotos"
-  - name: "settings"
 paths:
   /settings:
     get:
@@ -74,6 +75,21 @@ paths:
                 properties:
                   userID: { $ref: "#/components/schemas/UserID" }
                 required: [ "userID" ]
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
+  /auth/me:
+    get:
+      tags: [ "auth" ]
+      summary: "Get the authenticated user"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  user: { $ref: "#/components/schemas/User" }
+                required: [ "user" ]
         default: { $ref: "#/components/responses/DefaultErrorResponse" }
   /auth/authenticate:
     post:
@@ -179,6 +195,151 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AuthenticateBrowserOK" }
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
+
+  /tracks:
+    get:
+      tags: [ tracks ]
+      summary: List tracks
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+        - name: orderBy
+          in: query
+          schema:
+            type: string
+            enum:
+              - name
+              - dateAsc
+              - dateDesc
+              - dateUploadedAsc
+              - dateUploadedDesc
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page: { type: integer }
+                  perPage: { type: integer }
+                  hasNext: { type: boolean }
+                  tracks:
+                    type: array
+                    items: { $ref: "#/components/schemas/TrackSummary" }
+                required: [ page, perPage, hasNext, tracks ]
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
+    post:
+      tags: [ tracks ]
+      summary: Create track
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tracks:
+                  type: array
+                  items: { $ref: '#/components/schemas/TrackCreate' }
+              required: [ track ]
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tracks:
+                    type: array
+                    items: { $ref: '#/components/schemas/Track' }
+                required: [ track ]
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
+  /tracks/track/{id}:
+    get:
+      tags: [ tracks ]
+      summary: Get track
+      parameters:
+        - name: id
+          in: path
+          schema: { type: string }
+          required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  track: { $ref: '#/components/schemas/Track' }
+                required: [ track ]
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
+    patch:
+      tags: [ tracks ]
+      summary: Update track
+      parameters:
+        - name: id
+          in: path
+          schema: { type: string }
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                track: { $ref: '#/components/schemas/TrackUpdate' }
+              required: [ track ]
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  track: { $ref: '#/components/schemas/Track' }
+                required: [ track ]
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
+    delete:
+      tags: [ tracks ]
+      summary: Delete track
+      parameters:
+        - name: id
+          in: path
+          schema: { type: string }
+          required: true
+      responses:
+        "200":
+          description: "OK"
+          content:
+            application/json:
+              schema:
+                type: object
+        default: { $ref: "#/components/responses/DefaultErrorResponse" }
+  /tracks/tile/{z}/{x}/{y}.mvt:
+    get:
+      tags: [ tracks ]
+      summary: Get MVT tile
+      parameters:
+        - { $ref: '#/components/parameters/SlippyZ' }
+        - { $ref: '#/components/parameters/SlippyX' }
+        - { $ref: '#/components/parameters/SlippyY' }
+      responses:
+        "200": { $ref: '#/components/responses/MVTTile' }
         default: { $ref: "#/components/responses/DefaultErrorResponse" }
 
   /elevation:
@@ -495,14 +656,17 @@ components:
     DefaultError:
       type: object
       properties:
+        code:
+          type: integer
         message:
           type: string
         retryAfterSeconds:
           type: "integer"
         validationErrors:
           $ref: "#/components/schemas/ValidationErrors"
-      required: [ "message" ]
+      required: [ "code", "message" ]
       example:
+        code: 500
         message: "internal server error (correlation id cor_e0a3b2628acbb22dad4696acaf30be88)"
     ValidationErrors:
       type: object
@@ -661,3 +825,51 @@ components:
         width: { type: integer }
         height: { type: integer }
       required: [ src, width, height ]
+    Polyline:
+      type: string
+      example: "_p~iF~ps|U_ulLnnqC_mqNvxq`@"
+      description: "Google Maps encoded Polyline (see https://developers.google.com/maps/documentation/utilities/polylineutility)"
+    Track:
+      type: object
+      properties:
+        id: { type: string }
+        ownerID: { type: string }
+        name: { type: string }
+        descriptionMd: { type: string }
+        date: { type: string, format: date-time }
+        dateUploaded: { type: string, format: date-time }
+        lengthMeters: { type: number }
+        durationSecs: { type: integer }
+        times: { type: array, items: { type: string, format: date-time } }
+        line: { $ref: "#/components/schemas/Polyline" }
+      required: [ id, ownerID, date, dateUploaded, lengthMeters, line ]
+    TrackCreate:
+      type: object
+      properties:
+        name: { type: string }
+        descriptionMd: { type: string }
+        date: { type: string, format: date-time }
+        times: { type: array, items: { type: string, format: date-time } }
+        line: { $ref: "#/components/schemas/Polyline" }
+      required: [ date, line ]
+    TrackUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        descriptionMd: { type: string }
+        date: { type: string, format: date-time }
+        times: { type: array, items: { type: string, format: date-time } }
+        line: { $ref: "#/components/schemas/Polyline" }
+    TrackSummary:
+      type: object
+      properties:
+        id: { type: string }
+        ownerID: { type: string }
+        name: { type: string }
+        descriptionMd: { type: string }
+        date: { type: string, format: date-time }
+        dateUploaded: { type: string, format: date-time }
+        lengthMeters: { type: number }
+        durationSecs: { type: integer }
+        simplifiedLine: { $ref: "#/components/schemas/Polyline" }
+      required: [ id, ownerID, date, dateUploaded, lengthMeters, simplifiedLine ]

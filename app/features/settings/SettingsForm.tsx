@@ -14,7 +14,6 @@ export function SettingsForm() {
   const mutation = useSettingsMutation();
   const query = useSettingsQuery();
 
-  if (query.error) throw query.error;
   if (!query.data) {
     return <Skeleton />;
   }
@@ -49,7 +48,11 @@ export function SettingsForm() {
         </Field>
 
         <div className="mt-4">
-          <Button type="submit" disableWith={mutation.isPending && 'Saving...'}>
+          <Button
+            type="submit"
+            disableWith={mutation.isPending && 'Saving...'}
+            color="dark/zinc"
+          >
             Save
           </Button>
         </div>

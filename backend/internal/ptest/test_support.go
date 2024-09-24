@@ -60,9 +60,13 @@ var loadTestEnvMu sync.Mutex
 func NewTestEnv(t *testing.T) *TestEnv {
 	t.Helper()
 
+	if testing.Short() {
+		t.Skip("NewTestEnv: skipping in short mode")
+	}
+
 	loadTestEnvMu.Lock()
 	if !loadedTestEnv {
-		if err := godotenv.Load(gitRoot()+"/backend/.env", gitRoot()+"/backend/.env.local"); err != nil {
+		if err := godotenv.Load(GitRoot()+"/backend/.env", GitRoot()+"/backend/.env.local"); err != nil {
 			t.Log("load dotenv", err)
 		}
 		loadedTestEnv = true
@@ -203,6 +207,7 @@ func (te *TestEnv) setupDB() {
 		postgrescontainers.WithUsername(dbUser),
 		postgrescontainers.WithPassword(dbPassword),
 		postgrescontainers.WithSQLDriver("pgx"),
+		testcontainers.WithEnv(map[string]string{"TZ": "UTC"}),
 		testcontainers.WithWaitStrategy(
 			// First, we wait for the container to log readiness twice.
 			// This is because it will restart itself after the first startup.
@@ -229,7 +234,7 @@ func (te *TestEnv) setupDB() {
 
 	runMigrations(connString)
 
-	err = c.CopyFileToContainer(ctx, gitRoot()+"/backend/test_seeds.sql", "/test_seeds.sql", 0777)
+	err = c.CopyFileToContainer(ctx, GitRoot()+"/backend/test_seeds.sql", "/test_seeds.sql", 0777)
 	if err != nil {
 		panic(err)
 	}
@@ -316,7 +321,7 @@ func runMigrations(connString string) {
 
 	var out bytes.Buffer
 	cmd := exec.Command("tern", "migrate", "--conn-string", connString)
-	cmd.Dir = gitRoot() + "/backend/migrations"
+	cmd.Dir = GitRoot() + "/backend/migrations"
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
 		panic(out.String())
@@ -364,7 +369,7 @@ var (
 	gitRootCacheMu sync.Mutex
 )
 
-func gitRoot() string {
+func GitRoot() string {
 	gitRootCacheMu.Lock()
 	defer gitRootCacheMu.Unlock()
 
@@ -414,7 +419,7 @@ func NewTestLogger(t *testing.T) *slog.Logger {
 
 func LoadDevEnv(t *testing.T) *pconfig.Config {
 	t.Helper()
-	root := gitRoot()
+	root := GitRoot()
 	_ = godotenv.Load(root+"/backend/.env", root+"/backend/.env.local")
 	return pconfig.Read()
 }

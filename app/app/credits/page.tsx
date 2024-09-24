@@ -26,17 +26,9 @@ export default function Page() {
             Crown copyright and database rights {new Date().getFullYear()}
           </li>
           <li>
-            Data from European Space Agency, Sinergise (2021).{' '}
-            <i>Copernicus Global Digital Elevation Model</i>. Distributed by{' '}
-            OpenTopography.{' '}
-            <a href="https://doi.org/10.5069/G9028PQB">
-              https://doi.org/10.5069/G9028PQB
-            </a>
-          </li>
-          <li>
-            Elevation data from the{' '}
-            <a href="https://earth.jaxa.jp/en/data/policy/">
-              Japan Aerospace Exploration Agency
+            Elevation data from the European Space Agency{' '}
+            <a href="https://spacedata.copernicus.eu/en/web/guest/collections/copernicus-digital-elevation-model/">
+              Copernicus Global Digital Elevation Model.
             </a>
           </li>
           <li>

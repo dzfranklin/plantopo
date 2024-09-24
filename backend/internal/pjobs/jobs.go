@@ -1,6 +1,7 @@
 package pjobs
 
 import (
+	"github.com/dzfranklin/plantopo/backend/internal/demouser"
 	"github.com/dzfranklin/plantopo/backend/internal/dftbusopendata"
 	"github.com/dzfranklin/plantopo/backend/internal/osm"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
@@ -63,11 +64,19 @@ func Register(
 
 	river.AddWorker[pgeograph.JobArgs](workers, pgeograph.NewWorker(env))
 
+	river.AddWorker[demouser.ResetJobArgs](workers, demouser.NewResetWorker(env))
+
 	periodic.Add(river.NewPeriodicJob(
 		mustParseCron("46 18 * * *"),
 		func() (river.JobArgs, *river.InsertOpts) {
 			return pmunroaccess.PregenerationArgs{}, nil
 		},
+		nil,
+	))
+
+	periodic.Add(river.NewPeriodicJob(
+		mustParseCron("10 0 * * *"),
+		func() (river.JobArgs, *river.InsertOpts) { return demouser.ResetJobArgs{}, nil },
 		nil,
 	))
 

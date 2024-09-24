@@ -29,6 +29,28 @@ func (q *Queries) SelectSettings(ctx context.Context, db DBTX, userID pgtype.UUI
 	return i, err
 }
 
+const setSettings = `-- name: SetSettings :exec
+INSERT INTO user_settings (user_id, value, updated_at)
+VALueS ($1, $2, now())
+ON CONFLICT (user_id)
+    DO UPDATE SET value      = $2,
+                  updated_at = now()
+RETURNING user_id, value, updated_at
+`
+
+// SetSettings
+//
+//	INSERT INTO user_settings (user_id, value, updated_at)
+//	VALueS ($1, $2, now())
+//	ON CONFLICT (user_id)
+//	    DO UPDATE SET value      = $2,
+//	                  updated_at = now()
+//	RETURNING user_id, value, updated_at
+func (q *Queries) SetSettings(ctx context.Context, db DBTX, userID pgtype.UUID, newValue []byte) error {
+	_, err := db.Exec(ctx, setSettings, userID, newValue)
+	return err
+}
+
 const upsertSettings = `-- name: UpsertSettings :one
 INSERT INTO user_settings (user_id, value, updated_at)
 VALUES ($1, $2, now())

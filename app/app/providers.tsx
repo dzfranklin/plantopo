@@ -3,21 +3,60 @@
 // Since QueryClientProvider relies on useContext under the hood, we have to put 'use client' on top
 import {
   isServer,
+  QueryCache,
   QueryClient,
   QueryClientProvider,
 } from '@tanstack/react-query';
 import { ReactNode } from 'react';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 import { DebugModeProvider } from '@/hooks/debugMode';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 
+function toastErr(err: unknown) {
+  let msg;
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    'message' in err &&
+    typeof err.message === 'string' &&
+    err.message !== ''
+  ) {
+    msg = err.message;
+  } else if (typeof err === 'string') {
+    msg = err;
+  } else {
+    msg = 'An error has occurred';
+  }
+  toast.error(msg);
+}
+
 function makeQueryClient() {
   return new QueryClient({
+    queryCache: new QueryCache({
+      onError: (err, query) => {
+        if (query.state.data !== undefined) {
+          // We already have data, this is a background refetch
+          toastErr(err);
+        }
+      },
+    }),
     defaultOptions: {
       queries: {
+        throwOnError: (_err, query) => {
+          // Throw if we don't already have data (indicating this isn't a
+          // background refetch)
+          return query.state.data === undefined;
+        },
+        retry: (_failureCount, err) => {
+          // Fail fast for unauthorized errors so we can redirect to log in
+          return !('code' in err && err.code === 401);
+        },
         // With SSR, we usually want to set some default staleTime
         // above 0 to avoid refetching immediately on the client
         staleTime: 60 * 1000,
+      },
+      mutations: {
+        onError: (err) => toastErr(err),
       },
     },
   });
@@ -26,7 +65,7 @@ function makeQueryClient() {
 let browserQueryClient: QueryClient | undefined = undefined;
 
 function getQueryClient() {
-  if (isServer) {
+  if (isServer || process.env.STORYBOOK) {
     // Server: always make a new query client
     return makeQueryClient();
   } else {
@@ -50,7 +89,7 @@ export default function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <ReactQueryDevtools initialIsOpen={false} />
       <DebugModeProvider>
-        <Toaster position="bottom-right" />
+        <Toaster position="top-center" />
         {children}
       </DebugModeProvider>
     </QueryClientProvider>

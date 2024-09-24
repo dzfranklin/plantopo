@@ -14,7 +14,7 @@ export function useSettingsMutation() {
       client.setQueryData(['get', '/settings', null], (p: GetSettingsOK) => ({
         ...p,
         settings: {
-          ...p.settings,
+          ...p?.settings,
           ...variables.body.settings,
         },
       }));

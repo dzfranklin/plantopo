@@ -127,6 +127,7 @@ export default function RequestReportComponent() {
 
         <div className="flex justify-end">
           <Button
+            color="dark/zinc"
             type="submit"
             disableWith={
               (mutation.isPending || mutation.isSuccess) && 'Submitting...'

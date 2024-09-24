@@ -142,6 +142,18 @@ func (r *Users) UpdateSettings(value UserSettings) (UserSettings, error) {
 	return mapUserSettings(row), nil
 }
 
+func (r *Users) ResetSettings(id string) error {
+	ctx, cancel := defaultContext()
+	defer cancel()
+
+	dbID, err := IDToUUID(userIDKind, id)
+	if err != nil {
+		return err
+	}
+
+	return q.SetSettings(ctx, r.db, pgUUID(dbID), json.RawMessage(`{}`))
+}
+
 func mapUserSettings(row psqlc.UserSetting) UserSettings {
 	return UserSettings{
 		UserID:    UUIDToID(userIDKind, row.UserID.Bytes),

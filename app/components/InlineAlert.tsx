@@ -62,3 +62,11 @@ export default function InlineAlert({
     </div>
   );
 }
+
+InlineAlert.Subtext = function InlineAlertSubtext({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <div className="mt-2 text-gray-600 text-sm">{children}</div>;
+};

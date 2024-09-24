@@ -111,6 +111,45 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/auth/me': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get the authenticated user */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              user: components['schemas']['User'];
+            };
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/auth/authenticate': {
     parameters: {
       query?: never;
@@ -356,6 +395,214 @@ export interface paths {
         default: components['responses']['DefaultErrorResponse'];
       };
     };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/tracks': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List tracks */
+    get: {
+      parameters: {
+        query?: {
+          page?: number;
+          perPage?: number;
+          orderBy?:
+            | 'name'
+            | 'dateAsc'
+            | 'dateDesc'
+            | 'dateUploadedAsc'
+            | 'dateUploadedDesc';
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              page: number;
+              perPage: number;
+              hasNext: boolean;
+              tracks: components['schemas']['TrackSummary'][];
+            };
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    /** Create track */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            tracks?: components['schemas']['TrackCreate'][];
+          };
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              tracks?: components['schemas']['Track'][];
+            };
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/tracks/track/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get track */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              track: components['schemas']['Track'];
+            };
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    post?: never;
+    /** Delete track */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': Record<string, never>;
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    options?: never;
+    head?: never;
+    /** Update track */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            track: components['schemas']['TrackUpdate'];
+          };
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              track: components['schemas']['Track'];
+            };
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    trace?: never;
+  };
+  '/tracks/tile/{z}/{x}/{y}.mvt': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get MVT tile */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          z: components['parameters']['SlippyZ'];
+          x: components['parameters']['SlippyX'];
+          y: components['parameters']['SlippyY'];
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        200: components['responses']['MVTTile'];
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -754,9 +1001,11 @@ export interface components {
       password: string;
     };
     /** @example {
+     *       "code": 500,
      *       "message": "internal server error (correlation id cor_e0a3b2628acbb22dad4696acaf30be88)"
      *     } */
     DefaultError: {
+      code: number;
       message: string;
       retryAfterSeconds?: number;
       validationErrors?: components['schemas']['ValidationErrors'];
@@ -882,6 +1131,54 @@ export interface components {
       src: string;
       width: number;
       height: number;
+    };
+    /**
+     * @description Google Maps encoded Polyline (see https://developers.google.com/maps/documentation/utilities/polylineutility)
+     * @example _p~iF~ps|U_ulLnnqC_mqNvxq`@
+     */
+    Polyline: string;
+    Track: {
+      id: string;
+      ownerID: string;
+      name?: string;
+      descriptionMd?: string;
+      /** Format: date-time */
+      date: string;
+      /** Format: date-time */
+      dateUploaded: string;
+      lengthMeters: number;
+      durationSecs?: number;
+      times?: string[];
+      line: components['schemas']['Polyline'];
+    };
+    TrackCreate: {
+      name?: string;
+      descriptionMd?: string;
+      /** Format: date-time */
+      date: string;
+      times?: string[];
+      line: components['schemas']['Polyline'];
+    };
+    TrackUpdate: {
+      name?: string;
+      descriptionMd?: string;
+      /** Format: date-time */
+      date?: string;
+      times?: string[];
+      line?: components['schemas']['Polyline'];
+    };
+    TrackSummary: {
+      id: string;
+      ownerID: string;
+      name?: string;
+      descriptionMd?: string;
+      /** Format: date-time */
+      date: string;
+      /** Format: date-time */
+      dateUploaded: string;
+      lengthMeters: number;
+      durationSecs?: number;
+      simplifiedLine: components['schemas']['Polyline'];
     };
   };
   responses: {

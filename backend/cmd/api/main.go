@@ -7,6 +7,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/penv"
 	"github.com/dzfranklin/plantopo/backend/internal/pgeophotos"
 	"github.com/dzfranklin/plantopo/backend/internal/ptime"
+	_ "go.uber.org/automaxprocs"
 	"log"
 	"math/rand"
 	"net/http"

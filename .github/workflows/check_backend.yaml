@@ -17,7 +17,7 @@ jobs:
       - name: Install proj
         run: |
           sudo apt-get update
-          sudo apt-get -y install proj-data libproj-dev proj-bin
+          sudo apt-get -y install proj-data libproj-dev proj-bin gdal
       - uses: actions/checkout@v4
       - name: Check
         run: ./scripts/check-in-ci.sh

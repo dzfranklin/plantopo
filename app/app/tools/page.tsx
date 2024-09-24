@@ -1,11 +1,15 @@
 import Link from 'next/link';
 import { Layout } from '@/components/Layout';
 
-const entries: { name: string; link: string; description: string }[] = [
+const entries: { name: string; link: string; description?: string }[] = [
   {
     name: 'Munro access',
     link: '/munro-access',
     description: 'Find Munros accessible via public transit in Scotland.',
+  },
+  {
+    name: 'Visualize GPX points over time',
+    link: '/tools/gpx-points-over-time',
   },
 ];
 
@@ -27,9 +31,11 @@ export default function Page() {
                     <dt className="text-base font-semibold leading-7 text-gray-900 link">
                       <Link href={entry.link}>{entry.name}</Link>
                     </dt>
-                    <dd className="mt-2 text-base leading-7 text-gray-600">
-                      {entry.description}
-                    </dd>
+                    {entry.description && (
+                      <dd className="mt-2 text-base leading-7 text-gray-600">
+                        {entry.description}
+                      </dd>
+                    )}
                   </div>
                 ))}
               </dl>

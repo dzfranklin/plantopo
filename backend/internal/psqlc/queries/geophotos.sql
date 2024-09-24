@@ -37,51 +37,6 @@ SELECT cutoff
 FROM geograph_index_progress
 WHERE id = 0;
 
--- name: SelectGeophotoTileSampled :one
-SELECT ST_AsMVT(tile.*, 'default', 4096, 'geom') as tile
-FROM (SELECT ST_AsMVTGeom(
-                     ST_Transform(center::geometry, 3857),
-                     ST_TileEnvelope(@z::integer, @x::integer, @y::integer),
-                     extent => 4096,
-                     buffer => 256,
-                     clip_geom => true
-             ) AS geom,
-             count
-      FROM (SELECT ST_Centroid(ST_Collect(ST_Transform(point::geometry, 3857))) as center,
-                   count(cluster_id) * (100 / @percent)                         as count
-            FROM (SELECT ST_ClusterDBSCAN(ST_Transform(point::geometry, 3857),
-                         (40075017.0 / (256 * 2 ^ @z)),
-                         1) OVER () AS cluster_id,
-                         point
-                  FROM geophotos
-                           TABLESAMPLE system (@percent)
-                  WHERE ST_Transform(point::geometry, 3857) &&
-                        ST_TileEnvelope(@z::integer, @x::integer, @y::integer,
-                                        margin => (64.0 / 4096))) AS cluster
-            GROUP BY cluster_id) AS clusters) AS tile;
-
--- name: SelectGeophotoTile :one
-SELECT ST_AsMVT(tile.*, 'default', 4096, 'geom') as tile
-FROM (SELECT ST_AsMVTGeom(
-                     ST_Transform(center::geometry, 3857),
-                     ST_TileEnvelope(@z::integer, @x::integer, @y::integer),
-                     extent => 4096,
-                     buffer => 256,
-                     clip_geom => true
-             ) AS geom,
-             count
-      FROM (SELECT ST_Centroid(ST_Collect(ST_Transform(point::geometry, 3857))) as center,
-                   count(cluster_id)                                            as count
-            FROM (SELECT ST_ClusterDBSCAN(ST_Transform(point::geometry, 3857),
-                         (40075017.0 / (256 * 2 ^ @z)),
-                         1) OVER () AS cluster_id,
-                         point
-                  FROM geophotos
-                  WHERE ST_Transform(point::geometry, 3857) &&
-                        ST_TileEnvelope(@z::integer, @x::integer, @y::integer,
-                                        margin => (64.0 / 4096))) AS cluster
-            GROUP BY cluster_id) AS clusters) AS tile;
-
 -- name: SelectGeophotosByID :many
 SELECT id,
        source,

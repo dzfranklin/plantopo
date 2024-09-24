@@ -1,5 +1,5 @@
 export function Logo() {
   return (
-    <span className="text-indigo-700 font-semibold text-lg">PlanTopo</span>
+    <span className="py-1 px-2 text-indigo-900 font-semibold">PlanTopo</span>
   );
 }

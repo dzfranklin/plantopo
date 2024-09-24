@@ -28,6 +28,20 @@ func (s *AuthCheckPostOK) SetUserID(val UserID) {
 	s.UserID = val
 }
 
+type AuthMeGetOK struct {
+	User User `json:"user"`
+}
+
+// GetUser returns the value of User.
+func (s *AuthMeGetOK) GetUser() User {
+	return s.User
+}
+
+// SetUser sets the value of User.
+func (s *AuthMeGetOK) SetUser(val User) {
+	s.User = val
+}
+
 // Ref: #/components/schemas/AuthRegisterRequest
 type AuthRegisterRequest struct {
 	Name     string `json:"name"`
@@ -233,9 +247,15 @@ func (s *Browser) SetAPIKey(val string) {
 
 // Ref: #/components/schemas/DefaultError
 type DefaultError struct {
+	Code              int                 `json:"code"`
 	Message           string              `json:"message"`
 	RetryAfterSeconds OptInt              `json:"retryAfterSeconds"`
 	ValidationErrors  OptValidationErrors `json:"validationErrors"`
+}
+
+// GetCode returns the value of Code.
+func (s *DefaultError) GetCode() int {
+	return s.Code
 }
 
 // GetMessage returns the value of Message.
@@ -251,6 +271,11 @@ func (s *DefaultError) GetRetryAfterSeconds() OptInt {
 // GetValidationErrors returns the value of ValidationErrors.
 func (s *DefaultError) GetValidationErrors() OptValidationErrors {
 	return s.ValidationErrors
+}
+
+// SetCode sets the value of Code.
+func (s *DefaultError) SetCode(val int) {
+	s.Code = val
 }
 
 // SetMessage sets the value of Message.
@@ -510,6 +535,46 @@ func (s *Image) SetWidth(val int) {
 // SetHeight sets the value of Height.
 func (s *Image) SetHeight(val int) {
 	s.Height = val
+}
+
+type MVTTile struct {
+	Data io.Reader
+}
+
+// Read reads data from the Data reader.
+//
+// Kept to satisfy the io.Reader interface.
+func (s MVTTile) Read(p []byte) (n int, err error) {
+	if s.Data == nil {
+		return 0, io.EOF
+	}
+	return s.Data.Read(p)
+}
+
+// MVTTileHeaders wraps MVTTile with response headers.
+type MVTTileHeaders struct {
+	ContentEncoding OptString
+	Response        MVTTile
+}
+
+// GetContentEncoding returns the value of ContentEncoding.
+func (s *MVTTileHeaders) GetContentEncoding() OptString {
+	return s.ContentEncoding
+}
+
+// GetResponse returns the value of Response.
+func (s *MVTTileHeaders) GetResponse() MVTTile {
+	return s.Response
+}
+
+// SetContentEncoding sets the value of ContentEncoding.
+func (s *MVTTileHeaders) SetContentEncoding(val OptString) {
+	s.ContentEncoding = val
+}
+
+// SetResponse sets the value of Response.
+func (s *MVTTileHeaders) SetResponse(val MVTTile) {
+	s.Response = val
 }
 
 type MunroAccessMunrosGetOK struct {
@@ -1363,6 +1428,52 @@ func (o OptMunroAccessMunrosGetOKMunrosFeaturesItemPropertiesPhoto) Or(d MunroAc
 	return d
 }
 
+// NewOptPolyline returns new OptPolyline with value set to v.
+func NewOptPolyline(v Polyline) OptPolyline {
+	return OptPolyline{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptPolyline is optional Polyline.
+type OptPolyline struct {
+	Value Polyline
+	Set   bool
+}
+
+// IsSet returns true if OptPolyline was set.
+func (o OptPolyline) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptPolyline) Reset() {
+	var v Polyline
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptPolyline) SetTo(v Polyline) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptPolyline) Get() (v Polyline, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptPolyline) Or(d Polyline) Polyline {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSetSessionCookieHeader returns new OptSetSessionCookieHeader with value set to v.
 func NewOptSetSessionCookieHeader(v SetSessionCookieHeader) OptSetSessionCookieHeader {
 	return OptSetSessionCookieHeader{
@@ -1501,6 +1612,52 @@ func (o OptString) Or(d string) string {
 	return d
 }
 
+// NewOptTracksGetOrderBy returns new OptTracksGetOrderBy with value set to v.
+func NewOptTracksGetOrderBy(v TracksGetOrderBy) OptTracksGetOrderBy {
+	return OptTracksGetOrderBy{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptTracksGetOrderBy is optional TracksGetOrderBy.
+type OptTracksGetOrderBy struct {
+	Value TracksGetOrderBy
+	Set   bool
+}
+
+// IsSet returns true if OptTracksGetOrderBy was set.
+func (o OptTracksGetOrderBy) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptTracksGetOrderBy) Reset() {
+	var v TracksGetOrderBy
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptTracksGetOrderBy) SetTo(v TracksGetOrderBy) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptTracksGetOrderBy) Get() (v TracksGetOrderBy, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptTracksGetOrderBy) Or(d TracksGetOrderBy) TracksGetOrderBy {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptValidationErrors returns new OptValidationErrors with value set to v.
 func NewOptValidationErrors(v ValidationErrors) OptValidationErrors {
 	return OptValidationErrors{
@@ -1594,6 +1751,8 @@ func (o OptValidationErrorsFieldErrors) Or(d ValidationErrorsFieldErrors) Valida
 }
 
 type Point []float64
+
+type Polyline string
 
 type SetSessionCookieHeader string
 
@@ -1696,6 +1855,522 @@ func (s *SettingsUnits) UnmarshalText(data []byte) error {
 }
 
 type Token string
+
+// Ref: #/components/schemas/Track
+type Track struct {
+	ID            string      `json:"id"`
+	OwnerID       string      `json:"ownerID"`
+	Name          OptString   `json:"name"`
+	DescriptionMd OptString   `json:"descriptionMd"`
+	Date          time.Time   `json:"date"`
+	DateUploaded  time.Time   `json:"dateUploaded"`
+	LengthMeters  float64     `json:"lengthMeters"`
+	DurationSecs  OptInt      `json:"durationSecs"`
+	Times         []time.Time `json:"times"`
+	Line          Polyline    `json:"line"`
+}
+
+// GetID returns the value of ID.
+func (s *Track) GetID() string {
+	return s.ID
+}
+
+// GetOwnerID returns the value of OwnerID.
+func (s *Track) GetOwnerID() string {
+	return s.OwnerID
+}
+
+// GetName returns the value of Name.
+func (s *Track) GetName() OptString {
+	return s.Name
+}
+
+// GetDescriptionMd returns the value of DescriptionMd.
+func (s *Track) GetDescriptionMd() OptString {
+	return s.DescriptionMd
+}
+
+// GetDate returns the value of Date.
+func (s *Track) GetDate() time.Time {
+	return s.Date
+}
+
+// GetDateUploaded returns the value of DateUploaded.
+func (s *Track) GetDateUploaded() time.Time {
+	return s.DateUploaded
+}
+
+// GetLengthMeters returns the value of LengthMeters.
+func (s *Track) GetLengthMeters() float64 {
+	return s.LengthMeters
+}
+
+// GetDurationSecs returns the value of DurationSecs.
+func (s *Track) GetDurationSecs() OptInt {
+	return s.DurationSecs
+}
+
+// GetTimes returns the value of Times.
+func (s *Track) GetTimes() []time.Time {
+	return s.Times
+}
+
+// GetLine returns the value of Line.
+func (s *Track) GetLine() Polyline {
+	return s.Line
+}
+
+// SetID sets the value of ID.
+func (s *Track) SetID(val string) {
+	s.ID = val
+}
+
+// SetOwnerID sets the value of OwnerID.
+func (s *Track) SetOwnerID(val string) {
+	s.OwnerID = val
+}
+
+// SetName sets the value of Name.
+func (s *Track) SetName(val OptString) {
+	s.Name = val
+}
+
+// SetDescriptionMd sets the value of DescriptionMd.
+func (s *Track) SetDescriptionMd(val OptString) {
+	s.DescriptionMd = val
+}
+
+// SetDate sets the value of Date.
+func (s *Track) SetDate(val time.Time) {
+	s.Date = val
+}
+
+// SetDateUploaded sets the value of DateUploaded.
+func (s *Track) SetDateUploaded(val time.Time) {
+	s.DateUploaded = val
+}
+
+// SetLengthMeters sets the value of LengthMeters.
+func (s *Track) SetLengthMeters(val float64) {
+	s.LengthMeters = val
+}
+
+// SetDurationSecs sets the value of DurationSecs.
+func (s *Track) SetDurationSecs(val OptInt) {
+	s.DurationSecs = val
+}
+
+// SetTimes sets the value of Times.
+func (s *Track) SetTimes(val []time.Time) {
+	s.Times = val
+}
+
+// SetLine sets the value of Line.
+func (s *Track) SetLine(val Polyline) {
+	s.Line = val
+}
+
+// Ref: #/components/schemas/TrackCreate
+type TrackCreate struct {
+	Name          OptString   `json:"name"`
+	DescriptionMd OptString   `json:"descriptionMd"`
+	Date          time.Time   `json:"date"`
+	Times         []time.Time `json:"times"`
+	Line          Polyline    `json:"line"`
+}
+
+// GetName returns the value of Name.
+func (s *TrackCreate) GetName() OptString {
+	return s.Name
+}
+
+// GetDescriptionMd returns the value of DescriptionMd.
+func (s *TrackCreate) GetDescriptionMd() OptString {
+	return s.DescriptionMd
+}
+
+// GetDate returns the value of Date.
+func (s *TrackCreate) GetDate() time.Time {
+	return s.Date
+}
+
+// GetTimes returns the value of Times.
+func (s *TrackCreate) GetTimes() []time.Time {
+	return s.Times
+}
+
+// GetLine returns the value of Line.
+func (s *TrackCreate) GetLine() Polyline {
+	return s.Line
+}
+
+// SetName sets the value of Name.
+func (s *TrackCreate) SetName(val OptString) {
+	s.Name = val
+}
+
+// SetDescriptionMd sets the value of DescriptionMd.
+func (s *TrackCreate) SetDescriptionMd(val OptString) {
+	s.DescriptionMd = val
+}
+
+// SetDate sets the value of Date.
+func (s *TrackCreate) SetDate(val time.Time) {
+	s.Date = val
+}
+
+// SetTimes sets the value of Times.
+func (s *TrackCreate) SetTimes(val []time.Time) {
+	s.Times = val
+}
+
+// SetLine sets the value of Line.
+func (s *TrackCreate) SetLine(val Polyline) {
+	s.Line = val
+}
+
+// Ref: #/components/schemas/TrackSummary
+type TrackSummary struct {
+	ID             string    `json:"id"`
+	OwnerID        string    `json:"ownerID"`
+	Name           OptString `json:"name"`
+	DescriptionMd  OptString `json:"descriptionMd"`
+	Date           time.Time `json:"date"`
+	DateUploaded   time.Time `json:"dateUploaded"`
+	LengthMeters   float64   `json:"lengthMeters"`
+	DurationSecs   OptInt    `json:"durationSecs"`
+	SimplifiedLine Polyline  `json:"simplifiedLine"`
+}
+
+// GetID returns the value of ID.
+func (s *TrackSummary) GetID() string {
+	return s.ID
+}
+
+// GetOwnerID returns the value of OwnerID.
+func (s *TrackSummary) GetOwnerID() string {
+	return s.OwnerID
+}
+
+// GetName returns the value of Name.
+func (s *TrackSummary) GetName() OptString {
+	return s.Name
+}
+
+// GetDescriptionMd returns the value of DescriptionMd.
+func (s *TrackSummary) GetDescriptionMd() OptString {
+	return s.DescriptionMd
+}
+
+// GetDate returns the value of Date.
+func (s *TrackSummary) GetDate() time.Time {
+	return s.Date
+}
+
+// GetDateUploaded returns the value of DateUploaded.
+func (s *TrackSummary) GetDateUploaded() time.Time {
+	return s.DateUploaded
+}
+
+// GetLengthMeters returns the value of LengthMeters.
+func (s *TrackSummary) GetLengthMeters() float64 {
+	return s.LengthMeters
+}
+
+// GetDurationSecs returns the value of DurationSecs.
+func (s *TrackSummary) GetDurationSecs() OptInt {
+	return s.DurationSecs
+}
+
+// GetSimplifiedLine returns the value of SimplifiedLine.
+func (s *TrackSummary) GetSimplifiedLine() Polyline {
+	return s.SimplifiedLine
+}
+
+// SetID sets the value of ID.
+func (s *TrackSummary) SetID(val string) {
+	s.ID = val
+}
+
+// SetOwnerID sets the value of OwnerID.
+func (s *TrackSummary) SetOwnerID(val string) {
+	s.OwnerID = val
+}
+
+// SetName sets the value of Name.
+func (s *TrackSummary) SetName(val OptString) {
+	s.Name = val
+}
+
+// SetDescriptionMd sets the value of DescriptionMd.
+func (s *TrackSummary) SetDescriptionMd(val OptString) {
+	s.DescriptionMd = val
+}
+
+// SetDate sets the value of Date.
+func (s *TrackSummary) SetDate(val time.Time) {
+	s.Date = val
+}
+
+// SetDateUploaded sets the value of DateUploaded.
+func (s *TrackSummary) SetDateUploaded(val time.Time) {
+	s.DateUploaded = val
+}
+
+// SetLengthMeters sets the value of LengthMeters.
+func (s *TrackSummary) SetLengthMeters(val float64) {
+	s.LengthMeters = val
+}
+
+// SetDurationSecs sets the value of DurationSecs.
+func (s *TrackSummary) SetDurationSecs(val OptInt) {
+	s.DurationSecs = val
+}
+
+// SetSimplifiedLine sets the value of SimplifiedLine.
+func (s *TrackSummary) SetSimplifiedLine(val Polyline) {
+	s.SimplifiedLine = val
+}
+
+// Ref: #/components/schemas/TrackUpdate
+type TrackUpdate struct {
+	Name          OptString   `json:"name"`
+	DescriptionMd OptString   `json:"descriptionMd"`
+	Date          OptDateTime `json:"date"`
+	Times         []time.Time `json:"times"`
+	Line          OptPolyline `json:"line"`
+}
+
+// GetName returns the value of Name.
+func (s *TrackUpdate) GetName() OptString {
+	return s.Name
+}
+
+// GetDescriptionMd returns the value of DescriptionMd.
+func (s *TrackUpdate) GetDescriptionMd() OptString {
+	return s.DescriptionMd
+}
+
+// GetDate returns the value of Date.
+func (s *TrackUpdate) GetDate() OptDateTime {
+	return s.Date
+}
+
+// GetTimes returns the value of Times.
+func (s *TrackUpdate) GetTimes() []time.Time {
+	return s.Times
+}
+
+// GetLine returns the value of Line.
+func (s *TrackUpdate) GetLine() OptPolyline {
+	return s.Line
+}
+
+// SetName sets the value of Name.
+func (s *TrackUpdate) SetName(val OptString) {
+	s.Name = val
+}
+
+// SetDescriptionMd sets the value of DescriptionMd.
+func (s *TrackUpdate) SetDescriptionMd(val OptString) {
+	s.DescriptionMd = val
+}
+
+// SetDate sets the value of Date.
+func (s *TrackUpdate) SetDate(val OptDateTime) {
+	s.Date = val
+}
+
+// SetTimes sets the value of Times.
+func (s *TrackUpdate) SetTimes(val []time.Time) {
+	s.Times = val
+}
+
+// SetLine sets the value of Line.
+func (s *TrackUpdate) SetLine(val OptPolyline) {
+	s.Line = val
+}
+
+type TracksGetOK struct {
+	Page    int            `json:"page"`
+	PerPage int            `json:"perPage"`
+	HasNext bool           `json:"hasNext"`
+	Tracks  []TrackSummary `json:"tracks"`
+}
+
+// GetPage returns the value of Page.
+func (s *TracksGetOK) GetPage() int {
+	return s.Page
+}
+
+// GetPerPage returns the value of PerPage.
+func (s *TracksGetOK) GetPerPage() int {
+	return s.PerPage
+}
+
+// GetHasNext returns the value of HasNext.
+func (s *TracksGetOK) GetHasNext() bool {
+	return s.HasNext
+}
+
+// GetTracks returns the value of Tracks.
+func (s *TracksGetOK) GetTracks() []TrackSummary {
+	return s.Tracks
+}
+
+// SetPage sets the value of Page.
+func (s *TracksGetOK) SetPage(val int) {
+	s.Page = val
+}
+
+// SetPerPage sets the value of PerPage.
+func (s *TracksGetOK) SetPerPage(val int) {
+	s.PerPage = val
+}
+
+// SetHasNext sets the value of HasNext.
+func (s *TracksGetOK) SetHasNext(val bool) {
+	s.HasNext = val
+}
+
+// SetTracks sets the value of Tracks.
+func (s *TracksGetOK) SetTracks(val []TrackSummary) {
+	s.Tracks = val
+}
+
+type TracksGetOrderBy string
+
+const (
+	TracksGetOrderByName             TracksGetOrderBy = "name"
+	TracksGetOrderByDateAsc          TracksGetOrderBy = "dateAsc"
+	TracksGetOrderByDateDesc         TracksGetOrderBy = "dateDesc"
+	TracksGetOrderByDateUploadedAsc  TracksGetOrderBy = "dateUploadedAsc"
+	TracksGetOrderByDateUploadedDesc TracksGetOrderBy = "dateUploadedDesc"
+)
+
+// AllValues returns all TracksGetOrderBy values.
+func (TracksGetOrderBy) AllValues() []TracksGetOrderBy {
+	return []TracksGetOrderBy{
+		TracksGetOrderByName,
+		TracksGetOrderByDateAsc,
+		TracksGetOrderByDateDesc,
+		TracksGetOrderByDateUploadedAsc,
+		TracksGetOrderByDateUploadedDesc,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s TracksGetOrderBy) MarshalText() ([]byte, error) {
+	switch s {
+	case TracksGetOrderByName:
+		return []byte(s), nil
+	case TracksGetOrderByDateAsc:
+		return []byte(s), nil
+	case TracksGetOrderByDateDesc:
+		return []byte(s), nil
+	case TracksGetOrderByDateUploadedAsc:
+		return []byte(s), nil
+	case TracksGetOrderByDateUploadedDesc:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *TracksGetOrderBy) UnmarshalText(data []byte) error {
+	switch TracksGetOrderBy(data) {
+	case TracksGetOrderByName:
+		*s = TracksGetOrderByName
+		return nil
+	case TracksGetOrderByDateAsc:
+		*s = TracksGetOrderByDateAsc
+		return nil
+	case TracksGetOrderByDateDesc:
+		*s = TracksGetOrderByDateDesc
+		return nil
+	case TracksGetOrderByDateUploadedAsc:
+		*s = TracksGetOrderByDateUploadedAsc
+		return nil
+	case TracksGetOrderByDateUploadedDesc:
+		*s = TracksGetOrderByDateUploadedDesc
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type TracksPostOK struct {
+	Tracks []Track `json:"tracks"`
+}
+
+// GetTracks returns the value of Tracks.
+func (s *TracksPostOK) GetTracks() []Track {
+	return s.Tracks
+}
+
+// SetTracks sets the value of Tracks.
+func (s *TracksPostOK) SetTracks(val []Track) {
+	s.Tracks = val
+}
+
+type TracksPostReq struct {
+	Tracks []TrackCreate `json:"tracks"`
+}
+
+// GetTracks returns the value of Tracks.
+func (s *TracksPostReq) GetTracks() []TrackCreate {
+	return s.Tracks
+}
+
+// SetTracks sets the value of Tracks.
+func (s *TracksPostReq) SetTracks(val []TrackCreate) {
+	s.Tracks = val
+}
+
+type TracksTrackIDDeleteOK struct{}
+
+type TracksTrackIDGetOK struct {
+	Track Track `json:"track"`
+}
+
+// GetTrack returns the value of Track.
+func (s *TracksTrackIDGetOK) GetTrack() Track {
+	return s.Track
+}
+
+// SetTrack sets the value of Track.
+func (s *TracksTrackIDGetOK) SetTrack(val Track) {
+	s.Track = val
+}
+
+type TracksTrackIDPatchOK struct {
+	Track Track `json:"track"`
+}
+
+// GetTrack returns the value of Track.
+func (s *TracksTrackIDPatchOK) GetTrack() Track {
+	return s.Track
+}
+
+// SetTrack sets the value of Track.
+func (s *TracksTrackIDPatchOK) SetTrack(val Track) {
+	s.Track = val
+}
+
+type TracksTrackIDPatchReq struct {
+	Track TrackUpdate `json:"track"`
+}
+
+// GetTrack returns the value of Track.
+func (s *TracksTrackIDPatchReq) GetTrack() TrackUpdate {
+	return s.Track
+}
+
+// SetTrack sets the value of Track.
+func (s *TracksTrackIDPatchReq) SetTrack(val TrackUpdate) {
+	s.Track = val
+}
 
 // Ref: #/components/schemas/User
 type User struct {

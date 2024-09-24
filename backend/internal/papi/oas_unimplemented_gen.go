@@ -40,6 +40,15 @@ func (UnimplementedHandler) AuthCheckPost(ctx context.Context) (r *AuthCheckPost
 	return r, ht.ErrNotImplemented
 }
 
+// AuthMeGet implements GET /auth/me operation.
+//
+// Get the authenticated user.
+//
+// GET /auth/me
+func (UnimplementedHandler) AuthMeGet(ctx context.Context) (r *AuthMeGetOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // AuthRegisterBrowserPost implements POST /auth/register-browser operation.
 //
 // Register a new account and store the token in the requesting browser's cookie jar.
@@ -154,6 +163,60 @@ func (UnimplementedHandler) SettingsGet(ctx context.Context) (r *SettingsGetOK, 
 //
 // PUT /settings
 func (UnimplementedHandler) SettingsPut(ctx context.Context, req *SettingsPutReq) (r *SettingsPutOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// TracksGet implements GET /tracks operation.
+//
+// List tracks.
+//
+// GET /tracks
+func (UnimplementedHandler) TracksGet(ctx context.Context, params TracksGetParams) (r *TracksGetOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// TracksPost implements POST /tracks operation.
+//
+// Create track.
+//
+// POST /tracks
+func (UnimplementedHandler) TracksPost(ctx context.Context, req *TracksPostReq) (r *TracksPostOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// TracksTileZXYMvtGet implements GET /tracks/tile/{z}/{x}/{y}.mvt operation.
+//
+// Get MVT tile.
+//
+// GET /tracks/tile/{z}/{x}/{y}.mvt
+func (UnimplementedHandler) TracksTileZXYMvtGet(ctx context.Context, params TracksTileZXYMvtGetParams) (r *MVTTileHeaders, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// TracksTrackIDDelete implements DELETE /tracks/track/{id} operation.
+//
+// Delete track.
+//
+// DELETE /tracks/track/{id}
+func (UnimplementedHandler) TracksTrackIDDelete(ctx context.Context, params TracksTrackIDDeleteParams) error {
+	return ht.ErrNotImplemented
+}
+
+// TracksTrackIDGet implements GET /tracks/track/{id} operation.
+//
+// Get track.
+//
+// GET /tracks/track/{id}
+func (UnimplementedHandler) TracksTrackIDGet(ctx context.Context, params TracksTrackIDGetParams) (r *TracksTrackIDGetOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// TracksTrackIDPatch implements PATCH /tracks/track/{id} operation.
+//
+// Update track.
+//
+// PATCH /tracks/track/{id}
+func (UnimplementedHandler) TracksTrackIDPatch(ctx context.Context, req *TracksTrackIDPatchReq, params TracksTrackIDPatchParams) (r *TracksTrackIDPatchOK, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

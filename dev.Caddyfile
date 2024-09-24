@@ -1,0 +1,9 @@
+api.pt.internal {
+	tls internal
+	reverse_proxy localhost:4000
+}
+
+pt.internal {
+	tls internal
+	reverse_proxy localhost:8000
+}

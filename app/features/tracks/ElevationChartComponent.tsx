@@ -1,5 +1,3 @@
-'use client';
-
 import InlineAlert from '@/components/InlineAlert';
 import * as Plot from '@observablehq/plot';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -22,6 +20,8 @@ function computeDistance(a: [number, number], b: [number, number]): number {
 // See <https://www.gpsvisualizer.com/tutorials/elevation_gain.html>
 const horizThreshold = 5;
 const vertTreshold = 5;
+
+// TODO: try a generic line smoothing algorithm. plot to a canvas if perf issues with too many points.
 
 interface PointEntry {
   elevation: number;

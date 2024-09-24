@@ -2,22 +2,20 @@ package papi
 
 import (
 	"context"
-	"net/http"
+	"github.com/dzfranklin/plantopo/backend/internal/pslices"
+	"github.com/tidwall/geojson/geometry"
 )
 
 func (h *phandler) ElevationPost(ctx context.Context, req *ElevationPostReq) (*ElevationPostOK, error) {
 	if len(req.Coordinates) == 0 {
 		return &ElevationPostOK{Elevation: make([]float64, 0)}, nil
 	}
-	var coords [][2]float64
+	var coords []geometry.Point
 	for _, item := range req.Coordinates {
 		if len(item) != 2 {
-			return nil, &DefaultErrorResponseStatusCode{
-				StatusCode: http.StatusBadRequest,
-				Response:   DefaultError{Message: "invalid coordinate"},
-			}
+			return nil, badRequest("invalid coordinate")
 		}
-		coords = append(coords, [2]float64{item[0], item[1]})
+		coords = append(coords, geometry.Point{X: item[0], Y: item[1]})
 	}
 
 	value, err := h.elevation.Lookup(ctx, coords)
@@ -25,10 +23,5 @@ func (h *phandler) ElevationPost(ctx context.Context, req *ElevationPostReq) (*E
 		return nil, err
 	}
 
-	var elevs []float64
-	for _, item := range value {
-		elevs = append(elevs, float64(item))
-	}
-
-	return &ElevationPostOK{elevs}, nil
+	return &ElevationPostOK{Elevation: pslices.Map(value, func(v int16) float64 { return float64(v) })}, nil
 }

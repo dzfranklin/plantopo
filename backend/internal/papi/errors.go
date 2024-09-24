@@ -19,56 +19,32 @@ func (h *phandler) NewError(ctx context.Context, err error) *DefaultErrorRespons
 }
 
 func HandleDefaultErrorResponse(env *pconfig.Env, _ context.Context, err error) *DefaultErrorResponseStatusCode {
-	correlationID := makeCorrelationID()
-
 	if specificErr, ok := perrors.Into[*DefaultErrorResponseStatusCode](err); ok {
+		specificErr.Response.Code = specificErr.StatusCode
 		return specificErr
 	} else if errors.Is(err, ErrNotLoggedIn) {
-		return &DefaultErrorResponseStatusCode{
-			StatusCode: http.StatusUnauthorized,
-			Response: DefaultError{
-				Message: "not logged in",
-			},
-		}
+		return statusResponse(http.StatusUnauthorized, "not logged in")
 	} else if specificErr, ok := perrors.Into[*prepo.ErrRateLimited](err); ok {
-		return &DefaultErrorResponseStatusCode{
-			StatusCode: http.StatusTooManyRequests,
-			Response: DefaultError{
-				Message:           specificErr.Error(),
-				RetryAfterSeconds: NewOptInt(specificErr.RetryAfterSeconds),
-			},
-		}
+		resp := statusResponse(http.StatusTooManyRequests, specificErr.Error())
+		resp.Response.RetryAfterSeconds = NewOptInt(specificErr.RetryAfterSeconds)
+		return resp
 	} else if specificErr, ok := perrors.Into[*prepo.ErrValidation](err); ok {
-		return &DefaultErrorResponseStatusCode{
-			StatusCode: http.StatusUnprocessableEntity,
-			Response: DefaultError{
-				Message: "invalid input",
-				ValidationErrors: NewOptValidationErrors(ValidationErrors{
-					GeneralErrors: specificErr.GeneralErrors,
-					FieldErrors:   NewOptValidationErrorsFieldErrors(specificErr.FieldErrors),
-				}),
-			},
-		}
+		resp := statusResponse(http.StatusUnprocessableEntity, "invalid input")
+		resp.Response.ValidationErrors = NewOptValidationErrors(ValidationErrors{
+			GeneralErrors: specificErr.GeneralErrors,
+			FieldErrors:   NewOptValidationErrorsFieldErrors(specificErr.FieldErrors),
+		})
+		return resp
 	} else if errors.Is(err, prepo.ErrInvalidID) {
-		return &DefaultErrorResponseStatusCode{
-			StatusCode: http.StatusUnprocessableEntity,
-			Response: DefaultError{
-				Message: "invalid id",
-			},
-		}
+		return statusResponse(http.StatusUnprocessableEntity, "invalid id")
 	} else if errors.Is(err, prepo.ErrInvalidSessionToken) {
-		return &DefaultErrorResponseStatusCode{
-			StatusCode: http.StatusForbidden,
-			Response: DefaultError{
-				Message: "invalid session token",
-			},
-		}
-	} else if errors.Is(err, context.Canceled) {
-		return &DefaultErrorResponseStatusCode{
-			StatusCode: http.StatusRequestTimeout,
-			Response:   DefaultError{Message: "request timed out"},
-		}
+		return statusResponse(http.StatusUnauthorized, "invalid session token")
+	} else if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return statusResponse(http.StatusInternalServerError, "server timed out processing request")
+	} else if errors.Is(err, prepo.ErrNotFound) {
+		return statusResponse(http.StatusNotFound, "")
 	} else {
+		correlationID := makeCorrelationID()
 		stack := string(debug.Stack())
 		userFacingMessage := fmt.Sprintf("internal server error (correlation id %s)", correlationID)
 
@@ -83,12 +59,7 @@ func HandleDefaultErrorResponse(env *pconfig.Env, _ context.Context, err error) 
 			"correlationID", correlationID,
 			"stack", stack)
 
-		return &DefaultErrorResponseStatusCode{
-			StatusCode: 500,
-			Response: DefaultError{
-				Message: userFacingMessage,
-			},
-		}
+		return statusResponse(http.StatusInternalServerError, userFacingMessage)
 	}
 }
 

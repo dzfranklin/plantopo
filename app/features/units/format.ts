@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 export type UnitSystem = 'metric' | 'customary';
 
 export function formatDuration(seconds: number): [string, string] {
@@ -5,8 +7,7 @@ export function formatDuration(seconds: number): [string, string] {
     return [String(seconds), 's'];
   } else if (seconds < 3600) {
     const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return [`${minutes}:${String(remainingSeconds).padStart(2, '0')}`, 'm'];
+    return [`${minutes}`, 'm'];
   } else {
     const hours = Math.floor(seconds / 3600);
     const remainingMinutes = Math.floor((seconds % 3600) / 60);
@@ -80,4 +81,26 @@ function getLang() {
 function resolveUnit(s: UnitSystem | undefined): UnitSystem {
   if (s) return s;
   return 'metric';
+}
+
+export function formatByteSize(bytes: number, decimals = 0) {
+  if (!+bytes) return '0 bytes';
+
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = [
+    'bytes',
+    'KiB',
+    'MiB',
+    'GiB',
+    'TiB',
+    'PiB',
+    'EiB',
+    'ZiB',
+    'YiB',
+  ];
+
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }

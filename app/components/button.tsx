@@ -193,7 +193,57 @@ export const Button = React.forwardRef(function Button(
       ? styles.outline
       : plain
         ? styles.plain
-        : clsx(styles.solid, styles.colors[color ?? 'dark/zinc']),
+        : clsx(styles.solid, styles.colors[color ?? 'secondary']),
+  );
+
+  const formStatus = useFormStatus();
+
+  return 'href' in props ? (
+    disableWith ? (
+      <span
+        {...props}
+        className={classes}
+        ref={ref as React.ForwardedRef<HTMLSpanElement>}
+      >
+        {children}
+      </span>
+    ) : (
+      <Link
+        {...props}
+        className={classes}
+        ref={ref as React.ForwardedRef<HTMLAnchorElement>}
+      >
+        <TouchTarget>{children}</TouchTarget>
+      </Link>
+    )
+  ) : (
+    <Headless.Button
+      {...props}
+      className={clsx(classes, 'cursor-default')}
+      disabled={!!disableWith || props.disabled || formStatus?.pending}
+      ref={ref}
+    >
+      <TouchTarget>{disableWith || children}</TouchTarget>
+    </Headless.Button>
+  );
+});
+
+export const IconButton = React.forwardRef(function Button(
+  { className, children, disableWith, ...props }: ButtonProps,
+  ref: React.ForwardedRef<HTMLElement>,
+) {
+  const classes = clsx(
+    className,
+    // Base
+    'rounded-full relative isolate inline-flex items-center justify-center gap-x-2 border text-base/6 font-semibold',
+    // Sizing
+    'p-[calc(theme(spacing[1.5])-1px)] text-sm/6',
+    // Focus
+    'focus:outline-none data-[focus]:outline data-[focus]:outline-2 data-[focus]:outline-offset-2 data-[focus]:outline-blue-500',
+    // Disabled
+    'data-[disabled]:opacity-50',
+    // Outline
+    'border-zinc-950/10 text-zinc-600 data-[active]:bg-zinc-950/[2.5%] data-[hover]:bg-zinc-950/[2.5%]',
   );
 
   const formStatus = useFormStatus();

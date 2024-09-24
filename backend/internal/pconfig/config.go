@@ -49,10 +49,11 @@ type Config struct {
 	Mapbox         Mapbox
 	Flickr         Flickr
 	Geograph       Geograph
+	DemoUser       DemoUser
 }
 
 type Elevation struct {
-	Endpoint string
+	DEMDataset string
 }
 
 type Postgres struct {
@@ -128,4 +129,8 @@ type Flickr struct {
 
 type Geograph struct {
 	ImageSecret string
+}
+
+type DemoUser struct {
+	SampleTracksURL string
 }

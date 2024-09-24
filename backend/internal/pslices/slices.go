@@ -6,6 +6,9 @@ import (
 )
 
 func Filter[T any](slice []T, pred func(T) bool) []T {
+	if slice == nil {
+		return nil
+	}
 	out := make([]T, 0, len(slice))
 	for _, item := range slice {
 		if pred(item) {
@@ -16,6 +19,9 @@ func Filter[T any](slice []T, pred func(T) bool) []T {
 }
 
 func Map[T any, V any](slice []T, fn func(T) V) []V {
+	if slice == nil {
+		return nil
+	}
 	out := make([]V, 0, len(slice))
 	for _, item := range slice {
 		out = append(out, fn(item))

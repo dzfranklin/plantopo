@@ -147,6 +147,20 @@ type Session struct {
 	IpAddr      *netip.Addr
 }
 
+type Track struct {
+	ID            pgtype.UUID
+	OwnerID       pgtype.UUID
+	Name          pgtype.Text
+	DescriptionMd pgtype.Text
+	Date          pgtype.Timestamptz
+	DateUploaded  pgtype.Timestamptz
+	LengthMeters  pgtype.Float8
+	DurationSecs  pgtype.Int4
+	Times         pgtype.Array[pgtype.Timestamptz]
+	Line          Geometry
+	LineFeatureID pgtype.Int8
+}
+
 type User struct {
 	ID             pgtype.UUID
 	Name           pgtype.Text

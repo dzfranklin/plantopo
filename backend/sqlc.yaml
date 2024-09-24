@@ -12,3 +12,10 @@ sql:
         emit_sql_as_comment: true
         query_parameter_limit: 2
         emit_methods_with_db_argument: true
+        overrides:
+          - column: "tracks.line"
+            go_type:
+              type: Geometry
+          - column: "tracks.times"
+            go_type:
+              type: "pgtype.Array[pgtype.Timestamptz]"

@@ -1,10 +1,17 @@
 import { Logo } from '@/components/Logo';
 import Link from 'next/link';
-import { FormEventHandler, InputHTMLAttributes, useId } from 'react';
+import {
+  FormEventHandler,
+  InputHTMLAttributes,
+  useCallback,
+  useEffect,
+  useId,
+} from 'react';
 import { $api } from '@/api/client';
 import { components } from '@/api/v1';
 import InlineAlert from '@/components/InlineAlert';
 import { useRouter } from 'next/navigation';
+import { useUserID } from '@/features/users/queries';
 
 export function LoginScreen({
   isSignup,
@@ -14,17 +21,20 @@ export function LoginScreen({
   returnTo: string | undefined;
 }) {
   const router = useRouter();
-  const doReturn = () => router.replace(returnTo ?? '/');
+  const doReturn = useCallback(
+    () => router.replace(returnTo ?? '/'),
+    [returnTo],
+  );
 
   const signupMutation = $api.useMutation('post', '/auth/register-browser');
   const loginMutation = $api.useMutation('post', '/auth/authenticate-browser');
   const status = isSignup ? signupMutation.status : loginMutation.status;
   const error = isSignup ? signupMutation.error : loginMutation.error;
 
-  const alreadyLoggedIn = $api.useQuery('post', '/auth/check', {});
-  if (alreadyLoggedIn.isSuccess) {
-    doReturn();
-  }
+  const user = useUserID();
+  useEffect(() => {
+    if (user !== null) doReturn();
+  }, [doReturn, user]);
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = (evt) => {
     evt.preventDefault();

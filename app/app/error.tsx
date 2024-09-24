@@ -5,13 +5,30 @@ import { useEffect } from 'react';
 export default function Error({
   error,
 }: {
-  error: Error & { digest?: string };
+  error: unknown;
   reset: () => void;
 }) {
+  const errCode =
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'number'
+      ? error.code
+      : null;
+
   useEffect(() => {
+    if (errCode === 401) return;
     // TODO: Log the error to an error reporting service
-    console.error(error);
-  }, [error]);
+    console.error('got error', error);
+  }, [errCode, error]);
+
+  if (errCode === 401) {
+    if (typeof window !== 'undefined') {
+      const currentPath = location.pathname + location.search + location.hash;
+      location.replace('/login?returnTo=' + encodeURIComponent(currentPath));
+    }
+    return;
+  }
 
   return (
     <div className="p-8 w-full max-w-full h-full max-h-full flex justify-center items-center prose">
@@ -26,11 +43,28 @@ export default function Error({
         </button>
 
         <details className="max-w-full">
-          <summary>Technical info: Digest {error.digest}</summary>
+          <summary>Technical info</summary>
 
-          <pre>{error.message}</pre>
+          {typeof error === 'object' && error !== null && (
+            <pre>
+              {'code' in error &&
+                typeof error.code === 'number' &&
+                error.code + ': '}
 
-          <pre className="max-h-80 max-w-full overflow-auto">{error.stack}</pre>
+              {'message' in error &&
+                typeof error.message === 'string' &&
+                error.message}
+            </pre>
+          )}
+
+          {typeof error === 'object' &&
+            error !== null &&
+            'stack' in error &&
+            typeof error.stack === 'string' && (
+              <pre className="max-h-80 max-w-full overflow-auto">
+                {error.stack}
+              </pre>
+            )}
         </details>
       </div>
     </div>
