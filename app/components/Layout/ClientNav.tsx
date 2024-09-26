@@ -7,6 +7,7 @@ import {
   Dropdown,
   DropdownButton,
   DropdownDivider,
+  DropdownIcon,
   DropdownItem,
   DropdownLabel,
   DropdownMenu,
@@ -15,7 +16,6 @@ import {
   ArrowRightStartOnRectangleIcon,
   Cog8ToothIcon,
 } from '@heroicons/react/20/solid';
-import { ChevronDownIcon } from '@heroicons/react/16/solid';
 import { Button } from '@/components/button';
 
 interface NavItem {
@@ -85,7 +85,7 @@ export function NavbarUserSection() {
       <Dropdown>
         <DropdownButton plain={true}>
           {user.name}
-          <ChevronDownIcon />
+          <DropdownIcon />
         </DropdownButton>
         <DropdownMenu className="min-w-64" anchor="bottom end">
           <DropdownItem href="/settings">

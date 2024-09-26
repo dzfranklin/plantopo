@@ -35,6 +35,11 @@ ORDER BY CASE WHEN @order_by_name THEN name END,
          CASE WHEN @order_by_date_uploaded_desc THEN date_uploaded END desc
 OFFSET @offset_value LIMIT @limit_value;
 
+-- name: CountSearchTracks :one
+SELECT count(*)
+FROM tracks
+WHERE owner_id = @owner_id;
+
 -- name: SearchTracksTile :one
 WITH mvtgeom AS
          (SELECT ST_AsMVTGeom(

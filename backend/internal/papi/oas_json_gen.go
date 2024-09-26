@@ -5032,8 +5032,12 @@ func (s *TracksGetOK) encodeFields(e *jx.Encoder) {
 		e.Int(s.PerPage)
 	}
 	{
-		e.FieldStart("hasNext")
-		e.Bool(s.HasNext)
+		e.FieldStart("pages")
+		e.Int(s.Pages)
+	}
+	{
+		e.FieldStart("total")
+		e.Int(s.Total)
 	}
 	{
 		e.FieldStart("tracks")
@@ -5045,11 +5049,12 @@ func (s *TracksGetOK) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfTracksGetOK = [4]string{
+var jsonFieldsNameOfTracksGetOK = [5]string{
 	0: "page",
 	1: "perPage",
-	2: "hasNext",
-	3: "tracks",
+	2: "pages",
+	3: "total",
+	4: "tracks",
 }
 
 // Decode decodes TracksGetOK from json.
@@ -5085,20 +5090,32 @@ func (s *TracksGetOK) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"perPage\"")
 			}
-		case "hasNext":
+		case "pages":
 			requiredBitSet[0] |= 1 << 2
 			if err := func() error {
-				v, err := d.Bool()
-				s.HasNext = bool(v)
+				v, err := d.Int()
+				s.Pages = int(v)
 				if err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"hasNext\"")
+				return errors.Wrap(err, "decode field \"pages\"")
+			}
+		case "total":
+			requiredBitSet[0] |= 1 << 3
+			if err := func() error {
+				v, err := d.Int()
+				s.Total = int(v)
+				if err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"total\"")
 			}
 		case "tracks":
-			requiredBitSet[0] |= 1 << 3
+			requiredBitSet[0] |= 1 << 4
 			if err := func() error {
 				s.Tracks = make([]TrackSummary, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
@@ -5125,7 +5142,7 @@ func (s *TracksGetOK) Decode(d *jx.Decoder) error {
 	// Validate required fields.
 	var failures []validate.FieldError
 	for i, mask := range [1]uint8{
-		0b00001111,
+		0b00011111,
 	} {
 		if result := (requiredBitSet[i] & mask) ^ mask; result != 0 {
 			// Mask only required fields and check equality to mask using XOR.

@@ -38,22 +38,10 @@ export function useUpdateTrackMutation() {
   });
 }
 
-export function useInfiniteTracksQuery(
-  query?: Omit<paths['/tracks']['get']['parameters']['query'], 'page'>,
+export function useTracksQuery(
+  query?: paths['/tracks']['get']['parameters']['query'],
 ) {
-  return useInfiniteQuery({
-    initialPageParam: 1,
-    queryKey: ['get', '/tracks', query],
-    queryFn: ({ pageParam }) =>
-      fetchClient.GET('/tracks', {
-        params: { query: { ...query, page: pageParam } },
-      }),
-    getNextPageParam: (lastPage, _pages) => {
-      if (lastPage?.data?.hasNext) {
-        return lastPage.data.page + 1;
-      }
-    },
-  });
+  return $api.useQuery('get', '/tracks', { params: { query } });
 }
 
 export function useCreateTrackMutation() {

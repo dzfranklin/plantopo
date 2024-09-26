@@ -11,6 +11,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countSearchTracks = `-- name: CountSearchTracks :one
+SELECT count(*)
+FROM tracks
+WHERE owner_id = $1
+`
+
+// CountSearchTracks
+//
+//	SELECT count(*)
+//	FROM tracks
+//	WHERE owner_id = $1
+func (q *Queries) CountSearchTracks(ctx context.Context, db DBTX, ownerID pgtype.UUID) (int64, error) {
+	row := db.QueryRow(ctx, countSearchTracks, ownerID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteTrack = `-- name: DeleteTrack :exec
 DELETE
 FROM tracks

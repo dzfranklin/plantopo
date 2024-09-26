@@ -9,7 +9,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/tidwall/geojson/geometry"
+	"golang.org/x/sync/errgroup"
 	"log/slog"
+	"math"
 	"time"
 )
 
@@ -139,12 +141,15 @@ type TrackSearchPage struct {
 	Tracks  []Track
 	Page    int
 	PerPage int
-	HasNext bool
+	Pages   int
+	Total   int
 }
 
 func (r *Tracks) Search(opts TrackSearchOpts) (TrackSearchPage, error) {
 	ctx, cancel := defaultContext()
 	defer cancel()
+
+	// Prepare
 
 	if opts.Owner == "" {
 		return TrackSearchPage{}, errors.New("must specify owner")
@@ -171,33 +176,60 @@ func (r *Tracks) Search(opts TrackSearchOpts) (TrackSearchPage, error) {
 	}
 
 	offset := (opts.Page - 1) * opts.PerPage
-	limit := opts.PerPage + 1
+	limit := opts.PerPage
 
-	rows, err := q.SearchTracks(ctx, r.db, psqlc.SearchTracksParams{
-		OwnerID:                 pgUUID(ownerID),
-		OrderByName:             pgBool(opts.OrderByName),
-		OrderByDateAsc:          pgBool(opts.OrderByDateAsc),
-		OrderByDateDesc:         pgBool(opts.OrderByDateDesc),
-		OrderByDateUploadedAsc:  pgBool(opts.OrderByDateUploadedAsc),
-		OrderByDateUploadedDesc: pgBool(opts.OrderByDateUploadedDesc),
-		OffsetValue:             int64(offset),
-		LimitValue:              int64(limit),
+	// Fetch
+
+	errGrp, ctx := errgroup.WithContext(ctx)
+
+	var count int
+	errGrp.Go(func() error {
+		res, err := q.CountSearchTracks(ctx, r.db, pgUUID(ownerID))
+		if err != nil {
+			return err
+		}
+		count = int(res)
+		return nil
 	})
-	if err != nil {
+
+	var tracks []Track
+	errGrp.Go(func() error {
+		rows, err := q.SearchTracks(ctx, r.db, psqlc.SearchTracksParams{
+			OwnerID:                 pgUUID(ownerID),
+			OrderByName:             pgBool(opts.OrderByName),
+			OrderByDateAsc:          pgBool(opts.OrderByDateAsc),
+			OrderByDateDesc:         pgBool(opts.OrderByDateDesc),
+			OrderByDateUploadedAsc:  pgBool(opts.OrderByDateUploadedAsc),
+			OrderByDateUploadedDesc: pgBool(opts.OrderByDateUploadedDesc),
+			OffsetValue:             int64(offset),
+			LimitValue:              int64(limit),
+		})
+		if err != nil {
+			return err
+		}
+		tracks = pslices.Map(rows, mapTrack)
+		return nil
+	})
+
+	if err := errGrp.Wait(); err != nil {
 		return TrackSearchPage{}, err
 	}
 
-	hasNext := false
-	if len(rows) == limit {
-		hasNext = true
-		rows = rows[:opts.PerPage]
+	// Process
+
+	if offset > count {
+		// Ensure the result is consistent
+		tracks = []Track{}
 	}
 
+	pages := int(math.Ceil(float64(count) / float64(opts.PerPage)))
+
 	return TrackSearchPage{
-		Tracks:  pslices.Map(rows, mapTrack),
+		Tracks:  tracks,
 		Page:    opts.Page,
 		PerPage: opts.PerPage,
-		HasNext: hasNext,
+		Pages:   pages,
+		Total:   count,
 	}, nil
 }
 

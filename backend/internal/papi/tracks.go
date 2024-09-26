@@ -38,7 +38,8 @@ func (h *phandler) TracksGet(ctx context.Context, params TracksGetParams) (*Trac
 	return &TracksGetOK{
 		Page:    tracks.Page,
 		PerPage: tracks.PerPage,
-		HasNext: tracks.HasNext,
+		Pages:   tracks.Pages,
+		Total:   tracks.Total,
 		Tracks:  pslices.Map(tracks.Tracks, mapTrackSummary),
 	}, nil
 }

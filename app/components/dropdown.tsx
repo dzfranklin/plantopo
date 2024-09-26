@@ -6,6 +6,7 @@ import type React from 'react';
 import { Button } from './button';
 import { Link } from './link';
 import { forwardRef } from 'react';
+import { ChevronDownIcon } from '@heroicons/react/16/solid';
 
 export function Dropdown(props: Headless.MenuProps) {
   return <Headless.Menu {...props} />;
@@ -16,6 +17,10 @@ export function DropdownButton<T extends React.ElementType = typeof Button>({
   ...props
 }: { className?: string } & Omit<Headless.MenuButtonProps<T>, 'className'>) {
   return <Headless.MenuButton as={as} {...props} />;
+}
+
+export function DropdownIcon() {
+  return <ChevronDownIcon />;
 }
 
 export function DropdownMenu({

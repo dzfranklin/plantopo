@@ -233,11 +233,12 @@ paths:
                 properties:
                   page: { type: integer }
                   perPage: { type: integer }
-                  hasNext: { type: boolean }
+                  pages: { type: integer }
+                  total: { type: integer }
                   tracks:
                     type: array
                     items: { $ref: "#/components/schemas/TrackSummary" }
-                required: [ page, perPage, hasNext, tracks ]
+                required: [ page, perPage, pages, total, tracks ]
         default: { $ref: "#/components/responses/DefaultErrorResponse" }
     post:
       tags: [ tracks ]

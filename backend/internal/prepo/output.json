@@ -2,6 +2,6 @@
 "type": "FeatureCollection",
 "name": "default",
 "features": [
-{ "type": "Feature", "properties": { "mvt_id": 1, "id": "t_0691vwsc99xdv7be4kzbqkzq80", "owner_id": "u_248h248h248h248h248h248h28", "name": "Edinburgh to Perth (other user)" }, "geometry": { "type": "LineString", "coordinates": [ [ 3008.0, 893.0 ], [ 2239.0, 3242.0 ] ] } }
+{ "type": "Feature", "properties": { "mvt_id": 1, "id": "t_0692xb3d85yfh3s3dcya29v7pm", "owner_id": "u_248h248h248h248h248h248h28", "name": "Edinburgh to Perth (other user)" }, "geometry": { "type": "LineString", "coordinates": [ [ 3008.0, 893.0 ], [ 2239.0, 3242.0 ] ] } }
 ]
 }

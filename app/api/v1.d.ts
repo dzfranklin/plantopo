@@ -436,7 +436,8 @@ export interface paths {
             'application/json': {
               page: number;
               perPage: number;
-              hasNext: boolean;
+              pages: number;
+              total: number;
               tracks: components['schemas']['TrackSummary'][];
             };
           };

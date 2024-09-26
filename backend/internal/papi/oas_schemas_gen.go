@@ -2194,7 +2194,8 @@ func (s *TrackUpdate) SetLine(val OptPolyline) {
 type TracksGetOK struct {
 	Page    int            `json:"page"`
 	PerPage int            `json:"perPage"`
-	HasNext bool           `json:"hasNext"`
+	Pages   int            `json:"pages"`
+	Total   int            `json:"total"`
 	Tracks  []TrackSummary `json:"tracks"`
 }
 
@@ -2208,9 +2209,14 @@ func (s *TracksGetOK) GetPerPage() int {
 	return s.PerPage
 }
 
-// GetHasNext returns the value of HasNext.
-func (s *TracksGetOK) GetHasNext() bool {
-	return s.HasNext
+// GetPages returns the value of Pages.
+func (s *TracksGetOK) GetPages() int {
+	return s.Pages
+}
+
+// GetTotal returns the value of Total.
+func (s *TracksGetOK) GetTotal() int {
+	return s.Total
 }
 
 // GetTracks returns the value of Tracks.
@@ -2228,9 +2234,14 @@ func (s *TracksGetOK) SetPerPage(val int) {
 	s.PerPage = val
 }
 
-// SetHasNext sets the value of HasNext.
-func (s *TracksGetOK) SetHasNext(val bool) {
-	s.HasNext = val
+// SetPages sets the value of Pages.
+func (s *TracksGetOK) SetPages(val int) {
+	s.Pages = val
+}
+
+// SetTotal sets the value of Total.
+func (s *TracksGetOK) SetTotal(val int) {
+	s.Total = val
 }
 
 // SetTracks sets the value of Tracks.

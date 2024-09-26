@@ -323,7 +323,7 @@ func TestTracks(t *testing.T) {
 					gotPage := testPage{
 						Tracks:  pslices.Map(got.Tracks, func(r Track) string { return r.ID }),
 						Page:    got.Page,
-						HasNext: got.HasNext,
+						HasNext: got.Page < got.Pages,
 					}
 					assert.Equal(t, c.expected, gotPage)
 				}
