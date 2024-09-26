@@ -345,25 +345,10 @@ function PaginationControlPageNumber({
 }
 
 function TrackItem({ track }: { track: TrackSummary }) {
-  const router = useRouter();
   const href = '/tracks/' + track.id;
   return (
     <div className="aspect-[4/3] grid grid-cols-1 grid-rows-[minmax(0,1fr)_max-content] mb-2">
-      <div
-        onClick={(evt) => {
-          evt.preventDefault();
-          router.push(href);
-        }}
-        className="cursor-pointer h-full max-h-full"
-      >
-        <div className="w-full max-w-full h-full max-h-full pointer-events-none clip rounded-lg">
-          <TrackPreview
-            padding={10}
-            polyline={track.simplifiedLine}
-            className=""
-          />
-        </div>
-      </div>
+      <TrackPreview href={href} padding={10} polyline={track.simplifiedLine} />
 
       <Link href={href}>
         <p className="pointer-events-none mt-2 block truncate text-sm font-medium text-gray-900">
