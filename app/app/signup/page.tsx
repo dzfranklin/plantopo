@@ -7,5 +7,5 @@ export default function Page({
 }: {
   searchParams: { returnTo?: string };
 }) {
-  return <LoginScreen isSignup={true} returnTo={returnTo} />;
+  return <LoginScreen isSignup={true} returnTo={returnTo ?? '/'} />;
 }

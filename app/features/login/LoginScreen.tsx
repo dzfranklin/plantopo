@@ -18,12 +18,12 @@ export function LoginScreen({
   returnTo,
 }: {
   isSignup: boolean;
-  returnTo: string | undefined;
+  returnTo: string;
 }) {
   const router = useRouter();
   const doReturn = useCallback(
-    () => router.replace(returnTo ?? '/'),
-    [returnTo],
+    () => router.replace(returnTo),
+    [returnTo, router],
   );
 
   const signupMutation = $api.useMutation('post', '/auth/register-browser');

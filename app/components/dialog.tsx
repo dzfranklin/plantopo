@@ -42,7 +42,7 @@ export function Dialog({
           <div className="fixed inset-0 flex w-screen justify-center overflow-y-auto bg-zinc-950/25 px-2 py-2 focus:outline-0 sm:px-6 sm:py-8 lg:px-8 lg:py-16" />
         </Headless.TransitionChild>
 
-        <div className="fixed inset-0 w-screen overflow-y-auto pt-6 sm:pt-0">
+        <div className="fixed inset-0 z-[100] w-screen overflow-y-auto pt-6 sm:pt-0">
           <div className="grid min-h-full grid-rows-[1fr_auto] justify-items-center sm:grid-rows-[1fr_auto_3fr] sm:p-4">
             <Headless.TransitionChild
               enter="ease-out duration-100"
