@@ -16,8 +16,11 @@ import {
   loadInitialView,
   storeInitialView,
 } from '@/features/map/initialView';
-import './registerOSExplorer';
 import deepEqual from 'deep-equal';
+import { OSExplorerMapComponent } from '@/features/map/OSExplorerMapComponent';
+import OLMap from 'ol/Map';
+import { transform as olTransform } from 'ol/proj';
+import { map } from 'zod';
 
 // TODO: Add controls
 // TODO: settings-aware
@@ -47,6 +50,7 @@ export function MapComponent(props: MapComponentProps) {
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapManager | null>(null);
+  const explorerMapRef = useRef<OLMap | null>(null);
 
   const [showSkeleton, setShowSkeleton] = useState(true);
   const [areTilesLoaded, setAreTilesLoaded] = useState(false);
@@ -85,8 +89,9 @@ export function MapComponent(props: MapComponentProps) {
     const map = new MapManager({
       container: mapContainerRef.current,
       initialView,
-      initialBaseStyle: baseStyle,
+      baseStyle: baseStyle,
     });
+    explorerMapRef.current && syncExplorerMap(map.m, explorerMapRef.current);
 
     let maybeOnMapCleanup: MaybeCleanup;
     map.m.on('load', () => {
@@ -94,6 +99,10 @@ export function MapComponent(props: MapComponentProps) {
 
       setShowSkeleton(false);
       mapRef.current = map;
+
+      viewRef.current = cameraPosition(map.m);
+
+      explorerMapRef.current && syncExplorerMap(map.m, explorerMapRef.current);
 
       if (propsRef.current.geojson) {
         map.setGeoJSON(
@@ -108,19 +117,19 @@ export function MapComponent(props: MapComponentProps) {
       maybeOnMapCleanup = propsRef.current.onMap?.(map.m);
     });
 
+    map.m.on('render', () => {
+      explorerMapRef.current && syncExplorerMap(map.m, explorerMapRef.current);
+    });
+
     map.m.on('move', () => {
-      const { lng, lat } = map.m.getCenter();
-      viewRef.current = { lng, lat, zoom: map.m.getZoom() };
+      viewRef.current = cameraPosition(map.m);
     });
 
     let pendingSaveView: number | undefined;
     map.m.on('moveend', () => {
       if (pendingSaveView !== undefined) cancelIdleCallback(pendingSaveView);
-      const { lng, lat } = map.m.getCenter();
       const view: InitialView = {
-        lng,
-        lat,
-        zoom: map.m.getZoom(),
+        ...cameraPosition(map.m),
         baseStyle: baseStyle.id,
       };
       pendingSaveView = requestIdleCallback(() => storeInitialView(view));
@@ -156,6 +165,16 @@ export function MapComponent(props: MapComponentProps) {
     prevLayers.current = props.layers;
   }, [props.layers]);
 
+  const onExplorerMap = useCallback((oMap: OLMap) => {
+    explorerMapRef.current = oMap;
+
+    if (viewRef.current) setExplorerMapView(oMap, viewRef.current);
+
+    return () => {
+      explorerMapRef.current = null;
+    };
+  }, []);
+
   return (
     <div
       className={cls(
@@ -167,6 +186,12 @@ export function MapComponent(props: MapComponentProps) {
         ref={mapContainerRef}
         className="w-full h-full max-h-full max-w-full"
       />
+
+      <div className="absolute inset-0 -z-40 pointer-events-none">
+        {baseStyle.id === 'os-explorer' && (
+          <OSExplorerMapComponent onMap={onExplorerMap} />
+        )}
+      </div>
 
       <div
         className={cls(
@@ -192,4 +217,28 @@ function TilesLoadingIndicator() {
       <div className="animate-[progress_1.5s_infinite_linear] w-full h-full bg-blue-500 origin-left-right"></div>
     </div>
   );
+}
+
+function cameraPosition(map: ml.Map): CameraPosition {
+  const { lng, lat } = map.getCenter();
+  return {
+    lng,
+    lat,
+    pitch: map.getPitch(),
+    bearing: map.getBearing(),
+    zoom: map.getZoom(),
+  };
+}
+
+function syncExplorerMap(mMap: ml.Map, oMap: OLMap) {
+  if (mMap.getPitch() !== 0) mMap.setPitch(0);
+  setExplorerMapView(oMap, cameraPosition(mMap));
+}
+
+function setExplorerMapView(oMap: OLMap, cam: CameraPosition) {
+  // The inverse of <https://openlayers.org/en/latest/examples/mapbox-layer.html>
+  const oView = oMap.getView();
+  oView.setZoom(cam.zoom + 1);
+  oView.setRotation((-cam.bearing * Math.PI) / 180);
+  oView.setCenter(olTransform([cam.lng, cam.lat], 'EPSG:4326', 'EPSG:3857'));
 }

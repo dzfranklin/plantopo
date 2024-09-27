@@ -1,5 +1,6 @@
 import { MAPTILER_KEY } from '@/env';
 import { z } from 'zod';
+import * as ml from 'maplibre-gl';
 
 export const baseStyleIDSchema = z.enum([
   'topo',
@@ -14,8 +15,14 @@ export interface BaseStyle {
   id: BaseStyleID;
   name: string;
   preview: string;
-  style: string;
+  style: string | ml.StyleSpecification;
 }
+
+const emptyStyle: ml.StyleSpecification = {
+  version: 8,
+  sources: {},
+  layers: [],
+};
 
 export const baseStyles: Record<BaseStyleID, BaseStyle> = {
   topo: {
@@ -43,7 +50,7 @@ export const baseStyles: Record<BaseStyleID, BaseStyle> = {
     id: 'os-explorer',
     name: 'Explorer',
     preview: '/style-preview/os_explorer_60x60.png',
-    style: 'os-explorer://style.json',
+    style: emptyStyle,
   },
 };
 

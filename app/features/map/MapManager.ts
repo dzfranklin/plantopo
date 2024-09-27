@@ -3,7 +3,13 @@ import { GeoJSON } from 'geojson';
 import { BaseStyle } from '@/features/map/style';
 import { fitBoundsFor } from '@/features/map/util';
 
-export type CameraPosition = { lng: number; lat: number; zoom: number };
+export type CameraPosition = {
+  lng: number;
+  lat: number;
+  bearing: number;
+  pitch: number;
+  zoom: number;
+};
 
 export type MapManagerInitialView =
   | { at: CameraPosition }
@@ -17,22 +23,28 @@ export class MapManager {
 
   constructor(props: {
     container: HTMLDivElement;
-    initialBaseStyle: BaseStyle;
+    baseStyle: BaseStyle;
     initialView?: MapManagerInitialView;
   }) {
-    this.baseStyle = props.initialBaseStyle;
+    this.baseStyle = props.baseStyle;
 
     const opts: ml.MapOptions = {
       container: props.container,
-      style: props.initialBaseStyle.style,
+      style: props.baseStyle.style,
     };
 
     if (props.initialView && 'at' in props.initialView) {
       opts.center = [props.initialView.at.lng, props.initialView.at.lat];
       opts.zoom = props.initialView.at.zoom;
+      opts.bearing = props.initialView.at.bearing;
+      opts.pitch = props.initialView.at.pitch;
     } else if (props.initialView && 'fit' in props.initialView) {
       opts.bounds = props.initialView.fit;
       opts.fitBoundsOptions = props.initialView.options;
+    }
+
+    if (props.baseStyle.id === 'os-explorer') {
+      opts.pitch = opts.minPitch = opts.maxPitch = 0;
     }
 
     this.m = new ml.Map(opts);

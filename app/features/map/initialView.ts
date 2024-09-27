@@ -5,6 +5,8 @@ const initialViewSchema = z.object({
   lng: z.number(),
   lat: z.number(),
   zoom: z.number(),
+  bearing: z.number(),
+  pitch: z.number(),
   baseStyle: baseStyleIDSchema,
 });
 
@@ -14,6 +16,8 @@ export const defaultInitialView: InitialView = {
   lng: 0,
   lat: 50,
   zoom: 2,
+  bearing: 0,
+  pitch: 0,
   baseStyle: defaultBaseStyle.id,
 };
 
