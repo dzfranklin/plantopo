@@ -88,6 +88,9 @@ const preview: Preview = {
           http.all('https://events.mapbox.com/*', () => passthrough()),
         ],
         maptiler: [http.all('https://api.maptiler.com/*', () => passthrough())],
+        maplibreDemoTiles: [
+          http.all('https://demotiles.maplibre.org/*', () => passthrough()),
+        ],
         user: loggedInUserHandlers,
       },
     },
