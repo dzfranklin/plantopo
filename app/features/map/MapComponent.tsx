@@ -16,8 +16,13 @@ import {
   loadInitialView,
   storeInitialView,
 } from '@/features/map/initialView';
+import './registerOSExplorer';
+import deepEqual from 'deep-equal';
 
 // TODO: Add controls
+// TODO: settings-aware
+// TODO: resize
+// TODO: snap to zoom for raster basestyle?
 
 export interface MapComponentProps {
   onMap?: OnMap;
@@ -44,6 +49,7 @@ export function MapComponent(props: MapComponentProps) {
   const mapRef = useRef<MapManager | null>(null);
 
   const [showSkeleton, setShowSkeleton] = useState(true);
+  const [areTilesLoaded, setAreTilesLoaded] = useState(false);
 
   const viewRef = useRef<CameraPosition | null>(null);
 
@@ -120,6 +126,8 @@ export function MapComponent(props: MapComponentProps) {
       pendingSaveView = requestIdleCallback(() => storeInitialView(view));
     });
 
+    map.m.on('data', () => setAreTilesLoaded(map.m.areTilesLoaded()));
+
     return () => {
       maybeOnMapCleanup?.();
       removed = true;
@@ -130,16 +138,22 @@ export function MapComponent(props: MapComponentProps) {
 
   // Sync
 
+  const prevGeoJSON = useRef<GeoJSON | undefined>(undefined);
   useEffect(() => {
+    if (deepEqual(prevGeoJSON.current, props.geojson)) return;
     mapRef.current?.setGeoJSON(
       props.geojson,
       propsRef.current.fitGeoJSON ?? false,
       propsRef.current.fitOptions,
     );
+    prevGeoJSON.current = props.geojson;
   }, [props.geojson]);
 
+  const prevLayers = useRef<ml.LayerSpecification[] | undefined>(undefined);
   useEffect(() => {
+    if (deepEqual(prevLayers.current, props.layers)) return;
     mapRef.current?.setLayers(props.layers ?? []);
+    prevLayers.current = props.layers;
   }, [props.layers]);
 
   return (
@@ -154,11 +168,28 @@ export function MapComponent(props: MapComponentProps) {
         className="w-full h-full max-h-full max-w-full"
       />
 
+      <div
+        className={cls(
+          'absolute left-0 top-0 right-0 transition-opacity pointer-events-none',
+          areTilesLoaded ? 'opacity-0' : 'opacity-100',
+        )}
+      >
+        <TilesLoadingIndicator />
+      </div>
+
       <div className="absolute left-0 bottom-0">
         <div className="h-[73px] w-[73px] pl-[10px] pb-[10px]">
           <LayersControl baseStyle={baseStyle} setBaseStyle={setBaseStyle} />
         </div>
       </div>
+    </div>
+  );
+}
+
+function TilesLoadingIndicator() {
+  return (
+    <div className="h-1 w-full bg-blue-200 overflow-hidden">
+      <div className="animate-[progress_1.5s_infinite_linear] w-full h-full bg-blue-500 origin-left-right"></div>
     </div>
   );
 }

@@ -1140,6 +1140,12 @@
     "repository": "https://github.com/open-draft/until"
   },
   {
+    "name": "@petamoriken/float16@3.8.7",
+    "publisher": "Kenta Moriuchi",
+    "licenses": "MIT",
+    "repository": "https://github.com/petamoriken/float16"
+  },
+  {
     "name": "@pkgjs/parseargs@0.11.0",
     "publisher": null,
     "licenses": "MIT",
@@ -1776,6 +1782,12 @@
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
   },
   {
+    "name": "@types/deep-equal@1.0.4",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
+  },
+  {
     "name": "@types/doctrine@0.0.9",
     "publisher": null,
     "licenses": "MIT",
@@ -1974,6 +1986,12 @@
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
   },
   {
+    "name": "@types/proj4@2.5.5",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
+  },
+  {
     "name": "@types/prop-types@15.7.12",
     "publisher": null,
     "licenses": "MIT",
@@ -1987,6 +2005,12 @@
   },
   {
     "name": "@types/range-parser@1.2.7",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
+  },
+  {
+    "name": "@types/rbush@3.0.3",
     "publisher": null,
     "licenses": "MIT",
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
@@ -3088,6 +3112,30 @@
     "publisher": "DY",
     "licenses": "MIT",
     "repository": "https://github.com/colorjs/color-name"
+  },
+  {
+    "name": "color-name@2.0.0",
+    "publisher": "DY",
+    "licenses": "MIT",
+    "repository": "https://github.com/colorjs/color-name"
+  },
+  {
+    "name": "color-parse@2.0.2",
+    "publisher": "Dmitry Ivanov",
+    "licenses": "MIT",
+    "repository": "https://github.com/colorjs/color-parse"
+  },
+  {
+    "name": "color-rgba@3.0.0",
+    "publisher": "Dmitry Iv",
+    "licenses": "MIT",
+    "repository": "https://github.com/colorjs/color-rgba"
+  },
+  {
+    "name": "color-space@2.0.1",
+    "publisher": "Dmitry Ivanov",
+    "licenses": "MIT",
+    "repository": "https://github.com/colorjs/color-space"
   },
   {
     "name": "color-string@1.9.1",
@@ -4512,6 +4560,12 @@
     "repository": "https://github.com/caseycesari/geojson.js"
   },
   {
+    "name": "geotiff@2.1.3",
+    "publisher": "Fabian Schindler",
+    "licenses": "MIT",
+    "repository": "https://github.com/geotiffjs/geotiff.js"
+  },
+  {
     "name": "get-caller-file@2.0.5",
     "publisher": "Stefan Penner",
     "licenses": "ISC",
@@ -5454,6 +5508,12 @@
     "repository": "https://github.com/mattcg/language-tags"
   },
   {
+    "name": "lerc@3.0.0",
+    "publisher": "Esri",
+    "licenses": "Apache-2.0",
+    "repository": "https://github.com/Esri/lerc"
+  },
+  {
     "name": "leven@3.1.0",
     "publisher": "Sindre Sorhus",
     "licenses": "MIT",
@@ -5746,6 +5806,12 @@
     "publisher": null,
     "licenses": "MIT",
     "repository": "https://github.com/jshttp/methods"
+  },
+  {
+    "name": "mgrs@1.0.0",
+    "publisher": "proj4 team",
+    "licenses": "MIT",
+    "repository": "https://github.com/proj4js/mgrs"
   },
   {
     "name": "micromatch@4.0.8",
@@ -6132,6 +6198,12 @@
     "repository": "https://github.com/unjs/ohash"
   },
   {
+    "name": "ol@10.2.1",
+    "publisher": null,
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/openlayers/openlayers"
+  },
+  {
     "name": "on-finished@2.4.1",
     "publisher": null,
     "licenses": "MIT",
@@ -6258,6 +6330,12 @@
     "repository": "https://github.com/nodeca/pako"
   },
   {
+    "name": "pako@2.1.0",
+    "publisher": null,
+    "licenses": "(MIT AND Zlib)",
+    "repository": "https://github.com/nodeca/pako"
+  },
+  {
     "name": "param-case@3.0.4",
     "publisher": "Blake Embrey",
     "licenses": "MIT",
@@ -6274,6 +6352,12 @@
     "publisher": null,
     "licenses": "ISC",
     "repository": "https://github.com/crypto-browserify/parse-asn1"
+  },
+  {
+    "name": "parse-headers@2.0.5",
+    "publisher": "David Björklund",
+    "licenses": "MIT",
+    "repository": "https://github.com/kesla/parse-headers"
   },
   {
     "name": "parse-json@5.2.0",
@@ -6403,6 +6487,12 @@
   },
   {
     "name": "pbf@3.3.0",
+    "publisher": "Konstantin Kaefer",
+    "licenses": "BSD-3-Clause",
+    "repository": "https://github.com/mapbox/pbf"
+  },
+  {
+    "name": "pbf@4.0.1",
     "publisher": "Konstantin Kaefer",
     "licenses": "BSD-3-Clause",
     "repository": "https://github.com/mapbox/pbf"
@@ -6636,6 +6726,12 @@
     "repository": "https://github.com/shtylman/node-process"
   },
   {
+    "name": "proj4@2.12.1",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/proj4js/proj4js"
+  },
+  {
     "name": "prompts@2.4.2",
     "publisher": "Terkel Gjervig",
     "licenses": "MIT",
@@ -6726,6 +6822,12 @@
     "repository": "https://github.com/sindresorhus/quick-lru"
   },
   {
+    "name": "quick-lru@6.1.2",
+    "publisher": "Sindre Sorhus",
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/quick-lru"
+  },
+  {
     "name": "quickselect@2.0.0",
     "publisher": "Vladimir Agafonkin",
     "licenses": "ISC",
@@ -6764,6 +6866,12 @@
   {
     "name": "rbush@3.0.1",
     "publisher": "Vladimir Agafonkin",
+    "licenses": "MIT",
+    "repository": "https://github.com/mourner/rbush"
+  },
+  {
+    "name": "rbush@4.0.1",
+    "publisher": "Volodymyr Agafonkin",
     "licenses": "MIT",
     "repository": "https://github.com/mourner/rbush"
   },
@@ -8298,6 +8406,12 @@
     "repository": "https://github.com/timoxley/wcwidth"
   },
   {
+    "name": "web-worker@1.3.0",
+    "publisher": null,
+    "licenses": "Apache-2.0",
+    "repository": "https://github.com/developit/web-worker"
+  },
+  {
     "name": "webidl-conversions@3.0.1",
     "publisher": "Domenic Denicola",
     "licenses": "BSD-2-Clause",
@@ -8400,6 +8514,12 @@
     "repository": "https://github.com/npm/node-which"
   },
   {
+    "name": "wkt-parser@1.3.3",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/proj4js/wkt-parser"
+  },
+  {
     "name": "word-wrap@1.2.5",
     "publisher": "Jon Schlinkert",
     "licenses": "MIT",
@@ -8446,6 +8566,12 @@
     "publisher": "Domenic Denicola",
     "licenses": "Apache-2.0",
     "repository": "https://github.com/jsdom/xml-name-validator"
+  },
+  {
+    "name": "xml-utils@1.10.1",
+    "publisher": "Daniel J. Dufour",
+    "licenses": "CC0-1.0",
+    "repository": "https://github.com/DanielJDufour/xml-utils"
   },
   {
     "name": "xmlchars@2.2.0",
@@ -8542,5 +8668,11 @@
     "publisher": "Colin McDonnell",
     "licenses": "MIT",
     "repository": "https://github.com/colinhacks/zod"
+  },
+  {
+    "name": "zstddec@0.1.0",
+    "publisher": "Don McCurdy",
+    "licenses": "MIT AND BSD-3-Clause",
+    "repository": "https://github.com/donmccurdy/zstddec"
   }
 ]

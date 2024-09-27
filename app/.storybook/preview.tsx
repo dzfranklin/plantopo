@@ -91,6 +91,7 @@ const preview: Preview = {
         maplibreDemoTiles: [
           http.all('https://demotiles.maplibre.org/*', () => passthrough()),
         ],
+        osMaps: [http.all('https://api.os.uk/maps/*', () => passthrough())],
         user: loggedInUserHandlers,
       },
     },

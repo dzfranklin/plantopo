@@ -1,7 +1,12 @@
 import { MAPTILER_KEY } from '@/env';
 import { z } from 'zod';
 
-export const baseStyleIDSchema = z.enum(['topo', 'streets', 'satellite']);
+export const baseStyleIDSchema = z.enum([
+  'topo',
+  'streets',
+  'satellite',
+  'os-explorer',
+]);
 
 export type BaseStyleID = z.infer<typeof baseStyleIDSchema>;
 
@@ -33,6 +38,12 @@ export const baseStyles: Record<BaseStyleID, BaseStyle> = {
     preview: '/style-preview/landsat_60x60.png',
     style:
       'https://api.maptiler.com/maps/satellite/style.json?key=' + MAPTILER_KEY,
+  },
+  'os-explorer': {
+    id: 'os-explorer',
+    name: 'Explorer',
+    preview: '/style-preview/os_explorer_60x60.png',
+    style: 'os-explorer://style.json',
   },
 };
 

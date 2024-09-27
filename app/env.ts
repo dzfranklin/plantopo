@@ -17,3 +17,9 @@ if (!maptilerKey) {
   throw new Error('Missing NEXT_PUBLIC_MAPTILER_KEY');
 }
 export const MAPTILER_KEY: string = maptilerKey;
+
+const osKey = process.env.NEXT_PUBLIC_OS_KEY;
+if (!osKey) {
+  throw new Error('Missing NEXT_PUBLIC_OS_KEY');
+}
+export const OS_KEY = process.env.NEXT_PUBLIC_OS_KEY;

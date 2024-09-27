@@ -66,7 +66,7 @@ function LayerButton({
     <button
       onClick={onClick}
       className={cls(
-        'relative h-[63px] w-[63px] text-xs rounded-lg bg-cover',
+        'relative h-[63px] w-[63px] text-[11px] rounded-lg bg-cover',
         selected === undefined && 'border-white border-[1.5px]',
         selected === true && 'border-blue-600 border-[3px]',
         selected === false && 'border-white border-[3px]',
