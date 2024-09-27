@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 
 import { MapComponent } from './MapComponent';
 import { clearInitialView } from '@/features/map/initialView';
+import { ResizableContainer } from '@/components/ResizableContainer';
 
 const meta = {
   component: MapComponent,
@@ -17,9 +18,9 @@ if (typeof window !== 'undefined') {
 
 export const Default: Story = {
   render: (props) => (
-    <div className="w-[400px] h-[300px]">
+    <ResizableContainer initialWidth={400} initialHeight={300}>
       <MapComponent {...props} />
-    </div>
+    </ResizableContainer>
   ),
 };
 
@@ -40,21 +41,37 @@ export const SimpleGeoJSON: Story = {
   },
 };
 
+export const OSExplorer: Story = {
+  ...Default,
+  args: {
+    initialBaseStyle: 'os-explorer',
+    initialCamera: {
+      lng: -3.4,
+      lat: 56.5,
+      zoom: 6,
+    },
+  },
+};
+
 export const Large: Story = {
   ...Default,
   render: (props) => (
-    <div className="w-[800px] h-[600px]">
+    <ResizableContainer initialWidth={800} initialHeight={600}>
       <MapComponent {...props} />
-    </div>
+    </ResizableContainer>
   ),
 };
 
 export const Rounded: Story = {
   ...Default,
   render: (props) => (
-    <div className="w-[400px] h-[300px] rounded-lg overflow-clip">
+    <ResizableContainer
+      initialWidth={400}
+      initialHeight={300}
+      className="rounded-lg overflow-clip"
+    >
       <MapComponent {...props} />
-    </div>
+    </ResizableContainer>
   ),
 };
 
@@ -62,12 +79,13 @@ export const Multiple: Story = {
   ...Default,
   render: (props) => (
     <div className="space-y-2">
-      <div className="w-[400px] h-[300px]">
+      <ResizableContainer initialWidth={400} initialHeight={300}>
         <MapComponent {...props} />
-      </div>
-      <div className="w-[400px] h-[300px]">
+      </ResizableContainer>
+
+      <ResizableContainer initialWidth={400} initialHeight={300}>
         <MapComponent {...props} />
-      </div>
+      </ResizableContainer>
     </div>
   ),
 };

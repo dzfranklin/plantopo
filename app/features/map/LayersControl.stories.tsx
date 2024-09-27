@@ -2,7 +2,11 @@ import type { Meta, StoryObj } from '@storybook/react';
 
 import { LayersControl } from './LayersControl';
 import { useState } from 'react';
-import { BaseStyle, defaultBaseStyle } from '@/features/map/style';
+import {
+  BaseStyle,
+  defaultBaseStyle,
+  OverlayStyle,
+} from '@/features/map/style';
 
 const meta = {
   component: LayersControl,
@@ -14,13 +18,23 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    baseStyle: defaultBaseStyle,
-    setBaseStyle: () => {},
+    activeBase: defaultBaseStyle,
+    setActiveBase: () => {},
+    activeOverlays: [],
+    setActiveOverlays: () => {},
   },
   render: () => <Container />,
 };
 
 function Container() {
-  const [baseStyle, setBaseStyle] = useState<BaseStyle>(defaultBaseStyle);
-  return <LayersControl baseStyle={baseStyle} setBaseStyle={setBaseStyle} />;
+  const [activeBase, setActiveBase] = useState<BaseStyle>(defaultBaseStyle);
+  const [activeOverlays, setActiveOverlays] = useState<OverlayStyle[]>([]);
+  return (
+    <LayersControl
+      activeBase={activeBase}
+      setActiveBase={setActiveBase}
+      activeOverlays={activeOverlays}
+      setActiveOverlays={setActiveOverlays}
+    />
+  );
 }

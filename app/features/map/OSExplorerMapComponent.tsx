@@ -10,6 +10,8 @@ import XYZSource from 'ol/source/XYZ';
 import TileLayer from 'ol/layer/Tile';
 import 'ol/ol.css';
 import { Coordinate as OLCoord } from 'ol/coordinate';
+import AttributionControl from 'ol/control/Attribution';
+import { Control } from 'ol/Control';
 
 const reprojectionErrorThreshold = 0.2;
 const debugMode = false;
@@ -35,10 +37,13 @@ export function OSExplorerMapComponent({
   center,
   zoom,
   onMap,
+  hideAttribution,
 }: {
   center?: [number, number];
   zoom?: number;
   onMap?: (map: OLMap) => (() => void) | void;
+  // When integrated with MapComponent the attribution text is integrated with the other attributions
+  hideAttribution?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -65,11 +70,20 @@ export function OSExplorerMapComponent({
       projection: 'EPSG:27700',
       tileGrid,
       reprojectionErrorThreshold,
+      attributions: [
+        'Contains OS data &copy; Crown copyright and database rights ' +
+          new Date().getFullYear(),
+      ],
     });
     source.setRenderReprojectionEdges(debugMode);
 
+    const controls: Control[] = [];
+    if (!hideAttribution) {
+      controls.push(new AttributionControl({ collapsed: false }));
+    }
+
     const map = new OLMap({
-      controls: [],
+      controls,
       interactions: [],
       layers: [
         new TileLayer({
@@ -90,12 +104,20 @@ export function OSExplorerMapComponent({
       maybeCleanupOnMap?.();
       map.dispose();
     };
-  }, [centerLng, centerLat, zoom, onMap]);
+  }, [centerLng, centerLat, zoom, onMap, hideAttribution]);
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full max-w-full h-full max-h-full"
-    ></div>
+    <div className="relative w-full max-w-full h-full max-h-full">
+      <div ref={containerRef} className="w-full max-w-full h-full max-h-full" />
+      {!hideAttribution && (
+        <img
+          className="absolute right-[8px] bottom-[8px]"
+          width="90"
+          height="24"
+          src="/os-logo-maps.svg"
+          alt="Ordnance Survey maps logo"
+        />
+      )}
+    </div>
   );
 }

@@ -1,31 +1,49 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  MutableRefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import cls from '@/cls';
 import * as ml from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { GeoJSON } from 'geojson';
-import { BaseStyle, baseStyles, defaultBaseStyle } from '@/features/map/style';
-import { LayersControl } from '@/features/map/LayersControl';
 import {
-  CameraPosition,
-  MapManager,
-  MapManagerInitialView,
-} from '@/features/map/MapManager';
-import { fitBoundsFor } from '@/features/map/util';
+  BaseStyle,
+  BaseStyleID,
+  baseStyles,
+  defaultBaseStyle,
+  OverlayStyle,
+} from './style';
+import { LayersControl } from './LayersControl';
+import { CameraOptions, MapManager, MapManagerInitialView } from './MapManager';
+import { fitBoundsFor } from './util';
 import {
   InitialView,
   loadInitialView,
   storeInitialView,
 } from '@/features/map/initialView';
 import deepEqual from 'deep-equal';
-import { OSExplorerMapComponent } from '@/features/map/OSExplorerMapComponent';
+import { OSExplorerMapComponent } from './OSExplorerMapComponent';
 import OLMap from 'ol/Map';
 import { transform as olTransform } from 'ol/proj';
-import { map } from 'zod';
+import { OSLogoControl } from './OSLogoControl';
+import { usePortalControl } from './PortalControl';
+import { Button } from '@/components/button';
+import JSONView from '@/components/JSONView';
+import {
+  InspectFeature,
+  InspectFeaturesDialog,
+} from '@/features/map/InspectFeaturesDialog';
 
 // TODO: Add controls
 // TODO: settings-aware
-// TODO: resize
 // TODO: snap to zoom for raster basestyle?
+// TODO: if stored baseStyle is a limited region and you load a map outside the region you should use the default
+
+export type { CameraOptions } from './MapManager';
 
 export interface MapComponentProps {
   onMap?: OnMap;
@@ -35,6 +53,9 @@ export interface MapComponentProps {
   fitGeoJSON?: boolean;
   // Whenever the map is fit to bounds this will be used
   fitOptions?: ml.FitBoundsOptions;
+  initialCamera?: Pick<CameraOptions, 'lng' | 'lat' | 'zoom'> &
+    Partial<CameraOptions>;
+  initialBaseStyle?: BaseStyleID;
 }
 
 export type MaybeCleanup = (() => void) | undefined;
@@ -55,10 +76,12 @@ export function MapComponent(props: MapComponentProps) {
   const [showSkeleton, setShowSkeleton] = useState(true);
   const [areTilesLoaded, setAreTilesLoaded] = useState(false);
 
-  const viewRef = useRef<CameraPosition | null>(null);
+  const viewRef = useRef<CameraOptions | null>(null);
 
   const [baseStyle, _setBaseStyle] = useState<BaseStyle>(
-    () => baseStyles[loadInitialView().baseStyle] || defaultBaseStyle,
+    () =>
+      baseStyles[props.initialBaseStyle ?? loadInitialView().baseStyle] ||
+      defaultBaseStyle,
   );
   const setBaseStyle = useCallback((value: BaseStyle) => {
     _setBaseStyle(value);
@@ -68,9 +91,30 @@ export function MapComponent(props: MapComponentProps) {
     });
   }, []);
 
+  const [activeOverlays, setActiveOverlays] = useState<OverlayStyle[]>([]);
+  const activeOverlaysRef = useRef<OverlayStyle[]>(activeOverlays);
+  activeOverlaysRef.current = activeOverlays;
+
+  const [inspectFeatures, setInspectFeatures] = useState<InspectFeature[]>([]);
+
+  // Controls
+
+  const [layersPortal, layersControl] = usePortalControl(
+    <div className="h-[73px] w-[73px] pl-[10px] pb-[10px] pointer-events-auto">
+      <LayersControl
+        activeBase={baseStyle}
+        setActiveBase={setBaseStyle}
+        activeOverlays={activeOverlays}
+        setActiveOverlays={setActiveOverlays}
+        debugMenu={<MapDebugMenu mapRef={mapRef} />}
+      />
+    </div>,
+    'layers-control',
+  );
+
   // Setup
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!mapContainerRef.current) return;
     let removed = false;
 
@@ -81,6 +125,10 @@ export function MapComponent(props: MapComponentProps) {
       initialView = {
         fit: fitBoundsFor(propsRef.current.geojson),
         options: propsRef.current.fitOptions,
+      };
+    } else if (propsRef.current.initialCamera) {
+      initialView = {
+        at: { bearing: 0, pitch: 0, ...propsRef.current.initialCamera },
       };
     } else {
       initialView = { at: loadInitialView() };
@@ -93,9 +141,25 @@ export function MapComponent(props: MapComponentProps) {
     });
     explorerMapRef.current && syncExplorerMap(map.m, explorerMapRef.current);
 
+    // Controls
+
+    map.m.addControl(layersControl, 'bottom-left');
+
+    if (baseStyle.id === 'os-explorer') {
+      map.m.addControl(new OSLogoControl());
+    }
+
+    map.m.addControl(new ml.NavigationControl());
+
+    // Events
+
     let maybeOnMapCleanup: MaybeCleanup;
     map.m.on('load', () => {
       if (removed) return;
+
+      console.log('initialized map');
+
+      map.m.resize();
 
       setShowSkeleton(false);
       mapRef.current = map;
@@ -103,6 +167,8 @@ export function MapComponent(props: MapComponentProps) {
       viewRef.current = cameraPosition(map.m);
 
       explorerMapRef.current && syncExplorerMap(map.m, explorerMapRef.current);
+
+      map.setOverlays(activeOverlaysRef.current);
 
       if (propsRef.current.geojson) {
         map.setGeoJSON(
@@ -128,14 +194,31 @@ export function MapComponent(props: MapComponentProps) {
     let pendingSaveView: number | undefined;
     map.m.on('moveend', () => {
       if (pendingSaveView !== undefined) cancelIdleCallback(pendingSaveView);
-      const view: InitialView = {
-        ...cameraPosition(map.m),
-        baseStyle: baseStyle.id,
-      };
+      const currentCamera = cameraPosition(map.m);
+      const view: InitialView = { ...currentCamera, baseStyle: baseStyle.id };
       pendingSaveView = requestIdleCallback(() => storeInitialView(view));
     });
 
     map.m.on('data', () => setAreTilesLoaded(map.m.areTilesLoaded()));
+
+    map.m.on('click', (evt) => {
+      if (evt.originalEvent.altKey) {
+        evt.preventDefault();
+        const slop = 2;
+        const query = map.m.queryRenderedFeatures([
+          [evt.point.x - slop, evt.point.y - slop],
+          [evt.point.x + slop, evt.point.y + slop],
+        ]);
+        setInspectFeatures(
+          query.map((f) => ({
+            rawSource: f.source,
+            rawSourceLayer: f.sourceLayer,
+            properties: f.properties,
+            layer: f.layer,
+          })),
+        );
+      }
+    });
 
     return () => {
       maybeOnMapCleanup?.();
@@ -143,9 +226,23 @@ export function MapComponent(props: MapComponentProps) {
       map.remove();
       mapRef.current = null;
     };
-  }, [baseStyle]);
+  }, [baseStyle, layersControl]);
 
   // Sync
+
+  const onExplorerMap = useCallback((oMap: OLMap) => {
+    explorerMapRef.current = oMap;
+
+    if (viewRef.current) setExplorerMapView(oMap, viewRef.current);
+
+    return () => {
+      explorerMapRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    mapRef.current?.setOverlays(activeOverlays);
+  }, [activeOverlays]);
 
   const prevGeoJSON = useRef<GeoJSON | undefined>(undefined);
   useEffect(() => {
@@ -165,16 +262,6 @@ export function MapComponent(props: MapComponentProps) {
     prevLayers.current = props.layers;
   }, [props.layers]);
 
-  const onExplorerMap = useCallback((oMap: OLMap) => {
-    explorerMapRef.current = oMap;
-
-    if (viewRef.current) setExplorerMapView(oMap, viewRef.current);
-
-    return () => {
-      explorerMapRef.current = null;
-    };
-  }, []);
-
   return (
     <div
       className={cls(
@@ -189,7 +276,11 @@ export function MapComponent(props: MapComponentProps) {
 
       <div className="absolute inset-0 -z-40 pointer-events-none">
         {baseStyle.id === 'os-explorer' && (
-          <OSExplorerMapComponent onMap={onExplorerMap} />
+          <OSExplorerMapComponent
+            onMap={onExplorerMap}
+            // Because we integrate attribution with the others via a dummy source and layer in the style
+            hideAttribution={true}
+          />
         )}
       </div>
 
@@ -202,11 +293,13 @@ export function MapComponent(props: MapComponentProps) {
         <TilesLoadingIndicator />
       </div>
 
-      <div className="absolute left-0 bottom-0">
-        <div className="h-[73px] w-[73px] pl-[10px] pb-[10px]">
-          <LayersControl baseStyle={baseStyle} setBaseStyle={setBaseStyle} />
-        </div>
-      </div>
+      {layersPortal}
+
+      <InspectFeaturesDialog
+        show={inspectFeatures.length > 0}
+        onClose={() => setInspectFeatures([])}
+        features={inspectFeatures}
+      />
     </div>
   );
 }
@@ -219,7 +312,7 @@ function TilesLoadingIndicator() {
   );
 }
 
-function cameraPosition(map: ml.Map): CameraPosition {
+function cameraPosition(map: ml.Map): CameraOptions {
   const { lng, lat } = map.getCenter();
   return {
     lng,
@@ -235,10 +328,39 @@ function syncExplorerMap(mMap: ml.Map, oMap: OLMap) {
   setExplorerMapView(oMap, cameraPosition(mMap));
 }
 
-function setExplorerMapView(oMap: OLMap, cam: CameraPosition) {
+function setExplorerMapView(oMap: OLMap, cam: CameraOptions) {
   // The inverse of <https://openlayers.org/en/latest/examples/mapbox-layer.html>
   const oView = oMap.getView();
   oView.setZoom(cam.zoom + 1);
   oView.setRotation((-cam.bearing * Math.PI) / 180);
   oView.setCenter(olTransform([cam.lng, cam.lat], 'EPSG:4326', 'EPSG:3857'));
+}
+
+export function MapDebugMenu({
+  mapRef,
+}: {
+  mapRef: MutableRefObject<MapManager | null>;
+}) {
+  const [values, setValues] = useState<Record<string, unknown> | undefined>();
+  return (
+    <div>
+      <Button
+        onClick={() => {
+          if (!mapRef.current) {
+            setValues(undefined);
+            return;
+          }
+          const map = mapRef.current.m;
+          setValues({
+            camera: cameraPosition(map),
+            manager: mapRef.current.debugValues(),
+          });
+        }}
+      >
+        Read values
+      </Button>
+
+      <JSONView data={values} />
+    </div>
+  );
 }

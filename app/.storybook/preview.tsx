@@ -92,6 +92,12 @@ const preview: Preview = {
           http.all('https://demotiles.maplibre.org/*', () => passthrough()),
         ],
         osMaps: [http.all('https://api.os.uk/maps/*', () => passthrough())],
+        pmtiles: [
+          http.all('https://pmtiles.plantopo.com/*', () => passthrough()),
+        ],
+        tnmBasemap: [
+          http.all('https://basemap.nationalmap.gov/*', () => passthrough()),
+        ],
         user: loggedInUserHandlers,
       },
     },
