@@ -1,6 +1,8 @@
 import { Layout } from '@/components/Layout';
 import { TracksScreen } from './Screen';
 import { PageActions } from './PageActions';
+import { Suspense } from 'react';
+import Skeleton from '@/components/Skeleton';
 
 export default function Page() {
   return (
@@ -9,7 +11,9 @@ export default function Page() {
       className="flex flex-col"
       pageActions={<PageActions />}
     >
-      <TracksScreen />
+      <Suspense fallback={<Skeleton />}>
+        <TracksScreen />
+      </Suspense>
     </Layout>
   );
 }

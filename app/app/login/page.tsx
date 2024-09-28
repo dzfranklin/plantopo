@@ -1,22 +1,31 @@
 'use client';
 
 import { LoginScreen } from '@/features/login/LoginScreen';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Dialog } from '@/components/dialog';
 import { useCallback, useState } from 'react';
 import { Button } from '@/components/button';
 import { $api } from '@/api/client';
 import { toast } from 'react-hot-toast';
+import {
+  pageSearchParams,
+  PageSearchParams,
+  searchParamValue,
+} from '@/app/util';
 
-export default function Page() {
+export default function Page({
+  searchParams,
+}: {
+  searchParams: PageSearchParams;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  const returnTo = searchParams.get('returnTo') ?? '/';
+  const demoMode = 'demo' in searchParams;
+  const returnTo = searchParamValue(searchParams, 'returnTo') ?? '/';
 
   const [isLoggingInToDemo, setIsLoggingInToDemo] = useState(false);
   const cancelDemo = useCallback(() => {
-    const newParams = new URLSearchParams(searchParams);
+    const newParams = pageSearchParams(searchParams);
     newParams.delete('demo');
     router.replace('?' + newParams.toString());
   }, [router, searchParams]);
@@ -26,7 +35,7 @@ export default function Page() {
     <>
       <LoginScreen isSignup={false} returnTo={returnTo} />
 
-      <Dialog open={searchParams.has('demo')} onClose={cancelDemo}>
+      <Dialog open={demoMode} onClose={cancelDemo}>
         <Dialog.Title>Demo Mode</Dialog.Title>
         <Dialog.Body>
           This link allows you to login to a shared demo account. Anything in
