@@ -1,0 +1,35 @@
+type: object
+properties:
+  id:
+    type: integer
+  source:
+    type: integer
+  sourceID:
+    type: string
+    description: The source's id for this image
+  indexedAt:
+    type: string
+    format: date-time
+  attributionText:
+    type: string
+  attributionLink:
+    type: string
+  licenses:
+    type: array
+    items:
+      type: integer
+  image:
+    $ref: ./Image.yaml
+  smallImage:
+    $ref: ./Image.yaml
+  point:
+    $ref: ./Point.yaml
+  title:
+    type: string
+  dateTaken:
+    type: string
+    format: date-time
+required:
+  - id
+  - image
+  - point

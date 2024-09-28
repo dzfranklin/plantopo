@@ -23,6 +23,7 @@ if ! git diff --exit-code; then
   exit 1
 fi
 
+echo 'Checking...'
 SHORT_CHECK=1 ./scripts/check-all.sh
 status=$?
 

@@ -1,0 +1,99 @@
+get:
+  tags:
+    - munro-access-reports
+  summary: List munros
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              munros:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum:
+                      - FeatureCollection
+                  features:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                          enum:
+                            - Feature
+                        id:
+                          type: integer
+                          example: 1
+                        properties:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              example: Ben Chonzie
+                            meters:
+                              type: number
+                              example: 930.4
+                            photo:
+                              type: object
+                              properties:
+                                source:
+                                  type: string
+                                  example: https://...
+                                width:
+                                  type: integer
+                                  example: 800
+                                height:
+                                  type: integer
+                                  example: 600
+                                author:
+                                  type: string
+                                  example: Angus
+                                sourceText:
+                                  type: string
+                                  example: geograph.org.uk
+                                sourceLink:
+                                  type: string
+                                  example: https://www.geograph.org.uk
+                              required:
+                                - source
+                                - width
+                                - height
+                          required:
+                            - name
+                            - meters
+                        geometry:
+                          type: object
+                          properties:
+                            type:
+                              type: string
+                              enum:
+                                - Point
+                            coordinates:
+                              type: array
+                              items:
+                                type: number
+                              minItems: 2
+                              maxItems: 2
+                              example:
+                                - -3.992057
+                                - 56.453851
+                          required:
+                            - type
+                            - coordinates
+                      required:
+                        - type
+                        - id
+                        - properties
+                        - geometry
+                required:
+                  - type
+                  - features
+            required:
+              - munros
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

@@ -1,0 +1,11 @@
+description: OK
+headers:
+  Content-Encoding:
+    schema:
+      type: string
+      example: gzip
+content:
+  application/vnd.mapbox-vector-tile:
+    schema:
+      type: string
+      format: binary

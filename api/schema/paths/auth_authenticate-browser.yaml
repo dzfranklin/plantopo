@@ -1,0 +1,26 @@
+post:
+  tags:
+    - auth
+  summary: Authenticate and store the token in the requesting browser's cookie jar
+  description: >-
+    This sets a cookie authenticating you as the given user. The cookie will
+    only work on plantopo.com
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/AuthenticateReq.yaml
+  responses:
+    '200':
+      description: OK
+      headers:
+        Set-Cookie:
+          schema:
+            $ref: ../components/schemas/SetSessionCookieHeader.yaml
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/AuthenticateBrowserOK.yaml
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

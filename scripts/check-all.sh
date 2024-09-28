@@ -16,9 +16,6 @@ chronic() {
   return "$ret"
 }
 
-# API
-(chronic spectral lint ./api/schema/schema.yaml --fail-severity error) &
-
 # APP
 (cd app && chronic npx prettier . --check) &
 (cd app && chronic npx next lint --max-warnings 0) &

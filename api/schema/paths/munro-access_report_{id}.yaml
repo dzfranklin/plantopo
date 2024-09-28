@@ -1,0 +1,20 @@
+get:
+  tags:
+    - munro-access-reports
+  summary: Get a report
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        example: example
+  responses:
+    '307':
+      description: Redirect
+      headers:
+        Location:
+          schema:
+            type: string
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

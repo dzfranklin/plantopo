@@ -1,0 +1,16 @@
+type: object
+properties:
+  code:
+    type: integer
+  message:
+    type: string
+  retryAfterSeconds:
+    type: integer
+  validationErrors:
+    $ref: ./ValidationErrors.yaml
+required:
+  - code
+  - message
+example:
+  code: 500
+  message: internal server error (correlation id cor_e0a3b2628acbb22dad4696acaf30be88)

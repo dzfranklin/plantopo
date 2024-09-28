@@ -1,0 +1,13 @@
+type: object
+properties:
+  elevation:
+    type: array
+    items:
+      type: number
+required:
+  - elevation
+example:
+  elevation:
+    - 2518
+    - 2518
+    - 2518

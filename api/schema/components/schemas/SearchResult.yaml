@@ -1,0 +1,12 @@
+type: object
+properties:
+  geometry:
+    $ref: ./Geometry.yaml
+  name:
+    type: string
+  countryCode2:
+    type: string
+required:
+  - geometry
+  - name
+  - countryCode2

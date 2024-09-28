@@ -1,0 +1,87 @@
+get:
+  tags:
+    - tracks
+  summary: List tracks
+  parameters:
+    - name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+    - name: perPage
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+    - name: orderBy
+      in: query
+      schema:
+        type: string
+        enum:
+          - name
+          - dateAsc
+          - dateDesc
+          - dateUploadedAsc
+          - dateUploadedDesc
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              page:
+                type: integer
+              perPage:
+                type: integer
+              pages:
+                type: integer
+              total:
+                type: integer
+              tracks:
+                type: array
+                items:
+                  $ref: ../components/schemas/TrackSummary.yaml
+            required:
+              - page
+              - perPage
+              - pages
+              - total
+              - tracks
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml
+post:
+  tags:
+    - tracks
+  summary: Create track
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            tracks:
+              type: array
+              items:
+                $ref: ../components/schemas/TrackCreate.yaml
+          required:
+            - track
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              tracks:
+                type: array
+                items:
+                  $ref: ../components/schemas/Track.yaml
+            required:
+              - track
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

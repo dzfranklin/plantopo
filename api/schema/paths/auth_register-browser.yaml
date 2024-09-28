@@ -1,0 +1,25 @@
+post:
+  summary: >-
+    Register a new account and store the token in the requesting browser's
+    cookie jar
+  tags:
+    - auth
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/AuthRegisterRequest.yaml
+  responses:
+    '200':
+      description: OK
+      headers:
+        Set-Cookie:
+          schema:
+            $ref: ../components/schemas/SetSessionCookieHeader.yaml
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/AuthenticateBrowserOK.yaml
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

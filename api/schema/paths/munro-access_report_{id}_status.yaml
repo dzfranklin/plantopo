@@ -1,0 +1,23 @@
+get:
+  tags:
+    - munro-access-reports
+  summary: Get report generation status
+  description: >
+    To subscribe to status updates use `new
+    EventSource('/munro-access/report/{id}/status-updates')`
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        example: example
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/MunroAccessReportStatus.yaml
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

@@ -1,0 +1,21 @@
+post:
+  tags:
+    - auth
+  summary: >-
+    Authenticate as a user (see /auth/authenticate-browser if you are the
+    frontend)
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/AuthenticateReq.yaml
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/AuthenticateOK.yaml
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

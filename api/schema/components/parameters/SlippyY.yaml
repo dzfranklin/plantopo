@@ -1,0 +1,6 @@
+name: 'y'
+in: path
+required: true
+schema:
+  type: integer
+  example: 0

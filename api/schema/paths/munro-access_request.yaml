@@ -1,0 +1,37 @@
+post:
+  tags:
+    - munro-access-reports
+  summary: Request a report be generated
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            fromLabel:
+              type: string
+              example: Edinburgh Waverley Railway Station (EDB)
+            fromPoint:
+              $ref: ../components/schemas/Point.yaml
+            date:
+              type: string
+              format: date-time
+          required:
+            - fromLabel
+            - fromPoint
+            - date
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                $ref: ../components/schemas/MunroAccessReportStatus.yaml
+            required:
+              - status
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

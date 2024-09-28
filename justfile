@@ -24,16 +24,23 @@ api-schema-watch:
     watchexec --watch ./api/schema just api-schema-gen
 
 api-schema-gen:
-    spectral lint ./api/schema/schema.yaml --fail-severity error
+    redocly lint ./api/schema/openapi.yaml \
+      --skip-rule operation-operationId \
+      --skip-rule operation-4xx-response \
+      --skip-rule tag-description \
+      --skip-rule operation-operationId \
+      --skip-rule no-server-example.com \
+      --skip-rule info-license
 
-    cp api/schema/schema.yaml backend/internal/papi/schema.gen.yaml
+    redocly bundle ./api/schema/openapi.yaml -o backend/internal/papi/schema.gen.json
     cd backend && ogen \
       -loglevel warn \
       -target internal/papi -package papi \
       -clean \
-      ./internal/papi/schema.gen.yaml
+      ./internal/papi/schema.gen.json
 
-    cd app && npx openapi-typescript ../api/schema/schema.yaml -o ./api/v1.d.ts && npx prettier --write ./api/v1.d.ts
+    cd app && npx tsx ./api/genCmd.ts ../backend/internal/papi/schema.gen.json ./api/v1.d.ts && \
+        npx prettier --write ./api/v1.d.ts
 
 sqlc-watch:
     cd backend && watchexec \

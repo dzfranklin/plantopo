@@ -1,0 +1,19 @@
+post:
+  tags:
+    - auth
+  summary: Revoke a token
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/AuthRevokeReq.yaml
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

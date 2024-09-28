@@ -1,0 +1,10 @@
+type: object
+properties:
+  generalErrors:
+    type: array
+    items:
+      type: string
+  fieldErrors:
+    type: object
+    additionalProperties:
+      type: string

@@ -1,0 +1,19 @@
+type: object
+properties:
+  name:
+    type: string
+  descriptionMd:
+    type: string
+  date:
+    type: string
+    format: date-time
+  times:
+    type: array
+    items:
+      type: string
+      format: date-time
+  line:
+    $ref: ./Polyline.yaml
+required:
+  - date
+  - line

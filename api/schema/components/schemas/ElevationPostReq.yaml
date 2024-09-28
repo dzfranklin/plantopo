@@ -1,0 +1,20 @@
+type: object
+properties:
+  coordinates:
+    type: array
+    items:
+      type: array
+      items:
+        type: number
+      minItems: 2
+      maxItems: 2
+example:
+  coordinates:
+    - - -105.883643
+      - 40.176097
+    - - -105.861114
+      - 40.150743
+    - - -105.822319
+      - 40.14182
+required:
+  - coordinates

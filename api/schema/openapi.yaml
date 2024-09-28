@@ -1,0 +1,74 @@
+openapi: 3.0.0
+info:
+  version: 0.1.0
+  title: PlanTopo API
+  description: Internal API for PlanTopo.com
+  contact: {}
+servers:
+  - url: https://api.plantopo.com/api/v1
+    description: Production
+  - url: http://localhost:4000/api/v1
+    description: Local development
+security:
+  - {}
+  - bearer: []
+  - browser: []
+tags:
+  - name: settings
+  - name: auth
+  - name: tracks
+  - name: elevation
+  - name: weather
+  - name: munro-access-reports
+  - name: geophotos
+  - name: search
+paths:
+  /settings:
+    $ref: paths/settings.yaml
+  /auth/check:
+    $ref: paths/auth_check.yaml
+  /auth/me:
+    $ref: paths/auth_me.yaml
+  /auth/authenticate:
+    $ref: paths/auth_authenticate.yaml
+  /auth/authenticate-browser:
+    $ref: paths/auth_authenticate-browser.yaml
+  /auth/revoke:
+    $ref: paths/auth_revoke.yaml
+  /auth/revoke-browser:
+    $ref: paths/auth_revoke-browser.yaml
+  /auth/register:
+    $ref: paths/auth_register.yaml
+  /auth/register-browser:
+    $ref: paths/auth_register-browser.yaml
+  /tracks:
+    $ref: paths/tracks.yaml
+  /tracks/track/{id}:
+    $ref: paths/tracks_track_{id}.yaml
+  /tracks/tile/{z}/{x}/{y}.mvt:
+    $ref: paths/tracks_tile_{z}_{x}_{y}.mvt.yaml
+  /elevation:
+    $ref: paths/elevation.yaml
+  /weather/short-uk:
+    $ref: paths/weather_short-uk.yaml
+  /munro-access/request:
+    $ref: paths/munro-access_request.yaml
+  /munro-access/report/{id}:
+    $ref: paths/munro-access_report_{id}.yaml
+  /munro-access/report/{id}/status:
+    $ref: paths/munro-access_report_{id}_status.yaml
+  /munro-access/pregenerated-reports:
+    $ref: paths/munro-access_pregenerated-reports.yaml
+  /munro-access/munros:
+    $ref: paths/munro-access_munros.yaml
+  /geophotos:
+    $ref: paths/geophotos.yaml
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+    browser:
+      type: apiKey
+      in: cookie
+      name: session

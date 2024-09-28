@@ -1,0 +1,19 @@
+post:
+  tags:
+    - elevation
+  summary: Lookup elevations for a list of coordinates
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/ElevationPostReq.yaml
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/ElevationPostOK.yaml
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

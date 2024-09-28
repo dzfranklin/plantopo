@@ -1,0 +1,18 @@
+post:
+  tags:
+    - auth
+  summary: Revoke the token stored in the requesting browser's cookie jar
+  description: Revokes the cookie set by /auth/authenticate-browser
+  responses:
+    '200':
+      description: OK
+      headers:
+        Set-Cookie:
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            type: object
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

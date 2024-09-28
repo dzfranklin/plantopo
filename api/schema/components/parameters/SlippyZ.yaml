@@ -1,0 +1,6 @@
+name: z
+in: path
+required: true
+schema:
+  type: integer
+  example: 0

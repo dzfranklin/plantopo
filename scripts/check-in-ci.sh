@@ -34,20 +34,6 @@ fi
 
 tools_dir=$(mktemp -d)
 
-SPECTRAL_ARCH="$ARCH"
-if [ "$SPECTRAL_ARCH" = "amd64" ]; then
-  SPECTRAL_ARCH="x64"
-fi
-
-SPECTRAL_OS="$OS"
-if [ "$SPECTRAL_OS" = "darwin" ]; then
-  SPECTRAL_OS="macos"
-fi
-
-spectral_url="https://github.com/stoplightio/spectral/releases/latest/download/spectral-${SPECTRAL_OS}-${SPECTRAL_ARCH}"
-curl --proto '=https' --tlsv1.2 -sLSf "$spectral_url" -o "$tools_dir/spectral"
-chmod +x "$tools_dir/spectral"
-
 staticcheck_url="https://github.com/dominikh/go-tools/releases/latest/download/staticcheck_${OS}_${ARCH}.tar.gz"
 curl --proto '=https' --tlsv1.2 -sLSf "$staticcheck_url" -o "$tools_dir/staticcheck.tar.gz"
 tar -xvzf $tools_dir/staticcheck.tar.gz --strip-components=1 -C "$tools_dir" staticcheck/staticcheck

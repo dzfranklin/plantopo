@@ -3,40 +3,20 @@
  * Do not make direct changes to the file.
  */
 
+import * as geojson from 'geojson';
+
 export interface paths {
-  '/settings': {
+  '/auth/authenticate': {
     parameters: {
       query?: never;
       header?: never;
       path?: never;
       cookie?: never;
     };
-    /** Get settings */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': {
-              settings: components['schemas']['Settings'];
-            };
-          };
-        };
-        default: components['responses']['DefaultErrorResponse'];
-      };
-    };
-    /** Update settings */
-    put: {
+    get?: never;
+    put?: never;
+    /** Authenticate as a user (see /auth/authenticate-browser if you are the frontend) */
+    post: {
       parameters: {
         query?: never;
         header?: never;
@@ -45,9 +25,7 @@ export interface paths {
       };
       requestBody: {
         content: {
-          'application/json': {
-            settings: components['schemas']['Settings'];
-          };
+          'application/json': components['schemas']['AuthenticateReq'];
         };
       };
       responses: {
@@ -57,15 +35,57 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': {
-              settings: components['schemas']['Settings'];
-            };
+            'application/json': components['schemas']['AuthenticateOK'];
           };
         };
         default: components['responses']['DefaultErrorResponse'];
       };
     };
-    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/auth/authenticate-browser': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Authenticate and store the token in the requesting browser's cookie jar
+     * @description This sets a cookie authenticating you as the given user. The cookie will only work on plantopo.com
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['AuthenticateReq'];
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            'Set-Cookie'?: components['schemas']['SetSessionCookieHeader'];
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['AuthenticateBrowserOK'];
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
     delete?: never;
     options?: never;
     head?: never;
@@ -150,7 +170,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/auth/authenticate': {
+  '/auth/register': {
     parameters: {
       query?: never;
       header?: never;
@@ -159,7 +179,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Authenticate as a user (see /auth/authenticate-browser if you are the frontend) */
+    /** Register a new account */
     post: {
       parameters: {
         query?: never;
@@ -169,7 +189,7 @@ export interface paths {
       };
       requestBody: {
         content: {
-          'application/json': components['schemas']['AuthenticateReq'];
+          'application/json': components['schemas']['AuthRegisterRequest'];
         };
       };
       responses: {
@@ -191,7 +211,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/auth/authenticate-browser': {
+  '/auth/register-browser': {
     parameters: {
       query?: never;
       header?: never;
@@ -200,10 +220,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /**
-     * Authenticate and store the token in the requesting browser's cookie jar
-     * @description This sets a cookie authenticating you as the given user. The cookie will only work on plantopo.com
-     */
+    /** Register a new account and store the token in the requesting browser's cookie jar */
     post: {
       parameters: {
         query?: never;
@@ -213,7 +230,7 @@ export interface paths {
       };
       requestBody: {
         content: {
-          'application/json': components['schemas']['AuthenticateReq'];
+          'application/json': components['schemas']['AuthRegisterRequest'];
         };
       };
       responses: {
@@ -318,7 +335,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/auth/register': {
+  '/elevation': {
     parameters: {
       query?: never;
       header?: never;
@@ -327,7 +344,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Register a new account */
+    /** Lookup elevations for a list of coordinates */
     post: {
       parameters: {
         query?: never;
@@ -337,7 +354,7 @@ export interface paths {
       };
       requestBody: {
         content: {
-          'application/json': components['schemas']['AuthRegisterRequest'];
+          'application/json': components['schemas']['ElevationPostReq'];
         };
       };
       responses: {
@@ -347,7 +364,7 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['AuthenticateOK'];
+            'application/json': components['schemas']['ElevationPostOK'];
           };
         };
         default: components['responses']['DefaultErrorResponse'];
@@ -359,7 +376,249 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/auth/register-browser': {
+  '/geophotos': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get metadata by ID */
+    get: {
+      parameters: {
+        query?: {
+          id?: number[];
+          maxLat?: number;
+          maxLng?: number;
+          minLat?: number;
+          minLng?: number;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              photos: components['schemas']['Geophoto'][];
+            };
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/munro-access/munros': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List munros */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              munros: {
+                features: {
+                  geometry: {
+                    /** @example [
+                     *       -3.992057,
+                     *       56.453851
+                     *     ] */
+                    coordinates: [number, number];
+                    /** @enum {string} */
+                    type: 'Point';
+                  };
+                  /** @example 1 */
+                  id: number;
+                  properties: {
+                    /** @example 930.4 */
+                    meters: number;
+                    /** @example Ben Chonzie */
+                    name: string;
+                    photo?: {
+                      /** @example Angus */
+                      author?: string;
+                      /** @example 600 */
+                      height: number;
+                      /** @example https://... */
+                      source: string;
+                      /** @example https://www.geograph.org.uk */
+                      sourceLink?: string;
+                      /** @example geograph.org.uk */
+                      sourceText?: string;
+                      /** @example 800 */
+                      width: number;
+                    };
+                  };
+                  /** @enum {string} */
+                  type: 'Feature';
+                }[];
+                /** @enum {string} */
+                type: 'FeatureCollection';
+              };
+            };
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/munro-access/pregenerated-reports': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get pregenerated reports for common locations */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              reports: components['schemas']['MunroAccessReportMeta'][];
+            };
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/munro-access/report/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get a report */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Redirect */
+        307: {
+          headers: {
+            Location?: string;
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/munro-access/report/{id}/status': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get report generation status
+     * @description To subscribe to status updates use `new EventSource('/munro-access/report/{id}/status-updates')`
+     *
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['MunroAccessReportStatus'];
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/munro-access/request': {
     parameters: {
       query?: never;
       header?: never;
@@ -368,7 +627,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Register a new account and store the token in the requesting browser's cookie jar */
+    /** Request a report be generated */
     post: {
       parameters: {
         query?: never;
@@ -378,23 +637,98 @@ export interface paths {
       };
       requestBody: {
         content: {
-          'application/json': components['schemas']['AuthRegisterRequest'];
+          'application/json': {
+            /** Format: date-time */
+            date: string;
+            /** @example Edinburgh Waverley Railway Station (EDB) */
+            fromLabel: string;
+            fromPoint: components['schemas']['Point'];
+          };
         };
       };
       responses: {
         /** @description OK */
         200: {
           headers: {
-            'Set-Cookie'?: components['schemas']['SetSessionCookieHeader'];
             [name: string]: unknown;
           };
           content: {
-            'application/json': components['schemas']['AuthenticateBrowserOK'];
+            'application/json': {
+              status: components['schemas']['MunroAccessReportStatus'];
+            };
           };
         };
         default: components['responses']['DefaultErrorResponse'];
       };
     };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/settings': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get settings */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              settings: components['schemas']['Settings'];
+            };
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    /** Update settings */
+    put: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            settings: components['schemas']['Settings'];
+          };
+        };
+      };
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              settings: components['schemas']['Settings'];
+            };
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -412,14 +746,14 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          page?: number;
-          perPage?: number;
           orderBy?:
             | 'name'
             | 'dateAsc'
             | 'dateDesc'
             | 'dateUploadedAsc'
             | 'dateUploadedDesc';
+          page?: number;
+          perPage?: number;
         };
         header?: never;
         path?: never;
@@ -435,8 +769,8 @@ export interface paths {
           content: {
             'application/json': {
               page: number;
-              perPage: number;
               pages: number;
+              perPage: number;
               total: number;
               tracks: components['schemas']['TrackSummary'][];
             };
@@ -476,6 +810,39 @@ export interface paths {
         default: components['responses']['DefaultErrorResponse'];
       };
     };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/tracks/tile/{z}/{x}/{y}.mvt': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get MVT tile */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          x: components['parameters']['SlippyX'];
+          y: components['parameters']['SlippyY'];
+          z: components['parameters']['SlippyZ'];
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        200: components['responses']['MVTTile'];
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -577,80 +944,6 @@ export interface paths {
     };
     trace?: never;
   };
-  '/tracks/tile/{z}/{x}/{y}.mvt': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get MVT tile */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          z: components['parameters']['SlippyZ'];
-          x: components['parameters']['SlippyX'];
-          y: components['parameters']['SlippyY'];
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        200: components['responses']['MVTTile'];
-        default: components['responses']['DefaultErrorResponse'];
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/elevation': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Lookup elevations for a list of coordinates */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['ElevationPostReq'];
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['ElevationPostOK'];
-          };
-        };
-        default: components['responses']['DefaultErrorResponse'];
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   '/weather/short-uk': {
     parameters: {
       query?: never;
@@ -694,312 +987,33 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  '/munro-access/request': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    get?: never;
-    put?: never;
-    /** Request a report be generated */
-    post: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody: {
-        content: {
-          'application/json': {
-            /** @example Edinburgh Waverley Railway Station (EDB) */
-            fromLabel: string;
-            fromPoint: components['schemas']['Point'];
-            /** Format: date-time */
-            date: string;
-          };
-        };
-      };
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': {
-              status: components['schemas']['MunroAccessReportStatus'];
-            };
-          };
-        };
-        default: components['responses']['DefaultErrorResponse'];
-      };
-    };
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/munro-access/report/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get a report */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          id: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description Redirect */
-        307: {
-          headers: {
-            Location?: string;
-            [name: string]: unknown;
-          };
-          content?: never;
-        };
-        default: components['responses']['DefaultErrorResponse'];
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/munro-access/report/{id}/status': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Get report generation status
-     * @description To subscribe to status updates use `new EventSource('/munro-access/report/{id}/status-updates')`
-     *
-     */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path: {
-          id: string;
-        };
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': components['schemas']['MunroAccessReportStatus'];
-          };
-        };
-        default: components['responses']['DefaultErrorResponse'];
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/munro-access/pregenerated-reports': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get pregenerated reports for common locations */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': {
-              reports: components['schemas']['MunroAccessReportMeta'][];
-            };
-          };
-        };
-        default: components['responses']['DefaultErrorResponse'];
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/munro-access/munros': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** List munros */
-    get: {
-      parameters: {
-        query?: never;
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': {
-              munros: {
-                /** @enum {string} */
-                type: 'FeatureCollection';
-                features: {
-                  /** @enum {string} */
-                  type: 'Feature';
-                  /** @example 1 */
-                  id: number;
-                  properties: {
-                    /** @example Ben Chonzie */
-                    name: string;
-                    /** @example 930.4 */
-                    meters: number;
-                    photo?: {
-                      /** @example https://... */
-                      source: string;
-                      /** @example 800 */
-                      width: number;
-                      /** @example 600 */
-                      height: number;
-                      /** @example Angus */
-                      author?: string;
-                      /** @example geograph.org.uk */
-                      sourceText?: string;
-                      /** @example https://www.geograph.org.uk */
-                      sourceLink?: string;
-                    };
-                  };
-                  geometry: {
-                    /** @enum {string} */
-                    type: 'Point';
-                    /** @example [
-                     *       -3.992057,
-                     *       56.453851
-                     *     ] */
-                    coordinates: number[];
-                  };
-                }[];
-              };
-            };
-          };
-        };
-        default: components['responses']['DefaultErrorResponse'];
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/geophotos': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /** Get metadata by ID */
-    get: {
-      parameters: {
-        query?: {
-          id?: number[];
-          minLng?: number;
-          minLat?: number;
-          maxLng?: number;
-          maxLat?: number;
-        };
-        header?: never;
-        path?: never;
-        cookie?: never;
-      };
-      requestBody?: never;
-      responses: {
-        /** @description OK */
-        200: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            'application/json': {
-              photos: components['schemas']['Geophoto'][];
-            };
-          };
-        };
-        default: components['responses']['DefaultErrorResponse'];
-      };
-    };
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
-    Settings: {
-      /** @enum {string} */
-      units?: 'metric' | 'customary';
+    AuthenticateBrowserOK: {
+      user: components['schemas']['User'];
     };
-    AuthRegisterRequest: {
-      /** @example John Doe */
-      name: string;
-      /** @example john.doe@example.com */
+    AuthenticateOK: {
+      token: components['schemas']['Token'];
+      user: components['schemas']['User'];
+    };
+    AuthenticateReq: {
+      /** @example user@example.com */
       email: string;
       /** @example password */
       password: string;
+    };
+    AuthRegisterRequest: {
+      /** @example john.doe@example.com */
+      email: string;
+      /** @example John Doe */
+      name: string;
+      /** @example password */
+      password: string;
+    };
+    AuthRevokeReq: {
+      token: components['schemas']['Token'];
     };
     /** @example {
      *       "code": 500,
@@ -1011,43 +1025,16 @@ export interface components {
       retryAfterSeconds?: number;
       validationErrors?: components['schemas']['ValidationErrors'];
     };
-    ValidationErrors: {
-      generalErrors?: string[];
-      fieldErrors?: {
-        [key: string]: string;
-      };
+    /** @example {
+     *       "elevation": [
+     *         2518,
+     *         2518,
+     *         2518
+     *       ]
+     *     } */
+    ElevationPostOK: {
+      elevation: number[];
     };
-    AuthenticateReq: {
-      /** @example user@example.com */
-      email: string;
-      /** @example password */
-      password: string;
-    };
-    AuthenticateOK: {
-      token: components['schemas']['Token'];
-      user: components['schemas']['User'];
-    };
-    AuthenticateBrowserOK: {
-      user: components['schemas']['User'];
-    };
-    AuthRevokeReq: {
-      token: components['schemas']['Token'];
-    };
-    User: {
-      id: components['schemas']['UserID'];
-      /** @example John Doe */
-      name?: string;
-      /** @example john.doe@example.com */
-      email: string;
-      /** @example true */
-      emailConfirmed?: boolean;
-    };
-    /** @example u_248h248h248h248h248h248h24 */
-    UserID: string;
-    /** @example plantoposecret_db480e5c2aa6f443ff721116b352e88c396351fd20eee0c95ed272cba311edd6890f6759931d2cdca4acb16d90a8d2af0ee9af83b35446fda1c8e272fa378462 */
-    Token: string;
-    /** @example session=plantoposecret_db480e5c2aa6f443ff721116b352e88c396351fd20eee0c95ed272cba311edd6890f6759931d2cdca4acb16d90a8d2af0ee9af83b35446fda1c8e272fa378462; ... */
-    SetSessionCookieHeader: string;
     /** @example {
      *       "coordinates": [
      *         [
@@ -1065,17 +1052,55 @@ export interface components {
      *       ]
      *     } */
     ElevationPostReq: {
-      coordinates: number[][];
+      coordinates: [number, number][];
     };
-    /** @example {
-     *       "elevation": [
-     *         2518,
-     *         2518,
-     *         2518
-     *       ]
-     *     } */
-    ElevationPostOK: {
-      elevation: number[];
+    Geophoto: {
+      attributionLink?: string;
+      attributionText?: string;
+      /** Format: date-time */
+      dateTaken?: string;
+      id: number;
+      image: components['schemas']['Image'];
+      /** Format: date-time */
+      indexedAt?: string;
+      licenses?: number[];
+      point: components['schemas']['Point'];
+      smallImage?: components['schemas']['Image'];
+      source?: number;
+      /** @description The source's id for this image */
+      sourceID?: string;
+      title?: string;
+    };
+    Image: {
+      height: number;
+      src: string;
+      width: number;
+    };
+    MunroAccessReportMeta: {
+      /** Format: date-time */
+      date: string;
+      /** @example Edinburgh Waverley Railway Station (EDB) */
+      fromLabel: string;
+      fromPoint: components['schemas']['Point'];
+      /** @example mar_2gnkznnp7j5ef54jfqgxnxszsc */
+      id: string;
+      /** Format: date-time */
+      requestTime: string;
+      slug: string;
+      /**
+       * @description URL to report JSON
+       * @example https://...
+       */
+      url?: string;
+    };
+    MunroAccessReportStatus: {
+      /** @example 1724364326040-0 */
+      id: string;
+      report: components['schemas']['MunroAccessReportMeta'];
+      /** @enum {string} */
+      status: 'received' | 'working' | 'ready';
+      /** Format: date-time */
+      timestamp: string;
     };
     /**
      * @description longitude, latitude
@@ -1084,102 +1109,79 @@ export interface components {
      *       55.94839
      *     ]
      */
-    Point: number[];
-    MunroAccessReportStatus: {
-      /** @example 1724364326040-0 */
-      id: string;
-      /** Format: date-time */
-      timestamp: string;
-      /** @enum {string} */
-      status: 'received' | 'working' | 'ready';
-      report: components['schemas']['MunroAccessReportMeta'];
-    };
-    MunroAccessReportMeta: {
-      /** @example mar_2gnkznnp7j5ef54jfqgxnxszsc */
-      id: string;
-      slug: string;
-      /** @example Edinburgh Waverley Railway Station (EDB) */
-      fromLabel: string;
-      fromPoint: components['schemas']['Point'];
-      /** Format: date-time */
-      date: string;
-      /** Format: date-time */
-      requestTime: string;
-      /**
-       * @description URL to report JSON
-       * @example https://...
-       */
-      url?: string;
-    };
-    Geophoto: {
-      id: number;
-      source?: number;
-      /** @description The source's id for this image */
-      sourceID?: string;
-      /** Format: date-time */
-      indexedAt?: string;
-      attributionText?: string;
-      attributionLink?: string;
-      licenses?: number[];
-      image: components['schemas']['Image'];
-      smallImage?: components['schemas']['Image'];
-      point: components['schemas']['Point'];
-      title?: string;
-      /** Format: date-time */
-      dateTaken?: string;
-    };
-    Image: {
-      src: string;
-      width: number;
-      height: number;
-    };
+    Point: [number, number];
     /**
      * @description Google Maps encoded Polyline (see https://developers.google.com/maps/documentation/utilities/polylineutility)
      * @example _p~iF~ps|U_ulLnnqC_mqNvxq`@
      */
     Polyline: string;
+    /** @example session=plantoposecret_db480e5c2aa6f443ff721116b352e88c396351fd20eee0c95ed272cba311edd6890f6759931d2cdca4acb16d90a8d2af0ee9af83b35446fda1c8e272fa378462; ... */
+    SetSessionCookieHeader: string;
+    Settings: {
+      /** @enum {string} */
+      units?: 'metric' | 'customary';
+    };
+    /** @example plantoposecret_db480e5c2aa6f443ff721116b352e88c396351fd20eee0c95ed272cba311edd6890f6759931d2cdca4acb16d90a8d2af0ee9af83b35446fda1c8e272fa378462 */
+    Token: string;
     Track: {
-      id: string;
-      ownerID: string;
-      name?: string;
-      descriptionMd?: string;
       /** Format: date-time */
       date: string;
       /** Format: date-time */
       dateUploaded: string;
-      lengthMeters: number;
+      descriptionMd?: string;
       durationSecs?: number;
-      times?: string[];
+      id: string;
+      lengthMeters: number;
       line: components['schemas']['Polyline'];
+      name?: string;
+      ownerID: string;
+      times?: string[];
     };
     TrackCreate: {
-      name?: string;
-      descriptionMd?: string;
       /** Format: date-time */
       date: string;
-      times?: string[];
-      line: components['schemas']['Polyline'];
-    };
-    TrackUpdate: {
-      name?: string;
       descriptionMd?: string;
-      /** Format: date-time */
-      date?: string;
+      line: components['schemas']['Polyline'];
+      name?: string;
       times?: string[];
-      line?: components['schemas']['Polyline'];
     };
     TrackSummary: {
-      id: string;
-      ownerID: string;
-      name?: string;
-      descriptionMd?: string;
       /** Format: date-time */
       date: string;
       /** Format: date-time */
       dateUploaded: string;
-      lengthMeters: number;
+      descriptionMd?: string;
       durationSecs?: number;
+      id: string;
+      lengthMeters: number;
+      name?: string;
+      ownerID: string;
       simplifiedLine: components['schemas']['Polyline'];
+    };
+    TrackUpdate: {
+      /** Format: date-time */
+      date?: string;
+      descriptionMd?: string;
+      line?: components['schemas']['Polyline'];
+      name?: string;
+      times?: string[];
+    };
+    User: {
+      /** @example john.doe@example.com */
+      email: string;
+      /** @example true */
+      emailConfirmed?: boolean;
+      id: components['schemas']['UserID'];
+      /** @example John Doe */
+      name?: string;
+    };
+    /** @example u_248h248h248h248h248h248h24 */
+    UserID: string;
+    ValidationErrors: {
+      fieldErrors?: {
+        [key: string]: string;
+      };
+      generalErrors?: string[];
     };
   };
   responses: {
@@ -1204,9 +1206,9 @@ export interface components {
     };
   };
   parameters: {
-    SlippyZ: number;
     SlippyX: number;
     SlippyY: number;
+    SlippyZ: number;
   };
   requestBodies: never;
   headers: never;

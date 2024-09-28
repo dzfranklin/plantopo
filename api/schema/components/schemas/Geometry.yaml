@@ -1,0 +1,6 @@
+type: object
+x-ts-type: geojson.Geometry
+properties:
+  type:
+    type: string
+  coordinates: {}

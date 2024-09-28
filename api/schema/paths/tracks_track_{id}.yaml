@@ -1,0 +1,78 @@
+get:
+  tags:
+    - tracks
+  summary: Get track
+  parameters:
+    - name: id
+      in: path
+      schema:
+        type: string
+      required: true
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              track:
+                $ref: ../components/schemas/Track.yaml
+            required:
+              - track
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml
+patch:
+  tags:
+    - tracks
+  summary: Update track
+  parameters:
+    - name: id
+      in: path
+      schema:
+        type: string
+      required: true
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            track:
+              $ref: ../components/schemas/TrackUpdate.yaml
+          required:
+            - track
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              track:
+                $ref: ../components/schemas/Track.yaml
+            required:
+              - track
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml
+delete:
+  tags:
+    - tracks
+  summary: Delete track
+  parameters:
+    - name: id
+      in: path
+      schema:
+        type: string
+      required: true
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

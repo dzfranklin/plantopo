@@ -1,0 +1,20 @@
+get:
+  tags:
+    - munro-access-reports
+  summary: Get pregenerated reports for common locations
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              reports:
+                type: array
+                items:
+                  $ref: ../components/schemas/MunroAccessReportMeta.yaml
+            required:
+              - reports
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

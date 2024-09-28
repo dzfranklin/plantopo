@@ -1,0 +1,34 @@
+type: object
+properties:
+  id:
+    type: string
+  ownerID:
+    type: string
+  name:
+    type: string
+  descriptionMd:
+    type: string
+  date:
+    type: string
+    format: date-time
+  dateUploaded:
+    type: string
+    format: date-time
+  lengthMeters:
+    type: number
+  durationSecs:
+    type: integer
+  times:
+    type: array
+    items:
+      type: string
+      format: date-time
+  line:
+    $ref: ./Polyline.yaml
+required:
+  - id
+  - ownerID
+  - date
+  - dateUploaded
+  - lengthMeters
+  - line

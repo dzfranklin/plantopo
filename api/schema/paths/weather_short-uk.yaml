@@ -1,0 +1,25 @@
+get:
+  tags:
+    - weather
+  summary: Find short format weather forecasts for a place in the UK
+  parameters:
+    - in: query
+      name: query
+      required: true
+      schema:
+        type: string
+      description: A place to search for
+      example: ben nevis
+  responses:
+    '200':
+      description: OK
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: >
+              Mon 22 Partly cloudy 7% 9,Tue 1 " 0% 9,4 Clear 0% 7,7 Sunny 0%
+              11,10 " 0% 13,13 Partly cloudy 0% 13,16 Sunny 0% 13,19 " 0% 11,22
+              Clear 0% 9
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

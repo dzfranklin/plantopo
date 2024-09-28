@@ -1,0 +1,1750 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "0.1.0",
+    "title": "PlanTopo API",
+    "description": "Internal API for PlanTopo.com",
+    "contact": {}
+  },
+  "servers": [
+    {
+      "url": "https://api.plantopo.com/api/v1",
+      "description": "Production"
+    },
+    {
+      "url": "http://localhost:4000/api/v1",
+      "description": "Local development"
+    }
+  ],
+  "security": [
+    {},
+    {
+      "bearer": []
+    },
+    {
+      "browser": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "settings"
+    },
+    {
+      "name": "auth"
+    },
+    {
+      "name": "tracks"
+    },
+    {
+      "name": "elevation"
+    },
+    {
+      "name": "weather"
+    },
+    {
+      "name": "munro-access-reports"
+    },
+    {
+      "name": "geophotos"
+    },
+    {
+      "name": "search"
+    }
+  ],
+  "paths": {
+    "/settings": {
+      "get": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Get settings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settings": {
+                      "$ref": "#/components/schemas/Settings"
+                    }
+                  },
+                  "required": [
+                    "settings"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "settings"
+        ],
+        "summary": "Update settings",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "settings": {
+                    "$ref": "#/components/schemas/Settings"
+                  }
+                },
+                "required": [
+                  "settings"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "settings": {
+                      "$ref": "#/components/schemas/Settings"
+                    }
+                  },
+                  "required": [
+                    "settings"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/auth/check": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Check if you are authenticated",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "userID": {
+                      "$ref": "#/components/schemas/UserID"
+                    }
+                  },
+                  "required": [
+                    "userID"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Get the authenticated user",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  },
+                  "required": [
+                    "user"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/auth/authenticate": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Authenticate as a user (see /auth/authenticate-browser if you are the frontend)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthenticateReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticateOK"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/auth/authenticate-browser": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Authenticate and store the token in the requesting browser's cookie jar",
+        "description": "This sets a cookie authenticating you as the given user. The cookie will only work on plantopo.com",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthenticateReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetSessionCookieHeader"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticateBrowserOK"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/auth/revoke": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Revoke a token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthRevokeReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/auth/revoke-browser": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Revoke the token stored in the requesting browser's cookie jar",
+        "description": "Revokes the cookie set by /auth/authenticate-browser",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register a new account",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticateOK"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/auth/register-browser": {
+      "post": {
+        "summary": "Register a new account and store the token in the requesting browser's cookie jar",
+        "tags": [
+          "auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AuthRegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetSessionCookieHeader"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticateBrowserOK"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/tracks": {
+      "get": {
+        "tags": [
+          "tracks"
+        ],
+        "summary": "List tracks",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          },
+          {
+            "name": "orderBy",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "name",
+                "dateAsc",
+                "dateDesc",
+                "dateUploadedAsc",
+                "dateUploadedDesc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "page": {
+                      "type": "integer"
+                    },
+                    "perPage": {
+                      "type": "integer"
+                    },
+                    "pages": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "tracks": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TrackSummary"
+                      }
+                    }
+                  },
+                  "required": [
+                    "page",
+                    "perPage",
+                    "pages",
+                    "total",
+                    "tracks"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "tracks"
+        ],
+        "summary": "Create track",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "tracks": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/TrackCreate"
+                    }
+                  }
+                },
+                "required": [
+                  "track"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tracks": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Track"
+                      }
+                    }
+                  },
+                  "required": [
+                    "track"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/tracks/track/{id}": {
+      "get": {
+        "tags": [
+          "tracks"
+        ],
+        "summary": "Get track",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "track": {
+                      "$ref": "#/components/schemas/Track"
+                    }
+                  },
+                  "required": [
+                    "track"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "tracks"
+        ],
+        "summary": "Update track",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "track": {
+                    "$ref": "#/components/schemas/TrackUpdate"
+                  }
+                },
+                "required": [
+                  "track"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "track": {
+                      "$ref": "#/components/schemas/Track"
+                    }
+                  },
+                  "required": [
+                    "track"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "tracks"
+        ],
+        "summary": "Delete track",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/tracks/tile/{z}/{x}/{y}.mvt": {
+      "get": {
+        "tags": [
+          "tracks"
+        ],
+        "summary": "Get MVT tile",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SlippyZ"
+          },
+          {
+            "$ref": "#/components/parameters/SlippyX"
+          },
+          {
+            "$ref": "#/components/parameters/SlippyY"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/MVTTile"
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/elevation": {
+      "post": {
+        "tags": [
+          "elevation"
+        ],
+        "summary": "Lookup elevations for a list of coordinates",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ElevationPostReq"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElevationPostOK"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/weather/short-uk": {
+      "get": {
+        "tags": [
+          "weather"
+        ],
+        "summary": "Find short format weather forecasts for a place in the UK",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "A place to search for",
+            "example": "ben nevis"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "example": "Mon 22 Partly cloudy 7% 9,Tue 1 \" 0% 9,4 Clear 0% 7,7 Sunny 0% 11,10 \" 0% 13,13 Partly cloudy 0% 13,16 Sunny 0% 13,19 \" 0% 11,22 Clear 0% 9\n"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/munro-access/request": {
+      "post": {
+        "tags": [
+          "munro-access-reports"
+        ],
+        "summary": "Request a report be generated",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fromLabel": {
+                    "type": "string",
+                    "example": "Edinburgh Waverley Railway Station (EDB)"
+                  },
+                  "fromPoint": {
+                    "$ref": "#/components/schemas/Point"
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "fromLabel",
+                  "fromPoint",
+                  "date"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "$ref": "#/components/schemas/MunroAccessReportStatus"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/munro-access/report/{id}": {
+      "get": {
+        "tags": [
+          "munro-access-reports"
+        ],
+        "summary": "Get a report",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "example"
+            }
+          }
+        ],
+        "responses": {
+          "307": {
+            "description": "Redirect",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/munro-access/report/{id}/status": {
+      "get": {
+        "tags": [
+          "munro-access-reports"
+        ],
+        "summary": "Get report generation status",
+        "description": "To subscribe to status updates use `new EventSource('/munro-access/report/{id}/status-updates')`\n",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "example"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MunroAccessReportStatus"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/munro-access/pregenerated-reports": {
+      "get": {
+        "tags": [
+          "munro-access-reports"
+        ],
+        "summary": "Get pregenerated reports for common locations",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reports": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MunroAccessReportMeta"
+                      }
+                    }
+                  },
+                  "required": [
+                    "reports"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/munro-access/munros": {
+      "get": {
+        "tags": [
+          "munro-access-reports"
+        ],
+        "summary": "List munros",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "munros": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "FeatureCollection"
+                          ]
+                        },
+                        "features": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "enum": [
+                                  "Feature"
+                                ]
+                              },
+                              "id": {
+                                "type": "integer",
+                                "example": 1
+                              },
+                              "properties": {
+                                "type": "object",
+                                "properties": {
+                                  "name": {
+                                    "type": "string",
+                                    "example": "Ben Chonzie"
+                                  },
+                                  "meters": {
+                                    "type": "number",
+                                    "example": 930.4
+                                  },
+                                  "photo": {
+                                    "type": "object",
+                                    "properties": {
+                                      "source": {
+                                        "type": "string",
+                                        "example": "https://..."
+                                      },
+                                      "width": {
+                                        "type": "integer",
+                                        "example": 800
+                                      },
+                                      "height": {
+                                        "type": "integer",
+                                        "example": 600
+                                      },
+                                      "author": {
+                                        "type": "string",
+                                        "example": "Angus"
+                                      },
+                                      "sourceText": {
+                                        "type": "string",
+                                        "example": "geograph.org.uk"
+                                      },
+                                      "sourceLink": {
+                                        "type": "string",
+                                        "example": "https://www.geograph.org.uk"
+                                      }
+                                    },
+                                    "required": [
+                                      "source",
+                                      "width",
+                                      "height"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "meters"
+                                ]
+                              },
+                              "geometry": {
+                                "type": "object",
+                                "properties": {
+                                  "type": {
+                                    "type": "string",
+                                    "enum": [
+                                      "Point"
+                                    ]
+                                  },
+                                  "coordinates": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "number"
+                                    },
+                                    "minItems": 2,
+                                    "maxItems": 2,
+                                    "example": [
+                                      -3.992057,
+                                      56.453851
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "type",
+                                  "coordinates"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "id",
+                              "properties",
+                              "geometry"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "type",
+                        "features"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "munros"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    },
+    "/geophotos": {
+      "get": {
+        "tags": [
+          "geophotos"
+        ],
+        "summary": "Get metadata by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          {
+            "name": "minLng",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "minLat",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "maxLng",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "maxLat",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "photos": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Geophoto"
+                      }
+                    }
+                  },
+                  "required": [
+                    "photos"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "browser": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "session"
+      }
+    },
+    "schemas": {
+      "ValidationErrors": {
+        "type": "object",
+        "properties": {
+          "generalErrors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "fieldErrors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "DefaultError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryAfterSeconds": {
+            "type": "integer"
+          },
+          "validationErrors": {
+            "$ref": "#/components/schemas/ValidationErrors"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "example": {
+          "code": 500,
+          "message": "internal server error (correlation id cor_e0a3b2628acbb22dad4696acaf30be88)"
+        }
+      },
+      "Settings": {
+        "type": "object",
+        "properties": {
+          "units": {
+            "type": "string",
+            "enum": [
+              "metric",
+              "customary"
+            ]
+          }
+        }
+      },
+      "UserID": {
+        "type": "string",
+        "example": "u_248h248h248h248h248h248h24"
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/UserID"
+          },
+          "name": {
+            "type": "string",
+            "example": "John Doe"
+          },
+          "email": {
+            "type": "string",
+            "example": "john.doe@example.com"
+          },
+          "emailConfirmed": {
+            "type": "boolean",
+            "example": true
+          }
+        },
+        "required": [
+          "id",
+          "email"
+        ]
+      },
+      "AuthenticateReq": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "user@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "password"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "Token": {
+        "type": "string",
+        "example": "plantoposecret_db480e5c2aa6f443ff721116b352e88c396351fd20eee0c95ed272cba311edd6890f6759931d2cdca4acb16d90a8d2af0ee9af83b35446fda1c8e272fa378462"
+      },
+      "AuthenticateOK": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "$ref": "#/components/schemas/Token"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "required": [
+          "token",
+          "user"
+        ]
+      },
+      "SetSessionCookieHeader": {
+        "type": "string",
+        "example": "session=plantoposecret_db480e5c2aa6f443ff721116b352e88c396351fd20eee0c95ed272cba311edd6890f6759931d2cdca4acb16d90a8d2af0ee9af83b35446fda1c8e272fa378462; ..."
+      },
+      "AuthenticateBrowserOK": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/User"
+          }
+        },
+        "required": [
+          "user"
+        ]
+      },
+      "AuthRevokeReq": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "$ref": "#/components/schemas/Token"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "AuthRegisterRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "John Doe"
+          },
+          "email": {
+            "type": "string",
+            "example": "john.doe@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "password"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "password"
+        ]
+      },
+      "Polyline": {
+        "type": "string",
+        "example": "_p~iF~ps|U_ulLnnqC_mqNvxq`@",
+        "description": "Google Maps encoded Polyline (see https://developers.google.com/maps/documentation/utilities/polylineutility)"
+      },
+      "TrackSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ownerID": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "descriptionMd": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dateUploaded": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lengthMeters": {
+            "type": "number"
+          },
+          "durationSecs": {
+            "type": "integer"
+          },
+          "simplifiedLine": {
+            "$ref": "#/components/schemas/Polyline"
+          }
+        },
+        "required": [
+          "id",
+          "ownerID",
+          "date",
+          "dateUploaded",
+          "lengthMeters",
+          "simplifiedLine"
+        ]
+      },
+      "TrackCreate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "descriptionMd": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "times": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "line": {
+            "$ref": "#/components/schemas/Polyline"
+          }
+        },
+        "required": [
+          "date",
+          "line"
+        ]
+      },
+      "Track": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ownerID": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "descriptionMd": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dateUploaded": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lengthMeters": {
+            "type": "number"
+          },
+          "durationSecs": {
+            "type": "integer"
+          },
+          "times": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "line": {
+            "$ref": "#/components/schemas/Polyline"
+          }
+        },
+        "required": [
+          "id",
+          "ownerID",
+          "date",
+          "dateUploaded",
+          "lengthMeters",
+          "line"
+        ]
+      },
+      "TrackUpdate": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "descriptionMd": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "times": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "line": {
+            "$ref": "#/components/schemas/Polyline"
+          }
+        }
+      },
+      "ElevationPostReq": {
+        "type": "object",
+        "properties": {
+          "coordinates": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        },
+        "example": {
+          "coordinates": [
+            [
+              -105.883643,
+              40.176097
+            ],
+            [
+              -105.861114,
+              40.150743
+            ],
+            [
+              -105.822319,
+              40.14182
+            ]
+          ]
+        },
+        "required": [
+          "coordinates"
+        ]
+      },
+      "ElevationPostOK": {
+        "type": "object",
+        "properties": {
+          "elevation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "elevation"
+        ],
+        "example": {
+          "elevation": [
+            2518,
+            2518,
+            2518
+          ]
+        }
+      },
+      "Point": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "minItems": 2,
+        "maxItems": 2,
+        "example": [
+          -3.36459,
+          55.94839
+        ],
+        "description": "longitude, latitude"
+      },
+      "MunroAccessReportMeta": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "mar_2gnkznnp7j5ef54jfqgxnxszsc"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "fromLabel": {
+            "type": "string",
+            "example": "Edinburgh Waverley Railway Station (EDB)"
+          },
+          "fromPoint": {
+            "$ref": "#/components/schemas/Point"
+          },
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "requestTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "url": {
+            "type": "string",
+            "description": "URL to report JSON",
+            "example": "https://..."
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "fromLabel",
+          "fromPoint",
+          "date",
+          "requestTime"
+        ]
+      },
+      "MunroAccessReportStatus": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "1724364326040-0"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "received",
+              "working",
+              "ready"
+            ]
+          },
+          "report": {
+            "$ref": "#/components/schemas/MunroAccessReportMeta"
+          }
+        },
+        "required": [
+          "id",
+          "timestamp",
+          "status",
+          "report"
+        ]
+      },
+      "Image": {
+        "type": "object",
+        "properties": {
+          "src": {
+            "type": "string"
+          },
+          "width": {
+            "type": "integer"
+          },
+          "height": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "src",
+          "width",
+          "height"
+        ]
+      },
+      "Geophoto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "source": {
+            "type": "integer"
+          },
+          "sourceID": {
+            "type": "string",
+            "description": "The source's id for this image"
+          },
+          "indexedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "attributionText": {
+            "type": "string"
+          },
+          "attributionLink": {
+            "type": "string"
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "image": {
+            "$ref": "#/components/schemas/Image"
+          },
+          "smallImage": {
+            "$ref": "#/components/schemas/Image"
+          },
+          "point": {
+            "$ref": "#/components/schemas/Point"
+          },
+          "title": {
+            "type": "string"
+          },
+          "dateTaken": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "image",
+          "point"
+        ]
+      }
+    },
+    "responses": {
+      "DefaultErrorResponse": {
+        "description": "Error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/DefaultError"
+            }
+          }
+        }
+      },
+      "MVTTile": {
+        "description": "OK",
+        "headers": {
+          "Content-Encoding": {
+            "schema": {
+              "type": "string",
+              "example": "gzip"
+            }
+          }
+        },
+        "content": {
+          "application/vnd.mapbox-vector-tile": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "SlippyZ": {
+        "name": "z",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "example": 0
+        }
+      },
+      "SlippyX": {
+        "name": "x",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "example": 0
+        }
+      },
+      "SlippyY": {
+        "name": "y",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "example": 0
+        }
+      }
+    }
+  }
+}

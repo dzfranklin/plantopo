@@ -1,0 +1,19 @@
+post:
+  tags:
+    - auth
+  summary: Register a new account
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: ../components/schemas/AuthRegisterRequest.yaml
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: ../components/schemas/AuthenticateOK.yaml
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

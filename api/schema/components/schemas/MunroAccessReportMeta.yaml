@@ -1,0 +1,29 @@
+type: object
+properties:
+  id:
+    type: string
+    example: mar_2gnkznnp7j5ef54jfqgxnxszsc
+  slug:
+    type: string
+  fromLabel:
+    type: string
+    example: Edinburgh Waverley Railway Station (EDB)
+  fromPoint:
+    $ref: ./Point.yaml
+  date:
+    type: string
+    format: date-time
+  requestTime:
+    type: string
+    format: date-time
+  url:
+    type: string
+    description: URL to report JSON
+    example: https://...
+required:
+  - id
+  - slug
+  - fromLabel
+  - fromPoint
+  - date
+  - requestTime

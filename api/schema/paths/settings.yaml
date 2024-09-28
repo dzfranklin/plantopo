@@ -1,0 +1,47 @@
+get:
+  tags:
+    - settings
+  summary: Get settings
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              settings:
+                $ref: ../components/schemas/Settings.yaml
+            required:
+              - settings
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml
+put:
+  tags:
+    - settings
+  summary: Update settings
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          properties:
+            settings:
+              $ref: ../components/schemas/Settings.yaml
+          required:
+            - settings
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              settings:
+                $ref: ../components/schemas/Settings.yaml
+            required:
+              - settings
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

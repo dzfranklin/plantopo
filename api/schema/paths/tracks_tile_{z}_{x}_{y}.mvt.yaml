@@ -1,0 +1,13 @@
+get:
+  tags:
+    - tracks
+  summary: Get MVT tile
+  parameters:
+    - $ref: ../components/parameters/SlippyZ.yaml
+    - $ref: ../components/parameters/SlippyX.yaml
+    - $ref: ../components/parameters/SlippyY.yaml
+  responses:
+    '200':
+      $ref: ../components/responses/MVTTile.yaml
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

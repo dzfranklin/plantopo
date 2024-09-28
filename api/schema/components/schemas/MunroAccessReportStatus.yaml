@@ -1,0 +1,21 @@
+type: object
+properties:
+  id:
+    type: string
+    example: 1724364326040-0
+  timestamp:
+    type: string
+    format: date-time
+  status:
+    type: string
+    enum:
+      - received
+      - working
+      - ready
+  report:
+    $ref: ./MunroAccessReportMeta.yaml
+required:
+  - id
+  - timestamp
+  - status
+  - report

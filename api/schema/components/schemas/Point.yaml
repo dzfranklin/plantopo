@@ -1,0 +1,9 @@
+type: array
+items:
+  type: number
+minItems: 2
+maxItems: 2
+example:
+  - -3.36459
+  - 55.94839
+description: longitude, latitude
