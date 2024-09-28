@@ -339,6 +339,39 @@ const overlayStyleList: OverlayStyle[] = [
       },
     ],
   },
+  {
+    id: 'bgs_mining_hazard_ex_coal',
+    name: 'British Geological Survey Mining Hazard (not including coal)',
+    sources: {
+      default: {
+        type: 'vector',
+        url: 'https://pmtiles.plantopo.com/bgs_mining_hazard_ex_coal.json',
+        attribution:
+          '<a href="https://osdatahub.os.uk/downloads/open/GB-Hex-1km-Mining-Haz" target="_blank">British Geological Survey</a>',
+      },
+    },
+    layers: [
+      {
+        id: 'poly',
+        type: 'fill',
+        source: 'default',
+        'source-layer': 'default',
+        filter: [
+          'all',
+          ['!=', ['get', 'Class'], 'NA'],
+          ['!=', ['get', 'Class'], 'Low'],
+        ],
+        paint: {
+          // prettier-ignore
+          'fill-color': ['case',
+            ['==', ['get', 'Class'], 'Significant'], 'rgba(255,0,0,0.3)',
+            ['==', ['get', 'Class'], 'Moderate'], 'rgba(255,255,0,0.3)',
+            'rgba(0,0,0,0.2)',
+          ],
+        },
+      },
+    ],
+  },
 ];
 
 export const overlayStyles: Record<string, OverlayStyle> =
