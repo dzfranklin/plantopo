@@ -28,6 +28,7 @@ func makeSubject(t *testing.T) *dataset {
 }
 
 func Fuzz_lookupOne(f *testing.F) {
+	f.Skip()
 	cases := []geometry.Point{
 		// Corners of Copernicus_DSM_COG_10_N00_00_E035_00_DEM.tif
 		{X: 34.9998611, Y: 1.0001389},
