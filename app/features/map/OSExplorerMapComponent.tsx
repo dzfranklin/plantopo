@@ -3,7 +3,7 @@ import { OS_KEY } from '@/env';
 import proj4 from 'proj4';
 import { register as registerOLProj4 } from 'ol/proj/proj4';
 import { get as getProjection, transform } from 'ol/proj';
-import OLMap from 'ol/Map';
+import OLMap, { MapOptions } from 'ol/Map';
 import View from 'ol/View';
 import { TileGrid } from 'ol/tilegrid';
 import XYZSource from 'ol/source/XYZ';
@@ -11,7 +11,6 @@ import TileLayer from 'ol/layer/Tile';
 import 'ol/ol.css';
 import { Coordinate as OLCoord } from 'ol/coordinate';
 import AttributionControl from 'ol/control/Attribution';
-import { Control } from 'ol/Control';
 
 const reprojectionErrorThreshold = 0.2;
 const debugMode = false;
@@ -77,7 +76,7 @@ export function OSExplorerMapComponent({
     });
     source.setRenderReprojectionEdges(debugMode);
 
-    const controls: Control[] = [];
+    const controls: MapOptions['controls'] = [];
     if (!hideAttribution) {
       controls.push(new AttributionControl({ collapsed: false }));
     }

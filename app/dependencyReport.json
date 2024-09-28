@@ -588,6 +588,18 @@
     "repository": "https://github.com/babel/babel"
   },
   {
+    "name": "@babel/plugin-transform-react-jsx-self@7.24.7",
+    "publisher": "The Babel Team",
+    "licenses": "MIT",
+    "repository": "https://github.com/babel/babel"
+  },
+  {
+    "name": "@babel/plugin-transform-react-jsx-source@7.24.7",
+    "publisher": "The Babel Team",
+    "licenses": "MIT",
+    "repository": "https://github.com/babel/babel"
+  },
+  {
     "name": "@babel/plugin-transform-react-jsx@7.25.2",
     "publisher": "The Babel Team",
     "licenses": "MIT",
@@ -1902,6 +1914,12 @@
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
   },
   {
+    "name": "@types/leaflet@1.9.12",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
+  },
+  {
     "name": "@types/lodash@4.17.7",
     "publisher": null,
     "licenses": "MIT",
@@ -2254,6 +2272,12 @@
     "publisher": "Andrea Giammarchi",
     "licenses": "ISC",
     "repository": "https://github.com/ungap/structured-clone"
+  },
+  {
+    "name": "@vitejs/plugin-react@4.3.1",
+    "publisher": "Evan You",
+    "licenses": "MIT",
+    "repository": "https://github.com/vitejs/vite-plugin-react"
   },
   {
     "name": "@vitest/expect@1.6.0",
