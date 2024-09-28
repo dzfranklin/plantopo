@@ -8,7 +8,7 @@ WORKDIR /app
 
 RUN apt update && apt install -y --no-install-recommends \
     ca-certificates \
-    proj-data libproj-dev proj-bin && \
+    proj-data libproj-dev proj-bin libgdal-dev gdal-bin && \
     rm -rf /var/lib/apt/lists/*
 
 RUN curl -L --fail "https://github.com/felt/tippecanoe/archive/refs/tags/$TIPPECANOE_VERSION.tar.gz" -o tippecanoe.tar.gz && \
