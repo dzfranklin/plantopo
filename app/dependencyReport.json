@@ -1212,6 +1212,12 @@
     "repository": "https://github.com/Redocly/redocly-cli"
   },
   {
+    "name": "@rollup/rollup-darwin-arm64@4.22.5",
+    "publisher": "Lukas Taegert-Atkinson",
+    "licenses": "MIT",
+    "repository": "https://github.com/rollup/rollup"
+  },
+  {
     "name": "@rushstack/eslint-patch@1.10.4",
     "publisher": null,
     "licenses": "MIT",
@@ -1524,6 +1530,12 @@
     "repository": "https://github.com/testing-library/user-event"
   },
   {
+    "name": "@tmcw/togeojson@5.8.1",
+    "publisher": null,
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/placemark/togeojson"
+  },
+  {
     "name": "@tsconfig/node10@1.0.11",
     "publisher": null,
     "licenses": "MIT",
@@ -1819,6 +1831,12 @@
   },
   {
     "name": "@types/estree@1.0.5",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
+  },
+  {
+    "name": "@types/estree@1.0.6",
     "publisher": null,
     "licenses": "MIT",
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped"
@@ -2244,13 +2262,55 @@
     "repository": "https://github.com/vitest-dev/vitest"
   },
   {
+    "name": "@vitest/expect@2.1.1",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/vitest-dev/vitest"
+  },
+  {
+    "name": "@vitest/mocker@2.1.1",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/vitest-dev/vitest"
+  },
+  {
+    "name": "@vitest/pretty-format@2.1.1",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/vitest-dev/vitest"
+  },
+  {
+    "name": "@vitest/runner@2.1.1",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/vitest-dev/vitest"
+  },
+  {
+    "name": "@vitest/snapshot@2.1.1",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/vitest-dev/vitest"
+  },
+  {
     "name": "@vitest/spy@1.6.0",
     "publisher": null,
     "licenses": "MIT",
     "repository": "https://github.com/vitest-dev/vitest"
   },
   {
+    "name": "@vitest/spy@2.1.1",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/vitest-dev/vitest"
+  },
+  {
     "name": "@vitest/utils@1.6.0",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/vitest-dev/vitest"
+  },
+  {
+    "name": "@vitest/utils@2.1.1",
     "publisher": null,
     "licenses": "MIT",
     "repository": "https://github.com/vitest-dev/vitest"
@@ -2652,6 +2712,12 @@
     "repository": "https://github.com/chaijs/assertion-error"
   },
   {
+    "name": "assertion-error@2.0.1",
+    "publisher": "Jake Luer",
+    "licenses": "MIT",
+    "repository": "https://github.com/chaijs/assertion-error"
+  },
+  {
     "name": "assign-symbols@1.0.0",
     "publisher": "Jon Schlinkert",
     "licenses": "MIT",
@@ -2910,6 +2976,12 @@
     "repository": "https://github.com/deanlandolt/bytewise"
   },
   {
+    "name": "cac@6.7.14",
+    "publisher": "egoist",
+    "licenses": "MIT",
+    "repository": "https://github.com/egoist/cac"
+  },
+  {
     "name": "call-bind@1.0.7",
     "publisher": "Jordan Harband",
     "licenses": "MIT",
@@ -2964,6 +3036,12 @@
     "repository": "https://github.com/chaijs/chai"
   },
   {
+    "name": "chai@5.1.1",
+    "publisher": "Jake Luer",
+    "licenses": "MIT",
+    "repository": "https://github.com/chaijs/chai"
+  },
+  {
     "name": "chalk@2.4.2",
     "publisher": null,
     "licenses": "MIT",
@@ -2989,6 +3067,12 @@
   },
   {
     "name": "check-error@1.0.3",
+    "publisher": "Jake Luer",
+    "licenses": "MIT",
+    "repository": "https://github.com/chaijs/check-error"
+  },
+  {
+    "name": "check-error@2.1.1",
     "publisher": "Jake Luer",
     "licenses": "MIT",
     "repository": "https://github.com/chaijs/check-error"
@@ -3685,6 +3769,12 @@
   },
   {
     "name": "deep-eql@4.1.4",
+    "publisher": "Jake Luer",
+    "licenses": "MIT",
+    "repository": "https://github.com/chaijs/deep-eql"
+  },
+  {
+    "name": "deep-eql@5.0.2",
     "publisher": "Jake Luer",
     "licenses": "MIT",
     "repository": "https://github.com/chaijs/deep-eql"
@@ -5508,6 +5598,12 @@
     "repository": "https://github.com/mattcg/language-tags"
   },
   {
+    "name": "leaflet@1.9.4",
+    "publisher": null,
+    "licenses": "BSD-2-Clause",
+    "repository": "https://github.com/Leaflet/Leaflet"
+  },
+  {
     "name": "lerc@3.0.0",
     "publisher": "Esri",
     "licenses": "Apache-2.0",
@@ -5641,6 +5737,12 @@
   },
   {
     "name": "loupe@2.3.7",
+    "publisher": "Veselin Todorov",
+    "licenses": "MIT",
+    "repository": "https://github.com/chaijs/loupe"
+  },
+  {
+    "name": "loupe@3.1.1",
     "publisher": "Veselin Todorov",
     "licenses": "MIT",
     "repository": "https://github.com/chaijs/loupe"
@@ -6486,6 +6588,12 @@
     "repository": "https://github.com/chaijs/pathval"
   },
   {
+    "name": "pathval@2.0.0",
+    "publisher": "Veselin Todorov",
+    "licenses": "MIT",
+    "repository": "https://github.com/chaijs/pathval"
+  },
+  {
     "name": "pbf@3.3.0",
     "publisher": "Konstantin Kaefer",
     "licenses": "BSD-3-Clause",
@@ -6504,7 +6612,7 @@
     "repository": "https://github.com/crypto-browserify/pbkdf2"
   },
   {
-    "name": "picocolors@1.0.1",
+    "name": "picocolors@1.1.0",
     "publisher": "Alexey Raspopov",
     "licenses": "ISC",
     "repository": "https://github.com/alexeyraspopov/picocolors"
@@ -6666,7 +6774,7 @@
     "repository": "https://github.com/postcss/postcss"
   },
   {
-    "name": "postcss@8.4.41",
+    "name": "postcss@8.4.47",
     "publisher": "Andrey Sitnik",
     "licenses": "MIT",
     "repository": "https://github.com/postcss/postcss"
@@ -7230,6 +7338,12 @@
     "repository": "https://github.com/mourner/robust-predicates"
   },
   {
+    "name": "rollup@4.22.5",
+    "publisher": "Rich Harris",
+    "licenses": "MIT",
+    "repository": "https://github.com/rollup/rollup"
+  },
+  {
     "name": "rrweb-cssom@0.7.1",
     "publisher": "Nikita Vasilyev",
     "licenses": "MIT",
@@ -7440,6 +7554,12 @@
     "repository": "https://github.com/ljharb/side-channel"
   },
   {
+    "name": "siginfo@2.0.0",
+    "publisher": "Emil Bay",
+    "licenses": "ISC",
+    "repository": "https://github.com/emilbayes/siginfo"
+  },
+  {
     "name": "signal-exit@3.0.7",
     "publisher": "Ben Coe",
     "licenses": "ISC",
@@ -7506,7 +7626,7 @@
     "repository": "https://github.com/doowb/sort-object"
   },
   {
-    "name": "source-map-js@1.2.0",
+    "name": "source-map-js@1.2.1",
     "publisher": "Valentin 7rulnik Semirulnik",
     "licenses": "BSD-3-Clause",
     "repository": "https://github.com/7rulnik/source-map-js"
@@ -7566,6 +7686,12 @@
     "repository": "https://github.com/jonschlinkert/split-string"
   },
   {
+    "name": "stackback@0.0.2",
+    "publisher": "Roman Shtylman",
+    "licenses": "MIT",
+    "repository": "https://github.com/shtylman/node-stackback"
+  },
+  {
     "name": "stackframe@1.3.4",
     "publisher": null,
     "licenses": "MIT",
@@ -7576,6 +7702,12 @@
     "publisher": null,
     "licenses": "MIT",
     "repository": "https://github.com/jshttp/statuses"
+  },
+  {
+    "name": "std-env@3.7.0",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/unjs/std-env"
   },
   {
     "name": "stop-iteration-iterator@1.0.0",
@@ -7896,6 +8028,24 @@
     "repository": "https://github.com/alexreardon/tiny-invariant"
   },
   {
+    "name": "tinybench@2.9.0",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/tinylibs/tinybench"
+  },
+  {
+    "name": "tinyexec@0.3.0",
+    "publisher": "James Garbutt",
+    "licenses": "MIT",
+    "repository": "https://github.com/tinylibs/tinyexec"
+  },
+  {
+    "name": "tinypool@1.0.1",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/tinylibs/tinypool"
+  },
+  {
     "name": "tinyqueue@2.0.3",
     "publisher": null,
     "licenses": "ISC",
@@ -7908,7 +8058,19 @@
     "repository": "https://github.com/mourner/tinyqueue"
   },
   {
+    "name": "tinyrainbow@1.2.0",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/tinylibs/tinyrainbow"
+  },
+  {
     "name": "tinyspy@2.2.1",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/tinylibs/tinyspy"
+  },
+  {
+    "name": "tinyspy@3.0.2",
     "publisher": null,
     "licenses": "MIT",
     "repository": "https://github.com/tinylibs/tinyspy"
@@ -8370,6 +8532,24 @@
     "repository": "https://github.com/jshttp/vary"
   },
   {
+    "name": "vite-node@2.1.1",
+    "publisher": "Anthony Fu",
+    "licenses": "MIT",
+    "repository": "https://github.com/vitest-dev/vitest"
+  },
+  {
+    "name": "vite@5.4.8",
+    "publisher": "Evan You",
+    "licenses": "MIT",
+    "repository": "https://github.com/vitejs/vite"
+  },
+  {
+    "name": "vitest@2.1.1",
+    "publisher": "Anthony Fu",
+    "licenses": "MIT",
+    "repository": "https://github.com/vitest-dev/vitest"
+  },
+  {
     "name": "vm-browserify@1.1.2",
     "publisher": "James Halliday",
     "licenses": "MIT",
@@ -8512,6 +8692,12 @@
     "publisher": "GitHub Inc.",
     "licenses": "ISC",
     "repository": "https://github.com/npm/node-which"
+  },
+  {
+    "name": "why-is-node-running@2.3.0",
+    "publisher": "Mathias Buus",
+    "licenses": "MIT",
+    "repository": "https://github.com/mafintosh/why-is-node-running"
   },
   {
     "name": "wkt-parser@1.3.3",
