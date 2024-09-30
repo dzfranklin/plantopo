@@ -33,6 +33,12 @@ const defaultGlyphs =
 
 // Adding FSTopo would require mirroring https://data.fs.usda.gov/geodata/rastergateway/states-regions/quad-index.php I think, ~200GB by rough approximation
 
+const geoboundariesSource: ml.SourceSpecification = {
+  type: 'vector',
+  url: 'https://pmtiles.plantopo.com/geoboundaries.json',
+  attribution: '<a href="https://www.geoboundaries.org/">geoBoundaries</a>',
+};
+
 export const baseStyles: Record<BaseStyleID, BaseStyle> = {
   topo: {
     id: 'topo',
@@ -73,6 +79,26 @@ export const baseStyles: Record<BaseStyleID, BaseStyle> = {
       // The empty layer and source ensure the attribution is displayed
       layers: [
         {
+          id: 'adm0-outline',
+          type: 'line',
+          source: 'geoboundaries',
+          'source-layer': 'adm0',
+          paint: {
+            'line-width': [
+              'interpolate',
+              ['linear'],
+              ['zoom'],
+              0,
+              1,
+              10,
+              2,
+              15,
+              3,
+            ],
+            'line-color': '#a8a8a8',
+          },
+        },
+        {
           id: 'os-explorer-attribution',
           type: 'line',
           source: 'os-explorer-attribution',
@@ -86,6 +112,7 @@ export const baseStyles: Record<BaseStyleID, BaseStyle> = {
             'Contains OS data &copy; Crown copyright and database rights ' +
             new Date().getFullYear(),
         },
+        geoboundaries: geoboundariesSource,
       },
     },
   },
@@ -376,12 +403,7 @@ const overlayStyleList: OverlayStyle[] = [
     id: 'geoboundaries',
     name: 'Countries',
     sources: {
-      default: {
-        type: 'vector',
-        url: 'https://pmtiles.plantopo.com/geoboundaries.json',
-        attribution:
-          '<a href="https://www.geoboundaries.org/">geoBoundaries</a>',
-      },
+      default: geoboundariesSource,
     },
     layers: [
       {
@@ -390,8 +412,18 @@ const overlayStyleList: OverlayStyle[] = [
         source: 'default',
         'source-layer': 'adm0',
         paint: {
-          'line-width': 2,
-          'line-color': '#7d827e',
+          'line-width': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            0,
+            1,
+            10,
+            2,
+            15,
+            3,
+          ],
+          'line-color': '#a8a8a8',
         },
       },
     ],
