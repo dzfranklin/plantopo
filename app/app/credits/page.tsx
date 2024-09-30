@@ -48,6 +48,7 @@ export default function Page() {
           <li>
             Data from <a href="https://en.wikipedia.org">Wikipedia</a>
           </li>
+          <li>Map sources as attributed on each map</li>
         </ul>
 
         <h2>App</h2>

@@ -372,6 +372,30 @@ const overlayStyleList: OverlayStyle[] = [
       },
     ],
   },
+  {
+    id: 'geoboundaries',
+    name: 'Countries',
+    sources: {
+      default: {
+        type: 'vector',
+        url: 'https://pmtiles.plantopo.com/geoboundaries.json',
+        attribution:
+          '<a href="https://www.geoboundaries.org/">geoBoundaries</a>',
+      },
+    },
+    layers: [
+      {
+        id: 'adm0-outline',
+        type: 'line',
+        source: 'default',
+        'source-layer': 'adm0',
+        paint: {
+          'line-width': 2,
+          'line-color': '#7d827e',
+        },
+      },
+    ],
+  },
 ];
 
 export const overlayStyles: Record<string, OverlayStyle> =
