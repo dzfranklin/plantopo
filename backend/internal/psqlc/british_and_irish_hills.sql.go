@@ -382,3 +382,50 @@ func (q *Queries) SelectOneUnreviewedBritishAndIrishHillPhoto(ctx context.Contex
 	)
 	return i, err
 }
+
+const trigramSearchBritishAndIrishHills = `-- name: TrigramSearchBritishAndIrishHills :many
+SELECT name, term, point, country, hill
+FROM british_and_irish_hill_search_terms
+ORDER BY term <-> $1
+LIMIT 100
+`
+
+type TrigramSearchBritishAndIrishHillsRow struct {
+	Name    string
+	Term    string
+	Point   Point
+	Country string
+	Hill    int32
+}
+
+// TrigramSearchBritishAndIrishHills
+//
+//	SELECT name, term, point, country, hill
+//	FROM british_and_irish_hill_search_terms
+//	ORDER BY term <-> $1
+//	LIMIT 100
+func (q *Queries) TrigramSearchBritishAndIrishHills(ctx context.Context, db DBTX, term string) ([]TrigramSearchBritishAndIrishHillsRow, error) {
+	rows, err := db.Query(ctx, trigramSearchBritishAndIrishHills, term)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []TrigramSearchBritishAndIrishHillsRow
+	for rows.Next() {
+		var i TrigramSearchBritishAndIrishHillsRow
+		if err := rows.Scan(
+			&i.Name,
+			&i.Term,
+			&i.Point,
+			&i.Country,
+			&i.Hill,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/go-faster/errors"
+	"github.com/go-faster/jx"
 )
 
 func (s *DefaultErrorResponseStatusCode) Error() string {
@@ -349,6 +350,8 @@ func (s *ElevationPostReq) SetCoordinates(val [][]float64) {
 	s.Coordinates = val
 }
 
+type Geometry jx.Raw
+
 // Ref: #/components/schemas/Geophoto
 type Geophoto struct {
 	ID     int    `json:"id"`
@@ -498,6 +501,32 @@ func (s *GeophotosGetOK) GetPhotos() []Geophoto {
 // SetPhotos sets the value of Photos.
 func (s *GeophotosGetOK) SetPhotos(val []Geophoto) {
 	s.Photos = val
+}
+
+type GeosearchGetOK struct {
+	// The user the search results were generated for, if any.
+	User    OptString      `json:"user"`
+	Results []SearchResult `json:"results"`
+}
+
+// GetUser returns the value of User.
+func (s *GeosearchGetOK) GetUser() OptString {
+	return s.User
+}
+
+// GetResults returns the value of Results.
+func (s *GeosearchGetOK) GetResults() []SearchResult {
+	return s.Results
+}
+
+// SetUser sets the value of User.
+func (s *GeosearchGetOK) SetUser(val OptString) {
+	s.User = val
+}
+
+// SetResults sets the value of Results.
+func (s *GeosearchGetOK) SetResults(val []SearchResult) {
+	s.Results = val
 }
 
 // Ref: #/components/schemas/Image
@@ -1474,6 +1503,52 @@ func (o OptPolyline) Or(d Polyline) Polyline {
 	return d
 }
 
+// NewOptSearchResultDebug returns new OptSearchResultDebug with value set to v.
+func NewOptSearchResultDebug(v SearchResultDebug) OptSearchResultDebug {
+	return OptSearchResultDebug{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptSearchResultDebug is optional SearchResultDebug.
+type OptSearchResultDebug struct {
+	Value SearchResultDebug
+	Set   bool
+}
+
+// IsSet returns true if OptSearchResultDebug was set.
+func (o OptSearchResultDebug) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptSearchResultDebug) Reset() {
+	var v SearchResultDebug
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptSearchResultDebug) SetTo(v SearchResultDebug) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptSearchResultDebug) Get() (v SearchResultDebug, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptSearchResultDebug) Or(d SearchResultDebug) SearchResultDebug {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptSetSessionCookieHeader returns new OptSetSessionCookieHeader with value set to v.
 func NewOptSetSessionCookieHeader(v SetSessionCookieHeader) OptSetSessionCookieHeader {
 	return OptSetSessionCookieHeader{
@@ -1753,6 +1828,156 @@ func (o OptValidationErrorsFieldErrors) Or(d ValidationErrorsFieldErrors) Valida
 type Point []float64
 
 type Polyline string
+
+// Ref: #/components/schemas/SearchResult
+type SearchResult struct {
+	ID           string               `json:"id"`
+	Name         string               `json:"name"`
+	Type         SearchResultType     `json:"type"`
+	CountryCode2 string               `json:"countryCode2"`
+	Geometry     Geometry             `json:"geometry"`
+	Debug        OptSearchResultDebug `json:"debug"`
+}
+
+// GetID returns the value of ID.
+func (s *SearchResult) GetID() string {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *SearchResult) GetName() string {
+	return s.Name
+}
+
+// GetType returns the value of Type.
+func (s *SearchResult) GetType() SearchResultType {
+	return s.Type
+}
+
+// GetCountryCode2 returns the value of CountryCode2.
+func (s *SearchResult) GetCountryCode2() string {
+	return s.CountryCode2
+}
+
+// GetGeometry returns the value of Geometry.
+func (s *SearchResult) GetGeometry() Geometry {
+	return s.Geometry
+}
+
+// GetDebug returns the value of Debug.
+func (s *SearchResult) GetDebug() OptSearchResultDebug {
+	return s.Debug
+}
+
+// SetID sets the value of ID.
+func (s *SearchResult) SetID(val string) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *SearchResult) SetName(val string) {
+	s.Name = val
+}
+
+// SetType sets the value of Type.
+func (s *SearchResult) SetType(val SearchResultType) {
+	s.Type = val
+}
+
+// SetCountryCode2 sets the value of CountryCode2.
+func (s *SearchResult) SetCountryCode2(val string) {
+	s.CountryCode2 = val
+}
+
+// SetGeometry sets the value of Geometry.
+func (s *SearchResult) SetGeometry(val Geometry) {
+	s.Geometry = val
+}
+
+// SetDebug sets the value of Debug.
+func (s *SearchResult) SetDebug(val OptSearchResultDebug) {
+	s.Debug = val
+}
+
+type SearchResultDebug map[string]jx.Raw
+
+func (s *SearchResultDebug) init() SearchResultDebug {
+	m := *s
+	if m == nil {
+		m = map[string]jx.Raw{}
+		*s = m
+	}
+	return m
+}
+
+type SearchResultType string
+
+const (
+	SearchResultTypePostcode       SearchResultType = "postcode"
+	SearchResultTypeHill           SearchResultType = "hill"
+	SearchResultTypeStreet         SearchResultType = "street"
+	SearchResultTypePopulatedPlace SearchResultType = "populated_place"
+	SearchResultTypeWaterBody      SearchResultType = "water_body"
+	SearchResultTypeOther          SearchResultType = "other"
+)
+
+// AllValues returns all SearchResultType values.
+func (SearchResultType) AllValues() []SearchResultType {
+	return []SearchResultType{
+		SearchResultTypePostcode,
+		SearchResultTypeHill,
+		SearchResultTypeStreet,
+		SearchResultTypePopulatedPlace,
+		SearchResultTypeWaterBody,
+		SearchResultTypeOther,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s SearchResultType) MarshalText() ([]byte, error) {
+	switch s {
+	case SearchResultTypePostcode:
+		return []byte(s), nil
+	case SearchResultTypeHill:
+		return []byte(s), nil
+	case SearchResultTypeStreet:
+		return []byte(s), nil
+	case SearchResultTypePopulatedPlace:
+		return []byte(s), nil
+	case SearchResultTypeWaterBody:
+		return []byte(s), nil
+	case SearchResultTypeOther:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *SearchResultType) UnmarshalText(data []byte) error {
+	switch SearchResultType(data) {
+	case SearchResultTypePostcode:
+		*s = SearchResultTypePostcode
+		return nil
+	case SearchResultTypeHill:
+		*s = SearchResultTypeHill
+		return nil
+	case SearchResultTypeStreet:
+		*s = SearchResultTypeStreet
+		return nil
+	case SearchResultTypePopulatedPlace:
+		*s = SearchResultTypePopulatedPlace
+		return nil
+	case SearchResultTypeWaterBody:
+		*s = SearchResultTypeWaterBody
+		return nil
+	case SearchResultTypeOther:
+		*s = SearchResultTypeOther
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 type SetSessionCookieHeader string
 

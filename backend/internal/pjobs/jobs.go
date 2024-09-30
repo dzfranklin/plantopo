@@ -3,6 +3,7 @@ package pjobs
 import (
 	"github.com/dzfranklin/plantopo/backend/internal/demouser"
 	"github.com/dzfranklin/plantopo/backend/internal/dftbusopendata"
+	"github.com/dzfranklin/plantopo/backend/internal/ordnancesurvey"
 	"github.com/dzfranklin/plantopo/backend/internal/osm"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/pemail"
@@ -48,6 +49,8 @@ func Register(
 	repo := prepo.New(env)
 	periodic := jobs.PeriodicJobs()
 
+	// Workers
+
 	river.AddWorker[pwebhooks.TwilioJobArgs](workers, pwebhooks.NewTwilioWorker(env, repo))
 
 	river.AddWorker[osm.TraceFeedIngesterJobArgs](workers, osm.NewTraceFeedIngesterWorker(env, jobs))
@@ -65,6 +68,10 @@ func Register(
 	river.AddWorker[pgeograph.JobArgs](workers, pgeograph.NewWorker(env))
 
 	river.AddWorker[demouser.ResetJobArgs](workers, demouser.NewResetWorker(env))
+
+	river.AddWorker[ordnancesurvey.CodepointJobArgs](workers, ordnancesurvey.NewCodepointWorker(env))
+
+	// Periodic jobs
 
 	periodic.Add(river.NewPeriodicJob(
 		mustParseCron("46 18 * * *"),
@@ -109,6 +116,14 @@ func Register(
 			mustParseCron("31 6 6 * *"),
 			func() (river.JobArgs, *river.InsertOpts) {
 				return pgeograph.JobArgs{}, nil
+			},
+			nil,
+		))
+
+		periodic.Add(river.NewPeriodicJob(
+			mustParseCron("16 4 5 * *"),
+			func() (river.JobArgs, *river.InsertOpts) {
+				return ordnancesurvey.CodepointJobArgs{}, nil
 			},
 			nil,
 		))

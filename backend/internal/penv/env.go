@@ -6,6 +6,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/pimg"
 	"github.com/dzfranklin/plantopo/backend/internal/pjobs"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
+	"github.com/dzfranklin/plantopo/backend/internal/psqlc"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/minio/minio-go/v7"
@@ -54,6 +55,7 @@ func openDB(cfg *pconfig.Config, logger *slog.Logger) *pgxpool.Pool {
 	}
 
 	config.ConnConfig.Tracer = prepo.NewTracer(logger)
+	psqlc.ConfigurePool(config)
 
 	db, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {

@@ -58,7 +58,7 @@ type InsertTrackParams struct {
 	DescriptionMd pgtype.Text
 	Date          pgtype.Timestamptz
 	Times         pgtype.Array[pgtype.Timestamptz]
-	Line          Geometry
+	Line          *Line
 }
 
 // InsertTrack
@@ -270,7 +270,7 @@ type UpdateTrackParams struct {
 	DescriptionMd pgtype.Text
 	Date          pgtype.Timestamptz
 	Times         pgtype.Array[pgtype.Timestamptz]
-	Line          Geometry
+	Line          *Line
 	ID            pgtype.UUID
 }
 

@@ -1,0 +1,50 @@
+get:
+  tags:
+    - search
+  summary: Search things that can be displayed on a map
+  parameters:
+    - name: text
+      in: query
+      required: true
+      schema:
+        type: string
+    - name: biasLng
+      in: query
+      schema:
+        type: number
+    - name: biasLat
+      in: query
+      schema:
+        type: number
+    - name: biasZoom
+      in: query
+      schema:
+        type: integer
+    - name: higherQuality
+      in: query
+      description: If true the search may take longer but may be of higher quality
+      schema:
+        type: boolean
+    - name: debug
+      in: query
+      schema:
+        type: boolean
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              user:
+                type: string
+                description: The user the search results were generated for, if any
+              results:
+                type: array
+                items:
+                  $ref: ../components/schemas/SearchResult.yaml
+            required:
+              - results
+    default:
+      $ref: ../components/responses/DefaultErrorResponse.yaml

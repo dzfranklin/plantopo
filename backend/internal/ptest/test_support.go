@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
+	"github.com/dzfranklin/plantopo/backend/internal/psqlc"
 	rdbdump "github.com/hdt3213/rdb/helper"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -258,11 +259,21 @@ func (te *TestEnv) setupDB() {
 
 func (te *TestEnv) connectDB() {
 	ctx := context.Background()
+
 	connString, err := te.dbC.ConnectionString(ctx, "sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
-	db, err := pgxpool.New(ctx, connString)
+
+	config, err := pgxpool.ParseConfig(connString)
+	if err != nil {
+		panic(err)
+	}
+
+	psqlc.ConfigurePool(config)
+
+	db, err := pgxpool.NewWithConfig(ctx, config)
+
 	if err != nil {
 		panic(err)
 	}
@@ -469,4 +480,11 @@ func (p *TestFlagProvider) Reset() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.boolFlags = nil
+}
+
+func Must[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return v
 }

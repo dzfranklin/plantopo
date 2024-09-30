@@ -5,6 +5,7 @@ import { delay, http, HttpResponse, passthrough } from 'msw';
 // noinspection ES6PreferShortImport
 import { API_ENDPOINT } from '../env';
 import { sampleUser } from '@/.storybook/samples/users';
+import { benAlderGeosearchResponse } from '@/.storybook/samples/geosearch';
 
 mswAddon.initialize({ onUnhandledRequest: 'error' });
 
@@ -99,6 +100,20 @@ const preview: Preview = {
           http.all('https://basemap.nationalmap.gov/*', () => passthrough()),
         ],
         user: loggedInUserHandlers,
+        geosearch: [
+          http.get(API_ENDPOINT + 'geosearch', async (req) => {
+            const params = new URL(req.request.url).searchParams;
+            const text = (params.get('text') as string).toLowerCase();
+
+            await delay();
+
+            if ('ben alder'.startsWith(text)) {
+              return HttpResponse.json(benAlderGeosearchResponse);
+            } else {
+              return HttpResponse.json({ results: [] });
+            }
+          }),
+        ],
       },
     },
   },

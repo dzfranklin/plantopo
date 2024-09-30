@@ -870,7 +870,7 @@
     "repository": "https://github.com/floating-ui/floating-ui"
   },
   {
-    "name": "@headlessui/react@2.1.3",
+    "name": "@headlessui/react@2.1.8",
     "publisher": null,
     "licenses": "MIT",
     "repository": "https://github.com/tailwindlabs/headlessui"
@@ -1476,6 +1476,12 @@
     "repository": "https://github.com/tailwindlabs/tailwindcss-aspect-ratio"
   },
   {
+    "name": "@tailwindcss/container-queries@0.1.1",
+    "publisher": null,
+    "licenses": "MIT",
+    "repository": "https://github.com/tailwindlabs/tailwindcss-container-queries"
+  },
+  {
     "name": "@tailwindcss/forms@0.5.7",
     "publisher": null,
     "licenses": "MIT",
@@ -1615,6 +1621,12 @@
   },
   {
     "name": "@turf/center@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
+    "name": "@turf/centroid@7.1.0",
     "publisher": "Turf Authors",
     "licenses": "MIT",
     "repository": "https://github.com/Turfjs/turf"

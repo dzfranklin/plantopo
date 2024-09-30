@@ -83,6 +83,12 @@ type Invoker interface {
 	//
 	// GET /geophotos
 	GeophotosGet(ctx context.Context, params GeophotosGetParams) (*GeophotosGetOK, error)
+	// GeosearchGet invokes GET /geosearch operation.
+	//
+	// Search things that can be displayed on a map.
+	//
+	// GET /geosearch
+	GeosearchGet(ctx context.Context, params GeosearchGetParams) (*GeosearchGetOK, error)
 	// MunroAccessMunrosGet invokes GET /munro-access/munros operation.
 	//
 	// List munros.
@@ -1502,6 +1508,226 @@ func (c *Client) sendGeophotosGet(ctx context.Context, params GeophotosGetParams
 
 	stage = "DecodeResponse"
 	result, err := decodeGeophotosGetResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// GeosearchGet invokes GET /geosearch operation.
+//
+// Search things that can be displayed on a map.
+//
+// GET /geosearch
+func (c *Client) GeosearchGet(ctx context.Context, params GeosearchGetParams) (*GeosearchGetOK, error) {
+	res, err := c.sendGeosearchGet(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendGeosearchGet(ctx context.Context, params GeosearchGetParams) (res *GeosearchGetOK, err error) {
+	otelAttrs := []attribute.KeyValue{
+		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPRouteKey.String("/geosearch"),
+	}
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(float64(elapsedDuration)/float64(time.Millisecond)), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, "GeosearchGet",
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/geosearch"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeQueryParams"
+	q := uri.NewQueryEncoder()
+	{
+		// Encode "text" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "text",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.Text))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "biasLng" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "biasLng",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.BiasLng.Get(); ok {
+				return e.EncodeValue(conv.Float64ToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "biasLat" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "biasLat",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.BiasLat.Get(); ok {
+				return e.EncodeValue(conv.Float64ToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "biasZoom" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "biasZoom",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.BiasZoom.Get(); ok {
+				return e.EncodeValue(conv.IntToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "higherQuality" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "higherQuality",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.HigherQuality.Get(); ok {
+				return e.EncodeValue(conv.BoolToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	{
+		// Encode "debug" parameter.
+		cfg := uri.QueryParameterEncodingConfig{
+			Name:    "debug",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.EncodeParam(cfg, func(e uri.Encoder) error {
+			if val, ok := params.Debug.Get(); ok {
+				return e.EncodeValue(conv.BoolToString(val))
+			}
+			return nil
+		}); err != nil {
+			return res, errors.Wrap(err, "encode query")
+		}
+	}
+	u.RawQuery = q.Values().Encode()
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:Bearer"
+			switch err := c.securityBearer(ctx, "GeosearchGet", r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"Bearer\"")
+			}
+		}
+		{
+			stage = "Security:Browser"
+			switch err := c.securityBrowser(ctx, "GeosearchGet", r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"Browser\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{},
+				{0b00000001},
+				{0b00000010},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	defer resp.Body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeGeosearchGetResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

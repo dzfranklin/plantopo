@@ -14,8 +14,11 @@ sql:
         emit_methods_with_db_argument: true
         overrides:
           - column: "tracks.line"
-            go_type:
-              type: Geometry
+            go_type: {type: "*Line"}
           - column: "tracks.times"
             go_type:
               type: "pgtype.Array[pgtype.Timestamptz]"
+          - column: "gb_postcode_points.point"
+            go_type: {type: Point}
+          - column: "british_and_irish_hill_search_terms.point"
+            go_type: {type: Point}

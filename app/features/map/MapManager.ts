@@ -28,12 +28,14 @@ export class MapManager {
     container: HTMLDivElement;
     baseStyle: BaseStyle;
     initialView?: MapManagerInitialView;
+    interactive: boolean;
   }) {
     this.baseStyle = props.baseStyle;
 
     const opts: ml.MapOptions = {
       container: props.container,
       style: props.baseStyle.style,
+      interactive: props.interactive,
     };
 
     if (props.initialView && 'at' in props.initialView) {
@@ -161,6 +163,18 @@ export class MapManager {
         throw err;
       },
     );
+  }
+
+  getCenter(): [number, number] {
+    const { lng, lat } = this.m.getCenter();
+    return [lng, lat];
+  }
+
+  flyIntoView(opts: ml.FlyToOptions, eventData?: unknown) {
+    if (opts.center && this.m.getBounds().contains(opts.center)) {
+      return;
+    }
+    this.m.flyTo(opts, eventData);
   }
 
   debugValues(): Record<string, unknown> {

@@ -103,6 +103,15 @@ func (UnimplementedHandler) GeophotosGet(ctx context.Context, params GeophotosGe
 	return r, ht.ErrNotImplemented
 }
 
+// GeosearchGet implements GET /geosearch operation.
+//
+// Search things that can be displayed on a map.
+//
+// GET /geosearch
+func (UnimplementedHandler) GeosearchGet(ctx context.Context, params GeosearchGetParams) (r *GeosearchGetOK, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // MunroAccessMunrosGet implements GET /munro-access/munros operation.
 //
 // List munros.

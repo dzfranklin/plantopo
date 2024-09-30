@@ -59,7 +59,7 @@ func (r *Tracks) Insert(track Track) (Track, error) {
 		DescriptionMd: pgOptText(track.DescriptionMd),
 		Date:          pgOptTimestamptz(track.Date),
 		Times:         mapTimesToDB(track.Times),
-		Line:          psqlc.Geometry{Geometry: track.Line},
+		Line:          (*psqlc.Line)(track.Line),
 	})
 	if err != nil {
 		return Track{}, err
@@ -85,7 +85,7 @@ func (r *Tracks) Update(track Track) (Track, error) {
 		DescriptionMd: pgOptText(track.DescriptionMd),
 		Date:          pgTimestamptz(track.Date),
 		Times:         mapTimesToDB(track.Times),
-		Line:          psqlc.Geometry{Geometry: track.Line},
+		Line:          (*psqlc.Line)(track.Line),
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Track{}, ErrNotFound
@@ -264,7 +264,7 @@ func mapTrack(row psqlc.Track) Track {
 		LengthMeters:  row.LengthMeters.Float64,
 		Duration:      time.Second * time.Duration(row.DurationSecs.Int32),
 		Times:         pslices.Map(row.Times.Elements, func(t pgtype.Timestamptz) time.Time { return t.Time }),
-		Line:          row.Line.Geometry.(*geometry.Line),
+		Line:          (*geometry.Line)(row.Line),
 	}
 }
 

@@ -3,16 +3,16 @@ info:
   version: 0.1.0
   title: PlanTopo API
   description: Internal API for PlanTopo.com
-  contact: {}
+  contact: { }
 servers:
   - url: https://api.plantopo.com/api/v1
     description: Production
   - url: http://localhost:4000/api/v1
     description: Local development
 security:
-  - {}
-  - bearer: []
-  - browser: []
+  - { }
+  - bearer: [ ]
+  - browser: [ ]
 tags:
   - name: settings
   - name: auth
@@ -63,6 +63,8 @@ paths:
     $ref: paths/munro-access_munros.yaml
   /geophotos:
     $ref: paths/geophotos.yaml
+  /geosearch:
+    $ref: paths/geosearch.yaml
 components:
   securitySchemes:
     bearer:

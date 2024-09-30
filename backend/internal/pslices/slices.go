@@ -34,3 +34,20 @@ func SortBy[S interface{ ~[]A }, A any, B cmp.Ordered](x S, fn func(A) B) {
 		return cmp.Compare(fn(a), fn(b))
 	})
 }
+
+func CollectChan[T any](channel chan T) []T {
+	out := make([]T, 0, cap(channel))
+	for v := range channel {
+		out = append(out, v)
+	}
+	return out
+}
+
+func First[T any](slice []T, pred func(T) bool) (res T) {
+	for _, v := range slice {
+		if pred(v) {
+			return v
+		}
+	}
+	return
+}

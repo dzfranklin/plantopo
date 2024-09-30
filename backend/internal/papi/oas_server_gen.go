@@ -68,6 +68,12 @@ type Handler interface {
 	//
 	// GET /geophotos
 	GeophotosGet(ctx context.Context, params GeophotosGetParams) (*GeophotosGetOK, error)
+	// GeosearchGet implements GET /geosearch operation.
+	//
+	// Search things that can be displayed on a map.
+	//
+	// GET /geosearch
+	GeosearchGet(ctx context.Context, params GeosearchGetParams) (*GeosearchGetOK, error)
 	// MunroAccessMunrosGet implements GET /munro-access/munros operation.
 	//
 	// List munros.

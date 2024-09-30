@@ -1,10 +1,15 @@
 package prepo
 
 import (
+	"context"
 	"errors"
+	"github.com/dzfranklin/plantopo/backend/internal/pslices"
 	"github.com/dzfranklin/plantopo/backend/internal/psqlc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/tidwall/geojson/geometry"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -206,4 +211,36 @@ func (s *BritishAndIrishHills) InsertPhoto(opts InsertBritishOrIrishHillPhotoOpt
 		SourceLink: pgOptText(opts.SourceLink),
 		Importer:   pgOptText(opts.Importer),
 	})
+}
+
+type BritishOrIrishHillSearchResult struct {
+	ID      int
+	Name    string
+	Term    string
+	Point   geometry.Point
+	Country string
+}
+
+var spaceRunRe = regexp.MustCompile(`\s+`)
+
+func (s *BritishAndIrishHills) TrigramSearch(ctx context.Context, term string) ([]BritishOrIrishHillSearchResult, error) {
+	term = strings.ReplaceAll(term, "' ", "")
+	term = strings.ReplaceAll(term, "'", "")
+	term = spaceRunRe.ReplaceAllString(term, " ")
+	term = strings.ToLower(term)
+	term = strings.TrimSpace(term)
+
+	rows, err := q.TrigramSearchBritishAndIrishHills(ctx, s.db, term)
+	if err != nil {
+		return nil, err
+	}
+	return pslices.Map(rows, func(r psqlc.TrigramSearchBritishAndIrishHillsRow) BritishOrIrishHillSearchResult {
+		return BritishOrIrishHillSearchResult{
+			ID:      int(r.Hill),
+			Name:    r.Name,
+			Term:    r.Term,
+			Point:   geometry.Point(r.Point),
+			Country: r.Country,
+		}
+	}), nil
 }

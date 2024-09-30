@@ -77,3 +77,9 @@ LIMIT 1;
 UPDATE british_and_irish_hill_photos
 SET reviewed = true
 WHERE id = $1;
+
+-- name: TrigramSearchBritishAndIrishHills :many
+SELECT name, term, point, country, hill
+FROM british_and_irish_hill_search_terms
+ORDER BY term <-> @term
+LIMIT 100;

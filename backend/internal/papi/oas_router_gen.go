@@ -283,24 +283,60 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 
 				elem = origElem
-			case 'g': // Prefix: "geophotos"
+			case 'g': // Prefix: "geo"
 				origElem := elem
-				if l := len("geophotos"); len(elem) >= l && elem[0:l] == "geophotos" {
+				if l := len("geo"); len(elem) >= l && elem[0:l] == "geo" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
 				if len(elem) == 0 {
-					// Leaf node.
-					switch r.Method {
-					case "GET":
-						s.handleGeophotosGetRequest([0]string{}, elemIsEscaped, w, r)
-					default:
-						s.notAllowed(w, r, "GET")
+					break
+				}
+				switch elem[0] {
+				case 'p': // Prefix: "photos"
+					origElem := elem
+					if l := len("photos"); len(elem) >= l && elem[0:l] == "photos" {
+						elem = elem[l:]
+					} else {
+						break
 					}
 
-					return
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "GET":
+							s.handleGeophotosGetRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "GET")
+						}
+
+						return
+					}
+
+					elem = origElem
+				case 's': // Prefix: "search"
+					origElem := elem
+					if l := len("search"); len(elem) >= l && elem[0:l] == "search" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "GET":
+							s.handleGeosearchGetRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "GET")
+						}
+
+						return
+					}
+
+					elem = origElem
 				}
 
 				elem = origElem
@@ -1022,28 +1058,68 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				}
 
 				elem = origElem
-			case 'g': // Prefix: "geophotos"
+			case 'g': // Prefix: "geo"
 				origElem := elem
-				if l := len("geophotos"); len(elem) >= l && elem[0:l] == "geophotos" {
+				if l := len("geo"); len(elem) >= l && elem[0:l] == "geo" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
 				if len(elem) == 0 {
-					// Leaf node.
-					switch method {
-					case "GET":
-						r.name = "GeophotosGet"
-						r.summary = "Get metadata by ID"
-						r.operationID = ""
-						r.pathPattern = "/geophotos"
-						r.args = args
-						r.count = 0
-						return r, true
-					default:
-						return
+					break
+				}
+				switch elem[0] {
+				case 'p': // Prefix: "photos"
+					origElem := elem
+					if l := len("photos"); len(elem) >= l && elem[0:l] == "photos" {
+						elem = elem[l:]
+					} else {
+						break
 					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "GET":
+							r.name = "GeophotosGet"
+							r.summary = "Get metadata by ID"
+							r.operationID = ""
+							r.pathPattern = "/geophotos"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+					elem = origElem
+				case 's': // Prefix: "search"
+					origElem := elem
+					if l := len("search"); len(elem) >= l && elem[0:l] == "search" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "GET":
+							r.name = "GeosearchGet"
+							r.summary = "Search things that can be displayed on a map"
+							r.operationID = ""
+							r.pathPattern = "/geosearch"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+					elem = origElem
 				}
 
 				elem = origElem

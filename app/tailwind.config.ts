@@ -41,6 +41,7 @@ const config: Config = {
     require('@tailwindcss/typography'),
     require('@tailwindcss/forms'),
     require('@tailwindcss/aspect-ratio'),
+    require('@tailwindcss/container-queries'),
     plugin(({ addUtilities }) => {
       addUtilities({
         '.link': {

@@ -1144,6 +1144,90 @@
           }
         }
       }
+    },
+    "/geosearch": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Search things that can be displayed on a map",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "biasLng",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "biasLat",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "biasZoom",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "higherQuality",
+            "in": "query",
+            "description": "If true the search may take longer but may be of higher quality",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "debug",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "type": "string",
+                      "description": "The user the search results were generated for, if any"
+                    },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SearchResult"
+                      }
+                    }
+                  },
+                  "required": [
+                    "results"
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1683,6 +1767,55 @@
           "id",
           "image",
           "point"
+        ]
+      },
+      "Geometry": {
+        "x-ts-type": "geojson.Geometry",
+        "example": {
+          "type": "Point",
+          "coordinates": [
+            51,
+            0
+          ]
+        }
+      },
+      "SearchResult": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "postcode",
+              "hill",
+              "street",
+              "populated_place",
+              "water_body",
+              "other"
+            ]
+          },
+          "countryCode2": {
+            "type": "string"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/Geometry"
+          },
+          "debug": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "countryCode2",
+          "geometry"
         ]
       }
     },

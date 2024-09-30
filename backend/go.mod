@@ -19,7 +19,7 @@ require (
 	github.com/hasura/go-graphql-client v0.13.0
 	github.com/hdt3213/rdb v1.0.18
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
-	github.com/jackc/pgx/v5 v5.6.0
+	github.com/jackc/pgx/v5 v5.7.1
 	github.com/joho/godotenv v1.5.1
 	github.com/lmittmann/tint v1.0.5
 	github.com/minio/minio-go/v7 v7.0.76
@@ -47,8 +47,10 @@ require (
 	github.com/tidwall/sjson v1.2.5
 	github.com/trustelem/zxcvbn v1.0.1
 	github.com/twilio/twilio-go v1.22.4
+	github.com/twpayne/go-geom v1.5.7
 	github.com/twpayne/go-polyline v1.1.1
 	github.com/twpayne/go-proj/v10 v10.2.0
+	github.com/twpayne/pgx-geom v0.0.2
 	github.com/uniplaces/carbon v0.2.2
 	github.com/urfave/negroni v1.0.0
 	github.com/wneessen/go-mail v0.4.3
@@ -57,12 +59,11 @@ require (
 	go.opentelemetry.io/otel/trace v1.29.0
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/multierr v1.11.0
-	golang.org/x/crypto v0.26.0
+	golang.org/x/crypto v0.27.0
 	golang.org/x/net v0.28.0
 	golang.org/x/sync v0.8.0
-	golang.org/x/text v0.17.0
+	golang.org/x/text v0.18.0
 	riverqueue.com/riverui v0.5.0
-	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -72,7 +73,6 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/PuerkitoBio/goquery v1.9.2 // indirect
-	github.com/alecthomas/assert/v2 v2.10.0 // indirect
 	github.com/antonholmquist/jason v1.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bytedance/sonic v1.12.2 // indirect
@@ -111,7 +111,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
@@ -162,7 +162,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/arch v0.9.0 // indirect
 	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 // indirect
-	golang.org/x/sys v0.24.0 // indirect
+	golang.org/x/sys v0.25.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240827150818-7e3bb234dfed // indirect
 	google.golang.org/grpc v1.66.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect

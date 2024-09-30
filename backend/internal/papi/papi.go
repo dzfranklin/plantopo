@@ -5,6 +5,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/pelevation"
 	"github.com/dzfranklin/plantopo/backend/internal/pmunroaccess"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
+	"github.com/dzfranklin/plantopo/backend/internal/psearch"
 	"github.com/dzfranklin/plantopo/backend/internal/pweather"
 	"net/http"
 )
@@ -15,6 +16,7 @@ type phandler struct {
 	elevation   *pelevation.Service
 	weather     *pweather.Service
 	munroaccess *pmunroaccess.Service
+	search      *psearch.Service
 }
 
 func New(env *pconfig.Env) (http.Handler, error) {
@@ -27,6 +29,7 @@ func New(env *pconfig.Env) (http.Handler, error) {
 		elevation:   pelevation.Singleton(env),
 		weather:     pweather.New(env),
 		munroaccess: pmunroaccess.New(env),
+		search:      psearch.New(env),
 	}
 
 	s := &psecurity{

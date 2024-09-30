@@ -118,11 +118,16 @@ func (c *JSONClient) do(ctx context.Context, out any, method string, path string
 		req.URL.RawQuery = q.Encode()
 	}
 
-	//fmt.Println(req.URL.String())
 	resp, err := c.c.Do(ctx, req)
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
-	return json.NewDecoder(resp.Body).Decode(out)
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(bodyBytes, out)
 }

@@ -345,6 +345,349 @@ func decodeGeophotosGetParams(args [0]string, argsEscaped bool, r *http.Request)
 	return params, nil
 }
 
+// GeosearchGetParams is parameters of GET /geosearch operation.
+type GeosearchGetParams struct {
+	Text     string
+	BiasLng  OptFloat64
+	BiasLat  OptFloat64
+	BiasZoom OptInt
+	// If true the search may take longer but may be of higher quality.
+	HigherQuality OptBool
+	Debug         OptBool
+}
+
+func unpackGeosearchGetParams(packed middleware.Parameters) (params GeosearchGetParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "text",
+			In:   "query",
+		}
+		params.Text = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "biasLng",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.BiasLng = v.(OptFloat64)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "biasLat",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.BiasLat = v.(OptFloat64)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "biasZoom",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.BiasZoom = v.(OptInt)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "higherQuality",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.HigherQuality = v.(OptBool)
+		}
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "debug",
+			In:   "query",
+		}
+		if v, ok := packed[key]; ok {
+			params.Debug = v.(OptBool)
+		}
+	}
+	return params
+}
+
+func decodeGeosearchGetParams(args [0]string, argsEscaped bool, r *http.Request) (params GeosearchGetParams, _ error) {
+	q := uri.NewQueryDecoder(r.URL.Query())
+	// Decode query: text.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "text",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.Text = c
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "text",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: biasLng.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "biasLng",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotBiasLngVal float64
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToFloat64(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotBiasLngVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.BiasLng.SetTo(paramsDotBiasLngVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.BiasLng.Get(); ok {
+					if err := func() error {
+						if err := (validate.Float{}).Validate(float64(value)); err != nil {
+							return errors.Wrap(err, "float")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "biasLng",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: biasLat.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "biasLat",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotBiasLatVal float64
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToFloat64(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotBiasLatVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.BiasLat.SetTo(paramsDotBiasLatVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if value, ok := params.BiasLat.Get(); ok {
+					if err := func() error {
+						if err := (validate.Float{}).Validate(float64(value)); err != nil {
+							return errors.Wrap(err, "float")
+						}
+						return nil
+					}(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "biasLat",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: biasZoom.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "biasZoom",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotBiasZoomVal int
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToInt(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotBiasZoomVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.BiasZoom.SetTo(paramsDotBiasZoomVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "biasZoom",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: higherQuality.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "higherQuality",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotHigherQualityVal bool
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToBool(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotHigherQualityVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.HigherQuality.SetTo(paramsDotHigherQualityVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "higherQuality",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	// Decode query: debug.
+	if err := func() error {
+		cfg := uri.QueryParameterDecodingConfig{
+			Name:    "debug",
+			Style:   uri.QueryStyleForm,
+			Explode: true,
+		}
+
+		if err := q.HasParam(cfg); err == nil {
+			if err := q.DecodeParam(cfg, func(d uri.Decoder) error {
+				var paramsDotDebugVal bool
+				if err := func() error {
+					val, err := d.DecodeValue()
+					if err != nil {
+						return err
+					}
+
+					c, err := conv.ToBool(val)
+					if err != nil {
+						return err
+					}
+
+					paramsDotDebugVal = c
+					return nil
+				}(); err != nil {
+					return err
+				}
+				params.Debug.SetTo(paramsDotDebugVal)
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "debug",
+			In:   "query",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // MunroAccessReportIDGetParams is parameters of GET /munro-access/report/{id} operation.
 type MunroAccessReportIDGetParams struct {
 	ID string

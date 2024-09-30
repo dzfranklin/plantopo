@@ -4,6 +4,9 @@ set dotenv-filename := "./backend/.env"
 
 tmpdir  := `mktemp -d`
 
+check:
+    ./scripts/check-all.sh
+
 gen:
     cd backend && test ! -f .env.local || cat .env.local | cut -d '=' -f 1 | xargs -I {} echo {}= >.env.local.example
     cd app && test ! -f .env.local || cat .env.local | cut -d '=' -f 1 | xargs -I {} echo {}= >.env.local.example
@@ -70,9 +73,6 @@ migrate-prod-up:
 
 prod-psql:
     psql $(op read "op://plantopo/plantopo-prod/plantopo_prod/url")
-
-pre-commit:
-    just check-all
 
 loc:
     tokei . -e '*.sql.go' -e '*_gen.go' -e '*.gen.go' -e '*.d.ts' -t go,sql,css,tsx,typescript

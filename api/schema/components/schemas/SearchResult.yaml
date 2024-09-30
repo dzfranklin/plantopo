@@ -1,12 +1,28 @@
 type: object
 properties:
-  geometry:
-    $ref: ./Geometry.yaml
+  id:
+    type: string
   name:
     type: string
+  type:
+    type: string
+    enum:
+      - postcode
+      - hill
+      - street
+      - populated_place
+      - water_body
+      - other
   countryCode2:
     type: string
+  geometry:
+    $ref: ./Geometry.yaml
+  debug:
+    type: object
+    additionalProperties: true
 required:
-  - geometry
+  - id
   - name
+  - type
   - countryCode2
+  - geometry

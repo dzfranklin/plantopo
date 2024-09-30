@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"github.com/tidwall/geojson"
 	"net/http"
 	"time"
 )
@@ -30,6 +31,10 @@ func omitEmptyDateTime(v time.Time) OptDateTime {
 	} else {
 		return OptDateTime{Value: v, Set: true}
 	}
+}
+
+func mapGeometry(v geojson.Object) Geometry {
+	return Geometry(v.JSON())
 }
 
 func mvtResponse(ctx context.Context, value []byte) (*MVTTileHeaders, error) {

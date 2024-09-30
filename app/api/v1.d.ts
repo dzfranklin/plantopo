@@ -421,6 +421,55 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/geosearch': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Search things that can be displayed on a map */
+    get: {
+      parameters: {
+        query: {
+          biasLat?: number;
+          biasLng?: number;
+          biasZoom?: number;
+          debug?: boolean;
+          /** @description If true the search may take longer but may be of higher quality */
+          higherQuality?: boolean;
+          text: string;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': {
+              results: components['schemas']['SearchResult'][];
+              /** @description The user the search results were generated for, if any */
+              user?: string;
+            };
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/munro-access/munros': {
     parameters: {
       query?: never;
@@ -1054,6 +1103,14 @@ export interface components {
     ElevationPostReq: {
       coordinates: [number, number][];
     };
+    /** @example {
+     *       "type": "Point",
+     *       "coordinates": [
+     *         51,
+     *         0
+     *       ]
+     *     } */
+    Geometry: geojson.Geometry;
     Geophoto: {
       attributionLink?: string;
       attributionText?: string;
@@ -1115,6 +1172,23 @@ export interface components {
      * @example _p~iF~ps|U_ulLnnqC_mqNvxq`@
      */
     Polyline: string;
+    SearchResult: {
+      countryCode2: string;
+      debug?: {
+        [key: string]: unknown;
+      };
+      geometry: components['schemas']['Geometry'];
+      id: string;
+      name: string;
+      /** @enum {string} */
+      type:
+        | 'postcode'
+        | 'hill'
+        | 'street'
+        | 'populated_place'
+        | 'water_body'
+        | 'other';
+    };
     /** @example session=plantoposecret_db480e5c2aa6f443ff721116b352e88c396351fd20eee0c95ed272cba311edd6890f6759931d2cdca4acb16d90a8d2af0ee9af83b35446fda1c8e272fa378462; ... */
     SetSessionCookieHeader: string;
     Settings: {

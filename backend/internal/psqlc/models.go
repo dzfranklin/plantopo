@@ -75,6 +75,15 @@ type BritishAndIrishHillPhoto struct {
 	Reviewed   bool
 }
 
+type BritishAndIrishHillSearchTerm struct {
+	ID      int64
+	Term    string
+	Name    string
+	Point   Point
+	Country string
+	Hill    int32
+}
+
 type FlickrIndexProgress struct {
 	RegionID int32
 	Latest   pgtype.Timestamptz
@@ -87,6 +96,12 @@ type FlickrIndexRegion struct {
 	MinLat float64
 	MaxLng float64
 	MaxLat float64
+}
+
+type GbPostcodePoint struct {
+	Code           string
+	Point          Point
+	CodeNormalized pgtype.Text
 }
 
 type GeographIndexProgress struct {
@@ -157,7 +172,7 @@ type Track struct {
 	LengthMeters  pgtype.Float8
 	DurationSecs  pgtype.Int4
 	Times         pgtype.Array[pgtype.Timestamptz]
-	Line          Geometry
+	Line          *Line
 	LineFeatureID pgtype.Int8
 }
 
