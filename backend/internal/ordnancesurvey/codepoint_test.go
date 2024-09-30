@@ -6,7 +6,7 @@ import (
 	"context"
 	_ "embed"
 	"github.com/dzfranklin/plantopo/backend/internal/pslices"
-	"github.com/stretchr/testify/assert"
+	"github.com/dzfranklin/plantopo/backend/internal/ptest"
 	"github.com/stretchr/testify/require"
 	"github.com/tidwall/geojson/geometry"
 	"testing"
@@ -32,9 +32,23 @@ func TestParseCodePointOpenZip(t *testing.T) {
 	}()
 
 	got := pslices.CollectChan(out)
-	assert.ElementsMatch(t, got, []PostcodePoint{
+
+	expected := []PostcodePoint{
 		{Code: "AB10 1AB", Point: geometry.Point{X: -2.096923, Y: 57.149590}},
 		{Code: "AB10 1AF", Point: geometry.Point{X: -2.096923, Y: 57.149590}},
 		{Code: "AB10 1AG", Point: geometry.Point{X: -2.097004, Y: 57.149051}},
-	})
+	}
+
+	require.Len(t, got, len(expected))
+
+outer:
+	for _, expectedValue := range got {
+		for _, gotValue := range got {
+			if expectedValue.Code == gotValue.Code {
+				ptest.AssertPointsEqual(t, expectedValue.Point, gotValue.Point)
+				continue outer
+			}
+		}
+		panic("missing " + expectedValue.Code)
+	}
 }
