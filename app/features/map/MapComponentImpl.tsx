@@ -395,7 +395,6 @@ function cameraPosition(map: ml.Map): CameraOptions {
 function syncExplorerMap(mMap: ml.Map, oMap: OLMap) {
   if (mMap.getPitch() !== 0) mMap.setPitch(0);
   setExplorerMapView(oMap, cameraPosition(mMap));
-  // TODO: Disable ol render loop and render here to avoid jank
 }
 
 function setExplorerMapView(oMap: OLMap, cam: CameraOptions) {
