@@ -82,7 +82,9 @@ export default function MapComponentImpl(props: MapComponentProps) {
   const explorerMapRef = useRef<OLMap | null>(null);
 
   const [showSkeleton, setShowSkeleton] = useState(true);
-  const [areTilesLoaded, setAreTilesLoaded] = useState(false);
+  const [areMLTilesLoaded, setAreMLTilesLoaded] = useState(true);
+  const [areOLTilesLoaded, setAreOLTilesLoaded] = useState(true);
+  const areTilesLoaded = areMLTilesLoaded && areOLTilesLoaded;
 
   const viewRef = useRef<CameraOptions | null>(null);
 
@@ -234,7 +236,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
       pendingSaveView = requestIdleCallback(() => storeInitialView(view));
     });
 
-    map.m.on('data', () => setAreTilesLoaded(map.m.areTilesLoaded()));
+    map.m.on('data', () => setAreMLTilesLoaded(map.m.areTilesLoaded()));
 
     map.m.on('click', (evt) => {
       if (evt.originalEvent.altKey) {
@@ -273,9 +275,17 @@ export default function MapComponentImpl(props: MapComponentProps) {
       setExplorerMapView(oMap, viewRef.current);
     }
 
+    oMap.on('loadstart', () => {
+      setAreOLTilesLoaded(false);
+    });
+    oMap.on('loadend', () => {
+      setAreOLTilesLoaded(true);
+    });
+
     return () => {
       console.log('disconnected explorer map');
       explorerMapRef.current = null;
+      setAreOLTilesLoaded(true);
     };
   }, []);
 
