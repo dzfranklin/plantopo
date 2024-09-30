@@ -41,7 +41,6 @@ import {
   MapSearchComponent,
   SearchResult,
 } from '@/features/map/search/MapSearchComponent';
-import { centroid } from '@turf/centroid';
 import { centroidOf } from '@/geo';
 
 // TODO: Add controls
@@ -268,10 +267,14 @@ export default function MapComponentImpl(props: MapComponentProps) {
 
   const onExplorerMap = useCallback((oMap: OLMap) => {
     explorerMapRef.current = oMap;
+    console.log('connected explorer map');
 
-    if (viewRef.current) setExplorerMapView(oMap, viewRef.current);
+    if (viewRef.current) {
+      setExplorerMapView(oMap, viewRef.current);
+    }
 
     return () => {
+      console.log('disconnected explorer map');
       explorerMapRef.current = null;
     };
   }, []);
@@ -324,12 +327,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
         showSkeleton && 'bg-gray-300 animate-pulse',
       )}
     >
-      <div
-        ref={mapContainerRef}
-        className="w-full h-full max-h-full max-w-full"
-      />
-
-      <div className="absolute inset-0 -z-40 pointer-events-none">
+      <div className="absolute inset-0 pointer-events-none">
         {baseStyle.id === 'os-explorer' && (
           <OSExplorerMapComponent
             onMap={onExplorerMap}
@@ -338,6 +336,11 @@ export default function MapComponentImpl(props: MapComponentProps) {
           />
         )}
       </div>
+
+      <div
+        ref={mapContainerRef}
+        className="w-full h-full max-h-full max-w-full"
+      />
 
       <div
         className={cls(
@@ -382,14 +385,22 @@ function cameraPosition(map: ml.Map): CameraOptions {
 function syncExplorerMap(mMap: ml.Map, oMap: OLMap) {
   if (mMap.getPitch() !== 0) mMap.setPitch(0);
   setExplorerMapView(oMap, cameraPosition(mMap));
+  // TODO: Disable ol render loop and render here to avoid jank
 }
 
 function setExplorerMapView(oMap: OLMap, cam: CameraOptions) {
   // The inverse of <https://openlayers.org/en/latest/examples/mapbox-layer.html>
+
+  const oCenter = olTransform([cam.lng, cam.lat], 'EPSG:4326', 'EPSG:3857');
+  const oZoom = cam.zoom + 1;
+  const oRotation = (-cam.bearing * Math.PI) / 180;
+
   const oView = oMap.getView();
-  oView.setZoom(cam.zoom + 1);
-  oView.setRotation((-cam.bearing * Math.PI) / 180);
-  oView.setCenter(olTransform([cam.lng, cam.lat], 'EPSG:4326', 'EPSG:3857'));
+  oView.setZoom(oZoom);
+  oView.setRotation(oRotation);
+  oView.setCenter(oCenter);
+
+  oMap.renderSync();
 }
 
 export function MapDebugMenu({

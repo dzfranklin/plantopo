@@ -96,12 +96,16 @@ export function OSExplorerMapComponent({
         zoom: zoom ?? 0,
       }),
     });
+    console.log('created os explorer map');
+
+    map.renderSync();
 
     const maybeCleanupOnMap = onMap?.(map);
 
     return () => {
       maybeCleanupOnMap?.();
       map.dispose();
+      console.log('destroyed os explorer map');
     };
   }, [centerLng, centerLat, zoom, onMap, hideAttribution]);
 
