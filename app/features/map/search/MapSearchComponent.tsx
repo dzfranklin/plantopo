@@ -7,14 +7,15 @@ import {
   ComboboxOption,
   ComboboxOptions,
 } from '@headlessui/react';
-import { components } from '@/api/v1';
-import { fetchClient } from '@/api/base';
+import { components, paths } from '@/api/v1';
 import cls from '@/cls';
 import { MapComponent } from '@/features/map/MapComponent';
 import { feature, featureCollection } from '@turf/helpers';
 import * as ml from 'maplibre-gl';
 import { centroid } from '@turf/centroid';
 import { bbox } from '@turf/bbox';
+import { toast } from 'react-hot-toast';
+import { API_ENDPOINT } from '@/env';
 
 export interface MapSearchComponentProps {
   getBias?: () => { point: [number, number]; zoom: number } | void;
@@ -24,9 +25,9 @@ export interface MapSearchComponentProps {
 
 export type SearchResult = components['schemas']['SearchResult'];
 
-const submitDelay = 200;
+const submitDelay = 300;
 
-// TODO: On initial search the first highlighted is wrong on the map
+// TODO: if the results changes such that active is not in results then the first result is highlighted as if active but not activeOption. I think this is a bug in headlessui.
 
 export function MapSearchComponent(props: MapSearchComponentProps) {
   const [results, _setResults] = useState<SearchResult[] | null>(null);
@@ -50,7 +51,7 @@ export function MapSearchComponent(props: MapSearchComponentProps) {
       by={'id'}
     >
       {({ activeOption }) => (
-        <div className="relative @container">
+        <div className="relative @container max-w-[300px] data-[open]:max-w-full motion-safe:transition-[max-width]">
           <MapSearchInput {...props} setResults={setResults} />
           <MapSearchResults results={results} activeOption={activeOption} />
         </div>
@@ -60,15 +61,16 @@ export function MapSearchComponent(props: MapSearchComponentProps) {
 }
 
 function MapSearchInput(props: MapSearchComponentProps) {
-  const pendingSearch = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined,
-  );
+  const pendingSearch = useRef<
+    [ReturnType<typeof setTimeout>, AbortController] | undefined
+  >(undefined);
 
   return (
     <>
       <ComboboxInput
         className="w-full rounded-md border-0 bg-white py-1.5 pl-3 pr-10 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
         autoComplete="off"
+        spellCheck={false}
         displayValue={(item: SearchResult | null) => item?.name ?? ''}
         onChange={(evt) => {
           const text = evt.target.value.trim();
@@ -78,33 +80,30 @@ function MapSearchInput(props: MapSearchComponentProps) {
             return;
           }
 
-          const bias = props?.getBias?.();
+          const bias = props?.getBias?.() ?? undefined;
 
           if (pendingSearch.current !== undefined) {
-            clearTimeout(pendingSearch.current);
+            const [timeout, controller] = pendingSearch.current;
+            clearTimeout(timeout);
+            controller.abort();
           }
-          pendingSearch.current = setTimeout(async () => {
-            const resp = await fetchClient.GET('/geosearch', {
-              params: {
-                query: {
-                  text,
-                  biasLng: bias?.point?.[0],
-                  biasLat: bias?.point?.[1],
-                  biasZoom: bias ? Math.round(bias.zoom) : undefined,
-                  debug: true,
-                },
+
+          const controller = new AbortController();
+          const timeout = setTimeout(() => {
+            doSearch(text, bias, controller.signal).then(
+              (res) => {
+                props.setResults?.(res);
               },
-            });
-            if (resp.data) {
-              props.setResults?.(resp.data.results);
-            } else if (resp.error) {
-              console.error(resp.error);
-            }
+              (err) => handleSearchErr(err),
+            );
           }, submitDelay);
+          pendingSearch.current = [timeout, controller];
         }}
         onBlur={() => {
           if (pendingSearch.current !== undefined) {
-            clearTimeout(pendingSearch.current);
+            const [timeout, controller] = pendingSearch.current;
+            clearTimeout(timeout);
+            controller.abort();
           }
           props.setResults?.([]);
         }}
@@ -254,4 +253,41 @@ function ResultsMapComponent({
       }}
     />
   );
+}
+
+async function doSearch(
+  text: string,
+  bias: { point: [number, number]; zoom: number } | undefined,
+  signal: AbortSignal,
+): Promise<SearchResult[]> {
+  const params = new URLSearchParams();
+  params.set('text', text);
+  if (bias) {
+    params.set('biasLng', bias.point[0].toString());
+    params.set('biasLat', bias.point[1].toString());
+    params.set('biasZoom', Math.round(bias.zoom).toString());
+    params.set('debug', 'true');
+  }
+  const resp = await fetch(API_ENDPOINT + 'geosearch?' + params.toString(), {
+    signal,
+  });
+  if (resp.status !== 200) {
+    console.warn('geosearch status: ' + resp.status);
+    throw new Error('Server error');
+  }
+  const data =
+    (await resp.json()) as paths['/geosearch']['get']['responses']['200']['content']['application/json'];
+  return data.results;
+}
+
+function handleSearchErr(err: unknown) {
+  if (typeof err === 'object' && err !== null) {
+    if ('name' in err && err.name === 'AbortError') {
+      return;
+    } else if ('message' in err && typeof err.message === 'string') {
+      toast.error(err.message);
+      return;
+    }
+  }
+  toast.error('Something went wrong');
 }
