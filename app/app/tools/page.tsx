@@ -3,6 +3,11 @@ import { Layout } from '@/components/Layout';
 
 const entries: { name: string; link: string; description?: string }[] = [
   {
+    name: 'Geophotos',
+    link: '/geophotos',
+    description: 'View photos of the outdoors from around the world',
+  },
+  {
     name: 'Munro access',
     link: '/munro-access',
     description: 'Find Munros accessible via public transit in Scotland.',

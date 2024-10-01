@@ -34,6 +34,7 @@ function useNavItems(): NavItem[] {
   } else {
     return [
       { label: 'Home', url: '/' },
+      { label: 'Map', url: '/map' },
       { label: 'Tools', url: '/tools' },
     ];
   }
