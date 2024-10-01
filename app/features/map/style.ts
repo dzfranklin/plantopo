@@ -83,7 +83,11 @@ export const baseStyles: Record<BaseStyleID, BaseStyle> = {
           type: 'line',
           source: 'geoboundaries',
           'source-layer': 'adm0',
-          filter: ['!=', ['get', 'shapeGroup'], 'GBR'],
+          filter: [
+            'all',
+            ['!=', ['get', 'shapeGroup'], 'GBR'],
+            ['!=', ['get', 'shapeGroup'], 'IRL'],
+          ],
           paint: {
             // prettier-ignore
             'line-width': ['interpolate', ['linear'], ['zoom'],
@@ -91,7 +95,7 @@ export const baseStyles: Record<BaseStyleID, BaseStyle> = {
               10, 2,
               15, 3,
             ],
-            'line-color': '#a8a8a8',
+            'line-color': 'rgb(232,232,232)',
           },
         },
         {

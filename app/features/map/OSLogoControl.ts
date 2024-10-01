@@ -1,20 +1,19 @@
 import * as ml from 'maplibre-gl';
+import { createElement } from '@/domUtil';
 
 export class OSLogoControl implements ml.IControl {
-  private _container: HTMLElement | undefined;
+  private _container = createElement({
+    className: 'p-2 flex justify-end',
+    contents: createElement({
+      tag: 'img',
+      width: '90',
+      height: '24',
+      src: '/os-logo-maps.svg',
+      alt: 'Ordnance Survey maps logo',
+    }),
+  });
 
   onAdd(_map: ml.Map): HTMLElement {
-    this._container = document.createElement('div');
-    this._container.style.padding = '8px';
-
-    const el = document.createElement('img');
-    this._container.append(el);
-    el.src = '/os-logo-maps.svg';
-    el.width = 90;
-    el.height = 24;
-    el.alt = 'Ordnance Survey maps logo';
-    el.style.marginLeft = 'auto';
-
     return this._container;
   }
 
