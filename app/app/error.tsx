@@ -24,6 +24,7 @@ export default function Error({
 
   if (errCode === 401) {
     if (typeof window !== 'undefined') {
+      console.log('error handler: redirecting to login after 401');
       const currentPath = location.pathname + location.search + location.hash;
       location.replace('/login?returnTo=' + encodeURIComponent(currentPath));
     }

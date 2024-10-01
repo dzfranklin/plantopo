@@ -23,7 +23,7 @@ export function useSettingsMutation() {
 }
 
 export function useSettingsQuery() {
-  return $api.useQuery('get', '/settings');
+  return $api.useQuery('get', '/settings', undefined, { throwOnError: false });
 }
 
 export function useSettings(): Settings {
