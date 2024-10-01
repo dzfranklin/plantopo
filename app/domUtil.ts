@@ -7,7 +7,7 @@ type Options = {
   style?: CSSStyleDeclaration;
 } & Record<string, unknown>;
 
-type ChildOptions = Options | string;
+type ChildOptions = Options | HTMLElement | string;
 
 export function createElement(options: Options) {
   const node = document.createElement(options.tag || 'div');
@@ -41,6 +41,8 @@ export function createElement(options: Options) {
     for (const childOpts of contents) {
       if (typeof childOpts === 'string') {
         node.innerText = childOpts;
+      } else if (childOpts instanceof HTMLElement) {
+        node.append(childOpts);
       } else {
         const child = createElement(childOpts);
         node.append(child);

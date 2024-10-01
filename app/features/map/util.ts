@@ -6,3 +6,11 @@ export function fitBoundsFor(geojson: GeoJSON): ml.LngLatBoundsLike {
   const b = bbox(geojson);
   return [b[0], b[1], b[2], b[3]] as [number, number, number, number];
 }
+
+export function onceMapLoaded(map: ml.Map, fn: () => void) {
+  if (map.isStyleLoaded()) {
+    setTimeout(() => fn(), 0);
+  } else {
+    map.once('load', () => fn());
+  }
+}

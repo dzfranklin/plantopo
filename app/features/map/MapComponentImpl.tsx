@@ -38,6 +38,8 @@ import FrameRateControl from '@mapbox/mapbox-gl-framerate';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { LinearMeasureControl } from './LinearMeasureControl';
+import { useSettings } from '@/features/settings/useSettings';
+import { UnitSystem } from '@/features/units/format';
 
 // TODO: Add controls
 // TODO: settings-aware
@@ -78,6 +80,17 @@ export default function MapComponentImpl(props: MapComponentProps) {
 
   const defaultDebugMode = useDebugMode();
   const debugMode = props.debugMode ?? defaultDebugMode;
+  const debugModeRef = useRef(debugMode);
+  debugModeRef.current = debugMode;
+
+  const { units } = useSettings();
+  const unitsRef = useRef<UnitSystem | undefined>(units);
+  unitsRef.current = units;
+
+  const measureControlRef = useRef<LinearMeasureControl | null>(null);
+  if (!measureControlRef.current) {
+    measureControlRef.current = new LinearMeasureControl({ units });
+  }
 
   // State
 
@@ -187,25 +200,23 @@ export default function MapComponentImpl(props: MapComponentProps) {
       map.m.addControl(layersControl, 'bottom-left');
       map.m.addControl(searchControl, 'top-left');
       map.m.addControl(new ml.NavigationControl());
-      map.m.addControl(new LinearMeasureControl(), 'top-right');
-
-      const draw = new MapboxDraw();
-      map.m.addControl(draw as unknown as ml.IControl);
-      (window as any).map = map.m;
+      if (measureControlRef.current) {
+        map.m.addControl(measureControlRef.current, 'top-right');
+      }
     }
 
     if (baseStyle.id === 'os-explorer') {
       map.m.addControl(new OSLogoControl());
     }
 
-    if (debugMode) {
+    if (debugModeRef.current) {
       map.m.addControl(new FrameRateControl(), 'bottom-left');
     }
 
     // Events
 
     let maybeOnMapCleanup: MaybeCleanup;
-    map.m.on('load', () => {
+    map.m.once('load', () => {
       if (removed) return;
 
       console.log('initialized map');
@@ -255,7 +266,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
     });
 
     map.m.on('click', (evt) => {
-      if (evt.originalEvent.altKey && debugMode) {
+      if (evt.originalEvent.altKey && debugModeRef.current) {
         evt.preventDefault();
         const slop = 2;
         const query = map.m.queryRenderedFeatures([
@@ -279,7 +290,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
       map.remove();
       mapRef.current = null;
     };
-  }, [baseStyle, layersControl, interactive, searchControl, debugMode]);
+  }, [baseStyle, layersControl, interactive, searchControl]);
 
   // Sync
 
@@ -361,6 +372,10 @@ export default function MapComponentImpl(props: MapComponentProps) {
       searchResultMarker.current = undefined;
     };
   }, [searchResult]);
+
+  useEffect(() => {
+    measureControlRef.current?.setUnits(units);
+  }, [units]);
 
   return (
     <div
@@ -472,21 +487,35 @@ function MapDebugMenu({
   const [values, setValues] = useState<Record<string, unknown> | undefined>();
   return (
     <div>
-      <Button
-        onClick={() => {
-          if (!mapRef.current) {
-            setValues(undefined);
-            return;
-          }
-          const map = mapRef.current.m;
-          setValues({
-            camera: cameraPosition(map),
-            manager: mapRef.current.debugValues(),
-          });
-        }}
-      >
-        Read values
-      </Button>
+      <div className="space-x-2">
+        <Button
+          onClick={() => {
+            if (!mapRef.current) {
+              setValues(undefined);
+              return;
+            }
+            const map = mapRef.current.m;
+            setValues({
+              camera: cameraPosition(map),
+              manager: mapRef.current.debugValues(),
+            });
+          }}
+        >
+          Read values
+        </Button>
+
+        <Button
+          onClick={() => {
+            const mm = mapRef.current;
+            (window as any).mm = mm;
+            (window as any).m = mm?.m;
+            console.info('window.mm = ', mm);
+            console.info('window.m = ', mm?.m);
+          }}
+        >
+          Assign to global
+        </Button>
+      </div>
 
       <JSONView data={values} />
     </div>

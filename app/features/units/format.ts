@@ -1,5 +1,3 @@
-import { useEffect } from 'react';
-
 export type UnitSystem = 'metric' | 'customary';
 
 export function formatDuration(seconds: number): [string, string] {
@@ -26,6 +24,10 @@ export function formatDistance(
   const value = distanceInUnit(meters, unit);
   const label = distanceUnitLabel(unit);
   return [formatUnitless(value, 2), label];
+}
+
+export function formatDistanceText(meters: number, unit?: UnitSystem): string {
+  return formatDistance(meters, unit).join('');
 }
 
 export function distanceInUnit(meters: number, unit?: UnitSystem): number {
