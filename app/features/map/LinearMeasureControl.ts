@@ -121,6 +121,7 @@ export class LinearMeasureControl implements ml.IControl {
 
   onRemove(_m: ml.Map): void {
     this._cleanup.forEach((f) => f());
+    this._cleanup = [];
     this._c.remove();
   }
 
@@ -157,6 +158,7 @@ export class LinearMeasureControl implements ml.IControl {
 
   private _onClick(evt: MapMouseEvent) {
     if (!this._active || !this._m) return;
+    evt.preventDefault();
     const { lng, lat } = evt.lngLat;
     this._update((p) => [...p, [lng, lat]]);
   }
