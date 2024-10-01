@@ -33,7 +33,7 @@ export function GeophotosMap({ onSelect }: { onSelect: OnSelect }) {
 
 async function loadMap(map: ml.Map, onSelect: OnSelect): Promise<void> {
   const [markerImage, _] = await Promise.all([
-    loadImage(map, '/marker@2x.png'),
+    loadImage(map, '/sprites/marker@2x.png'),
     awaitStyleLoad(map),
   ]);
 

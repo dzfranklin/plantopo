@@ -204,7 +204,7 @@ const overlayStyleList: OverlayStyle[] = [
         source: 'default',
         'source-layer': 'default',
         layout: {
-          'icon-image': '/marker@2x.png',
+          'icon-image': '/sprites/marker@2x.png',
           'icon-size': [
             'interpolate',
             ['exponential', 2],

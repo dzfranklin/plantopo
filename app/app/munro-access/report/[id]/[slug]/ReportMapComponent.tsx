@@ -1,16 +1,15 @@
 import {
   Dispatch,
   SetStateAction,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
 } from 'react';
 import { ItineraryData, MunroList, ReportData } from './report';
-import * as ml from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { MAPBOX_TOKEN } from '@/env';
-import geojson, { Feature } from 'geojson';
+import * as ml from 'maplibre-gl';
+import geojson, { Feature, GeoJSON } from 'geojson';
 import { decode as decodePolyline } from '@mapbox/polyline';
 import { itineraryHour } from './time';
 import { timeColorScale } from './color';
@@ -18,6 +17,7 @@ import { distance as computeDistance } from '@turf/distance';
 import { length as computeLength } from '@turf/length';
 import { bezierSpline } from '@turf/bezier-spline';
 import { lineString } from '@turf/helpers';
+import { MapComponent } from '@/features/map/MapComponent';
 
 const arcCutoffKm = 30;
 const bounds: ml.LngLatBoundsLike = [
@@ -37,35 +37,19 @@ export function ReportMapComponent({
   setExpandedCluster: Dispatch<SetStateAction<number | null>>;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<ml.Map | null>(null);
 
-  const expandedClusterRef = useRef<number | null>(null);
-  useEffect(() => {
-    expandedClusterRef.current = expandedCluster;
-  }, [expandedCluster]);
+  const munrosRef = useRef<MunroList>(munros);
+  munrosRef.current = munros;
 
-  const reportFeature = useMemo(() => reportToGeoJSON(report), [report]);
+  const setExpandedClusterRef =
+    useRef<Dispatch<SetStateAction<number | null>>>(setExpandedCluster);
+  setExpandedClusterRef.current = setExpandedCluster;
 
   useLayoutEffect(() => {
     if (!ref.current) return;
     const el = ref.current;
 
-    let loaded = false;
     let isSticky = false;
-
-    const mapEl = document.createElement('div');
-    mapEl.style.width = '100%';
-    mapEl.style.height = '100%';
-    el.append(mapEl);
-
-    const map = new ml.Map({
-      container: mapEl,
-      accessToken: MAPBOX_TOKEN,
-      style: 'mapbox://styles/dzfranklin/clxlno49r00er01qq3ppk4wwo',
-      bounds,
-      maxBounds: bounds,
-    });
-    mapRef.current = map;
 
     const sizeEl = () => {
       const doc = document.documentElement;
@@ -73,14 +57,6 @@ export function ReportMapComponent({
       if (!isSticky) {
         el.style.width = rect.width + 'px';
         el.style.height = doc.clientHeight - rect.top - 40 + 'px';
-      }
-
-      if (loaded) {
-        try {
-          map.resize();
-        } catch (err) {
-          console.warn('failed to resize', err);
-        }
       }
     };
 
@@ -103,71 +79,81 @@ export function ReportMapComponent({
     window.addEventListener('resize', () => sizeEl());
     sizeEl();
 
-    map.on('load', () => {
-      loaded = true;
-      map.resize();
+    return () => {
+      resizeObs.disconnect();
+    };
+  }, []);
 
-      map.addSource('report', {
-        type: 'geojson',
-        data: updateReportGeoJSON(reportFeature, expandedClusterRef.current),
-      });
+  const reportData = useMemo(() => {
+    const reportFeature = reportToGeoJSON(report);
+    return updateReportGeoJSON(reportFeature, expandedCluster);
+  }, [expandedCluster, report]);
+  const reportDataRef = useRef<GeoJSON>(reportData);
+  reportDataRef.current = reportData;
 
-      map.addSource('munros', {
-        type: 'geojson',
-        data: munros,
-      });
+  const mapRef = useRef<ml.Map | null>(null);
 
-      map.removeLayer('natural-point-label');
+  const onMap = useCallback((map: ml.Map) => {
+    mapRef.current = map;
 
-      for (const layer of reportLayers) {
-        map.addLayer(layer);
-      }
+    map.addSource('report', {
+      type: 'geojson',
+      data: reportDataRef.current,
+    });
 
-      map.addControl(new ml.ScaleControl({ unit: 'metric' }));
+    map.addSource('munros', {
+      type: 'geojson',
+      data: munrosRef.current,
+    });
 
-      let hoveredPolygonId: number | null = null;
-      map.on('mousemove', 'to', (e) => {
-        if (e.features && e.features.length > 0) {
-          if (hoveredPolygonId !== null) {
-            map.setFeatureState(
-              { source: 'report', id: hoveredPolygonId },
-              { hover: false },
-            );
-          }
+    if (map.getLayer('Peak labels')) {
+      map.removeLayer('Peak labels');
+    }
 
-          const f = e.features[0]!;
-          hoveredPolygonId = f.id as number;
-          map.setFeatureState(
-            { source: 'report', id: hoveredPolygonId },
-            { hover: true },
-          );
-          map.getCanvas().style.cursor = 'pointer';
-        }
-      });
-      map.on('mouseleave', 'to', () => {
+    for (const layer of reportLayers) {
+      map.addLayer(layer);
+    }
+
+    let hoveredPolygonId: number | null = null;
+    map.on('mousemove', 'to', (e) => {
+      if (e.features && e.features.length > 0) {
         if (hoveredPolygonId !== null) {
           map.setFeatureState(
             { source: 'report', id: hoveredPolygonId },
             { hover: false },
           );
         }
-        hoveredPolygonId = null;
-        map.getCanvas().style.cursor = '';
-      });
-      map.on('click', 'to', (e) => {
-        const f = e?.features?.[0];
-        if (!f) return;
-        const cluster = f.properties!.cluster as number;
-        setExpandedCluster(cluster);
-      });
+
+        const f = e.features[0]!;
+        hoveredPolygonId = f.id as number;
+        map.setFeatureState(
+          { source: 'report', id: hoveredPolygonId },
+          { hover: true },
+        );
+        map.getCanvas().style.cursor = 'pointer';
+      }
+    });
+    map.on('mouseleave', 'to', () => {
+      if (hoveredPolygonId !== null) {
+        map.setFeatureState(
+          { source: 'report', id: hoveredPolygonId },
+          { hover: false },
+        );
+      }
+      hoveredPolygonId = null;
+      map.getCanvas().style.cursor = '';
+    });
+    map.on('click', 'to', (e) => {
+      const f = e?.features?.[0];
+      if (!f) return;
+      const cluster = f.properties!.cluster as number;
+      setExpandedClusterRef.current(cluster);
     });
 
     return () => {
-      resizeObs.disconnect();
-      map.remove();
-      mapEl.remove();
+      mapRef.current = null;
     };
-  }, [report, munros, reportFeature, setExpandedCluster]);
+  }, []);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -175,19 +161,18 @@ export function ReportMapComponent({
 
     const reportSrc = map.getSource('report');
     if (!reportSrc) return;
-    if (reportSrc.type !== 'geojson') throw new Error('unreachable');
-    reportSrc.setData(updateReportGeoJSON(reportFeature, expandedCluster));
-  }, [report, expandedCluster, reportFeature]);
+    (reportSrc as ml.GeoJSONSource).setData(reportData);
+  }, [reportData]);
 
   return (
-    <div
-      className="lg:sticky lg:top-[40px] max-w-full max-h-full overflow-hidden"
-      ref={ref}
-    ></div>
+    <div className="lg:sticky lg:top-[40px] overflow-hidden" ref={ref}>
+      <MapComponent onMap={onMap} initialBounds={bounds} maxBounds={bounds} />
+    </div>
   );
 }
 
 // prettier-ignore
+// @ts-expect-error the object.entries returns in the correct order
 const lineColorDef: ml.ExpressionSpecification = [
   'match',
   ['get', 'itineraryHour'],
@@ -250,14 +235,17 @@ const reportLayers: ml.LayerSpecification[] = [
         'match',
         ['get', 'mode'],
         'BUS',
-        'bus',
+        '/sprites/bus@2x.png',
         'RAIL',
-        'rail',
+        '/sprites/rail@2x.png',
         '',
       ],
       'icon-rotate': 90,
       'icon-rotation-alignment': 'map',
-      'icon-size': ['interpolate', ['linear'], ['zoom'], 7, 1, 10, 1.5],
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 7, 0.6, 10, 1],
+    },
+    paint: {
+      'icon-color': 'rgb(30 64 175)',
     },
   },
   {
@@ -321,10 +309,17 @@ const reportLayers: ml.LayerSpecification[] = [
     type: 'symbol',
     source: 'munros',
     layout: {
-      'icon-image': 'mountain',
-      'icon-size': ['interpolate', ['linear'], ['zoom'], 7, 0.7, 11, 1.3],
+      'icon-image': '/sprites/triangle@2x.png',
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 7, 0.5, 11, 1],
       'icon-allow-overlap': true,
+      'icon-ignore-placement': true,
       'icon-anchor': 'bottom',
+    },
+    paint: {
+      'icon-color': '#60351b',
+      'icon-halo-color': '#FFFFFF',
+      'icon-halo-width': 1,
+      'icon-halo-blur': 2,
     },
   },
 ];

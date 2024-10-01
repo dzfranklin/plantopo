@@ -37,7 +37,7 @@ const layers: ml.LayerSpecification[] = [
     source: sourceID,
     filter: ['==', ['get', 'type'], 'control-point'],
     layout: {
-      'icon-image': '/marker@2x.png',
+      'icon-image': '/sprites/marker@2x.png',
       'icon-size': 0.3,
       'text-field': [
         'case',

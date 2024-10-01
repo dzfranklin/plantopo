@@ -57,6 +57,8 @@ export interface MapComponentProps {
   fitGeoJSON?: boolean;
   // Whenever the map is fit to bounds this will be used
   fitOptions?: ml.FitBoundsOptions;
+  initialBounds?: ml.LngLatBoundsLike;
+  maxBounds?: ml.LngLatBoundsLike;
   initialCamera?: Pick<CameraOptions, 'lng' | 'lat' | 'zoom'> &
     Partial<CameraOptions>;
   initialBaseStyle?: BaseStyleID;
@@ -186,6 +188,11 @@ export default function MapComponentImpl(props: MapComponentProps) {
       initialView = {
         at: { bearing: 0, pitch: 0, ...propsRef.current.initialCamera },
       };
+    } else if (propsRef.current.initialBounds) {
+      initialView = {
+        fit: propsRef.current.initialBounds,
+        options: propsRef.current.fitOptions,
+      };
     } else {
       initialView = { at: loadInitialView() };
     }
@@ -197,6 +204,10 @@ export default function MapComponentImpl(props: MapComponentProps) {
       interactive,
     });
     explorerMapRef.current && syncExplorerMap(map.m, explorerMapRef.current);
+
+    if (propsRef.current.maxBounds) {
+      map.m.setMaxBounds(propsRef.current.maxBounds);
+    }
 
     map.m.getCanvas().style.outline = 'none';
 
@@ -383,6 +394,12 @@ export default function MapComponentImpl(props: MapComponentProps) {
     measureControlRef.current?.setUnits(units);
     scaleControlRef.current?.setUnits(units);
   }, [units]);
+
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.m.setMaxBounds(props.maxBounds);
+    }
+  }, [props.maxBounds]);
 
   return (
     <div
