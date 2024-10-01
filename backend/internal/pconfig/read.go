@@ -69,10 +69,6 @@ func Read() *Config {
 			Username: getEnvString("SMTP_RELAY_USERNAME"),
 			Password: getEnvString("SMTP_RELAY_PASSWORD"),
 		},
-		Mapbox: Mapbox{
-			PrivateToken: getEnvString("MAPBOX_PRIVATE_TOKEN"),
-			PublicToken:  getEnvString("MAPBOX_PUBLIC_TOKEN"),
-		},
 		Flickr: Flickr{
 			APIKey: getEnvString("FLICKR_API_KEY"),
 		},
