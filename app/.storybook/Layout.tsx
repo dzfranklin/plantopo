@@ -3,5 +3,5 @@ import { ReactNode } from 'react';
 import Providers from '../app/providers';
 
 export function Layout({ children }: { children: ReactNode }) {
-  return <Providers>{children}</Providers>;
+  return <Providers forceDebugModeAllowed={true}>{children}</Providers>;
 }

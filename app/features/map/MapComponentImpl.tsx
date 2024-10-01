@@ -1,5 +1,6 @@
 import {
   MutableRefObject,
+  RefObject,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -20,11 +21,7 @@ import {
 import { LayersControl } from './LayersControl';
 import { CameraOptions, MapManager, MapManagerInitialView } from './MapManager';
 import { fitBoundsFor } from './util';
-import {
-  InitialView,
-  loadInitialView,
-  storeInitialView,
-} from '@/features/map/initialView';
+import { InitialView, loadInitialView, storeInitialView } from './initialView';
 import deepEqual from 'deep-equal';
 import { OSExplorerMapComponent } from './OSExplorerMapComponent';
 import OLMap from 'ol/Map';
@@ -33,15 +30,14 @@ import { OSLogoControl } from './OSLogoControl';
 import { usePortalControl } from './PortalControl';
 import { Button } from '@/components/button';
 import JSONView from '@/components/JSONView';
-import {
-  InspectFeature,
-  InspectFeaturesDialog,
-} from '@/features/map/InspectFeaturesDialog';
-import {
-  MapSearchComponent,
-  SearchResult,
-} from '@/features/map/search/MapSearchComponent';
+import { InspectFeature, InspectFeaturesDialog } from './InspectFeaturesDialog';
+import { MapSearchComponent, SearchResult } from './search/MapSearchComponent';
 import { centroidOf } from '@/geo';
+import { useDebugMode } from '@/hooks/debugMode';
+import FrameRateControl from '@mapbox/mapbox-gl-framerate';
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import { LinearMeasureControl } from './LinearMeasureControl';
 
 // TODO: Add controls
 // TODO: settings-aware
@@ -62,10 +58,15 @@ export interface MapComponentProps {
     Partial<CameraOptions>;
   initialBaseStyle?: BaseStyleID;
   interactive?: boolean;
+  debugMode?: boolean;
 }
 
 export type MaybeCleanup = (() => void) | void;
 export type OnMap = (map: ml.Map) => MaybeCleanup;
+
+(MapboxDraw.constants.classes.CONTROL_BASE as any) = 'maplibregl-ctrl';
+(MapboxDraw.constants.classes.CONTROL_PREFIX as any) = 'maplibregl-ctrl-';
+(MapboxDraw.constants.classes.CONTROL_GROUP as any) = 'maplibregl-ctrl-group';
 
 export default function MapComponentImpl(props: MapComponentProps) {
   // Inputs
@@ -75,6 +76,9 @@ export default function MapComponentImpl(props: MapComponentProps) {
 
   const interactive = props.interactive ?? true;
 
+  const defaultDebugMode = useDebugMode();
+  const debugMode = props.debugMode ?? defaultDebugMode;
+
   // State
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -82,10 +86,9 @@ export default function MapComponentImpl(props: MapComponentProps) {
   const explorerMapRef = useRef<OLMap | null>(null);
 
   const [showSkeleton, setShowSkeleton] = useState(true);
-  const [areMLTilesLoaded, setAreMLTilesLoaded] = useState(true);
-  const [areOLTilesLoaded, setAreOLTilesLoaded] = useState(true);
-  const areTilesLoaded = areMLTilesLoaded && areOLTilesLoaded;
 
+  const tilesLoadingIndicator = useRef<HTMLDivElement>(null);
+  const explorerTilesLoaded = useRef(true);
   const viewRef = useRef<CameraOptions | null>(null);
 
   const [baseStyle, _setBaseStyle] = useState<BaseStyle>(
@@ -112,7 +115,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
   // Controls
 
   const [layersPortal, layersControl] = usePortalControl(
-    <div className="hidden @[300px]:block h-[73px] w-[73px] pb-[10px] pl-[10px] pointer-events-auto">
+    <div className="hidden @[300px]:block h-[63px] w-[63px] m-[10px] pointer-events-auto">
       <LayersControl
         activeBase={baseStyle}
         setActiveBase={setBaseStyle}
@@ -176,16 +179,27 @@ export default function MapComponentImpl(props: MapComponentProps) {
     });
     explorerMapRef.current && syncExplorerMap(map.m, explorerMapRef.current);
 
+    map.m.getCanvas().style.outline = 'none';
+
     // Controls
 
     if (interactive) {
       map.m.addControl(layersControl, 'bottom-left');
       map.m.addControl(searchControl, 'top-left');
       map.m.addControl(new ml.NavigationControl());
+      map.m.addControl(new LinearMeasureControl(), 'top-right');
+
+      const draw = new MapboxDraw();
+      map.m.addControl(draw as unknown as ml.IControl);
+      (window as any).map = map.m;
     }
 
     if (baseStyle.id === 'os-explorer') {
       map.m.addControl(new OSLogoControl());
+    }
+
+    if (debugMode) {
+      map.m.addControl(new FrameRateControl(), 'bottom-left');
     }
 
     // Events
@@ -236,10 +250,12 @@ export default function MapComponentImpl(props: MapComponentProps) {
       pendingSaveView = requestIdleCallback(() => storeInitialView(view));
     });
 
-    map.m.on('data', () => setAreMLTilesLoaded(map.m.areTilesLoaded()));
+    map.m.on('data', () => {
+      updateTilesLoading(tilesLoadingIndicator, map.m, explorerTilesLoaded);
+    });
 
     map.m.on('click', (evt) => {
-      if (evt.originalEvent.altKey) {
+      if (evt.originalEvent.altKey && debugMode) {
         evt.preventDefault();
         const slop = 2;
         const query = map.m.queryRenderedFeatures([
@@ -263,7 +279,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
       map.remove();
       mapRef.current = null;
     };
-  }, [baseStyle, layersControl, interactive, searchControl]);
+  }, [baseStyle, layersControl, interactive, searchControl, debugMode]);
 
   // Sync
 
@@ -276,16 +292,32 @@ export default function MapComponentImpl(props: MapComponentProps) {
     }
 
     oMap.on('loadstart', () => {
-      setAreOLTilesLoaded(false);
+      explorerTilesLoaded.current = false;
+      updateTilesLoading(
+        tilesLoadingIndicator,
+        mapRef.current?.m ?? null,
+        explorerTilesLoaded,
+      );
     });
+
     oMap.on('loadend', () => {
-      setAreOLTilesLoaded(true);
+      explorerTilesLoaded.current = true;
+      updateTilesLoading(
+        tilesLoadingIndicator,
+        mapRef.current?.m ?? null,
+        explorerTilesLoaded,
+      );
     });
 
     return () => {
       console.log('disconnected explorer map');
       explorerMapRef.current = null;
-      setAreOLTilesLoaded(true);
+      explorerTilesLoaded.current = true;
+      updateTilesLoading(
+        tilesLoadingIndicator,
+        mapRef.current?.m ?? null,
+        explorerTilesLoaded,
+      );
     };
   }, []);
 
@@ -353,12 +385,15 @@ export default function MapComponentImpl(props: MapComponentProps) {
       />
 
       <div
+        ref={tilesLoadingIndicator}
         className={cls(
           'absolute left-0 top-0 right-0 transition-opacity pointer-events-none',
-          areTilesLoaded ? 'opacity-0' : 'opacity-100',
         )}
+        style={{ opacity: '0' }}
       >
-        <TilesLoadingIndicator />
+        <div className="h-1 w-full bg-blue-200 overflow-hidden">
+          <div className="animate-[progress_1.5s_infinite_linear] w-full h-full bg-blue-500 origin-left-right"></div>
+        </div>
       </div>
 
       {interactive && layersPortal}
@@ -369,14 +404,6 @@ export default function MapComponentImpl(props: MapComponentProps) {
         onClose={() => setInspectFeatures([])}
         features={inspectFeatures}
       />
-    </div>
-  );
-}
-
-function TilesLoadingIndicator() {
-  return (
-    <div className="h-1 w-full bg-blue-200 overflow-hidden">
-      <div className="animate-[progress_1.5s_infinite_linear] w-full h-full bg-blue-500 origin-left-right"></div>
     </div>
   );
 }
@@ -412,7 +439,32 @@ function setExplorerMapView(oMap: OLMap, cam: CameraOptions) {
   oMap.renderSync();
 }
 
-export function MapDebugMenu({
+function updateTilesLoading(
+  indicator: RefObject<HTMLDivElement>,
+  mMap: ml.Map | null,
+  explorerIsLoaded: MutableRefObject<boolean>,
+) {
+  if (!indicator.current) return;
+
+  let isLoading = false;
+  if (mMap && !mMap.areTilesLoaded()) {
+    isLoading = true;
+  }
+  if (!explorerIsLoaded.current) {
+    isLoading = true;
+  }
+
+  const prev = !(indicator.current.style.opacity === '0');
+  if (isLoading != prev) {
+    if (isLoading) {
+      indicator.current.style.opacity = '100';
+    } else {
+      indicator.current.style.opacity = '0';
+    }
+  }
+}
+
+function MapDebugMenu({
   mapRef,
 }: {
   mapRef: MutableRefObject<MapManager | null>;

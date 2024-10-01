@@ -78,7 +78,13 @@ function getQueryClient() {
   }
 }
 
-export default function Providers({ children }: { children: ReactNode }) {
+export default function Providers({
+  children,
+  forceDebugModeAllowed,
+}: {
+  children: ReactNode;
+  forceDebugModeAllowed?: boolean;
+}) {
   // NOTE: Avoid useState when initializing the query client if you don't
   //       have a suspense boundary between this and the code that may
   //       suspend because React will throw away the client on the initial
@@ -88,7 +94,7 @@ export default function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ReactQueryDevtools initialIsOpen={false} />
-      <DebugModeProvider>
+      <DebugModeProvider forceAllowed={forceDebugModeAllowed}>
         <Toaster position="top-center" />
         {children}
       </DebugModeProvider>

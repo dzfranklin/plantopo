@@ -10,8 +10,13 @@ import React, {
 
 const ctx = createContext(false);
 
-export function DebugModeProvider({ children }: { children: React.ReactNode }) {
-  const [allowed, setAllowed] = useState(false);
+export function DebugModeProvider(props: {
+  children: React.ReactNode;
+  forceAllowed?: boolean;
+}) {
+  const [allowedState, setAllowed] = useState(false);
+  const allowed = props.forceAllowed || allowedState;
+
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
@@ -40,7 +45,7 @@ export function DebugModeProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ctx.Provider value={enabled}>
-      {children}
+      {props.children}
 
       {allowed && (
         <div className="fixed left-0.5 top-0.5 z-50 w-7 h-4">

@@ -11,6 +11,7 @@ import cls from '@/cls';
 import { BugAntIcon } from '@heroicons/react/16/solid';
 import { Checkbox, CheckboxField } from '@/components/checkbox';
 import { Label } from '@headlessui/react';
+import { useDebugMode } from '@/hooks/debugMode';
 
 const baseStylesByCountry = Object.values(baseStyles).reduce((acc, item) => {
   const existing = acc.get(item.country);
@@ -67,7 +68,7 @@ function LayersDialog({
   isOpen,
   onClose,
 }: LayersControlProps & { isOpen: boolean; onClose: () => void }) {
-  const [showDebugMenu, setShowDebugMenu] = useState(false);
+  const debugMode = useDebugMode();
 
   return (
     <Dialog open={isOpen} onClose={() => onClose()} className="relative">
@@ -115,7 +116,7 @@ function LayersDialog({
           </ul>
         </div>
 
-        {showDebugMenu && (
+        {debugMode && (
           <div>
             <p className="font-semibold mb-4">Debug menu</p>
             {debugMenu}
@@ -128,14 +129,6 @@ function LayersDialog({
           Done
         </Button>
       </Dialog.Actions>
-
-      <div
-        className="absolute left-4 bottom-4"
-        onClick={() => setShowDebugMenu((p) => !p)}
-      >
-        <span className="sr-only">toggle debug menu</span>
-        <BugAntIcon width="16px" height="16px" />
-      </div>
     </Dialog>
   );
 }

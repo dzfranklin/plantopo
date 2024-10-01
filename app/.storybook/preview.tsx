@@ -121,7 +121,6 @@ const preview: Preview = {
   decorators: [
     (Story) => (
       <Layout>
-        {/*<ResetQueries />*/}
         <Story />
       </Layout>
     ),
