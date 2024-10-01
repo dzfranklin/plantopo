@@ -2,7 +2,7 @@ import type {
   DataDrivenPropertyValueSpecification,
   LayerSpecification,
   SourceSpecification,
-} from 'mapbox-gl';
+} from 'maplibre-gl';
 
 export const geophotosSource: SourceSpecification = {
   type: 'vector',
@@ -23,7 +23,7 @@ export const geophotosLayers: LayerSpecification[] = [
     source: 'geophotos',
     'source-layer': 'default',
     layout: {
-      'icon-image': 'pmarker',
+      'icon-image': '/sprites/marker@2x.png',
       'icon-size': [
         'interpolate',
         ['exponential', 2],
