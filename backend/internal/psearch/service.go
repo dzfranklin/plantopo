@@ -97,7 +97,7 @@ func (s *Service) Query(ctx context.Context, query Query) ([]Result, error) {
 	fallbackResults, err := s.fallbackSource.Query(ctx, query)
 	if err != nil {
 		l.Error("failed to query fallback", "error", err)
-		return results, err
+		return results, nil
 	}
 	fallbackSearchTime := time.Since(fallbackStart)
 
