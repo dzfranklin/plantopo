@@ -62,6 +62,7 @@ export interface MapComponentProps {
   initialCamera?: Pick<CameraOptions, 'lng' | 'lat' | 'zoom'> &
     Partial<CameraOptions>;
   initialBaseStyle?: BaseStyleID;
+  minimal?: boolean;
   interactive?: boolean;
   debugMode?: boolean;
 }
@@ -220,7 +221,9 @@ export default function MapComponentImpl(props: MapComponentProps) {
       measureControlRef.current && map.m.addControl(measureControlRef.current);
     }
 
-    scaleControlRef.current && map.m.addControl(scaleControlRef.current);
+    if (!props.minimal) {
+      scaleControlRef.current && map.m.addControl(scaleControlRef.current);
+    }
 
     if (baseStyle.id === 'os-explorer') {
       map.m.addControl(new OSLogoControl());
@@ -307,7 +310,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
       map.remove();
       mapRef.current = null;
     };
-  }, [baseStyle, layersControl, interactive, searchControl]);
+  }, [baseStyle, layersControl, searchControl, interactive, props.minimal]);
 
   // Sync
 

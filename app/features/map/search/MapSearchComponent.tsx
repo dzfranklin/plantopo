@@ -244,6 +244,7 @@ function ResultsMapComponent({
     <MapComponent
       initialBaseStyle="topo"
       interactive={false}
+      minimal={true}
       onMap={(map) => {
         mapRef.current = map;
         setMap(map, results, activeOption);
