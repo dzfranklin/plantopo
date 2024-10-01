@@ -50,6 +50,7 @@ export class MapManager {
 
     if (props.baseStyle.id === 'os-explorer') {
       opts.pitch = opts.minPitch = opts.maxPitch = 0;
+      opts.minZoom = 3; // at very low zoom the projections don't match
     }
 
     this.m = new ml.Map(opts);
