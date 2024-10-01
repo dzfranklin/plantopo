@@ -40,11 +40,12 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { LinearMeasureControl } from './LinearMeasureControl';
 import { useSettings } from '@/features/settings/useSettings';
 import { UnitSystem } from '@/features/units/format';
+import { ScaleControl } from '@/features/map/ScaleControl';
 
-// TODO: Add controls
-// TODO: settings-aware
-// TODO: snap to zoom for raster basestyle?
-// TODO: if stored baseStyle is a limited region and you load a map outside the region you should use the default
+/* Features I wish I could figure out how to realistically implement:
+- Map tiles that dynamically change units based on settings (including contour lines)
+- Snap to zoom levels that map the OS explorer reprojected raster look good
+ */
 
 export type { CameraOptions } from './MapManager';
 
@@ -90,6 +91,11 @@ export default function MapComponentImpl(props: MapComponentProps) {
   const measureControlRef = useRef<LinearMeasureControl | null>(null);
   if (!measureControlRef.current) {
     measureControlRef.current = new LinearMeasureControl({ units });
+  }
+
+  const scaleControlRef = useRef<ScaleControl | null>(null);
+  if (!scaleControlRef.current) {
+    scaleControlRef.current = new ScaleControl({ units });
   }
 
   // State
@@ -200,10 +206,10 @@ export default function MapComponentImpl(props: MapComponentProps) {
       map.m.addControl(layersControl, 'bottom-left');
       map.m.addControl(searchControl, 'top-left');
       map.m.addControl(new ml.NavigationControl());
-      if (measureControlRef.current) {
-        map.m.addControl(measureControlRef.current, 'top-right');
-      }
+      measureControlRef.current && map.m.addControl(measureControlRef.current);
     }
+
+    scaleControlRef.current && map.m.addControl(scaleControlRef.current);
 
     if (baseStyle.id === 'os-explorer') {
       map.m.addControl(new OSLogoControl());
@@ -375,6 +381,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
 
   useEffect(() => {
     measureControlRef.current?.setUnits(units);
+    scaleControlRef.current?.setUnits(units);
   }, [units]);
 
   return (

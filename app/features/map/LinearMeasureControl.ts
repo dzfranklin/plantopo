@@ -1,6 +1,6 @@
 import * as ml from 'maplibre-gl';
 import { createElement } from '@/domUtil';
-import { MapMouseEvent } from 'mapbox-gl';
+import { ControlPosition, MapMouseEvent } from 'mapbox-gl';
 import { featureCollection, lineString, point } from '@turf/helpers';
 import { Geometry } from 'geojson';
 import { onceMapLoaded } from '@/features/map/util';
@@ -123,6 +123,10 @@ export class LinearMeasureControl implements ml.IControl {
     this._cleanup.forEach((f) => f());
     this._cleanup = [];
     this._c.remove();
+  }
+
+  getDefaultPosition(): ControlPosition {
+    return 'top-right';
   }
 
   setUnits(unit?: UnitSystem) {

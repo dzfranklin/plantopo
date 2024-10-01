@@ -4,7 +4,7 @@ type Options = {
   tag?: string;
   className?: string;
   contents?: ChildOptions | ChildOptions[];
-  style?: CSSStyleDeclaration;
+  style?: Partial<CSSStyleDeclaration>;
 } & Record<string, unknown>;
 
 type ChildOptions = Options | HTMLElement | string;
