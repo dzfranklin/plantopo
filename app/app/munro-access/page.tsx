@@ -1,20 +1,18 @@
 import { Layout } from '@/components/Layout';
-import dynamic from 'next/dynamic';
 import { fetchClient } from '@/api/server';
 import { ReportMeta } from '@/app/munro-access/report/[id]/[slug]/report';
 import Link from 'next/link';
 import { DateTime } from 'luxon';
-import Skeleton from '@/components/Skeleton';
 
-const RequestReportComponent = dynamic(
-  () => import('./RequestReportComponent'),
-  { ssr: false, loading: () => <Skeleton height={200} /> },
-);
+// const RequestReportComponent = dynamic(
+//   () => import('./RequestReportComponent'),
+//   { ssr: false, loading: () => <Skeleton height={200} /> },
+// );
 
 export default async function Page() {
   return (
     <Layout pageTitle="Munro Access">
-      <RequestReportComponent />
+      {/*<RequestReportComponent />*/}
       <PregeneratedReportsComponent />
     </Layout>
   );
