@@ -1,6 +1,5 @@
 import * as ml from 'maplibre-gl';
 import { createElement } from '@/domUtil';
-import { ControlPosition, MapMouseEvent } from 'mapbox-gl';
 import { featureCollection, lineString, point } from '@turf/helpers';
 import { Geometry } from 'geojson';
 import { onceMapLoaded } from '@/features/map/util';
@@ -88,7 +87,7 @@ export class LinearMeasureControl implements ml.IControl {
     this._cleanup.push(() => (this._m = null));
 
     onceMapLoaded(m, () => {
-      const clickHandler = (evt: MapMouseEvent) => this._onClick(evt);
+      const clickHandler = (evt: ml.MapMouseEvent) => this._onClick(evt);
       m.on('click', clickHandler);
       this._cleanup.push(() => m.off('click', clickHandler));
 
@@ -125,7 +124,7 @@ export class LinearMeasureControl implements ml.IControl {
     this._c.remove();
   }
 
-  getDefaultPosition(): ControlPosition {
+  getDefaultPosition(): ml.ControlPosition {
     return 'top-right';
   }
 
@@ -160,7 +159,7 @@ export class LinearMeasureControl implements ml.IControl {
     }
   }
 
-  private _onClick(evt: MapMouseEvent) {
+  private _onClick(evt: ml.MapMouseEvent) {
     if (!this._active || !this._m) return;
     evt.preventDefault();
     const { lng, lat } = evt.lngLat;
