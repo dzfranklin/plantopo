@@ -414,6 +414,24 @@ const overlayStyleList: OverlayStyle[] = [
       },
     ],
   },
+  {
+    id: 'global_human_settlement_urbanisation',
+    name: 'Degree of Urbanisation (1km resolution)',
+    sources: {
+      default: {
+        type: 'raster',
+        url: 'https://pmtiles.plantopo.com/global_human_settlement_urbanisation_1km_colors.json',
+        tileSize: 512,
+      },
+    },
+    layers: [
+      {
+        id: 'raster',
+        type: 'raster',
+        source: 'default',
+      },
+    ],
+  },
 ];
 
 export const overlayStyles: Record<string, OverlayStyle> =
