@@ -59,8 +59,7 @@ export interface MapComponentProps {
   fitOptions?: ml.FitBoundsOptions;
   initialBounds?: ml.LngLatBoundsLike;
   maxBounds?: ml.LngLatBoundsLike;
-  initialCamera?: Pick<CameraOptions, 'lng' | 'lat' | 'zoom'> &
-    Partial<CameraOptions>;
+  initialCamera?: InitialCamera;
   initialBaseStyle?: BaseStyleID;
   minimal?: boolean;
   interactive?: boolean;
@@ -69,6 +68,8 @@ export interface MapComponentProps {
 
 export type MaybeCleanup = (() => void) | void;
 export type OnMap = (map: ml.Map) => MaybeCleanup;
+export type InitialCamera = Pick<CameraOptions, 'lng' | 'lat' | 'zoom'> &
+  Partial<CameraOptions>;
 
 (MapboxDraw.constants.classes.CONTROL_BASE as any) = 'maplibregl-ctrl';
 (MapboxDraw.constants.classes.CONTROL_PREFIX as any) = 'maplibregl-ctrl-';

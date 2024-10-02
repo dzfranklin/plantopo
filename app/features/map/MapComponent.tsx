@@ -1,4 +1,11 @@
 import dynamic from 'next/dynamic';
+export type {
+  CameraOptions,
+  MapComponentProps,
+  MaybeCleanup,
+  OnMap,
+  InitialCamera,
+} from './MapComponentImpl';
 
 export const MapComponent = dynamic(() => import('./MapComponentImpl'), {
   loading: () => (
