@@ -44,6 +44,7 @@ import { ScaleControl } from '@/features/map/ScaleControl';
 
 /* Features I wish I could figure out how to realistically implement:
 - Map tiles that dynamically change units based on settings (including contour lines)
+     - MapTiler has a tileset with contours in meters and ft: https://cloud.maptiler.com/tiles/contours-v2/
 - Snap to zoom levels that map the OS explorer reprojected raster look good
  */
 
