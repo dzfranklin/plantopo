@@ -1,9 +1,13 @@
 set -euox pipefail
 
-#curl "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/CGAZ/geoBoundariesCGAZ_ADM0.geojson" \
-#  -L --fail -o /tmp/geoboundaries_adm0.json
-#
+release="CGAZ/geoBoundariesCGAZ_ADM0.geojson"
+
+curl "https://github.com/wmgeolab/geoBoundaries/raw/main/releaseData/$release" \
+  -L --fail -o /tmp/geoboundaries_adm0.json
+
 tippecanoe --output /tmp/geoboundaries.pmtiles --force \
+  --name "Geoboundaries" --description "$release" \
+  --attribution '<a href="https://www.geoboundaries.org/">geoBoundaries</a>' \
   --generate-ids \
   -zg \
   -L adm0:/tmp/geoboundaries_adm0.json

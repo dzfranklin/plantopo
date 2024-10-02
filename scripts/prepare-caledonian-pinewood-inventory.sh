@@ -12,6 +12,8 @@ ogr2ogr -t_srs EPSG:4326 -f GEOJSON \
   /tmp/caledonian_pinewood_inventory_wgs84.json /tmp/caledonian_pinewood_inventory.json
 
 tippecanoe --output /tmp/caledonian_pinewood_inventory.pmtiles --force \
+  --name "Caledonian Pinewood Inventory (Scotland)" --description "ogc.nature.scot" \
+  --attribution "<a href=\"https://www.data.gov.uk/dataset/9fe00904-da11-44f7-97c3-f4e617e34ec7/caledonian-pinewood-inventory\" target=\"_blank\">Scottish Forestry</a>" \
   --layer=default \
   --generate-ids \
   --drop-smallest-as-needed \

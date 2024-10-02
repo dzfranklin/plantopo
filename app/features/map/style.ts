@@ -36,7 +36,6 @@ const defaultGlyphs =
 const geoboundariesSource: ml.SourceSpecification = {
   type: 'vector',
   url: 'https://pmtiles.plantopo.com/geoboundaries.json',
-  attribution: '<a href="https://www.geoboundaries.org/">geoBoundaries</a>',
 };
 
 export const baseStyles: Record<BaseStyleID, BaseStyle> = {
@@ -235,8 +234,6 @@ const overlayStyleList: OverlayStyle[] = [
       default: {
         type: 'vector',
         url: 'https://pmtiles.plantopo.com/scot_core_paths.json',
-        attribution:
-          '<a href="https://data.spatialhub.scot/dataset/core_paths-is" target="_blank">Improvement Service</a> under <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank">OGL</a>',
       },
     },
     layers: [
@@ -270,8 +267,6 @@ const overlayStyleList: OverlayStyle[] = [
       default: {
         type: 'vector',
         url: 'https://pmtiles.plantopo.com/scot_wild_land_areas_2014.json',
-        attribution:
-          '<a href="https://www.nature.scot/professional-advice/landscape/landscape-policy-and-guidance/landscape-policy-wild-land" target="_blank">NatureScot</a>',
       },
     },
     layers: [
@@ -314,8 +309,6 @@ const overlayStyleList: OverlayStyle[] = [
       default: {
         type: 'vector',
         url: 'https://pmtiles.plantopo.com/caledonian_pinewood_inventory.json',
-        attribution:
-          '<a href="https://www.data.gov.uk/dataset/9fe00904-da11-44f7-97c3-f4e617e34ec7/caledonian-pinewood-inventory" target="_blank">Scottish Forestry</a>',
       },
     },
     layers: [
@@ -373,8 +366,6 @@ const overlayStyleList: OverlayStyle[] = [
       default: {
         type: 'vector',
         url: 'https://pmtiles.plantopo.com/bgs_mining_hazard_ex_coal.json',
-        attribution:
-          '<a href="https://osdatahub.os.uk/downloads/open/GB-Hex-1km-Mining-Haz" target="_blank">British Geological Survey</a>',
       },
     },
     layers: [

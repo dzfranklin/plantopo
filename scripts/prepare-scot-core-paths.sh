@@ -7,11 +7,12 @@ curl "https://geo.spatialhub.scot/geoserver/sh_cpth/wfs?service=WFS&authkey=eyJ0
 ogr2ogr -t_srs EPSG:4326 -f GEOJSON /tmp/core_paths_wgs84.json /tmp/core_paths.json
 
 tippecanoe --output /tmp/core_paths.pmtiles --force \
+  --name "Core Paths (Scotland)" --description "geo.spatialhub.scot" \
+  --attribution "<a href=\"https://data.spatialhub.scot/dataset/core_paths-is\" target=\"_blank\">Improvement Service</a>" \
   --layer=default \
   --generate-ids \
   --drop-smallest-as-needed \
   --base-zoom=g \
-  --minimum-zoom=0 --maximum-zoom=14 \
   /tmp/core_paths_wgs84.json
 
 mc cp /tmp/core_paths.pmtiles df/pmtiles-public/scot_core_paths.pmtiles
