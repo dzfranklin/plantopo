@@ -115,16 +115,6 @@ spec:
                 secretKeyRef:
                   name: sendgrid-smtp
                   key: password
-            - name: MAPBOX_PRIVATE_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: mapbox
-                  key: private-token
-            - name: MAPBOX_PUBLIC_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: mapbox
-                  key: public-token
             - name: FLICKR_API_KEY
               valueFrom:
                 secretKeyRef:
