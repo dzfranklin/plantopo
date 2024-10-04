@@ -8,7 +8,6 @@ export default function Page() {
     typeof location !== 'undefined'
       ? parseInitialCamera(location.hash)
       : undefined;
-  console.log(initialCamera);
 
   return (
     <Layout fullBleed={true}>
