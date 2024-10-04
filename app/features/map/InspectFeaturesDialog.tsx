@@ -5,6 +5,7 @@ import JSONView from '@/components/JSONView';
 import * as ml from 'maplibre-gl';
 
 export interface InspectFeature {
+  id: string | number | undefined;
   rawSource: string;
   rawSourceLayer: string | undefined;
   layer: ml.LayerSpecification | undefined;
@@ -56,14 +57,17 @@ function InspectFeature({ feature }: { feature: InspectFeature }) {
   return (
     <div>
       <table className="w-full max-w-full table-fixed">
-        <InspectFeaturePropRow label="Source" value={sourceName} />
-        <InspectFeaturePropRow
-          label="Source layer"
-          value={feature.rawSourceLayer}
-        />
-        {Object.entries(feature.properties).map(([key, value]) => (
-          <InspectFeaturePropRow key={key} label={key} value={value} />
-        ))}
+        <tbody>
+          <InspectFeaturePropRow label="ID" value={feature.id} />
+          <InspectFeaturePropRow label="Source" value={sourceName} />
+          <InspectFeaturePropRow
+            label="Source layer"
+            value={feature.rawSourceLayer}
+          />
+          {Object.entries(feature.properties).map(([key, value]) => (
+            <InspectFeaturePropRow key={key} label={key} value={value} />
+          ))}
+        </tbody>
       </table>
 
       {feature.layer && (

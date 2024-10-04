@@ -297,6 +297,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
         ]);
         setInspectFeatures(
           query.map((f) => ({
+            id: f.id,
             rawSource: f.source,
             rawSourceLayer: f.sourceLayer,
             properties: f.properties,
