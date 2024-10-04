@@ -36,6 +36,10 @@ export default function Page() {
 }
 
 function parseInitialCamera(hash: string): InitialCamera | undefined {
+  if (location.hash === '' || location.hash === '#') {
+    return undefined;
+  }
+
   const parts = hash
     .replace(/^#/, '')
     .split('/')
