@@ -1,10 +1,11 @@
 import * as ml from 'maplibre-gl';
 import { createElement } from '@/domUtil';
-import { featureCollection, lineString, point } from '@turf/helpers';
-import { Geometry } from 'geojson';
+import { feature, featureCollection, lineString, point } from '@turf/helpers';
+import { Geometry, LineString, Position } from 'geojson';
 import { onceMapLoaded } from '@/features/map/util';
 import { metersBetween } from '@/geo';
 import { formatDistanceText, UnitSystem } from '@/features/units/format';
+import { SnapGraph } from '@/features/map/snap/SnapGraph';
 
 const prefix = 'pLinearMeasureControl:';
 const sourceID = prefix + 'source';
@@ -27,7 +28,17 @@ const layers: ml.LayerSpecification[] = [
     paint: {
       'line-width': 2.5,
       'line-color': 'rgb(249 115 22)',
-      'line-dasharray': [1, 1],
+    },
+  },
+  {
+    id: prefix + 'activeSnap',
+    type: 'line',
+    source: sourceID,
+    filter: ['==', ['get', 'type'], 'activeSnap'],
+    paint: {
+      'line-width': 2.5,
+      'line-color': 'rgb(249 115 22)',
+      'line-opacity': 0.6,
     },
   },
   {
@@ -87,15 +98,20 @@ export class LinearMeasureControl implements ml.IControl {
     this._cleanup.push(() => (this._m = null));
 
     onceMapLoaded(m, () => {
-      const clickHandler = (evt: ml.MapMouseEvent) => this._onClick(evt);
-      m.on('click', clickHandler);
-      this._cleanup.push(() => m.off('click', clickHandler));
+      m.on('click', this._onClick);
+      this._cleanup.push(() => m.off('click', this._onClick));
 
-      const keypressHandler = (evt: KeyboardEvent) => this._onKeyPress(evt);
-      window.addEventListener('keypress', keypressHandler);
+      // the keypress event doesn't fire on escape
+      window.addEventListener('keyup', this._onKeyUp);
       this._cleanup.push(() =>
-        window.removeEventListener('keypress', keypressHandler),
+        window.removeEventListener('keyup', this._onKeyUp),
       );
+
+      m.on('mousemove', this._onMouseMove);
+      this._cleanup.push(() => m.off('mousemove', this._onMouseMove));
+
+      m.on('render', this._onRender);
+      this._cleanup.push(() => m.off('render', this._onRender));
 
       m.addSource(sourceID, {
         type: 'geojson',
@@ -134,7 +150,9 @@ export class LinearMeasureControl implements ml.IControl {
   }
 
   private _active = false;
-  private _points: [number, number][] = [];
+  private _activeSnap: LineString | null = null;
+  private _points: Position[] = [];
+  private _graph: SnapGraph | null = null;
 
   private _prevCursor: string | undefined;
 
@@ -145,7 +163,10 @@ export class LinearMeasureControl implements ml.IControl {
 
       this._b.classList.remove(activeClass);
 
+      this._graph = null;
+
       this._points = [];
+      this._activeSnap = null;
       this._update(() => []);
 
       this._m.getCanvas().style.cursor = this._prevCursor ?? '';
@@ -154,29 +175,58 @@ export class LinearMeasureControl implements ml.IControl {
 
       this._b.classList.add(activeClass);
 
+      this._graph = SnapGraph.fromRenderedFeatures(this._m);
+
       this._prevCursor = this._m.getCanvas().style.cursor;
       this._m.getCanvas().style.cursor = 'crosshair';
     }
   }
 
-  private _onClick(evt: ml.MapMouseEvent) {
+  private _onClick = (evt: ml.MapMouseEvent) => {
     if (!this._active || !this._m) return;
     evt.preventDefault();
-    const { lng, lat } = evt.lngLat;
-    this._update((p) => [...p, [lng, lat]]);
-  }
+    const pt = evt.lngLat;
+    const snapped = this._findSnap(pt);
+    if (snapped) {
+      this._update((p) => [...p, ...snapped.coordinates]);
+    } else {
+      this._update((p) => [...p, [pt.lng, pt.lat]]);
+    }
+  };
 
-  private _onKeyPress(evt: KeyboardEvent) {
-    if (evt.key === 'Enter' && !evt.altKey && !evt.ctrlKey && !evt.metaKey) {
+  private _onKeyUp = (evt: KeyboardEvent) => {
+    const anyModifier = evt.altKey || evt.ctrlKey || evt.metaKey;
+    if ((evt.key === 'Enter' || evt.key === 'Escape') && !anyModifier) {
       if (this._active) {
         evt.preventDefault();
         evt.stopPropagation();
         this._toggle();
       }
     }
+  };
+
+  private _onMouseMove = (evt: ml.MapMouseEvent) => {
+    if (!this._active) return;
+    this._activeSnap = this._findSnap(evt.lngLat);
+    this._update();
+  };
+
+  private _onRender = () => {
+    if (this._active && this._m) {
+      this._graph = SnapGraph.fromRenderedFeatures(this._m);
+    }
+  };
+
+  private _findSnap(to: ml.LngLat): LineString | null {
+    if (!this._graph) return null;
+
+    const prev = this._points.at(-1);
+    if (!prev) return null;
+
+    return this._graph.search(prev, [to.lng, to.lat]);
   }
 
-  private _update(f?: (prev: [number, number][]) => [number, number][]) {
+  private _update(f?: (prev: Position[]) => Position[]) {
     if (!this._m || !this._s) return;
 
     if (f) {
@@ -202,7 +252,13 @@ export class LinearMeasureControl implements ml.IControl {
     }
 
     if (points.length > 1) {
-      gj.features.push(lineString(points, { type: 'line' }));
+      gj.features.push(lineString(points, { type: 'line', noSnap: true }));
+    }
+
+    if (this._activeSnap !== null) {
+      gj.features.push(
+        feature(this._activeSnap, { type: 'activeSnap', noSnap: true }),
+      );
     }
 
     this._s.setData(gj);
