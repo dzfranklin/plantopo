@@ -3,16 +3,17 @@ import type { GeoipCookie } from '@/features/geoip/schema';
 
 export function middleware(request: NextRequest): NextResponse {
   const country2 = request.headers.get('x-vercel-ip-country');
-  const countrySubdivision2 = request.headers.get('x-vercel-ip-country-region');
-  const city = request.headers.get('x-vercel-ip-city');
-  const lngS = request.headers.get('x-vercel-ip-longitude');
-  const latS = request.headers.get('x-vercel-ip-latitude');
+  const countrySubdivision = request.headers.get('x-vercel-ip-country-region');
+  const rawCity = request.headers.get('x-vercel-ip-city');
+  const rawLng = request.headers.get('x-vercel-ip-longitude');
+  const rawLat = request.headers.get('x-vercel-ip-latitude');
   let geoipData: GeoipCookie | undefined;
-  if (country2 && countrySubdivision2 && city && lngS && latS) {
-    const lng = parseFloat(lngS);
-    const lat = parseFloat(latS);
+  if (country2 && countrySubdivision && rawCity && rawLng && rawLat) {
+    const city = decodeURIComponent(rawCity);
+    const lng = parseFloat(rawLng);
+    const lat = parseFloat(rawLat);
     if (!Number.isNaN(lng) && !Number.isNaN(lng)) {
-      geoipData = { country2, countrySubdivision2, city, point: [lng, lat] };
+      geoipData = { country2, countrySubdivision, city, point: [lng, lat] };
     }
   }
 
