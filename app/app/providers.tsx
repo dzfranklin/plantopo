@@ -11,7 +11,6 @@ import { ReactNode } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { DebugModeProvider } from '@/hooks/debugMode';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { GeoipProvider } from '@/features/geoip/useGeoip';
 
 function toastErr(err: unknown) {
   let msg;
@@ -96,10 +95,8 @@ export default function Providers({
     <QueryClientProvider client={queryClient}>
       <ReactQueryDevtools initialIsOpen={false} />
       <DebugModeProvider forceAllowed={forceDebugModeAllowed}>
-        <GeoipProvider>
-          <Toaster position="top-center" />
-          {children}
-        </GeoipProvider>
+        <Toaster position="top-center" />
+        {children}
       </DebugModeProvider>
     </QueryClientProvider>
   );

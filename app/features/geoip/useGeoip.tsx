@@ -1,31 +1,11 @@
-import { createContext, useContext, useMemo } from 'react';
-import { GeoipData, geoipSchema } from './schema';
-import cookie from 'cookie';
+'use client';
+
+import { createContext, useContext } from 'react';
+import { GeoipData } from './schema';
 
 const GeoipContext = createContext<GeoipData | null>(null);
 
-export function GeoipProvider({ children }: { children: React.ReactNode }) {
-  const value = useMemo(() => {
-    if (typeof document === 'undefined') {
-      return null;
-    }
-    const cookies = cookie.parse(document.cookie);
-    if (!('geoip' in cookies)) {
-      return null;
-    }
-    const parsed = geoipSchema.safeParse(cookies.geoip);
-    if (!parsed.data) {
-      return null;
-    }
-    return parsed.data;
-  }, []);
-
-  return (
-    <GeoipContext.Provider value={value}>{children}</GeoipContext.Provider>
-  );
-}
-
-export function MockGeoipProvider({
+export function GeoipProvider({
   children,
   value,
 }: {
