@@ -46,6 +46,7 @@
     "@turf/simplify": "^7.0.0",
     "@types/mapbox__mapbox-gl-draw": "^1.4.8",
     "blissfuljs": "^1.0.6",
+    "cookie": "^0.7.1",
     "deep-equal": "^2.2.3",
     "dompurify": "^3.1.6",
     "eventsource-client": "^1.1.2",

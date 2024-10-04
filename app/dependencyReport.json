@@ -3468,6 +3468,12 @@
     "repository": "https://github.com/jshttp/cookie"
   },
   {
+    "name": "cookie@0.7.1",
+    "publisher": "Roman Shtylman",
+    "licenses": "MIT",
+    "repository": "https://github.com/jshttp/cookie"
+  },
+  {
     "name": "core-js-compat@3.38.1",
     "publisher": "Denis Pushkarev",
     "licenses": "MIT",

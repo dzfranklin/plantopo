@@ -42,6 +42,7 @@ import { useSettings } from '@/features/settings/useSettings';
 import { UnitSystem } from '@/features/units/format';
 import { ScaleControl } from '@/features/map/ScaleControl';
 import { SnapGraph } from '@/features/map/snap/SnapGraph';
+import { useGeoip } from '@/features/geoip/useGeoip';
 
 /* Features I wish I could figure out how to realistically implement:
 - Map tiles that dynamically change units based on settings (including contour lines)
