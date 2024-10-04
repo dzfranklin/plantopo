@@ -105,6 +105,10 @@ export default function MapComponentImpl(props: MapComponentProps) {
     scaleControlRef.current = new ScaleControl({ units });
   }
 
+  const geoip = useGeoip();
+  const geoipRef = useRef(geoip);
+  geoipRef.current = geoip;
+
   // State
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -119,13 +123,13 @@ export default function MapComponentImpl(props: MapComponentProps) {
 
   const [baseStyle, _setBaseStyle] = useState<BaseStyle>(
     () =>
-      baseStyles[props.initialBaseStyle ?? loadInitialView().baseStyle] ||
+      baseStyles[props.initialBaseStyle ?? defaultBaseStyle.id] ||
       defaultBaseStyle,
   );
   const setBaseStyle = useCallback((value: BaseStyle) => {
     _setBaseStyle(value);
     storeInitialView({
-      ...(viewRef.current || loadInitialView()),
+      ...(viewRef.current || loadInitialView(geoipRef.current)),
       baseStyle: value.id,
     });
   }, []);
@@ -199,7 +203,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
         options: propsRef.current.fitOptions,
       };
     } else {
-      initialView = { at: loadInitialView() };
+      initialView = { at: loadInitialView(geoipRef.current) };
     }
 
     const map = new MapManager({

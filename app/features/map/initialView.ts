@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { baseStyleIDSchema, defaultBaseStyle } from '@/features/map/style';
+import { GeoipData } from '@/features/geoip/schema';
 
 const initialViewSchema = z.object({
   lng: z.number(),
@@ -23,7 +24,7 @@ export const defaultInitialView: InitialView = {
 
 const storageKey = 'plantopo-map-initial-view';
 
-export function loadInitialView(): InitialView {
+export function loadInitialView(geoip: GeoipData | null): InitialView {
   if (typeof localStorage !== 'undefined') {
     const storedValue = localStorage.getItem(storageKey);
     if (storedValue) {
@@ -34,7 +35,17 @@ export function loadInitialView(): InitialView {
       }
     }
   }
-  return defaultInitialView;
+
+  if (geoip) {
+    return {
+      ...defaultInitialView,
+      lng: geoip.point[0],
+      lat: geoip.point[1],
+      zoom: 7,
+    };
+  } else {
+    return defaultInitialView;
+  }
 }
 
 export function storeInitialView(value: InitialView) {
