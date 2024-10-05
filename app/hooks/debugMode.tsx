@@ -48,7 +48,7 @@ export function DebugModeProvider(props: {
       {props.children}
 
       {allowed && (
-        <div className="fixed left-0.5 top-0.5 z-50 w-7 h-4">
+        <div className="fixed left-0.5 top-0.5 z-[99999]">
           <button className="p-1 text-xs" onClick={() => toggleDebugMode()}>
             {enabled ? '!dbg' : 'dbg'}
           </button>
