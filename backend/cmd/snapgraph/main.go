@@ -38,6 +38,9 @@ import (
 
 // The other option would be to produce vector tiles. each tile would have the links in its properties.
 
+// I tried a simple length-prefixed binary varint encoding. It took up around
+// half as much space which didn't feel worth the complexity.
+
 // From <https://mokole.com/palette.html>
 var debugColors = []string{"rgb(211, 211, 211)", "rgb(47, 79, 79)", "rgb(46, 139, 87)", "rgb(139, 0, 0)", "rgb(128, 128, 0)", "rgb(72, 61, 139)", "rgb(255, 0, 0)", "rgb(255, 140, 0)", "rgb(255, 215, 0)", "rgb(127, 255, 0)", "rgb(186, 85, 211)", "rgb(0, 250, 154)", "rgb(0, 255, 255)", "rgb(0, 191, 255)", "rgb(0, 0, 255)", "rgb(255, 0, 255)", "rgb(240, 230, 140)", "rgb(221, 160, 221)", "rgb(255, 20, 147)", "rgb(255, 160, 122)"}
 
