@@ -9,7 +9,7 @@ import { lineString } from '@turf/helpers';
 
 export class HighwaySegment {
   constructor(
-    public readonly id: string,
+    public readonly id: number,
     public readonly polyline: string,
     public readonly meters: number,
     public readonly bbox: [number, number, number, number],
@@ -47,8 +47,13 @@ export class HighwaySegment {
 }
 
 interface TileData {
-  segments: Record<string, HighwaySegment>;
-  links: Record<string, string[]>;
+  segments: {
+    id: number;
+    polyline: string;
+    meters: number;
+    bbox: [number, number, number, number];
+  }[];
+  links: { from: number; to: number[] }[];
 }
 
 const closeDist = 5 / 3600; // 5 arc-seconds
@@ -62,12 +67,12 @@ export class HighwayGraph {
     { requesters: number[]; controller: AbortController }
   >();
 
-  public readonly segments = new Map<string, HighwaySegment>();
+  public readonly segments = new Map<number, HighwaySegment>();
 
   // This uses ids rather than references so that links inserted when
   // neighboring segments aren't yet loaded will automatically start working
   // once the neighboring tile is loaded.
-  public readonly links = new Map<string, string[]>();
+  public readonly links = new Map<number, number[]>();
 
   public readonly index = new RBush<HighwaySegment>();
 
@@ -168,9 +173,14 @@ export class HighwayGraph {
     // Handle data
 
     const segments: HighwaySegment[] = [];
-    for (const [id, segment] of Object.entries(body.segments)) {
+    for (const segment of body.segments) {
       segments.push(
-        new HighwaySegment(id, segment.polyline, segment.meters, segment.bbox),
+        new HighwaySegment(
+          segment.id,
+          segment.polyline,
+          segment.meters,
+          segment.bbox,
+        ),
       );
     }
 
@@ -178,8 +188,8 @@ export class HighwayGraph {
       this.segments.set(segment.id, segment);
     }
 
-    for (const [id, links] of Object.entries(body.links)) {
-      this.links.set(id, links);
+    for (const link of body.links) {
+      this.links.set(link.from, link.to);
     }
 
     this.index.load(segments);

@@ -5,9 +5,10 @@ import { feature, featureCollection } from '@turf/helpers';
 import * as ml from 'maplibre-gl';
 import { HighwayGraph, HighwaySegment } from '@/features/map/snap/HighwayGraph';
 import { mapBBox } from '@/features/map/util';
-import { FeatureCollection, LineString } from 'geojson';
+import { Feature } from 'geojson';
+import { aStarPathSearch } from '@/features/map/snap/aStar';
 
-const sourceID = 'debug-snapgraph-reachability';
+const sourceID = 'debug-snapgraph-node-to-node';
 
 export default function Page() {
   return (
@@ -31,62 +32,57 @@ export default function Page() {
           }
         };
 
-        // let g = SnapGraph.fromRenderedFeatures(m);
         updateGraph();
         m.on('moveend', () => {
-          // g = SnapGraph.fromRenderedFeatures(m);
           updateGraph();
         });
+
+        let start: HighwaySegment | undefined;
+        let end: HighwaySegment | undefined;
+        let path: HighwaySegment[] | null | undefined;
+
+        const update = () => {
+          const fc: Feature[] = [];
+
+          if (start && end) {
+            path = aStarPathSearch(g, start, end, 10_000);
+          }
+
+          if (path) {
+            fc.push(...path.map((s) => s.feature));
+          } else {
+            if (start) {
+              fc.push(feature(start.geometry, { type: 'start' }));
+            }
+            if (end) {
+              fc.push(feature(end.geometry, { type: 'end' }));
+            }
+          }
+
+          s.setData(featureCollection(fc));
+        };
 
         m.on('click', (evt) => {
           if (evt.originalEvent.altKey) return;
           const { lng, lat } = evt.lngLat;
           const hit = g.findCloseTo([lng, lat]);
-          if (!hit) {
-            s.setData(featureCollection([]));
-            return;
+
+          if (path !== undefined) {
+            path = undefined;
+            start = undefined;
+            end = undefined;
           }
-          console.info(hit);
 
-          const fc = featureCollection<LineString>([]);
-          fc.features.push(feature(hit.geometry));
-          findNeighbors(g, hit, 0, new Set([hit.id]), fc);
-          s.setData(fc);
-
-          // const reachable = g.reachable([lng, lat]);
-          // if (!reachable) {
-          //   alert('no fromNode');
-          //   s.setData(featureCollection([]));
-          //   return;
-          // }
-          // s.setData(featureCollection(reachable));
+          if (!start) {
+            start = hit;
+          } else {
+            end = hit;
+          }
+          update();
         });
       }}
     />
   );
-}
-
-const maxDepth = 100;
-
-function findNeighbors(
-  g: HighwayGraph,
-  from: HighwaySegment,
-  depth: number,
-  seen: Set<number>,
-  out: FeatureCollection<LineString>,
-) {
-  if (depth > maxDepth) return;
-  const links = g.links.get(from.id);
-  if (!links) return;
-  for (const link of links) {
-    if (link === from.id || seen.has(link)) continue;
-    seen.add(link);
-    const seg = g.segments.get(link);
-    if (seg) {
-      out.features.push(feature(seg.geometry));
-      findNeighbors(g, seg, depth + 1, seen, out);
-    }
-  }
 }
 
 const layers: ml.LayerSpecification[] = [
@@ -96,7 +92,12 @@ const layers: ml.LayerSpecification[] = [
     type: 'line',
     paint: {
       'line-width': 4,
-      'line-color': 'orange',
+      // prettier-ignore
+      'line-color': ['match', ['get', 'type'],
+        'start', 'green',
+        'end', 'red',
+        'orange',
+      ],
     },
   },
 ];

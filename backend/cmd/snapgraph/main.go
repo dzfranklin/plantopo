@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/dzfranklin/plantopo/backend/internal/bunnycdn"
 	"github.com/dzfranklin/plantopo/backend/internal/pgeo"
 	"github.com/dzfranklin/plantopo/backend/internal/pslices"
 	"github.com/paulmach/osm"
@@ -15,6 +17,7 @@ import (
 	"github.com/tidwall/geojson/geo"
 	"github.com/tidwall/geojson/geometry"
 	"github.com/tidwall/rtree"
+	"golang.org/x/sync/errgroup"
 	"io"
 	"log/slog"
 	"math"
@@ -22,7 +25,6 @@ import (
 	"path"
 	"runtime"
 	"slices"
-	"strconv"
 	"time"
 )
 
@@ -46,19 +48,42 @@ var debugColors = []string{"rgb(211, 211, 211)", "rgb(47, 79, 79)", "rgb(46, 139
 
 func main() {
 	segmentGeojsonFlag := flag.Bool("segment-geojson", false, "")
+	uploadFlag := flag.Bool("upload", false, "")
 
 	flag.Parse()
 
 	inputPath := flag.Arg(0)
 	outputPath := flag.Arg(1)
-	if inputPath == "" || outputPath == "" {
-		fmt.Println("Usage: ./snapgraph <input-path> <output-path>")
+	if inputPath == "" {
+		fmt.Println("Missing input path")
+		os.Exit(1)
+	}
+	if outputPath == "" && !*uploadFlag {
+		fmt.Println("Missing output path")
+		os.Exit(1)
+	}
+	if outputPath != "" && *uploadFlag {
+		fmt.Println("Cannot use --upload and output path at the same time")
 		os.Exit(1)
 	}
 
 	input, openErr := os.Open(inputPath)
 	if openErr != nil {
 		panic(openErr)
+	}
+
+	var uploadTo *bunnycdn.Storage
+	if *uploadFlag {
+		apiKey := os.Getenv("BUNNY_STORAGE_API_KEY")
+		if apiKey == "" {
+			panic("If --upload BUNNY_STORAGE_API_KEY is required")
+		}
+		uploadTo = bunnycdn.NewStorage(bunnycdn.StorageConfig{
+			Endpoint: "uk.storage.bunnycdn.com",
+			ZoneName: "plantopo",
+			APIKey:   apiKey,
+		})
+		outputPath = "highway-graph"
 	}
 
 	g := process(input)
@@ -94,13 +119,26 @@ func main() {
 		segmentIndex.Insert([2]float64{bounds.Min.X, bounds.Min.Y}, [2]float64{bounds.Max.X, bounds.Max.Y}, i)
 	}
 
+	// TODO: Separate concurrency limits for generating and uploading?
+	// TODO: definitely need retries on uploads
+
+	var grp errgroup.Group
+	if uploadTo == nil {
+		grp.SetLimit(6)
+	} else {
+		grp.SetLimit(40)
+	}
+
 	for x := -180 * 10; x < 180*10; x += 1 {
 		for y := -90 * 10; y < 90*10; y += 1 {
-			tile := makeTile(g, segmentIndex, x, y)
-			if len(tile.Segments) > 0 {
-				writeTile(outputPath, x, y, tile)
-				slog.Info("wrote tile", "x", x, "y", y)
-			}
+			grp.Go(func() error {
+				tile := makeTile(g, segmentIndex, x, y)
+				if len(tile.Segments) > 0 {
+					writeTile(uploadTo, outputPath, x, y, tile)
+					slog.Info("wrote tile", "x", x, "y", y)
+				}
+				return nil
+			})
 		}
 	}
 }
@@ -109,11 +147,16 @@ func main() {
 // graph. Across all tiles Segments[id] and Links[id] will have the same value if
 // present.
 type GraphTile struct {
-	Attribution string              `json:"attribution"`
-	Lng         float64             `json:"lng"`
-	Lat         float64             `json:"lat"`
-	Segments    map[string]Segment  `json:"segments"`
-	Links       map[string][]string `json:"links"`
+	Attribution string    `json:"attribution"`
+	Lng         float64   `json:"lng"`
+	Lat         float64   `json:"lat"`
+	Segments    []Segment `json:"segments"`
+	Links       []Link    `json:"links"`
+}
+
+type Link struct {
+	From int   `json:"from"`
+	To   []int `json:"to"`
 }
 
 type Graph struct {
@@ -123,6 +166,7 @@ type Graph struct {
 }
 
 type Segment struct {
+	ID     int
 	Way    int64
 	Points []NodePoint
 }
@@ -130,10 +174,12 @@ type Segment struct {
 func (s Segment) MarshalJSON() ([]byte, error) {
 	points := pslices.Map(s.Points, func(p NodePoint) geometry.Point { return p.Point })
 	var container = struct {
+		ID       int        `json:"id"`
 		Polyline string     `json:"polyline"`
 		Meters   int        `json:"meters"`
 		BBox     [4]float64 `json:"bbox"`
 	}{
+		ID:       s.ID,
 		Polyline: pgeo.EncodePolylinePoints(points),
 		Meters:   segmentMeters(s),
 		BBox:     segmentBBox(s),
@@ -153,49 +199,54 @@ func makeTile(g Graph, segmentIndex SegmentIndex, x, y int) GraphTile {
 		Attribution: g.Attribution,
 		Lng:         float64(x) / 10,
 		Lat:         float64(y) / 10,
-		Segments:    make(map[string]Segment),
-		Links:       make(map[string][]string),
 	}
 
 	topLeft := [2]float64{float64(x) / 10, float64(y) / 10}
 	bottomRight := [2]float64{topLeft[0] + 0.1, topLeft[1] + 0.1}
-	segmentIndex.Search(topLeft, bottomRight, func(_, _ [2]float64, segIdx int) bool {
-		segID := strconv.FormatInt(int64(segIdx), 10)
-		out.Segments[segID] = g.Segments[segIdx]
-		for _, link := range g.Links[segIdx] {
-			out.Links[segID] = append(out.Links[segID], strconv.FormatInt(int64(link), 10))
-		}
+	segmentIndex.Search(topLeft, bottomRight, func(_, _ [2]float64, segID int) bool {
+		s := g.Segments[segID]
+		s.ID = segID
+		out.Segments = append(out.Segments, s)
 		return true
 	})
+
+	for _, s := range out.Segments {
+		out.Links = append(out.Links, Link{
+			From: s.ID,
+			To:   g.Links[s.ID],
+		})
+	}
 
 	return out
 }
 
-func writeTile(outputPath string, x, y int, tile GraphTile) {
+func writeTile(uploadTo *bunnycdn.Storage, outputPath string, x, y int, tile GraphTile) {
 	tileDir := path.Join(outputPath, fmt.Sprintf("%d", y))
 	tilePath := path.Join(tileDir, fmt.Sprintf("%d", x))
 
-	if err := os.MkdirAll(tileDir, os.ModePerm); err != nil {
+	var b bytes.Buffer
+	w, wErr := gzip.NewWriterLevel(&b, gzip.BestCompression)
+	if wErr != nil {
+		panic(wErr)
+	}
+	if err := json.NewEncoder(w).Encode(tile); err != nil {
+		panic(err)
+	}
+	if err := w.Close(); err != nil {
 		panic(err)
 	}
 
-	tileF, createErr := os.Create(tilePath)
-	if createErr != nil {
-		panic(createErr)
-	}
-
-	tileW := gzip.NewWriter(tileF)
-
-	if err := json.NewEncoder(tileW).Encode(tile); err != nil {
-		panic(err)
-	}
-
-	if err := tileW.Close(); err != nil {
-		panic(err)
-	}
-
-	if err := tileF.Close(); err != nil {
-		panic(err)
+	if uploadTo != nil {
+		if err := uploadTo.Put(context.Background(), tilePath, &b, nil); err != nil {
+			panic(err)
+		}
+	} else {
+		if err := os.MkdirAll(tileDir, os.ModePerm); err != nil {
+			panic(err)
+		}
+		if err := os.WriteFile(tilePath, b.Bytes(), os.ModePerm); err != nil {
+			panic(err)
+		}
 	}
 }
 
