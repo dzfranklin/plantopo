@@ -2,16 +2,19 @@ import RBush from 'rbush';
 import { bbox as computeBBox } from '@turf/bbox';
 import { Feature, LineString, Position } from 'geojson';
 import { bboxOf, lineStringGeometry, metersBetween } from '@/geo';
-import { unimplemented, unreachable } from '@/errors';
+import { unreachable } from '@/errors';
 import * as ml from 'maplibre-gl';
 import nearestPointOnLine from '@turf/nearest-point-on-line';
+import pointToLineDistance from '@turf/point-to-line-distance';
 
 /*
 In OSM an intersection is represented by a node shared between both ways.
 Without that it would be e.g. an underpass.
 
-MapTiler's basemap appears to have the same property probably because that's
-just how their generation works. I'll assume this always holds for now.
+MapTiler's basemap has the same property sometimes, especially at high zoom levels.
+But not exactly.
+
+Maybe I should consider making separate snap graph tiles offline?
  */
 
 export type GraphInputFeature = Feature & { id: string };
@@ -287,6 +290,38 @@ export class SnapGraph {
 
     return null;
     // unimplemented(); // TODO:
+  }
+
+  reachable(from: Position): Node[] | null {
+    const fromCandidates = this._rb.overlapsPoint(from, 1 / 3600);
+    let fromNode: Node | undefined;
+    let minFrom = Infinity;
+    for (const candidate of fromCandidates) {
+      const dist = pointToLineDistance(from, candidate);
+      if (dist < minFrom) {
+        fromNode = candidate;
+        minFrom = dist;
+      }
+    }
+    if (!fromNode) return null;
+
+    const seen = new Set<Node>();
+    this._recurseReachable(fromNode, seen);
+    return Array.from(seen);
+  }
+
+  _recurseReachable(fromNode: Node, seen: Set<Node>) {
+    if (seen.has(fromNode)) {
+      return;
+    }
+    seen.add(fromNode);
+
+    const links = this._l.get(fromNode);
+    if (!links) return;
+    for (const link of links) {
+      const neighbor = link.a === fromNode ? link.b : link.a;
+      this._recurseReachable(neighbor, seen);
+    }
   }
 
   dumpNodePoints(): string {

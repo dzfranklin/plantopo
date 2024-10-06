@@ -3,14 +3,7 @@ import { Button } from '@/components/button';
 import { overlayStyles } from '@/features/map/style';
 import JSONView from '@/components/JSONView';
 import * as ml from 'maplibre-gl';
-
-export interface InspectFeature {
-  id: string | number | undefined;
-  rawSource: string;
-  rawSourceLayer: string | undefined;
-  layer: ml.LayerSpecification | undefined;
-  properties: Record<string, unknown>;
-}
+import { ReactNode } from 'react';
 
 export function InspectFeaturesDialog({
   show,
@@ -19,7 +12,7 @@ export function InspectFeaturesDialog({
 }: {
   show: boolean;
   onClose: () => void;
-  features: InspectFeature[];
+  features: ml.MapGeoJSONFeature[];
 }) {
   return (
     <Dialog open={show} onClose={onClose}>
@@ -45,10 +38,10 @@ export function InspectFeaturesDialog({
   );
 }
 
-function InspectFeature({ feature }: { feature: InspectFeature }) {
+function InspectFeature({ feature }: { feature: ml.MapGeoJSONFeature }) {
   let sourceName: string;
-  if (feature.rawSource.startsWith('overlay:')) {
-    const sourceID = feature.rawSource.split(':')[1]!;
+  if (feature.source.startsWith('overlay:')) {
+    const sourceID = feature.source.split(':')[1]!;
     sourceName = (overlayStyles[sourceID]?.name ?? 'Unknown') + ' (overlay)';
   } else {
     sourceName = 'Base';
@@ -62,11 +55,16 @@ function InspectFeature({ feature }: { feature: InspectFeature }) {
           <InspectFeaturePropRow label="Source" value={sourceName} />
           <InspectFeaturePropRow
             label="Source layer"
-            value={feature.rawSourceLayer}
+            value={feature.sourceLayer}
           />
           {Object.entries(feature.properties).map(([key, value]) => (
             <InspectFeaturePropRow key={key} label={key} value={value} />
           ))}
+          <InspectFeaturePropRow label="Geometry">
+            <span className="p-1 select-all">
+              {JSON.stringify(feature.geometry)}
+            </span>
+          </InspectFeaturePropRow>
         </tbody>
       </table>
 
@@ -81,20 +79,25 @@ function InspectFeature({ feature }: { feature: InspectFeature }) {
   );
 }
 
-function InspectFeaturePropRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: unknown;
-}) {
+function InspectFeaturePropRow(
+  props: {
+    label: string;
+  } & ({ value: unknown } | { children: ReactNode }),
+) {
   return (
     <tr>
-      <td className="w-28 mr-4 text-left truncate font-medium" title={label}>
-        {label}
+      <td
+        className="w-28 mr-4 text-left truncate font-medium"
+        title={props.label}
+      >
+        {props.label}
       </td>
-      <td className="text-left truncate" title={stringValue(value)}>
-        <InspectFeaturePropValue value={value} />
+      <td
+        className="text-left truncate"
+        title={'value' in props ? stringValue(props.value) : ''}
+      >
+        {'value' in props && <InspectFeaturePropValue value={props.value} />}
+        {'children' in props && props.children}
       </td>
     </tr>
   );

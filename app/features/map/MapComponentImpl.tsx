@@ -20,7 +20,7 @@ import {
 } from './style';
 import { LayersControl } from './LayersControl';
 import { CameraOptions, MapManager, MapManagerInitialView } from './MapManager';
-import { fitBoundsFor } from './util';
+import { fitBoundsFor, queryRenderedFeatures } from './util';
 import { InitialView, loadInitialView, storeInitialView } from './initialView';
 import deepEqual from 'deep-equal';
 import { OSExplorerMapComponent } from './OSExplorerMapComponent';
@@ -30,7 +30,7 @@ import { OSLogoControl } from './OSLogoControl';
 import { usePortalControl } from './PortalControl';
 import { Button } from '@/components/button';
 import JSONView from '@/components/JSONView';
-import { InspectFeature, InspectFeaturesDialog } from './InspectFeaturesDialog';
+import { InspectFeaturesDialog } from './InspectFeaturesDialog';
 import { MapSearchComponent, SearchResult } from './search/MapSearchComponent';
 import { centroidOf } from '@/geo';
 import { useDebugMode } from '@/hooks/debugMode';
@@ -138,7 +138,9 @@ export default function MapComponentImpl(props: MapComponentProps) {
   const activeOverlaysRef = useRef<OverlayStyle[]>(activeOverlays);
   activeOverlaysRef.current = activeOverlays;
 
-  const [inspectFeatures, setInspectFeatures] = useState<InspectFeature[]>([]);
+  const [inspectFeatures, setInspectFeatures] = useState<
+    ml.MapGeoJSONFeature[]
+  >([]);
 
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
 
@@ -296,20 +298,8 @@ export default function MapComponentImpl(props: MapComponentProps) {
     map.m.on('click', (evt) => {
       if (evt.originalEvent.altKey && debugModeRef.current) {
         evt.preventDefault();
-        const slop = 2;
-        const query = map.m.queryRenderedFeatures([
-          [evt.point.x - slop, evt.point.y - slop],
-          [evt.point.x + slop, evt.point.y + slop],
-        ]);
-        setInspectFeatures(
-          query.map((f) => ({
-            id: f.id,
-            rawSource: f.source,
-            rawSourceLayer: f.sourceLayer,
-            properties: f.properties,
-            layer: f.layer,
-          })),
-        );
+        const query = queryRenderedFeatures(map.m, evt.point, 2);
+        setInspectFeatures(query);
       }
     });
 

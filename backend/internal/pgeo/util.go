@@ -2,6 +2,7 @@ package pgeo
 
 import (
 	"github.com/tidwall/geojson/geometry"
+	"github.com/twpayne/go-polyline"
 	"math"
 )
 
@@ -20,4 +21,12 @@ func RoundPoint(point geometry.Point) geometry.Point {
 func roundPointComponent(n float64) float64 {
 	scale := math.Pow10(6)
 	return math.Round(n*scale) / scale
+}
+
+func EncodePolylinePoints(points []geometry.Point) string {
+	input := make([][]float64, len(points))
+	for i := range points {
+		input[i] = []float64{points[i].Y, points[i].X} // polyline is lat,lng
+	}
+	return string(polyline.EncodeCoords(input))
 }
