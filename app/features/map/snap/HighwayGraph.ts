@@ -1,11 +1,14 @@
 import { wait } from '@/time';
 import RBush from 'rbush';
-import { Feature, LineString } from 'geojson';
+import { Feature, LineString, Position } from 'geojson';
 import { decodePolyline } from '@/features/tracks/polyline';
 import pointToLineDistance from '@turf/point-to-line-distance';
 import { lineString } from '@turf/helpers';
+import { aStarPathSearch } from '@/features/map/snap/aStar';
+import { searchPathToLine } from '@/features/map/snap/searchPathToLine';
+import { Semaphore } from '@/Semaphore';
 
-// TODO: limit concurrent requests so we don't starve the map tiles
+const maxConcurrentDownloads = 2;
 
 export class HighwaySegment {
   constructor(
@@ -13,7 +16,27 @@ export class HighwaySegment {
     public readonly polyline: string,
     public readonly meters: number,
     public readonly bbox: [number, number, number, number],
+    public readonly start: number,
+    public readonly end: number,
   ) {}
+
+  static fromData(data: {
+    id: number;
+    polyline: string;
+    meters: number;
+    bbox: [number, number, number, number];
+    start: number;
+    end: number;
+  }) {
+    return new HighwaySegment(
+      data.id,
+      data.polyline,
+      data.meters,
+      data.bbox,
+      data.start,
+      data.end,
+    );
+  }
 
   private _feature: Feature<LineString> | undefined;
 
@@ -52,6 +75,8 @@ interface TileData {
     polyline: string;
     meters: number;
     bbox: [number, number, number, number];
+    start: number;
+    end: number;
   }[];
   links: { from: number; to: number[] }[];
 }
@@ -66,6 +91,7 @@ export class HighwayGraph {
     string,
     { requesters: number[]; controller: AbortController }
   >();
+  private _downloadSem = new Semaphore(maxConcurrentDownloads);
 
   public readonly segments = new Map<number, HighwaySegment>();
 
@@ -76,14 +102,36 @@ export class HighwayGraph {
 
   public readonly index = new RBush<HighwaySegment>();
 
-  constructor(public readonly endpoint: string) {}
+  constructor(
+    public readonly endpoint: string = 'https://plantopo-storage.b-cdn.net/highway-graph/',
+  ) {}
 
-  findCloseTo(target: [number, number]): HighwaySegment | undefined {
+  findPath(
+    start: Position,
+    goal: Position,
+    limitMeters?: number,
+  ): LineString | null {
+    const startSeg = this.findCloseTo(start);
+    const goalSeg = this.findCloseTo(goal);
+    if (!startSeg || !goalSeg) return null;
+
+    let segs: HighwaySegment[] | null;
+    if (startSeg !== goalSeg) {
+      segs = aStarPathSearch(this, startSeg, goalSeg, limitMeters);
+    } else {
+      segs = [startSeg];
+    }
+    if (!segs) return null;
+
+    return searchPathToLine(start, goal, goalSeg, segs);
+  }
+
+  findCloseTo(target: Position): HighwaySegment | undefined {
     const candidates = this.index.search({
-      minX: target[0] - closeDist,
-      minY: target[1] - closeDist,
-      maxX: target[0] + closeDist,
-      maxY: target[1] + closeDist,
+      minX: target[0]! - closeDist,
+      minY: target[1]! - closeDist,
+      maxX: target[0]! + closeDist,
+      maxY: target[1]! + closeDist,
     });
     let hit: HighwaySegment | undefined;
     let minDist = Infinity;
@@ -146,27 +194,31 @@ export class HighwayGraph {
 
     const controller = new AbortController();
     this._inFlight.set(tile, { controller, requesters: [requesterID] });
-    let body: TileData;
+    let body: TileData | undefined;
     while (true) {
       if (controller.signal.aborted) return;
-      try {
-        const resp = await fetch(this.endpoint + tile, {
-          signal: controller.signal,
-        });
-        if (resp.status === 404) {
-          return;
-        } else if (resp.status !== 200) {
-          throw new Error('fetch highway graph tile: status ' + resp.status);
+      await this._downloadSem.use(async () => {
+        try {
+          const resp = await fetch(this.endpoint + tile, {
+            signal: controller.signal,
+          });
+          if (resp.status === 404) {
+            return;
+          } else if (resp.status !== 200) {
+            throw new Error('fetch highway graph tile: status ' + resp.status);
+          }
+          body = await resp.json();
+        } catch (err) {
+          if (err instanceof Error && err.name === 'AbortError') {
+            return;
+          }
+          console.warn('failed to fetch tile', tile, err);
         }
-        body = await resp.json();
+      });
+      if (body) {
         break;
-      } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') {
-          return;
-        }
-        console.warn('failed to fetch tile', tile, err);
-        await wait(1_000);
       }
+      await wait(1_000);
     }
     this._inFlight.delete(tile);
 
@@ -174,14 +226,7 @@ export class HighwayGraph {
 
     const segments: HighwaySegment[] = [];
     for (const segment of body.segments) {
-      segments.push(
-        new HighwaySegment(
-          segment.id,
-          segment.polyline,
-          segment.meters,
-          segment.bbox,
-        ),
-      );
+      segments.push(HighwaySegment.fromData(segment));
     }
 
     for (const segment of segments) {

@@ -1776,6 +1776,12 @@
     "repository": "https://github.com/Turfjs/turf"
   },
   {
+    "name": "@turf/point-to-line-distance@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
     "name": "@turf/projection@7.1.0",
     "publisher": "Turf Authors",
     "licenses": "MIT",

@@ -2,10 +2,10 @@ import * as ml from 'maplibre-gl';
 import { createElement } from '@/domUtil';
 import { feature, featureCollection, lineString, point } from '@turf/helpers';
 import { Geometry, LineString, Position } from 'geojson';
-import { onceMapLoaded } from '@/features/map/util';
-import { metersBetween } from '@/geo';
+import { mapBBox, onceMapLoaded } from '@/features/map/util';
+import { lineStringGeometry, metersBetween } from '@/geo';
 import { formatDistanceText, UnitSystem } from '@/features/units/format';
-import { SnapGraph } from '@/features/map/snap/SnapGraph';
+import { HighwayGraph } from '@/features/map/snap/HighwayGraph';
 
 const prefix = 'pLinearMeasureControl:';
 const sourceID = prefix + 'source';
@@ -21,24 +21,33 @@ const iconSource =
 
 const layers: ml.LayerSpecification[] = [
   {
-    id: prefix + 'line',
+    id: prefix + 'line-outline',
     type: 'line',
     source: sourceID,
-    filter: ['==', ['get', 'type'], 'line'],
     paint: {
-      'line-width': 2.5,
+      'line-width': 6,
+      'line-color': '#FFFFFF',
+    },
+  },
+  {
+    id: prefix + 'line-inner',
+    type: 'line',
+    source: sourceID,
+    filter: ['!=', ['get', 'type'], 'activeSnap'],
+    paint: {
+      'line-width': 2,
       'line-color': 'rgb(249 115 22)',
     },
   },
   {
-    id: prefix + 'activeSnap',
+    id: prefix + 'line-inner-active',
     type: 'line',
     source: sourceID,
     filter: ['==', ['get', 'type'], 'activeSnap'],
     paint: {
-      'line-width': 2.5,
+      'line-width': 2,
       'line-color': 'rgb(249 115 22)',
-      'line-opacity': 0.6,
+      'line-dasharray': [3, 2],
     },
   },
   {
@@ -84,13 +93,15 @@ export class LinearMeasureControl implements ml.IControl {
 
   private _units?: UnitSystem;
 
+  private _g: HighwayGraph;
   private _m: ml.Map | null = null;
   private _s: ml.GeoJSONSource | null = null;
 
   private _cleanup: Array<() => void> = [];
 
-  constructor(props: { units?: UnitSystem }) {
+  constructor(props: { units?: UnitSystem; highwayGraph: HighwayGraph }) {
     this._units = props.units;
+    this._g = props.highwayGraph;
   }
 
   onAdd(m: ml.Map): HTMLElement {
@@ -103,15 +114,17 @@ export class LinearMeasureControl implements ml.IControl {
 
       // the keypress event doesn't fire on escape
       window.addEventListener('keyup', this._onKeyUp);
-      this._cleanup.push(() =>
-        window.removeEventListener('keyup', this._onKeyUp),
-      );
+      window.addEventListener('keydown', this._onKeyDown);
+      this._cleanup.push(() => {
+        window.removeEventListener('keyup', this._onKeyUp);
+        window.removeEventListener('keydown', this._onKeyDown);
+      });
 
       m.on('mousemove', this._onMouseMove);
       this._cleanup.push(() => m.off('mousemove', this._onMouseMove));
 
-      m.on('render', this._onRender);
-      this._cleanup.push(() => m.off('render', this._onRender));
+      m.on('moveend', this._onMoveEnd);
+      this._cleanup.push(() => m.off('moveend', this._onMoveEnd));
 
       m.addSource(sourceID, {
         type: 'geojson',
@@ -150,11 +163,21 @@ export class LinearMeasureControl implements ml.IControl {
   }
 
   private _active = false;
+
   private _activeSnap: LineString | null = null;
+
   private _points: Position[] = [];
-  private _graph: SnapGraph | null = null;
 
   private _prevCursor: string | undefined;
+
+  private _cancelGraphLoad: (() => void) | undefined;
+
+  private _updateGraph() {
+    this._cancelGraphLoad?.();
+    if (this._m) {
+      this._cancelGraphLoad = this._g.load(mapBBox(this._m));
+    }
+  }
 
   private _toggle() {
     if (!this._m || !this._s) return;
@@ -163,32 +186,40 @@ export class LinearMeasureControl implements ml.IControl {
 
       this._b.classList.remove(activeClass);
 
-      this._graph = null;
-
       this._points = [];
       this._activeSnap = null;
       this._update(() => []);
 
       this._m.getCanvas().style.cursor = this._prevCursor ?? '';
+
+      this._cancelGraphLoad?.();
     } else {
       this._active = true;
 
       this._b.classList.add(activeClass);
 
-      this._graph = SnapGraph.fromRenderedFeatures(this._m);
-
       this._prevCursor = this._m.getCanvas().style.cursor;
       this._m.getCanvas().style.cursor = 'crosshair';
+
+      this._updateGraph();
     }
   }
+
+  private _onMoveEnd = () => {
+    if (this._active) {
+      this._updateGraph();
+    }
+  };
+
+  private _shiftKeyPressed = false;
 
   private _onClick = (evt: ml.MapMouseEvent) => {
     if (!this._active || !this._m) return;
     evt.preventDefault();
     const pt = evt.lngLat;
-    const snapped = this._findSnap(pt);
-    if (snapped) {
-      this._update((p) => [...p, ...snapped.coordinates]);
+    const snap = this._activeSnap;
+    if (snap) {
+      this._update((p) => [...p, ...snap.coordinates]);
     } else {
       this._update((p) => [...p, [pt.lng, pt.lat]]);
     }
@@ -202,6 +233,14 @@ export class LinearMeasureControl implements ml.IControl {
         evt.stopPropagation();
         this._toggle();
       }
+    } else if (evt.key === 'Shift') {
+      this._shiftKeyPressed = false;
+    }
+  };
+
+  private _onKeyDown = (evt: KeyboardEvent) => {
+    if (evt.key === 'Shift') {
+      this._shiftKeyPressed = true;
     }
   };
 
@@ -211,19 +250,14 @@ export class LinearMeasureControl implements ml.IControl {
     this._update();
   };
 
-  private _onRender = () => {
-    if (this._active && this._m) {
-      this._graph = SnapGraph.fromRenderedFeatures(this._m);
-    }
-  };
-
   private _findSnap(to: ml.LngLat): LineString | null {
-    if (!this._graph) return null;
-
     const prev = this._points.at(-1);
     if (!prev) return null;
-
-    return this._graph.search(prev, [to.lng, to.lat]);
+    if (this._shiftKeyPressed) {
+      return lineStringGeometry([prev, [to.lng, to.lat]]);
+    } else {
+      return this._g.findPath(prev, [to.lng, to.lat], 20_000);
+    }
   }
 
   private _update(f?: (prev: Position[]) => Position[]) {

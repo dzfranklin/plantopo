@@ -41,8 +41,8 @@ import { LinearMeasureControl } from './LinearMeasureControl';
 import { useSettings } from '@/features/settings/useSettings';
 import { UnitSystem } from '@/features/units/format';
 import { ScaleControl } from '@/features/map/ScaleControl';
-import { SnapGraph } from '@/features/map/snap/SnapGraph';
 import { useGeoip } from '@/features/geoip/useGeoip';
+import { useHighwayGraph } from '@/features/map/snap/provider';
 
 /* Features I wish I could figure out how to realistically implement:
 - Map tiles that dynamically change units based on settings (including contour lines)
@@ -95,9 +95,14 @@ export default function MapComponentImpl(props: MapComponentProps) {
   const unitsRef = useRef<UnitSystem | undefined>(units);
   unitsRef.current = units;
 
+  const highwayGraph = useHighwayGraph();
+
   const measureControlRef = useRef<LinearMeasureControl | null>(null);
   if (!measureControlRef.current) {
-    measureControlRef.current = new LinearMeasureControl({ units });
+    measureControlRef.current = new LinearMeasureControl({
+      units,
+      highwayGraph,
+    });
   }
 
   const scaleControlRef = useRef<ScaleControl | null>(null);
@@ -540,24 +545,6 @@ function MapDebugMenu({
           }}
         >
           Assign to global
-        </Button>
-
-        <Button
-          onClick={() => {
-            if (!mapRef.current) return;
-            const m = mapRef.current.m;
-            const graph = SnapGraph.fromRenderedFeatures(m);
-            const dump = [
-              'graph {',
-              graph.dumpNodes(),
-              graph.dumpLinks(),
-              '}',
-            ].join('\n\n');
-            const blob = new Blob([dump], { type: 'text/plain' });
-            window.open(URL.createObjectURL(blob), '_blank');
-          }}
-        >
-          Dump scene
         </Button>
       </div>
 

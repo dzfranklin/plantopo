@@ -6,18 +6,15 @@ import * as ml from 'maplibre-gl';
 import { HighwayGraph, HighwaySegment } from '@/features/map/snap/HighwayGraph';
 import { mapBBox } from '@/features/map/util';
 import { FeatureCollection, LineString } from 'geojson';
+import { useHighwayGraph } from '@/features/map/snap/provider';
 
 const sourceID = 'debug-snapgraph-reachability';
 
 export default function Page() {
+  const g = useHighwayGraph();
   return (
     <MapComponent
       onMap={(m) => {
-        // TODO: get from context
-        const g = new HighwayGraph(
-          'https://plantopo-storage.b-cdn.net/highway-graph/',
-        );
-
         m.addSource(sourceID, { type: 'geojson', data: featureCollection([]) });
         const s = m.getSource(sourceID) as ml.GeoJSONSource;
 

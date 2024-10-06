@@ -8,7 +8,7 @@ export function aStarPathSearch(
   graph: HighwayGraph,
   start: HighwaySegment,
   goal: HighwaySegment,
-  maxMeters?: number,
+  limitMeters?: number,
 ): HighwaySegment[] | null {
   const cameFrom = new Map<number, HighwaySegment>();
 
@@ -25,7 +25,10 @@ export function aStarPathSearch(
     const current = openSet.pop()!;
     const currentG = gScore.get(current.id);
 
-    if (current === goal || (maxMeters !== undefined && currentG > maxMeters)) {
+    if (
+      current === goal ||
+      (limitMeters !== undefined && currentG > limitMeters)
+    ) {
       return reconstructPath(cameFrom, current);
     }
 

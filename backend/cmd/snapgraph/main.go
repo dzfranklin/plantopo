@@ -168,6 +168,8 @@ type Graph struct {
 type Segment struct {
 	ID     int
 	Way    int64
+	Start  int
+	End    int
 	Points []NodePoint
 }
 
@@ -176,11 +178,15 @@ func (s Segment) MarshalJSON() ([]byte, error) {
 	var container = struct {
 		ID       int        `json:"id"`
 		Polyline string     `json:"polyline"`
+		Start    int        `json:"start"`
+		End      int        `json:"end"`
 		Meters   int        `json:"meters"`
 		BBox     [4]float64 `json:"bbox"`
 	}{
 		ID:       s.ID,
 		Polyline: pgeo.EncodePolylinePoints(points),
+		Start:    s.Start,
+		End:      s.End,
 		Meters:   segmentMeters(s),
 		BBox:     segmentBBox(s),
 	}
@@ -270,6 +276,21 @@ func process(f io.ReadSeeker) Graph {
 
 	links := findLinks(segments)
 	slog.Info("linked segments")
+
+	nodeIDs := make(map[int64]int)
+	assignNodeID := func(n NodePoint) int {
+		if id, ok := nodeIDs[n.Node]; ok {
+			return id
+		}
+		id := len(nodeIDs) + 1
+		nodeIDs[n.Node] = id
+		return id
+	}
+	for i, s := range segments {
+		s.Start = assignNodeID(s.Points[0])
+		s.End = assignNodeID(s.Points[len(s.Points)-1])
+		segments[i] = s
+	}
 
 	return Graph{
 		Attribution: fmt.Sprintf("Derived from OpenStreetMap dump (exported %s) at %s via github.com/dzfranklin/plantopo",

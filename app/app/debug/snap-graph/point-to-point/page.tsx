@@ -1,19 +1,16 @@
 'use client';
 
 import { MapComponent } from '@/features/map/MapComponent';
-import { feature, featureCollection } from '@turf/helpers';
+import { feature, featureCollection, point } from '@turf/helpers';
 import * as ml from 'maplibre-gl';
-import { HighwaySegment } from '@/features/map/snap/HighwayGraph';
 import { mapBBox } from '@/features/map/util';
-import { Feature } from 'geojson';
-import { aStarPathSearch } from '@/features/map/snap/aStar';
+import { Feature, LineString, Position } from 'geojson';
 import { useHighwayGraph } from '@/features/map/snap/provider';
 
 const sourceID = 'debug-snapgraph-node-to-node';
 
 export default function Page() {
   const g = useHighwayGraph();
-
   return (
     <MapComponent
       onMap={(m) => {
@@ -35,25 +32,26 @@ export default function Page() {
           updateGraph();
         });
 
-        let start: HighwaySegment | undefined;
-        let end: HighwaySegment | undefined;
-        let path: HighwaySegment[] | null | undefined;
+        let start: Position | undefined;
+        let end: Position | undefined;
+        let path: LineString | null | undefined;
 
         const update = () => {
           const fc: Feature[] = [];
 
           if (start && end) {
-            path = aStarPathSearch(g, start, end, 10_000);
+            path = g.findPath(start, end, 10_000);
           }
 
           if (path) {
-            fc.push(...path.map((s) => s.feature));
+            console.info(path);
+            fc.push(feature(path));
           } else {
             if (start) {
-              fc.push(feature(start.geometry, { type: 'start' }));
+              fc.push(point(start, { type: 'start' }));
             }
             if (end) {
-              fc.push(feature(end.geometry, { type: 'end' }));
+              fc.push(point(end, { type: 'end' }));
             }
           }
 
@@ -63,7 +61,6 @@ export default function Page() {
         m.on('click', (evt) => {
           if (evt.originalEvent.altKey) return;
           const { lng, lat } = evt.lngLat;
-          const hit = g.findCloseTo([lng, lat]);
 
           if (path !== undefined) {
             path = undefined;
@@ -72,9 +69,9 @@ export default function Page() {
           }
 
           if (!start) {
-            start = hit;
+            start = [lng, lat];
           } else {
-            end = hit;
+            end = [lng, lat];
           }
           update();
         });
@@ -85,17 +82,38 @@ export default function Page() {
 
 const layers: ml.LayerSpecification[] = [
   {
+    id: sourceID + 'point',
+    source: sourceID,
+    type: 'circle',
+    paint: {
+      'circle-radius': 4,
+      // prettier-ignore
+      'circle-color': ['match', ['get', 'type'],
+        'start', 'green',
+        'end', 'red',
+        'black',
+      ],
+    },
+  },
+  {
     id: sourceID + 'line',
     source: sourceID,
     type: 'line',
     paint: {
       'line-width': 4,
-      // prettier-ignore
-      'line-color': ['match', ['get', 'type'],
-        'start', 'green',
-        'end', 'red',
-        'orange',
-      ],
+      'line-color': 'orange',
+    },
+  },
+  {
+    id: sourceID + 'arrow',
+    source: sourceID,
+    type: 'symbol',
+    layout: {
+      'symbol-placement': 'line',
+      'icon-image': '/sprites/arrow@2x.png',
+    },
+    paint: {
+      'icon-color': 'white',
     },
   },
 ];

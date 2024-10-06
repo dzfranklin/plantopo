@@ -11,6 +11,7 @@ import { ReactNode } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import { DebugModeProvider } from '@/hooks/debugMode';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { HighwayGraphProvider } from '@/features/map/snap/provider';
 
 function toastErr(err: unknown) {
   let msg;
@@ -93,10 +94,12 @@ export default function Providers({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ReactQueryDevtools initialIsOpen={false} />
       <DebugModeProvider forceAllowed={forceDebugModeAllowed}>
-        <Toaster position="top-center" />
-        {children}
+        <ReactQueryDevtools initialIsOpen={false} />
+        <HighwayGraphProvider>
+          <Toaster position="top-center" />
+          {children}
+        </HighwayGraphProvider>
       </DebugModeProvider>
     </QueryClientProvider>
   );
