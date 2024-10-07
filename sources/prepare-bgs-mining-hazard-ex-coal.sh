@@ -21,4 +21,13 @@ tippecanoe --output /tmp/bgs_mining_hazard_ex_coal.pmtiles --force \
   -zg \
   /tmp/bgs_mining_hazard_ex_coal.json
 
-mc cp /tmp/bgs_mining_hazard_ex_coal.pmtiles df/pmtiles-public
+filename="bgs_mining_hazard_ex_coal.pmtiles"
+
+curl -X PUT -H "AccessKey: $BUNNY_STORAGE_KEY" --fail-with-body \
+  "https://uk.storage.bunnycdn.com/plantopo/$filename" \
+  --data-binary @/tmp/bgs_mining_hazard_ex_coal.pmtiles
+echo 'Uploaded'
+
+curl --get -H "AccessKey: $BUNNY_KEY" --fail-with-body "https://api.bunny.net/purge" \
+  -d "url=https://plantopo-storage.b-cdn.net/$filename"
+echo 'Purged cache'

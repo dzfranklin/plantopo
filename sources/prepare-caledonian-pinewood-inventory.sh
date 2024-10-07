@@ -21,4 +21,13 @@ tippecanoe --output /tmp/caledonian_pinewood_inventory.pmtiles --force \
   --minimum-zoom=0 --maximum-zoom=14 \
   /tmp/caledonian_pinewood_inventory_wgs84.json
 
-mc cp /tmp/caledonian_pinewood_inventory.pmtiles df/pmtiles-public/
+filename="caledonian_pinewood_inventory.pmtiles"
+
+curl -X PUT -H "AccessKey: $BUNNY_STORAGE_KEY" --fail-with-body \
+  "https://uk.storage.bunnycdn.com/plantopo/$filename" \
+  --data-binary @/tmp/caledonian_pinewood_inventory.pmtiles
+echo 'Uploaded'
+
+curl --get -H "AccessKey: $BUNNY_KEY" --fail-with-body "https://api.bunny.net/purge" \
+  -d "url=https://plantopo-storage.b-cdn.net/$filename"
+echo 'Purged cache'

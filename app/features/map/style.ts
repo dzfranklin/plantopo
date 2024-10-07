@@ -35,7 +35,7 @@ const defaultGlyphs =
 
 const geoboundariesSource: ml.SourceSpecification = {
   type: 'vector',
-  url: 'https://pmtiles.plantopo.com/geoboundaries.json',
+  url: 'pmtiles://https://plantopo-storage.b-cdn.net/geoboundaries.pmtiles',
 };
 
 export const baseStyles: Record<BaseStyleID, BaseStyle> = {
@@ -233,7 +233,7 @@ const overlayStyleList: OverlayStyle[] = [
     sources: {
       default: {
         type: 'vector',
-        url: 'https://pmtiles.plantopo.com/scot_core_paths.json',
+        url: 'pmtiles://https://plantopo-storage.b-cdn.net/scot_core_paths.pmtiles',
       },
     },
     layers: [
@@ -266,7 +266,7 @@ const overlayStyleList: OverlayStyle[] = [
     sources: {
       default: {
         type: 'vector',
-        url: 'https://pmtiles.plantopo.com/scot_wild_land_areas_2014.json',
+        url: 'pmtiles://https://plantopo-storage.b-cdn.net/scot_wild_land_areas_2014.pmtiles',
       },
     },
     layers: [
@@ -308,7 +308,7 @@ const overlayStyleList: OverlayStyle[] = [
     sources: {
       default: {
         type: 'vector',
-        url: 'https://pmtiles.plantopo.com/caledonian_pinewood_inventory.json',
+        url: 'pmtiles://https://plantopo-storage.b-cdn.net/caledonian_pinewood_inventory.pmtiles',
       },
     },
     layers: [
@@ -365,7 +365,7 @@ const overlayStyleList: OverlayStyle[] = [
     sources: {
       default: {
         type: 'vector',
-        url: 'https://pmtiles.plantopo.com/bgs_mining_hazard_ex_coal.json',
+        url: 'pmtiles://https://plantopo-storage.b-cdn.net/bgs_mining_hazard_ex_coal.pmtiles',
       },
     },
     layers: [
@@ -420,7 +420,7 @@ const overlayStyleList: OverlayStyle[] = [
     sources: {
       default: {
         type: 'raster',
-        url: 'https://pmtiles.plantopo.com/global_human_settlement_urbanisation_1km_colors.json',
+        url: 'pmtiles://https://plantopo-storage.b-cdn.net/global_human_settlement_urbanisation_1km_colors.pmtiles',
         tileSize: 512,
       },
     },

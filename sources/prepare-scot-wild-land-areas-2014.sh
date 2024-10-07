@@ -17,4 +17,13 @@ tippecanoe --output /tmp/scot_wild_land_areas_2014.pmtiles --force \
   --base-zoom=g \
   /tmp/scot_wild_land_areas_2014.json
 
-mc cp /tmp/scot_wild_land_areas_2014.pmtiles df/pmtiles-public
+filename="scot_wild_land_areas_2014.pmtiles"
+
+curl -X PUT -H "AccessKey: $BUNNY_STORAGE_KEY" --fail-with-body \
+  "https://uk.storage.bunnycdn.com/plantopo/$filename" \
+  --data-binary @/tmp/scot_wild_land_areas_2014.pmtiles
+echo 'Uploaded'
+
+curl --get -H "AccessKey: $BUNNY_KEY" --fail-with-body "https://api.bunny.net/purge" \
+  -d "url=https://plantopo-storage.b-cdn.net/$filename"
+echo 'Purged cache'

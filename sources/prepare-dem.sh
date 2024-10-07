@@ -4,16 +4,13 @@ set -euo pipefail
 mkdir work
 cd work
 
-# -- USAGE
-# Set the environment variable SSHPASS
-
 # -- NOTES
 # See <https://courses.spatialthoughts.com/gdal-tools.html#processing-elevation-data>
 
 # -- Install dependencies
 
 apt update
-apt install -y unzip file gdal-bin gdal-data parallel sshpass
+apt install -y unzip file gdal-bin gdal-data parallel
 
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
 unzip awscliv2.zip
@@ -65,6 +62,4 @@ find . -name '*.tif' >tile_list
 gdalbuildvrt -strict -resolution highest -input_file_list tile_list copernicus-dem-30m.vrt
 rm tile_list
 
-ssh-keyscan -p 23 u423943.your-storagebox.de >> ~/.ssh/known_hosts
-sshpass -e ssh -p23 u423943@u423943.your-storagebox.de mkdir -p dem/copernicus-dem-30m
-sshpass -e rsync -e "ssh -p23" -RPaul . u423943@u423943.your-storagebox.de:dem/copernicus-dem-30m/
+echo "Now you need to upload the compressed directory to bunny cdn"

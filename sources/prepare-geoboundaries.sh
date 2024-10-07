@@ -12,6 +12,15 @@ tippecanoe --output /tmp/geoboundaries.pmtiles --force \
   -zg \
   -L adm0:/tmp/geoboundaries_adm0.json
 
-mc cp /tmp/geoboundaries.pmtiles  df/pmtiles-public/
+filename="geoboundaries.pmtiles"
+
+curl -X PUT -H "AccessKey: $BUNNY_STORAGE_KEY" --fail-with-body \
+  "https://uk.storage.bunnycdn.com/plantopo/$filename" \
+  --data-binary @/tmp/geoboundaries.pmtiles
+echo 'Uploaded'
+
+curl --get -H "AccessKey: $BUNNY_KEY" --fail-with-body "https://api.bunny.net/purge" \
+  -d "url=https://plantopo-storage.b-cdn.net/$filename"
+echo 'Purged cache'
 
 echo 'All done'

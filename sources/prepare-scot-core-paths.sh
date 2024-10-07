@@ -15,6 +15,13 @@ tippecanoe --output /tmp/core_paths.pmtiles --force \
   --base-zoom=g \
   /tmp/core_paths_wgs84.json
 
-mc cp /tmp/core_paths.pmtiles df/pmtiles-public/scot_core_paths.pmtiles
+filename="scot_core_paths.pmtiles"
 
-echo 'All done'
+curl -X PUT -H "AccessKey: $BUNNY_STORAGE_KEY" --fail-with-body \
+  "https://uk.storage.bunnycdn.com/plantopo/$filename" \
+  --data-binary @/tmp/core_paths.pmtiles
+echo 'Uploaded'
+
+curl --get -H "AccessKey: $BUNNY_KEY" --fail-with-body "https://api.bunny.net/purge" \
+  -d "url=https://plantopo-storage.b-cdn.net/$filename"
+echo 'Purged cache'

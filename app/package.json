@@ -63,6 +63,7 @@
     "ol": "^10.2.1",
     "openapi-fetch": "^0.12.2",
     "openapi-react-query": "^0.1.7",
+    "pmtiles": "^3.2.0",
     "pretty-ms": "^9.1.0",
     "proj4": "^2.12.1",
     "react": "^18",

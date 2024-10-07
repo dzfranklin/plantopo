@@ -42,5 +42,23 @@ sqlite3 /tmp/ghs_colors.mbtiles "INSERT INTO metadata (name, value) VALUES ('att
 
 pmtiles convert /tmp/ghs_colors.mbtiles /tmp/ghs_colors.pmtiles
 
-mc cp /tmp/ghs.tif df/geodata/global_human_settlement_urbanisation_1km.tif
-mc cp /tmp/ghs_colors.pmtiles df/pmtiles-public/global_human_settlement_urbanisation_1km_colors.pmtiles
+dataFilename="global_human_settlement_urbanisation_1km.tif"
+colorsFilename="global_human_settlement_urbanisation_1km_colors.pmtiles"
+
+curl -X PUT -H "AccessKey: $BUNNY_STORAGE_KEY" --fail-with-body \
+  "https://uk.storage.bunnycdn.com/plantopo/$dataFilename" \
+  --data-binary @/tmp/ghs.tif
+
+curl -X PUT -H "AccessKey: $BUNNY_STORAGE_KEY" --fail-with-body \
+  "https://uk.storage.bunnycdn.com/plantopo/$colorsFilename" \
+  --data-binary @/tmp/ghs_colors.pmtiles
+
+echo 'Uploaded'
+
+curl --get -H "AccessKey: $BUNNY_KEY" --fail-with-body "https://api.bunny.net/purge" \
+  -d "url=https://plantopo-storage.b-cdn.net/$dataFilename"
+
+  curl --get -H "AccessKey: $BUNNY_KEY" --fail-with-body "https://api.bunny.net/purge" \
+    -d "url=https://plantopo-storage.b-cdn.net/$colorsFilename"
+
+echo 'Purged cache'

@@ -43,6 +43,7 @@ import { UnitSystem } from '@/features/units/format';
 import { ScaleControl } from '@/features/map/ScaleControl';
 import { useGeoip } from '@/features/geoip/useGeoip';
 import { useHighwayGraph } from '@/features/map/snap/provider';
+import * as pmtiles from 'pmtiles';
 
 /* Features I wish I could figure out how to realistically implement:
 - Map tiles that dynamically change units based on settings (including contour lines)
@@ -77,6 +78,13 @@ export type InitialCamera = Pick<CameraOptions, 'lng' | 'lat' | 'zoom'> &
 (MapboxDraw.constants.classes.CONTROL_BASE as any) = 'maplibregl-ctrl';
 (MapboxDraw.constants.classes.CONTROL_PREFIX as any) = 'maplibregl-ctrl-';
 (MapboxDraw.constants.classes.CONTROL_GROUP as any) = 'maplibregl-ctrl-group';
+
+ml.addProtocol(
+  'pmtiles',
+  new pmtiles.Protocol({
+    metadata: true, // required to show attribution
+  }).tile,
+);
 
 export default function MapComponentImpl(props: MapComponentProps) {
   // Inputs
