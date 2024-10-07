@@ -39,13 +39,15 @@ See:
 - https://web.archive.org/web/20240126143225/http://erouault.blogspot.com/2015/07/reliable-multithreading-is-hard.html
 */
 
+const cacheGB = 5
+
 func openDataset(l *slog.Logger, name string) (*dataset, error) {
 	ds, openErr := godal.Open(name,
 		godal.ConfigOption("GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR"),
 		godal.ConfigOption("GDAL_HTTP_MAX_RETRY=3"),
 		godal.ConfigOption("GDAL_HTTP_RETRY_DELAY=1"), // in seconds
 		godal.ConfigOption("GDAL_HTTP_RETRY_CODES=ALL"),
-		godal.ConfigOption("CPL_VSIL_CURL_CACHE_SIZE=1073741824"), // 1GB in bytes
+		godal.ConfigOption(fmt.Sprintf("CPL_VSIL_CURL_CACHE_SIZE=%d", cacheGB*1_000_000_000)),
 	)
 	if openErr != nil {
 		return nil, openErr
