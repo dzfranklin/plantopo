@@ -9,6 +9,7 @@ require (
 	github.com/andybalholm/cascadia v1.3.2
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cridenour/go-postgis v1.0.0
+	github.com/davidbyttow/govips/v2 v2.15.0
 	github.com/flatgeobuf/flatgeobuf/src/go v0.0.0-20240906191217-1d3647cec277
 	github.com/go-faster/errors v0.7.1
 	github.com/go-faster/jx v1.1.0
@@ -16,12 +17,14 @@ require (
 	github.com/google/flatbuffers v24.3.25+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.14.0
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/hasura/go-graphql-client v0.13.0
 	github.com/hdt3213/rdb v1.0.18
 	github.com/jackc/pgerrcode v0.0.0-20240316143900-6e2875d9b438
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/joho/godotenv v1.5.1
 	github.com/lmittmann/tint v1.0.5
+	github.com/mazznoer/csscolorparser v0.1.5
 	github.com/minio/minio-go/v7 v7.0.76
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/neilotoole/slogt v1.1.0
@@ -59,10 +62,10 @@ require (
 	go.opentelemetry.io/otel/trace v1.29.0
 	go.uber.org/automaxprocs v1.6.0
 	go.uber.org/multierr v1.11.0
-	golang.org/x/crypto v0.27.0
-	golang.org/x/net v0.28.0
+	golang.org/x/crypto v0.28.0
+	golang.org/x/net v0.30.0
 	golang.org/x/sync v0.8.0
-	golang.org/x/text v0.18.0
+	golang.org/x/text v0.19.0
 	riverqueue.com/riverui v0.5.0
 )
 
@@ -165,7 +168,8 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/arch v0.9.0 // indirect
 	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 // indirect
-	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/image v0.21.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240827150818-7e3bb234dfed // indirect
 	google.golang.org/grpc v1.66.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect

@@ -414,6 +414,10 @@ func GitRoot() string {
 	}
 }
 
+func DiscardLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
+
 func NewTestLogger(t *testing.T) *slog.Logger {
 	return slogt.New(t, slogt.Factory(func(w io.Writer) slog.Handler {
 		opts := &slog.HandlerOptions{

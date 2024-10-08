@@ -17,7 +17,7 @@ jobs:
       - name: Install system-level dependencies
         run: |
           sudo apt-get update
-          sudo apt-get -y install proj-data libproj-dev proj-bin gdal-bin libgdal-dev
+          sudo apt-get -y install proj-data libproj-dev proj-bin gdal-bin libgdal-dev libvips-dev
       - uses: actions/checkout@v4
       - name: Check
         run: ./scripts/check-in-ci.sh
