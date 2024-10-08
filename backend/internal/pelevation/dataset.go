@@ -42,12 +42,39 @@ See:
 const cacheGB = 5
 
 func openDataset(l *slog.Logger, name string) (*dataset, error) {
+	// The problem with doing this all the time is that all log messages go though godal's error handling mechanism
+	// which looks relatively heavy to me.
+	openLogger := func(ec godal.ErrorCategory, code int, msg string) error {
+		var slogLevel slog.Level
+		switch ec {
+		case godal.CE_None | godal.CE_Debug:
+			slogLevel = slog.LevelInfo
+		case godal.CE_Warning:
+			slogLevel = slog.LevelWarn
+		default:
+			slogLevel = slog.LevelError
+		}
+
+		slog.Log(context.Background(), slogLevel, "gdal open: "+msg, "code", "code", "category", ec)
+
+		if ec > godal.CE_Warning {
+			return fmt.Errorf("GDAL %d: %s", code, msg)
+		} else {
+			return nil
+		}
+	}
+
+	cacheBytes := cacheGB * 1_000_000_000
 	ds, openErr := godal.Open(name,
 		godal.ConfigOption("GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR"),
 		godal.ConfigOption("GDAL_HTTP_MAX_RETRY=3"),
 		godal.ConfigOption("GDAL_HTTP_RETRY_DELAY=1"), // in seconds
 		godal.ConfigOption("GDAL_HTTP_RETRY_CODES=ALL"),
-		godal.ConfigOption(fmt.Sprintf("CPL_VSIL_CURL_CACHE_SIZE=%d", cacheGB*1_000_000_000)),
+		godal.ConfigOption("GDAL_PAM_ENABLED=NO"), // disable aux file creation
+		godal.ConfigOption(fmt.Sprintf("CPL_VSIL_CURL_CACHE_SIZE=%d", cacheBytes)),
+		godal.ConfigOption("CPL_DEBUG=ON"),
+		godal.ConfigOption("CPL_LOG_ERRORS=ON"),
+		godal.ErrLogger(openLogger),
 	)
 	if openErr != nil {
 		return nil, openErr
