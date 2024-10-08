@@ -259,7 +259,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
     // Events
 
     let maybeOnMapCleanup: MaybeCleanup;
-    map.m.once('load', () => {
+    map.m.once('style.load', () => {
       if (removed) return;
 
       console.log('initialized map');
