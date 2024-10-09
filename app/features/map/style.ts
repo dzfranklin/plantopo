@@ -449,7 +449,7 @@ const overlayStyleList: OverlayStyle[] = [
         'source-layer': 'default',
         minzoom: 4,
         paint: {
-          'line-color': ['get', 'color'],
+          'line-color': ['coalesce', ['get', 'color'], '#424242'],
           'line-width': 1.5,
           'line-opacity': 0.8,
         },
@@ -462,7 +462,7 @@ const overlayStyleList: OverlayStyle[] = [
         minzoom: 5,
         layout: {},
         paint: {
-          'fill-color': ['get', 'color'],
+          'fill-color': ['coalesce', ['get', 'color'], '#424242'],
           'fill-opacity': [
             'case',
             ['boolean', ['feature-state', 'hover'], false],
@@ -496,7 +496,7 @@ const overlayStyleList: OverlayStyle[] = [
           'text-anchor': 'top',
         },
         paint: {
-          'text-color': ['get', 'color'],
+          'text-color': ['coalesce', ['get', 'color'], '#212121'],
           'text-halo-width': 1.4,
           'text-halo-color': '#fafafa',
         },
