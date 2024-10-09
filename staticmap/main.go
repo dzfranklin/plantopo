@@ -37,14 +37,12 @@ func main() {
 
 		opts, parseOptsErr := ParseOpts(r.URL.RawQuery)
 		if parseOptsErr != nil {
-			w.WriteHeader(http.StatusBadRequest)
 			http.Error(w, "invalid query: "+parseOptsErr.Error(), http.StatusBadRequest)
 			return
 		}
 
 		webp, drawErr := svc.DrawWebp(r.Context(), opts)
 		if drawErr != nil {
-			w.WriteHeader(http.StatusInternalServerError)
 			http.Error(w, "failed to draw: "+drawErr.Error(), http.StatusInternalServerError)
 			return
 		}
