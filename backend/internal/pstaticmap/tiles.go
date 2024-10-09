@@ -76,7 +76,7 @@ func (p *tileCache) Get(ctx context.Context, z, x, y int) ([]byte, error) {
 
 func requestFromOSM(ctx context.Context, l *slog.Logger, z, x, y int) ([]byte, error) {
 	url := fmt.Sprintf("https://tile.openstreetmap.org/%d/%d/%d.png", z, x, y)
-	l.Info("requesting tole from osm", "url", url)
+	l.Info("requesting tile from osm", "url", url)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
