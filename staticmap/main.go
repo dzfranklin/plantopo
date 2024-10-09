@@ -33,6 +33,11 @@ func main() {
 	})
 
 	http.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		if len(r.URL.RawQuery) > 5_000 {
+			http.Error(w, "query too large", http.StatusRequestEntityTooLarge)
+			return
+		}
+
 		l.Info("got request", "query", r.URL.RawQuery)
 
 		opts, parseOptsErr := ParseOpts(r.URL.RawQuery)
