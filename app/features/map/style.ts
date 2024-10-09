@@ -203,7 +203,7 @@ const overlayStyleList: OverlayStyle[] = [
         source: 'default',
         'source-layer': 'default',
         layout: {
-          'icon-image': '/sprites/marker@2x.png',
+          'icon-image': '/sprites/marker@2x.png.sdf',
           'icon-size': [
             'interpolate',
             ['exponential', 2],

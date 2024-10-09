@@ -110,7 +110,7 @@ const layers: ml.LayerSpecification[] = [
     type: 'symbol',
     layout: {
       'symbol-placement': 'line',
-      'icon-image': '/sprites/arrow@2x.png',
+      'icon-image': '/sprites/arrow@2x.png.sdf',
     },
     paint: {
       'icon-color': 'white',

@@ -137,28 +137,35 @@ export class MapManager {
     if (!(evt.id.startsWith('/') || evt.id.startsWith('https://'))) {
       return;
     }
-    const url = evt.id;
+    const id = evt.id;
+    let url = id;
 
-    if (this._fetchedImages.has(url)) {
+    if (this._fetchedImages.has(id)) {
       return;
     }
 
     let pixelRatio = 1;
-    const pixelRatioMatch = url.match(/@((?:[0-9]*[.])?[0-9]+)x/);
+    const pixelRatioMatch = id.match(/@((?:[0-9]*[.])?[0-9]+)x/);
     if (pixelRatioMatch !== null) {
       const parsed = parseFloat(pixelRatioMatch[1]!);
       if (isNaN(parsed)) {
-        console.warn('invalid pixel ratio expression in ' + url);
+        console.warn('invalid pixel ratio expression in ' + id);
       } else {
         pixelRatio = parsed;
       }
     }
 
-    this._fetchedImages.add(url);
+    let sdf = false;
+    if (url.endsWith('.sdf')) {
+      sdf = true;
+      url = url.replace(/\.sdf$/, '');
+    }
+
+    this._fetchedImages.add(id);
 
     this.m.loadImage(url).then(
       (img) => {
-        this.m.addImage(url, img.data, { sdf: true, pixelRatio });
+        this.m.addImage(id, img.data, { sdf, pixelRatio });
       },
       (err) => {
         throw err;
