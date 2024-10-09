@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: staticmap
+  namespace: pt
+spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: staticmap
+    template:
+      metadata:
+        labels:
+          app: staticmap
+      spec:
+        containers:
+          - name: staticmap
+            image: ghcr.io/dzfranklin/plantopo-staticmap:latest
+            ports:
+              - name: http
+                containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: staticmap
+  namespace: pt
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      name: http
+      targetPort: http
+  selector:
+    app: staticmap
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: staticmap-ingress-https
+  namespace: pt
+  labels:
+    app: staticmap
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  rules:
+    - host: staticmap.plantopo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: staticmap
+                port: { name: http }
+  tls:
+    - secretName: wildcard-prod
+      hosts:
+        - staticmap.plantopo.com

@@ -1,11 +1,10 @@
-package pstaticmap
+package main
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dzfranklin/plantopo/backend/internal/phttp"
-	"github.com/hashicorp/golang-lru/v2"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/sync/singleflight"
 	"io"
@@ -83,7 +82,7 @@ func requestFromOSM(ctx context.Context, l *slog.Logger, z, x, y int) ([]byte, e
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", phttp.UserAgent)
+	req.Header.Set("User-Agent", "github.com/dzfranklin/plantopo staticmap (daniel@danielzfranklin.org)")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

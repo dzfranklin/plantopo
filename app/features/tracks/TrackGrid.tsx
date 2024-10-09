@@ -5,7 +5,6 @@ import { TrackSummary } from '@/features/tracks/schema';
 import { Timestamp } from '@/components/Timestamp';
 import { DateTime } from 'luxon';
 import { useTracksQuery } from '@/features/tracks/queries';
-import { useRouter } from 'next/navigation';
 import { Dispatch, SetStateAction, useCallback, useRef, useState } from 'react';
 import * as Headless from '@headlessui/react';
 import cls from '@/cls';
@@ -104,7 +103,7 @@ export function TrackGrid(params: {
       <div className="mb-6 pb-2 border-b border-gray-200">
         <TrackGridControls options={options} setOptions={setOptions} />
       </div>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-8">
+      <div className="grid max-w-[264px] mx-auto sm:max-w-full grid-cols-[repeat(auto-fill,264px)] gap-8">
         {data.tracks.map((track) => (
           <TrackItem track={track} key={track.id} />
         ))}
@@ -347,19 +346,23 @@ function PaginationControlPageNumber({
 function TrackItem({ track }: { track: TrackSummary }) {
   const href = '/tracks/' + track.id;
   return (
-    <div className="aspect-[4/3] grid grid-cols-1 grid-rows-[minmax(0,1fr)_max-content] mb-2">
-      <TrackPreview href={href} padding={10} polyline={track.simplifiedLine} />
+    <Link href={href}>
+      <div className="w-[264px] grid grid-cols-1 grid-rows-[minmax(0,1fr)_max-content] mb-2">
+        <TrackPreview
+          width={264}
+          height={150}
+          polyline={track.simplifiedLine}
+        />
 
-      <Link href={href}>
         <p className="pointer-events-none mt-2 block truncate text-sm font-medium text-gray-900">
           {track.name}
         </p>
         <p className="pointer-events-none block text-sm font-medium text-gray-500">
           <Timestamp iso={track.date} fmt={DateTime.DATETIME_MED} />
         </p>
-      </Link>
 
-      <span className="sr-only">View details for {track.name}</span>
-    </div>
+        <span className="sr-only">View details for {track.name}</span>
+      </div>
+    </Link>
   );
 }

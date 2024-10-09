@@ -1,10 +1,10 @@
-package pstaticmap
+package main
 
 import (
 	"fmt"
-	"github.com/dzfranklin/plantopo/backend/internal/pgeo"
 	"github.com/mazznoer/csscolorparser"
 	"github.com/tidwall/geojson/geometry"
+	"github.com/twpayne/go-polyline"
 	"net/url"
 	"strconv"
 	"strings"
@@ -103,7 +103,7 @@ func SerializeOpts(opts Opts) string {
 				serializeOpt(&b, "lhc", op.HaloColor)
 			}
 			if len(op.Points) >= 2 {
-				serializeOpt(&b, "l", pgeo.EncodePolylinePoints(op.Points))
+				serializeOpt(&b, "l", encodePolylinePoints(op.Points))
 			}
 		case Circle:
 			if op.Color != "" {
@@ -167,7 +167,7 @@ func parseOpt(out *Opts, k string, v string) (err error) {
 	case "lhc":
 		out.defaultLine.HaloColor, err = validateColor(v)
 	case "l":
-		out.defaultLine.Points, err = pgeo.DecodePolylinePoints(v)
+		out.defaultLine.Points, err = decodePolylinePoints(v)
 		out.Draw = append(out.Draw, out.defaultLine)
 
 	// Circle options
@@ -214,4 +214,28 @@ func parseCircleCenter(v string) (p geometry.Point, err error) {
 func validateColor(value string) (string, error) {
 	_, err := csscolorparser.Parse(value)
 	return value, err
+}
+
+func encodePolylinePoints(points []geometry.Point) string {
+	input := make([][]float64, len(points))
+	for i := range points {
+		input[i] = []float64{points[i].Y, points[i].X} // polyline is lat,lng
+	}
+	return string(polyline.EncodeCoords(input))
+}
+
+func decodePolylinePoints(s string) ([]geometry.Point, error) {
+	pl, remaining, err := polyline.DecodeCoords([]byte(s))
+	if err != nil {
+		return nil, err
+	}
+	if len(remaining) > 0 {
+		return nil, fmt.Errorf("invalid polyline")
+	}
+
+	points := make([]geometry.Point, len(pl))
+	for i := range pl {
+		points[i] = geometry.Point{Y: pl[i][0], X: pl[i][1]}
+	}
+	return points, nil
 }

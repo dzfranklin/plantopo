@@ -6,7 +6,6 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/pmunroaccess"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
 	"github.com/dzfranklin/plantopo/backend/internal/psearch"
-	"github.com/dzfranklin/plantopo/backend/internal/pstaticmap"
 	"github.com/dzfranklin/plantopo/backend/internal/pweather"
 	"net/http"
 )
@@ -18,7 +17,6 @@ type phandler struct {
 	weather     *pweather.Service
 	munroaccess *pmunroaccess.Service
 	search      *psearch.Service
-	staticmap   *pstaticmap.Service
 }
 
 func New(env *pconfig.Env) (http.Handler, error) {
@@ -32,7 +30,6 @@ func New(env *pconfig.Env) (http.Handler, error) {
 		weather:     pweather.New(env),
 		munroaccess: pmunroaccess.New(env),
 		search:      psearch.New(env),
-		staticmap:   pstaticmap.Get(env.Logger),
 	}
 
 	s := &psecurity{
@@ -48,7 +45,6 @@ func New(env *pconfig.Env) (http.Handler, error) {
 
 	mux.HandleFunc("/complete-registration", h.CompleteRegistrationGet)
 	mux.HandleFunc("/munro-access/report/{id}/status-updates", h.MunroAccessReportIDStatusUpdatesGet)
-	mux.HandleFunc("/staticmap", h.StaticMapGet)
 
 	return mux, nil
 }

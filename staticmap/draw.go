@@ -1,4 +1,4 @@
-package pstaticmap
+package main
 
 import (
 	"bytes"

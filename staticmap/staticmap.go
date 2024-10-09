@@ -1,4 +1,4 @@
-package pstaticmap
+package main
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/tidwall/geojson/geometry"
 	"golang.org/x/sync/errgroup"
-	"log/slog"
 	"math"
 	"sync"
 )
@@ -17,20 +16,6 @@ import (
 type Service struct {
 	tiles     *tileCache
 	drawDebug bool
-}
-
-var globalMu sync.Mutex
-var global *Service
-
-func Get(l *slog.Logger) *Service {
-	globalMu.Lock()
-	defer globalMu.Unlock()
-	if global == nil {
-		global = &Service{
-			tiles: newTileCache(l, requestFromOSM),
-		}
-	}
-	return global
 }
 
 type Opts struct {

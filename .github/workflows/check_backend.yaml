@@ -1,5 +1,9 @@
 name: check_backend
-on: push
+on:
+  push:
+    paths-ignore:
+      - 'app/**'
+      - 'staticmap/**'
 jobs:
   check:
     name: Check
