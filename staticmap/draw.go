@@ -57,18 +57,18 @@ func drawSvg(view viewport, ops []DrawOp) ([]byte, error) {
 	fmt.Fprintf(&b, `<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d">`,
 		view.width, view.height)
 
+	for _, opt := range ops {
+		if err := opt.visit(view, &b); err != nil {
+			return nil, err
+		}
+	}
+
 	// Complies with <https://osmfoundation.org/wiki/Licence/Attribution_Guidelines#Static_images>
 	fmt.Fprint(&b, `<text y="100%" x="100%" dy="-5" dx="-5" `+
 		`alignment-baseline="text-after-edge" text-anchor="end" `+
 		`stroke="white" stroke-width="0.4em" fill="black" paint-order="stroke" stroke-linejoin="round" `+
 		`font-family="sans-serif" font-size="12px">`+
 		`© OpenStreetMap</text>`)
-
-	for _, opt := range ops {
-		if err := opt.visit(view, &b); err != nil {
-			return nil, err
-		}
-	}
 
 	fmt.Fprint(&b, "</svg>")
 
