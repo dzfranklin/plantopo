@@ -87,25 +87,28 @@ func (s *Service) runWorker() {
 	l := s.l
 
 	var ds lookuper
-	initErr := backoff.Retry(func() error {
-		l.Info("opening DEM dataset")
-		initStart := time.Now()
-		var err error
-		ds, err = s.opener()
-		if err != nil {
-			l.Warn("failed to open DEM dataset", "error", err)
-			return err
-		}
-		l.Info("opened DEM dataset", "time", time.Since(initStart))
-		return nil
-	}, backoff.NewExponentialBackOff(
-		backoff.WithInitialInterval(time.Millisecond),
-		backoff.WithRetryStopDuration(0)))
-	if initErr != nil {
-		panic("unreachable: should retry forever")
-	}
 
 	for req := range s.input {
+		if ds == nil {
+			initErr := backoff.Retry(func() error {
+				l.Info("opening DEM dataset")
+				initStart := time.Now()
+				var err error
+				ds, err = s.opener()
+				if err != nil {
+					l.Warn("failed to open DEM dataset", "error", err)
+					return err
+				}
+				l.Info("opened DEM dataset", "time", time.Since(initStart))
+				return nil
+			}, backoff.NewExponentialBackOff(
+				backoff.WithInitialInterval(time.Millisecond),
+				backoff.WithRetryStopDuration(0)))
+			if initErr != nil {
+				panic("unreachable: should retry forever")
+			}
+		}
+
 		reqCtx, cancel := context.WithTimeout(req.ctx, time.Minute)
 		lookupStart := time.Now()
 		centroid := computeCentroid(req.points)
