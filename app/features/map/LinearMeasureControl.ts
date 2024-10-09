@@ -174,7 +174,7 @@ export class LinearMeasureControl implements ml.IControl {
 
   private _updateGraph() {
     this._cancelGraphLoad?.();
-    if (this._m) {
+    if (this._m && this._m.getZoom() > 11) {
       this._cancelGraphLoad = this._g.load(mapBBox(this._m));
     }
   }
