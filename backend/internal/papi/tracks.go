@@ -195,7 +195,7 @@ func mapTrackSummary(track prepo.Track) TrackSummary {
 		DateUploaded:   track.DateUploaded,
 		LengthMeters:   track.LengthMeters,
 		DurationSecs:   omitEmptyInt(int(track.Duration / time.Second)),
-		SimplifiedLine: marshalPolyline(pgeo.Simplify(track.Line, 0.00001, true)),
+		SimplifiedLine: marshalSimplifiedLine(track.Line),
 	}
 }
 
@@ -210,6 +210,20 @@ func unmarshalPolyline(v Polyline) (*geometry.Line, error) {
 		points[i] = geometry.Point{Y: c[0], X: c[1]}
 	}
 	return geometry.NewLine(points, nil), nil
+}
+
+func marshalSimplifiedLine(line *geometry.Line) Polyline {
+	tolerance := 0.00001
+	for i := 0; i < 100; i++ {
+		simplified := marshalPolyline(pgeo.Simplify(line, tolerance, true))
+		if len(simplified) < 2000 {
+			return simplified
+		}
+		tolerance *= 2
+	}
+
+	fallbackSimplification := []geometry.Point{line.PointAt(0), line.PointAt(1)}
+	return marshalPolyline(geometry.NewLine(fallbackSimplification, nil))
 }
 
 func marshalPolyline(line *geometry.Line) Polyline {
