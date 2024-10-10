@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "plantopo-rastertile"
+version = "0.1.0"
+description = ""
+authors = ["Daniel Franklin <daniel@danielzfranklin.org>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+rio-tiler = "^6.7.0"
+pillow = "^10.4.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
