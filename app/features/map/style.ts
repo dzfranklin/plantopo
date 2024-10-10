@@ -477,10 +477,13 @@ const overlayStyleList: OverlayStyle[] = [
         source: 'default',
         'source-layer': 'default',
         layout: {
-          'icon-offset': [0, -0.2],
+          // prettier-ignore
+          'icon-offset': ['step', ['zoom'],
+            ['literal', [0, 0]],
+            7, ['literal', [0, -0.2]]],
           'icon-image': ['get', 'icon'],
           'icon-allow-overlap': ['step', ['zoom'], false, 6, true],
-          'icon-anchor': 'bottom',
+          'icon-anchor': ['step', ['zoom'], 'center', 7, 'bottom'],
           'icon-size': ['interpolate', ['linear'], ['zoom'], 5, 0.2, 9, 0.5],
 
           'text-offset': [0, 0.2],
