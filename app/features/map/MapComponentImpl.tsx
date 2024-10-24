@@ -55,6 +55,7 @@ export type { CameraOptions } from './MapManager';
 
 export interface MapComponentProps {
   onMap?: OnMap;
+  onMoveEnd?: (map: ml.Map) => void;
   geojson?: GeoJSON;
   layers?: ml.LayerSpecification[];
   // Fit the map to the provided geojson
@@ -248,7 +249,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
       scaleControlRef.current && map.m.addControl(scaleControlRef.current);
     }
 
-    if (baseStyle.id === 'os-explorer') {
+    if (baseStyle.id === 'os') {
       map.m.addControl(new OSLogoControl());
     }
 
@@ -302,6 +303,8 @@ export default function MapComponentImpl(props: MapComponentProps) {
       const currentCamera = cameraPosition(map.m);
       const view: InitialView = { ...currentCamera, baseStyle: baseStyle.id };
       pendingSaveView = requestIdleCallback(() => storeInitialView(view));
+
+      propsRef.current.onMoveEnd?.(map.m);
     });
 
     map.m.on('data', () => {
@@ -424,7 +427,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
       )}
     >
       <div className="absolute inset-0 pointer-events-none">
-        {baseStyle.id === 'os-explorer' && (
+        {baseStyle.id === 'os' && (
           <OSExplorerMapComponent
             onMap={onExplorerMap}
             // Because we integrate attribution with the others via a dummy source and layer in the style

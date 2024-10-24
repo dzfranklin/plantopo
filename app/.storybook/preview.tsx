@@ -114,6 +114,14 @@ const preview: Preview = {
             }
           }),
         ],
+        geophotoOrigins: [
+          http.all('https://s0.geograph.org.uk/geophotos/*', () =>
+            passthrough(),
+          ),
+        ],
+        cdnStorage: [
+          http.all('https://plantopo-storage.b-cdn.net/*', () => passthrough()),
+        ],
       },
     },
   },

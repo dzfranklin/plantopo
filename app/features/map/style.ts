@@ -6,7 +6,7 @@ export const baseStyleIDSchema = z.enum([
   'topo',
   'streets',
   'satellite',
-  'os-explorer',
+  'os',
   'usgs-imagery-topo',
   'usgs-topo',
 ]);
@@ -63,10 +63,10 @@ export const baseStyles: Record<BaseStyleID, BaseStyle> = {
     style:
       'https://api.maptiler.com/maps/satellite/style.json?key=' + MAPTILER_KEY,
   },
-  'os-explorer': {
-    id: 'os-explorer',
+  os: {
+    id: 'os',
     country: 'Great Britain',
-    name: 'Explorer',
+    name: 'OS',
     preview: '/style-preview/os_explorer_60x60.png',
     style: {
       version: 8,

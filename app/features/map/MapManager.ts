@@ -48,7 +48,7 @@ export class MapManager {
       opts.fitBoundsOptions = props.initialView.options;
     }
 
-    if (props.baseStyle.id === 'os-explorer') {
+    if (props.baseStyle.id === 'os') {
       opts.pitch = opts.minPitch = opts.maxPitch = 0;
       opts.minZoom = 3; // at very low zoom the projections don't match
     }

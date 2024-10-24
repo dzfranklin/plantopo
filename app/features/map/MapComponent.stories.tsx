@@ -44,7 +44,7 @@ export const SimpleGeoJSON: Story = {
 export const OSExplorer: Story = {
   ...Default,
   args: {
-    initialBaseStyle: 'os-explorer',
+    initialBaseStyle: 'os',
     initialCamera: {
       lng: -3.4,
       lat: 56.5,

@@ -1650,6 +1650,12 @@
     "repository": "https://github.com/Turfjs/turf"
   },
   {
+    "name": "@turf/boolean-overlap@7.1.0",
+    "publisher": "Turf Authors",
+    "licenses": "MIT",
+    "repository": "https://github.com/Turfjs/turf"
+  },
+  {
     "name": "@turf/boolean-point-on-line@7.1.0",
     "publisher": "Turf Authors",
     "licenses": "MIT",
@@ -3216,6 +3222,12 @@
     "repository": "https://github.com/nodejs/cjs-module-lexer"
   },
   {
+    "name": "classnames@2.5.1",
+    "publisher": "Jed Watson",
+    "licenses": "MIT",
+    "repository": "https://github.com/JedWatson/classnames"
+  },
+  {
     "name": "clean-css@5.3.3",
     "publisher": "Jakub Pawlowicz",
     "licenses": "MIT",
@@ -4738,6 +4750,12 @@
     "publisher": "Logan Smyth",
     "licenses": "MIT",
     "repository": "https://github.com/loganfsmyth/gensync"
+  },
+  {
+    "name": "geojson-equality-ts@1.0.2",
+    "publisher": "James Beard",
+    "licenses": "MIT",
+    "repository": "https://github.com/smallsaucepan/geojson-equality-ts"
   },
   {
     "name": "geojson-flatten@1.1.1",
@@ -6726,6 +6744,12 @@
     "repository": "https://github.com/crypto-browserify/pbkdf2"
   },
   {
+    "name": "pcg-random@2.0.1",
+    "publisher": "Thom Chiovoloni",
+    "licenses": "MIT",
+    "repository": "https://github.com/thomcc/pcg-random"
+  },
+  {
     "name": "picocolors@1.1.0",
     "publisher": "Alexey Raspopov",
     "licenses": "ISC",
@@ -7192,6 +7216,12 @@
     "publisher": null,
     "licenses": "MIT",
     "repository": "https://github.com/facebook/react"
+  },
+  {
+    "name": "react-tooltip@5.28.0",
+    "publisher": "ReactTooltip",
+    "licenses": "MIT",
+    "repository": "https://github.com/ReactTooltip/react-tooltip"
   },
   {
     "name": "react-virtualized-auto-sizer@1.0.24",

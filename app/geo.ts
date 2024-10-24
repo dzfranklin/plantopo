@@ -29,3 +29,10 @@ export function bboxOf(g: Geometry): [number, number, number, number] {
     return out.slice(0, 4) as [number, number, number, number];
   }
 }
+
+export function bboxIntersects(
+  [aMinX, aMinY, aMaxX, aMaxY]: readonly [number, number, number, number],
+  [bMinX, bMinY, bMaxX, bMaxY]: readonly [number, number, number, number],
+): boolean {
+  return bMaxX >= aMinX && bMinX <= aMaxX && bMaxY >= aMinY && bMinY <= aMaxY;
+}
