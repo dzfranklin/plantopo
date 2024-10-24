@@ -10,6 +10,18 @@ export default function Page() {
         <h2>Data</h2>
         <ul>
           <li>
+            Yahoo Flickr Creative Commons 100 Million Dataset (
+            <a href="https://dl.acm.org/doi/10.1145/2812802">
+              B. Thomee, D.A. Shamma, G. Friedland, B. Elizalde, K. Ni, D.
+              Poland, D. Borth, and L. Li, “YFCC100M: The New Data in Multimedia
+              Research”, Communications of the ACM, 59(2), 2016, pp. 64-73
+            </a>
+            ) with additional work by{' '}
+            <a href="https://multimediacommons.wordpress.com/">
+              multimediacommons.wordpress.com
+            </a>
+          </li>
+          <li>
             Images from <a href="https://www.geograph.org.uk/">Geograph</a>
           </li>
           <li>
