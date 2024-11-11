@@ -2,11 +2,11 @@
 
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
 import { useState } from 'react';
-import { formatDistance } from './format';
+import { formatElevation } from './format';
 import UnitSettingsDialog from './UnitSettingsDialog';
 import { useSettings } from '@/features/settings/useSettings';
 
-export default function DistanceText({
+export default function ElevationText({
   meters,
   unitSelector,
 }: {
@@ -14,7 +14,7 @@ export default function DistanceText({
   unitSelector?: boolean;
 }) {
   const { units } = useSettings();
-  const [value, unit] = formatDistance(meters, units);
+  const [value, unit] = formatElevation(meters, units);
   const [showSettings, setShowSettings] = useState(false);
   return (
     <span className="inline-flex items-end">

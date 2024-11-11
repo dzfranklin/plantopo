@@ -29,7 +29,7 @@ export default function TrackStatsComponent({
   return (
     <dl className="flex gap-12">
       <StatComponent label="Length">
-        <DistanceText meters={track.lengthMeters} />
+        <DistanceText meters={track.lengthMeters} unitSelector={true} />
       </StatComponent>
 
       {track.durationSecs !== undefined && (

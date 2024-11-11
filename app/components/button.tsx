@@ -19,6 +19,18 @@ const styles = {
     // Icon
     '[&>[data-slot=icon]]:-mx-0.5 [&>[data-slot=icon]]:my-0.5 [&>[data-slot=icon]]:size-5 [&>[data-slot=icon]]:shrink-0 [&>[data-slot=icon]]:text-[--btn-icon] [&>[data-slot=icon]]:sm:my-1 [&>[data-slot=icon]]:sm:size-4 forced-colors:[--btn-icon:ButtonText] forced-colors:data-[hover]:[--btn-icon:ButtonText]',
   ],
+  smallBase: [
+    // Base
+    'relative isolate inline-flex items-center justify-center gap-x-2 rounded-lg border text-base/6 font-semibold',
+    // Sizing
+    'px-1.5 py-1 text-xs',
+    // Focus
+    'focus:outline-none data-[focus]:outline data-[focus]:outline-2 data-[focus]:outline-offset-2 data-[focus]:outline-blue-500',
+    // Disabled
+    'data-[disabled]:opacity-50',
+    // Icon
+    '[&>[data-slot=icon]]:-mx-0.5 [&>[data-slot=icon]]:my-0.5 [&>[data-slot=icon]]:size-5 [&>[data-slot=icon]]:shrink-0 [&>[data-slot=icon]]:text-[--btn-icon] [&>[data-slot=icon]]:sm:my-1 [&>[data-slot=icon]]:sm:size-4 forced-colors:[--btn-icon:ButtonText] forced-colors:data-[hover]:[--btn-icon:ButtonText]',
+  ],
   solid: [
     // Optical border, implemented as the button background to avoid corner artifacts
     'border-transparent bg-[--btn-border]',
@@ -169,6 +181,7 @@ type ButtonProps = (
   className?: string;
   disableWith?: string | false | null;
   children: React.ReactNode;
+  small?: boolean;
 } & (
     | Omit<Headless.ButtonProps, 'className'>
     | Omit<React.ComponentPropsWithoutRef<typeof Link>, 'className'>
@@ -182,13 +195,14 @@ export const Button = React.forwardRef(function Button(
     className,
     children,
     disableWith,
+    small,
     ...props
   }: ButtonProps,
   ref: React.ForwardedRef<HTMLElement>,
 ) {
   const classes = clsx(
     className,
-    styles.base,
+    small ? styles.smallBase : styles.base,
     outline
       ? styles.outline
       : plain

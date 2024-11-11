@@ -8,7 +8,7 @@ export function PageTitle({
   inlineTitle,
 }: {
   title?: string;
-  actions: React.ReactNode;
+  actions?: React.ReactNode;
   inlineTitle?: boolean;
 }) {
   useEffect(() => {

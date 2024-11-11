@@ -13,7 +13,7 @@ export class ScaleControl implements IControl {
       'maplibregl-ctrl',
       'pb-[0.5px]',
       'border-b border-l border-r border-black',
-      'text-center text-[12px]',
+      'text-center text-[12px] select-none',
     ),
     style: { width: `${barWidth}px` },
   });

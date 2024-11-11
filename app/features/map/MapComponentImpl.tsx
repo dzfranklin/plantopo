@@ -1,5 +1,6 @@
 import {
   MutableRefObject,
+  ReactNode,
   RefObject,
   useCallback,
   useEffect,
@@ -44,6 +45,7 @@ import { ScaleControl } from '@/features/map/ScaleControl';
 import { useGeoip } from '@/features/geoip/useGeoip';
 import { useHighwayGraph } from '@/features/map/snap/provider';
 import * as pmtiles from 'pmtiles';
+import { MapContext } from '@/features/map/useMap';
 
 /* Features I wish I could figure out how to realistically implement:
 - Map tiles that dynamically change units based on settings (including contour lines)
@@ -69,6 +71,7 @@ export interface MapComponentProps {
   minimal?: boolean;
   interactive?: boolean;
   debugMode?: boolean;
+  children?: ReactNode;
 }
 
 export type MaybeCleanup = (() => void) | void;
@@ -127,6 +130,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapManager | null>(null);
+  const [mapState, setMapState] = useState<MapManager | null>(null);
   const explorerMapRef = useRef<OLMap | null>(null);
 
   const [showSkeleton, setShowSkeleton] = useState(true);
@@ -269,6 +273,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
 
       setShowSkeleton(false);
       mapRef.current = map;
+      setMapState(map);
 
       viewRef.current = cameraPosition(map.m);
 
@@ -324,6 +329,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
       removed = true;
       map.remove();
       mapRef.current = null;
+      setMapState(null);
     };
   }, [baseStyle, layersControl, searchControl, interactive, props.minimal]);
 
@@ -461,6 +467,14 @@ export default function MapComponentImpl(props: MapComponentProps) {
         onClose={() => setInspectFeatures([])}
         features={inspectFeatures}
       />
+
+      <div className="absolute inset-0 pointer-events-none">
+        {mapState && (
+          <MapContext.Provider value={mapState}>
+            {props.children}
+          </MapContext.Provider>
+        )}
+      </div>
     </div>
   );
 }

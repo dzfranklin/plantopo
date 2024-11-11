@@ -8,7 +8,6 @@ import { ReactNode, useMemo, useState } from 'react';
 import { Dialog } from '@/components/dialog';
 import { Button } from '@/components/button';
 import cls from '@/cls';
-import { BugAntIcon } from '@heroicons/react/16/solid';
 import { Checkbox, CheckboxField } from '@/components/checkbox';
 import { Label } from '@headlessui/react';
 import { useDebugMode } from '@/hooks/debugMode';
@@ -186,7 +185,7 @@ function LayerButton({
       title={label}
       onClick={onClick}
       className={cls(
-        'relative h-[63px] w-[63px] text-[11px] rounded-lg bg-cover',
+        'relative h-[63px] w-[63px] text-[11px] rounded-lg bg-cover select-none',
         selected === undefined && 'border-white border-[1.5px]',
         selected === true && 'border-blue-600 border-[3px]',
         selected === false && 'border-white border-[3px]',
