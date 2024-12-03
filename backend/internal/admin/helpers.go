@@ -25,7 +25,7 @@ var funcs = template.FuncMap{
 
 func (app *adminApp) render(w http.ResponseWriter, r *http.Request, name string, data M) {
 	if data == nil {
-		data = M{}
+		data = make(M)
 	}
 
 	user := getUser(r.Context())
