@@ -29,6 +29,12 @@ layout {
         }
     }
 
+    tab name="Minio" {
+        pane {
+            command "./scripts/dev-minio.sh"
+        }
+    }
+
     tab name="Proxy" {
         pane {
             command "caddy"
