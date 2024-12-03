@@ -12,3 +12,18 @@ spec:
       targetPort: http
   selector:
     app: api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin
+  namespace: pt
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  ports:
+    - port: 80
+      name: http
+      targetPort: admin
+  selector:
+    app: api

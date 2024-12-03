@@ -26,14 +26,12 @@ func NewServer(env *pconfig.Env) *http.Server {
 	}
 
 	webhookSrv := pwebhooks.Routes(env)
-	adminSrv := admin.Routes(env)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/status", handleStatus(env))
 	mux.Handle("/docs/", http.StripPrefix("/docs", docsRoutes()))
 	mux.Handle("/api/v1/", http.StripPrefix("/api/v1", apiSrv))
 	mux.Handle("/webhooks/", webhookSrv)
-	mux.Handle("/admin/", adminSrv)
 
 	srv := &http.Server{
 		Handler: instrumentRequests(recoverPanic(env, papi.AssignRequestID(enableCORS(env, mux)))),
@@ -41,6 +39,14 @@ func NewServer(env *pconfig.Env) *http.Server {
 	}
 
 	return srv
+}
+
+func NewAdminServer(env *pconfig.Env) *http.Server {
+	routes := admin.Routes(env)
+	return &http.Server{
+		Handler: instrumentRequests(recoverPanic(env, papi.AssignRequestID(routes))),
+		Addr:    fmt.Sprintf("0.0.0.0:%d", env.Config.Server.AdminPort),
+	}
 }
 
 type statusResult struct {

@@ -23,3 +23,29 @@ spec:
     - secretName: api-ingress-tls-certificate
       hosts:
           - api.plantopo.com
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: admin-ingress
+  namespace: pt
+  labels:
+    app: admin
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  rules:
+    - host: admin.plantopo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: admin
+                port: { name: http }
+  tls:
+    - secretName: admin-ingress-tls-certificate
+      hosts:
+        - admin.plantopo.com

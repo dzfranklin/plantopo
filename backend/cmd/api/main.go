@@ -64,6 +64,7 @@ func main() {
 		// hard stop succeeded
 	}()
 
+	// api server
 	quitGroup.Add(2)
 	go func() {
 		defer quitGroup.Done()
@@ -91,6 +92,35 @@ func main() {
 		}
 	}()
 
+	// admin server
+	quitGroup.Add(2)
+	go func() {
+		defer quitGroup.Done()
+		srv := NewAdminServer(env)
+
+		go func() {
+			defer quitGroup.Done()
+			<-shouldQuit
+
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+
+			l.Info("shutting down admin server")
+			err := srv.Shutdown(ctx)
+			if err != nil {
+				l.Error("admin server shutdown failed", "error", err)
+			}
+			l.Info("shut down admin server")
+		}()
+
+		l.Info("admin server starting", "addr", srv.Addr, "domain", env.Config.Server.Domain)
+		err := srv.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			l.Error("admin server failed", "error", err)
+		}
+	}()
+
+	// meta server
 	quitGroup.Add(2)
 	go func() {
 		defer quitGroup.Done()

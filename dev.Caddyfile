@@ -1,13 +1,17 @@
 {
 	ocsp_stapling off
+	persist_config off
 }
 
-api.pt.internal {
+pt.internal, *.pt.internal {
 	tls internal
-	reverse_proxy localhost:4000
-}
 
-pt.internal {
-	tls internal
-	reverse_proxy localhost:8000
+	@api host api.pt.internal
+	reverse_proxy @api localhost:4000
+
+	@admin host admin.pt.internal
+	reverse_proxy @admin localhost:4002
+
+	@app host pt.internal
+	reverse_proxy @app localhost:8000
 }

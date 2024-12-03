@@ -18,6 +18,7 @@ func Read() *Config {
 		Env: getEnvString("APP_ENV"),
 		Server: Server{
 			Port:           getEnvInt("PORT"),
+			AdminPort:      getEnvInt("ADMIN_PORT"),
 			MetaPort:       getEnvInt("META_PORT"),
 			Domain:         getEnvString("DOMAIN"),
 			CORSAllowHosts: getEnvStrings("CORS_ALLOW_HOSTS"),

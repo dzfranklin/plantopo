@@ -56,6 +56,8 @@
 </div>
 
 <script>
+  const apiDomain = location.host.replace(/^[^.]+/, 'api');
+
     const errContainerEl = document.querySelector("#errContainer");
     const errEl = document.querySelector("#err");
     const formEl = document.querySelector("#form");
@@ -74,17 +76,25 @@
         evt.preventDefault();
         clearError();
         const data = new FormData(formEl);
-        const resp = await fetch("/api/v1/auth/authenticate-browser", {
+      let resp;
+      let payload;
+      try {
+        resp = await fetch(`https://${apiDomain}/api/v1/auth/authenticate-browser`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+              'Content-Type': 'application/json',
             },
+          credentials: 'include',
             body: JSON.stringify({
-                email: data.get("email"),
-                password: data.get("password")
+              email: data.get('email'),
+              password: data.get('password'),
             })
         })
-        const payload = await resp.json();
+        payload = await resp.json();
+      } catch (err) {
+        showError(err.toString());
+        return;
+      }
         if (!resp.ok) {
             showError(JSON.stringify(payload));
             return;

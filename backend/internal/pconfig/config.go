@@ -78,6 +78,7 @@ type Session struct {
 
 type Server struct {
 	Port           int
+	AdminPort      int
 	MetaPort       int
 	Domain         string
 	CORSAllowHosts []string

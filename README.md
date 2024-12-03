@@ -19,6 +19,7 @@ Append to your `/etc/hosts`
  ```
  127.0.0.1 pt.internal
  127.0.0.1 api.pt.internal
+ 127.0.0.1 admin.pt.internal
  ```
 
 ### 3. Install app deps
