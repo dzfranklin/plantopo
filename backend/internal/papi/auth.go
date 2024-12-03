@@ -45,7 +45,7 @@ func (h *phandler) AuthAuthenticateBrowserPost(ctx context.Context, req *Authent
 		return nil, err
 	}
 	return &AuthenticateBrowserOKHeaders{
-		SetCookie: NewOptSetSessionCookieHeader(SetSessionCookieHeader(createSessionCookie(token).String())),
+		SetCookie: NewOptSetSessionCookieHeader(SetSessionCookieHeader(createSessionCookie(h.Config.Server.Domain, token).String())),
 		Response: AuthenticateBrowserOK{
 			User: user,
 		},
@@ -67,7 +67,7 @@ func (h *phandler) AuthRevokeBrowserPost(ctx context.Context) (*AuthRevokeBrowse
 		return nil, err
 	}
 
-	cookie := createSessionCookie("")
+	cookie := createSessionCookie(h.Config.Server.Domain, "")
 	cookie.MaxAge = -1
 
 	return &AuthRevokeBrowserPostOKHeaders{
@@ -82,7 +82,7 @@ func (h *phandler) AuthRegisterBrowserPost(ctx context.Context, req *AuthRegiste
 		return nil, err
 	}
 	return &AuthenticateBrowserOKHeaders{
-		SetCookie: NewOptSetSessionCookieHeader(SetSessionCookieHeader(createSessionCookie(token).String())),
+		SetCookie: NewOptSetSessionCookieHeader(SetSessionCookieHeader(createSessionCookie(h.Config.Server.Domain, token).String())),
 		Response: AuthenticateBrowserOK{
 			User: user,
 		},
@@ -143,10 +143,11 @@ func (h *phandler) createSessionFor(ctx context.Context, user User) (string, err
 	})
 }
 
-func createSessionCookie(token string) *http.Cookie {
+func createSessionCookie(domain, token string) *http.Cookie {
 	return &http.Cookie{
 		Name:     sessionCookieName,
 		Value:    token,
+		Domain:   domain,
 		Path:     "/",
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,

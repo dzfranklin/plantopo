@@ -84,7 +84,7 @@ func main() {
 			l.Info("shut down server")
 		}()
 
-		l.Info("server starting", "addr", srv.Addr)
+		l.Info("server starting", "addr", srv.Addr, "domain", env.Config.Server.Domain)
 		err := srv.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			l.Error("server failed", "error", err)
