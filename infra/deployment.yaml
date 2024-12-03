@@ -32,6 +32,8 @@ spec:
               value: "4000"
             - name: META_PORT
               value: "4001"
+            - name: ADMIN_PORT
+              value: "4002"
             - name: DOMAIN
               value: plantopo.com
             - name: CORS_ALLOW_HOSTS

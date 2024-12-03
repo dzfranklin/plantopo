@@ -44,6 +44,26 @@ func getUser(ctx context.Context) prepo.User {
 	return ctx.Value(userContextKey{}).(prepo.User)
 }
 
+func (app *adminApp) checkIsLoggedInButNotAdmin(r *http.Request) bool {
+	sessionCookie, err := r.Cookie("session")
+	if err != nil {
+		return false
+	}
+	token := sessionCookie.Value
+
+	userID, err := app.Sessions.LookupUser(token)
+	if err != nil {
+		return false
+	}
+
+	isAdmin, err := app.Users.IsAdmin(userID)
+	if err != nil {
+		return false
+	}
+
+	return !isAdmin
+}
+
 func (app *adminApp) checkIsAdmin(r *http.Request) (bool, string, error) {
 	sessionCookie, err := r.Cookie("session")
 	if err != nil {
