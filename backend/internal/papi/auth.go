@@ -52,18 +52,8 @@ func (h *phandler) AuthAuthenticateBrowserPost(ctx context.Context, req *Authent
 	}, nil
 }
 
-func (h *phandler) AuthRevokePost(ctx context.Context, req *AuthRevokeReq) error {
-	token, ok := getSessionToken(ctx)
-	if !ok {
-		return ErrNotLoggedIn
-	}
-
-	err := h.Sessions.Revoke(token)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (h *phandler) AuthRevokePost(_ context.Context, req *AuthRevokeReq) error {
+	return h.Sessions.Revoke(string(req.Token))
 }
 
 func (h *phandler) AuthRevokeBrowserPost(ctx context.Context) (*AuthRevokeBrowserPostOKHeaders, error) {
