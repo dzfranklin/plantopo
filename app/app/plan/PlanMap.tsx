@@ -1,6 +1,6 @@
 import { MapComponent } from '@/features/map/MapComponent';
 import { useMap, useOnMap } from '@/features/map/useMap';
-import { useCallback, useEffect, useRef } from 'react';
+import { Dispatch, useCallback, useEffect, useRef } from 'react';
 import {
   ActiveCandidate,
   ControlPoint,
@@ -11,6 +11,9 @@ import { clamp, pythagoreanDist } from '@/math';
 import { ControlPointControls } from './ControlPointControls';
 import cls from '@/cls';
 import { XMarkIcon } from '@heroicons/react/20/solid';
+import { useHighwayGraph } from '@/features/map/snap/provider';
+import { mapBBox } from '@/features/map/util';
+import * as ml from 'maplibre-gl';
 
 const connectorWidth = 2;
 const connectorOutlineWidth = 1;
@@ -20,6 +23,8 @@ const controlPointCandidateRadius = 3;
 const controlPointCandidateOutlineWidth = 1;
 const controlPointControlsWidth = 300;
 const controlPointControlsHeight = 120;
+
+const highwayGraphMinZoom = 12;
 
 export function PlanMap({
   state,
@@ -43,6 +48,8 @@ function RouteMapComponent({
   dispatch: EditorDispatch;
 }) {
   const ref = useRef<SVGSVGElement>(null);
+  const highways = useHighwayGraph();
+  const map = useMap();
 
   useOnMap('click', (ev) => {
     dispatch({
@@ -52,6 +59,26 @@ function RouteMapComponent({
       },
     });
   });
+
+  const cancelLoad = useRef<Dispatch<void> | undefined>();
+  const updateGraph = useCallback(
+    (map: ml.Map) => {
+      cancelLoad.current?.();
+      cancelLoad.current = undefined;
+      if (map.getZoom() >= highwayGraphMinZoom) {
+        cancelLoad.current = highways.load(mapBBox(map));
+      }
+    },
+    [highways],
+  );
+  useEffect(() => {
+    updateGraph(map);
+    return () => {
+      cancelLoad.current?.();
+      cancelLoad.current = undefined;
+    };
+  }, [updateGraph, map]);
+  useOnMap('moveend', (_ev, map) => updateGraph(map));
 
   return (
     <svg

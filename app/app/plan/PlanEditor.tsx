@@ -3,9 +3,14 @@ import { PlanMap } from './PlanMap';
 import { useReducer } from 'react';
 import { editorReducer, initialEditorState } from '@/app/plan/state';
 import cls from '@/cls';
+import { useHighwayGraph } from '@/features/map/snap/provider';
 
 export function PlanEditor() {
-  const [state, dispatch] = useReducer(editorReducer, initialEditorState);
+  const highways = useHighwayGraph();
+  const [state, dispatch] = useReducer(
+    editorReducer,
+    initialEditorState(highways),
+  );
 
   return (
     <div

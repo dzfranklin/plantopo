@@ -4,6 +4,10 @@ set dotenv-filename := "./backend/.env"
 
 tmpdir  := `mktemp -d`
 
+dev:
+    zellij delete-session plantopo >/dev/null; true
+    zellij --layout layout.kdl --session plantopo
+
 check:
     ./scripts/check-all.sh
 

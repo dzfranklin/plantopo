@@ -1,0 +1,38 @@
+// Zellij configuration for development
+
+simplified_ui true
+scroll_buffer_size 100000
+default_mode "scroll"
+
+layout {
+    default_tab_template {
+        pane size=1 borderless=true {
+            plugin location="zellij:tab-bar"
+        }
+
+        children
+    }
+
+    tab name="Run" focus=true {
+        pane split_direction="vertical" {
+            pane {
+                command "npm"
+                args "run" "dev-server"
+                cwd "app"
+            }
+
+            pane {
+                command "watchexec"
+                args "--restart" "bin=\"$(mktemp -d -t plantopo.XXXXXXXXXX)/api\" && printf \"\\nBuilding ./cmd/api\\n\\n\" && go build -race -o $bin ./cmd/api && printf \"\\nRunning ./cmd/api ($bin)\\n\\n\" && $bin"
+                cwd "backend"
+            }
+        }
+    }
+
+    tab name="Proxy" {
+        pane {
+            command "caddy"
+            args "run" "--config" "./dev.Caddyfile"
+        }
+    }
+}

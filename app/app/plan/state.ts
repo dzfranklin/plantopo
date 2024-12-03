@@ -1,9 +1,12 @@
 import { Dispatch } from 'react';
+import { LineString } from 'geojson';
+import { HighwayGraph } from '@/features/map/snap/HighwayGraph';
 
 export interface EditorState {
   nextID: number;
   points: Array<ControlPoint>;
   activeCandidate?: ActiveCandidate;
+  highways: HighwayGraph;
 }
 
 export interface ControlPoint {
@@ -11,6 +14,8 @@ export interface ControlPoint {
   lngLat: [number, number];
   waypoint?: Waypoint;
   showControls?: boolean;
+  shouldSnapOutgoing?: boolean;
+  resolvedSnapOutgoing?: ResolvedSnapOutgoing;
 }
 
 export interface Waypoint {
@@ -22,10 +27,16 @@ export interface ActiveCandidate {
   lngLat: [number, number];
 }
 
-export const initialEditorState: EditorState = {
+export interface ResolvedSnapOutgoing {
+  toLngLat: [number, number];
+  lineString: LineString;
+}
+
+export const initialEditorState = (highways: HighwayGraph): EditorState => ({
   nextID: 1,
   points: [],
-};
+  highways,
+});
 
 export type InsertControlPoint = Omit<ControlPoint, 'id'>;
 
