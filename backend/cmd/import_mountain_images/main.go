@@ -19,10 +19,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// WatchStatus: manually fix missing ids
+	// TODO: manually fix missing ids
 	//
-	// WatchStatus: Import flag that imports into table (which is then joined by the dboih
+	// TODO: Import flag that imports into table (which is then joined by the dboih
 	//   repo) Cleans up source into source_url (optional) and source_text
 	//
-	// WatchStatus: put cloudfront in from of imgproxy. behind that I think we can just request directly from wikimedia?
+	// TODO: put cloudfront in from of imgproxy. behind that I think we can just request directly from wikimedia?
 }

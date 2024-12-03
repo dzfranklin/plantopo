@@ -39,7 +39,7 @@ func Read() *Config {
 			SecretKey: getEnvString("S3_SECRET_KEY"),
 		},
 		Session: Session{
-			SessionIdleExpiry: 24 * time.Hour * 30, // WatchStatus: implement
+			SessionIdleExpiry: 24 * time.Hour * 30, // TODO: implement
 		},
 		Users: Users{
 			LoginThrottle:       throttled.RateQuota{MaxRate: throttled.PerMin(10), MaxBurst: 20},
