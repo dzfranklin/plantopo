@@ -4,7 +4,7 @@ set dotenv-filename := "./backend/.env"
 
 dev:
     zellij delete-session plantopo >/dev/null; true
-    zellij --layout layout.kdl --session plantopo
+    zellij --new-session-with-layout layout.kdl --session plantopo
 
 check:
     ./scripts/check-all.sh
