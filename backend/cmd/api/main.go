@@ -217,13 +217,13 @@ func startSignalHandlers() {
 
 			switch count {
 			case 0:
-				l.Info(fmt.Sprintf("received %s, soft quitting...", sig))
+				l.Info(fmt.Sprintf("received signal %s, soft quitting...", sig))
 				startQuit <- struct{}{}
 			case 1:
-				l.Info(fmt.Sprintf("received %s (second signal), aborting soft quit and hard quitting...", sig))
+				l.Info(fmt.Sprintf("received signal %s (second signal), aborting soft quit and hard quitting...", sig))
 				cancelSoftQuitCtx()
 			case 2:
-				l.Info(fmt.Sprintf("received %s (third signal), aborting hard quit and exiting...", sig))
+				l.Info(fmt.Sprintf("received signal %s (third signal), aborting hard quit and exiting...", sig))
 				cancelHardQuitCtx()
 			}
 		}
