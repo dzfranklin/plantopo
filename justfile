@@ -2,8 +2,6 @@ export RUST_LOG := "watchexec_cli=error"
 
 set dotenv-filename := "./backend/.env"
 
-tmpdir  := `mktemp -d`
-
 dev:
     zellij delete-session plantopo >/dev/null; true
     zellij --layout layout.kdl --session plantopo
@@ -22,10 +20,6 @@ gen:
 
 backend-test-watch:
     cd ./backend && watchexec --clear=clear --restart go test -race ./...
-
-api-watch:
-    cd ./backend && watchexec --clear=clear --restart \
-      'go build -race -o {{tmpdir}}/plantopo-api ./cmd/api && {{tmpdir}}/plantopo-api'
 
 api-schema-watch:
     watchexec --watch ./api/schema just api-schema-gen
