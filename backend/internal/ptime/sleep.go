@@ -2,6 +2,7 @@ package ptime
 
 import (
 	"context"
+	"math/rand"
 	"time"
 )
 
@@ -14,6 +15,11 @@ func Sleep(ctx context.Context, d time.Duration) error {
 	case <-t.C:
 		return nil
 	}
+}
+
+func SleepJitter(ctx context.Context, d time.Duration, j time.Duration) error {
+	total := d + time.Duration(rand.Int63n(int64(j)))
+	return Sleep(ctx, total)
 }
 
 func SleepUntil(ctx context.Context, t time.Time) error {

@@ -73,22 +73,22 @@ func Register(
 
 	// Periodic jobs
 
-	periodic.Add(river.NewPeriodicJob(
-		mustParseCron("46 18 * * *"),
-		func() (river.JobArgs, *river.InsertOpts) {
-			return pmunroaccess.PregenerationArgs{}, nil
-		},
-		nil,
-	))
-
-	periodic.Add(river.NewPeriodicJob(
-		mustParseCron("10 0 * * *"),
-		func() (river.JobArgs, *river.InsertOpts) { return demouser.ResetJobArgs{}, nil },
-		nil,
-	))
-
 	if env.IsProduction {
 		env.Logger.Info("registering production periodic jobs")
+
+		periodic.Add(river.NewPeriodicJob(
+			mustParseCron("46 18 * * *"),
+			func() (river.JobArgs, *river.InsertOpts) {
+				return pmunroaccess.PregenerationArgs{}, nil
+			},
+			nil,
+		))
+
+		periodic.Add(river.NewPeriodicJob(
+			mustParseCron("10 0 * * *"),
+			func() (river.JobArgs, *river.InsertOpts) { return demouser.ResetJobArgs{}, nil },
+			nil,
+		))
 
 		periodic.Add(river.NewPeriodicJob(
 			river.PeriodicInterval(time.Hour),

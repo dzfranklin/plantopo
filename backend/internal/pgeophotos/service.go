@@ -2,15 +2,14 @@ package pgeophotos
 
 import (
 	"context"
-	"errors"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
 	"github.com/dzfranklin/plantopo/backend/internal/pflickr"
+	"github.com/dzfranklin/plantopo/backend/internal/plog"
 	"github.com/dzfranklin/plantopo/backend/internal/prepo"
 	"github.com/dzfranklin/plantopo/backend/internal/ptime"
 	"github.com/jackc/pgx/v5"
 	"github.com/minio/minio-go/v7"
 	"github.com/riverqueue/river"
-	"golang.org/x/sync/errgroup"
 	"log/slog"
 	"os"
 	"path"
@@ -35,40 +34,33 @@ func New(env *pconfig.Env) *Service {
 	}
 }
 
+// RunIndexer indexes until ctx is cancelled, retrying internally on failures
 func (s *Service) RunIndexer(ctx context.Context) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	for {
+		if canceled := ptime.SleepJitter(ctx, time.Minute*15, time.Minute); canceled != nil {
+			return canceled
+		}
 
-	group, groupCtx := errgroup.WithContext(ctx)
-
-	go func() {
-		<-groupCtx.Done()
-		cancel()
-	}()
-
-	group.Go(func() error {
-		for {
-			didIndex, indexErr := s.flickr.IndexOnce(ctx)
-			if errors.Is(indexErr, context.Canceled) {
-				return indexErr
-			} else if indexErr != nil {
-				s.l.Error("failed to index flickr", "error", indexErr)
+		changed, indexErr := s.flickr.IndexOnce(ctx)
+		if canceled := ctx.Err(); canceled != nil {
+			s.l.Info("flickr index cancelled", "indexError", indexErr, "ctxError", canceled)
+			return canceled
+		}
+		if indexErr != nil {
+			s.l.Error("flickr index failed, delaying", plog.Error(indexErr))
+			if sleepCancel := ptime.SleepJitter(ctx, time.Hour*5, time.Hour); sleepCancel != nil {
+				return sleepCancel
 			}
+			continue
+		}
 
-			if didIndex {
-				s.l.Info("indexed flickr")
-				if _, err := s.jobs.Insert(ctx, DeployJobArgs{}, nil); err != nil {
-					s.l.Error("insert error", "error", err)
-				}
-			}
-
-			if err := ptime.Sleep(ctx, time.Minute*15); err != nil {
-				return err
+		if changed {
+			s.l.Info("flickr index resulted in changes, redeploying")
+			if _, err := s.jobs.Insert(ctx, DeployJobArgs{}, nil); err != nil {
+				s.l.Error("insert deploy job error", plog.Error(err))
 			}
 		}
-	})
-
-	return group.Wait()
+	}
 }
 
 func (s *Service) deployTiles(ctx context.Context) error {

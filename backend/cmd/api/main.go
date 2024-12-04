@@ -1,199 +1,366 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/penv"
 	"github.com/dzfranklin/plantopo/backend/internal/pgeophotos"
-	"github.com/dzfranklin/plantopo/backend/internal/ptime"
+	"github.com/dzfranklin/plantopo/backend/internal/plog"
 	_ "go.uber.org/automaxprocs"
-	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
+	"runtime/pprof"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
 
+/** Lifecycle:
+
+- Spawn tasks
+- Wait for a quit request
+- Quit. If at any point quitBlockers becomes empty skip to the end
+	- Cancel ctx
+	- Wait for softQuitTimeout then cancel softQuitCtx
+	- Wait for hardQuitTimeout then cancel hardQuitCtx
+	- Wait for a fraction of a second then exit the program.
+	  (This probably gives tasks a chance to log right after their hard quit times out)
+*/
+
+var env = penv.Load()
+var l = env.Logger
+
+// Constraint: Kubernetes defaults to hard-killing pods after 30sec
+var softQuitTimeout = 10 * time.Second
+var hardQuitTimeout = 2 * time.Second
+
+var startQuit = make(chan struct{})                                           // If sent to the server will enter quitting state if not already quitting
+var hardQuitCtx, cancelHardQuitCtx = context.WithCancel(context.Background()) // Cancelled when tasks should give up on hard quitting
+var softQuitCtx, cancelSoftQuitCtx = context.WithCancel(hardQuitCtx)          // Cancelled when tasks should give up on soft quitting
+var ctx, cancel = context.WithCancel(softQuitCtx)                             // Cancelled when tasks should start quitting
+var quitBlockers LabelledWaitGroup
+var dumpOnQuit atomic.Bool
+
 func main() {
-	env := penv.Load()
-	l := env.Logger
+	startSignalHandlers()
 
-	shouldQuit := make(chan struct{})
-	var quitGroup sync.WaitGroup
+	startJobWorkers()
+	startServer()
+	startAdminServer()
+	startMetaServer()
 
-	l.Info("river starting")
-	err := env.Jobs.Start(context.Background())
-	if err != nil {
-		log.Fatal(err)
+	if env.IsProduction {
+		startGeophotosIndexer()
 	}
-	quitGroup.Add(1)
-	go func() {
-		defer quitGroup.Done()
-		<-shouldQuit
 
-		softStopCtx, softStopCtxCancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer softStopCtxCancel()
+	<-startQuit
+	triggerQuitAndExit()
+}
 
-		err := env.Jobs.Stop(softStopCtx)
-		if err != nil && !errors.Is(err, context.DeadlineExceeded) && !errors.Is(err, context.Canceled) {
-			log.Fatal(err)
-		}
-		if err == nil {
-			l.Info("soft stopped river")
+func startJobWorkers() {
+	quitBlockers.Do("job_workers", func() {
+		l.Info("running job workers")
+		startErr := env.Jobs.Start(context.Background())
+		if startErr != nil {
+			l.Error("failed to start job workers", plog.Error(startErr))
 			return
 		}
 
-		hardStopCtx, hardStopCtxCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer hardStopCtxCancel()
+		<-ctx.Done()
 
-		// As long as all jobs respect context cancellation, StopAndCancel will
-		// always work. However, in the case of a bug where a job blocks despite
-		// being cancelled, it may be necessary to either ignore River's stop
-		// result (what's shown here) or have a supervisor kill the process.
-		err = env.Jobs.StopAndCancel(hardStopCtx)
-		if err != nil && errors.Is(err, context.DeadlineExceeded) {
-			fmt.Printf("Hard stop timeout; ignoring stop procedure and exiting unsafely\n")
-		} else if err != nil {
-			log.Fatal(err)
+		l.Info("stopping job workers")
+		stopStart := time.Now()
+
+		// First stop fetching new jobs and try waiting for in-progress jobs to finish
+		softStopErr := env.Jobs.Stop(softQuitCtx)
+		if softStopErr != nil {
+			l.Error("failed to soft stop job workers", plog.Error(softStopErr))
+
+			// Next try cancelling the context of in-progress jobs and waiting for them to finish
+			hardStopErr := env.Jobs.StopAndCancel(hardQuitCtx)
+			if hardStopErr != nil {
+				// Finally if jobs are still running give up and stop delaying the quit
+				l.Error("failed to hard stop job workers", plog.Error(hardStopErr))
+				return
+			}
+
+			l.Warn("hard stopped job workers", "time", time.Since(stopStart))
+			return
 		}
 
-		// hard stop succeeded
-	}()
+		l.Info("soft stopped job workers", "time", time.Since(stopStart))
+	})
+}
 
-	// api server
-	quitGroup.Add(2)
-	go func() {
-		defer quitGroup.Done()
+func startServer() {
+	quitBlockers.Do("server", func() {
 		srv := NewServer(env)
 
 		go func() {
-			defer quitGroup.Done()
-			<-shouldQuit
-
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
+			<-ctx.Done()
 
 			l.Info("shutting down server")
-			err := srv.Shutdown(ctx)
-			if err != nil {
-				l.Error("server shutdown failed", "error", err)
+
+			// First stop listening and try waiting for active connections to go idle
+			softStopErr := srv.Shutdown(softQuitCtx)
+			if softStopErr != nil {
+				l.Error("soft server shutdown failed", plog.Error(softStopErr))
+
+				hardStopErr := srv.Close()
+				if hardStopErr != nil {
+					l.Error("hard server shutdown failed", plog.Error(hardStopErr))
+					return
+				}
+
+				l.Warn("hard stopped server")
 			}
-			l.Info("shut down server")
 		}()
 
-		l.Info("server starting", "addr", srv.Addr, "domain", env.Config.Server.Domain)
-		err := srv.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			l.Error("server failed", "error", err)
+		l.Info("running server", "addr", srv.Addr, "domain", env.Config.Server.Domain)
+		srvErr := srv.ListenAndServe()
+		if ctx.Err() == nil {
+			l.Error("server stopped unexpectedly, requesting quit", plog.Error(srvErr))
+			startQuit <- struct{}{}
+		} else if srvErr != nil && !errors.Is(srvErr, http.ErrServerClosed) {
+			l.Error("server error (intending to stop)", plog.Error(srvErr))
+		} else {
+			l.Info("server stopped")
 		}
-	}()
+	})
+}
 
-	// admin server
-	quitGroup.Add(2)
-	go func() {
-		defer quitGroup.Done()
+func startAdminServer() {
+	quitBlockers.Do("admin_server", func() {
 		srv := NewAdminServer(env)
 
 		go func() {
-			defer quitGroup.Done()
-			<-shouldQuit
-
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-
-			l.Info("shutting down admin server")
-			err := srv.Shutdown(ctx)
-			if err != nil {
-				l.Error("admin server shutdown failed", "error", err)
+			<-ctx.Done()
+			if closeErr := srv.Close(); closeErr != nil {
+				l.Error("admin server close failed", plog.Error(closeErr))
 			}
-			l.Info("shut down admin server")
 		}()
 
-		l.Info("admin server starting", "addr", srv.Addr, "domain", env.Config.Server.Domain)
-		err := srv.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			l.Error("admin server failed", "error", err)
+		l.Info("running admin server", "addr", srv.Addr)
+		srvErr := srv.ListenAndServe()
+		if ctx.Err() == nil {
+			l.Error("admin server stopped unexpectedly", plog.Error(srvErr))
+		} else if srvErr != nil && !errors.Is(srvErr, http.ErrServerClosed) {
+			l.Error("admin server error (intending to stop)", plog.Error(srvErr))
+		} else {
+			l.Info("admin server stopped")
 		}
-	}()
+	})
+}
 
-	// meta server
-	quitGroup.Add(2)
-	go func() {
-		defer quitGroup.Done()
+func startMetaServer() {
+	quitBlockers.Do("meta_server", func() {
 		srv := NewMetaServer(env)
 
 		go func() {
-			defer quitGroup.Done()
-			<-shouldQuit
-
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-
-			l.Info("shutting down meta server")
-			err := srv.Shutdown(ctx)
-			if err != nil {
-				l.Error("meta server shutdown failed", "error", err)
+			<-ctx.Done()
+			if closeErr := srv.Close(); closeErr != nil {
+				l.Error("meta server close failed", plog.Error(closeErr))
 			}
-			l.Info("shut down meta server")
 		}()
 
-		l.Info("meta server starting", "addr", srv.Addr)
-		err := srv.ListenAndServe()
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			l.Error("meta server failed", "error", err)
+		l.Info("running meta server", "addr", srv.Addr)
+		srvErr := srv.ListenAndServe()
+		if ctx.Err() == nil {
+			l.Error("meta server stopped unexpectedly", plog.Error(srvErr))
+		} else if srvErr != nil && !errors.Is(srvErr, http.ErrServerClosed) {
+			l.Error("meta server error (intending to stop)", plog.Error(srvErr))
+		} else {
+			l.Info("meta server stopped")
+		}
+	})
+}
+
+func startGeophotosIndexer() {
+	quitBlockers.Do("geophotos_indexer", func() {
+		svc := pgeophotos.New(env)
+		runErr := svc.RunIndexer(ctx)
+		if ctx.Err() != nil {
+			l.Error("geophotos indexer stopped unexpectedly", plog.Error(runErr))
+		} else {
+			l.Info("geophotos indexer stopped")
+		}
+	})
+}
+
+func startSignalHandlers() {
+	go func() {
+		sigusr1 := make(chan os.Signal, 1)
+		signal.Notify(sigusr1, syscall.SIGUSR1)
+		for {
+			select {
+			case <-sigusr1:
+				outputConcurrencyDebugProfiles("SIGUSR1")
+			case <-hardQuitCtx.Done():
+				return
+			}
 		}
 	}()
 
-	// Geophotos indexer
-	if env.IsProduction {
-		quitGroup.Add(2)
-		go func() {
-			defer quitGroup.Done()
-			srv := pgeophotos.New(env)
-			indexCtx, cancel := context.WithCancel(context.Background())
-			go func() {
-				defer quitGroup.Done()
-
-				if err := ptime.Sleep(indexCtx, time.Duration(rand.Intn(60))*time.Second); err != nil && !errors.Is(err, context.Canceled) {
-					l.Error("sleep failed", "error", err)
-				}
-
-				for {
-					l.Info("running geophotos indexer")
-					runErr := srv.RunIndexer(indexCtx)
-					if errors.Is(runErr, context.Canceled) {
-						break
-					} else if runErr != nil {
-						l.Error("geophotos indexer failed", "error", runErr)
-						sleepErr := ptime.Sleep(indexCtx, time.Hour)
-						if errors.Is(sleepErr, context.Canceled) {
-							break
-						}
-						continue
-					}
-				}
-			}()
-			<-shouldQuit
-			cancel()
-		}()
-	}
-
-	quitRequestSignal := make(chan os.Signal, 1)
-	signal.Notify(quitRequestSignal, syscall.SIGINT, syscall.SIGTERM)
-
-	quitSignalReceived := <-quitRequestSignal
-	l.Info("shutting down", "signal", quitSignalReceived.String())
-
 	go func() {
-		<-quitRequestSignal
-		l.Info("force shutting down")
-		os.Exit(1)
+		osQuitSignals := make(chan os.Signal, 10) // buffer larger than the max number we are interested in
+		signal.Notify(osQuitSignals, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT)
+		for count := 0; count <= 2; count++ {
+			sig := <-osQuitSignals
+
+			if sig == syscall.SIGQUIT {
+				dumpOnQuit.Store(true)
+			}
+
+			switch count {
+			case 0:
+				l.Info(fmt.Sprintf("received %s, soft quitting...", sig))
+				startQuit <- struct{}{}
+			case 1:
+				l.Info(fmt.Sprintf("received %s (second signal), aborting soft quit and hard quitting...", sig))
+				cancelSoftQuitCtx()
+			case 2:
+				l.Info(fmt.Sprintf("received %s (third signal), aborting hard quit and exiting...", sig))
+				cancelHardQuitCtx()
+			}
+		}
+	}()
+}
+
+func triggerQuitAndExit() {
+	didSoftQuit := false
+	completedQuit := func() bool {
+		quitStart := time.Now()
+		softTimer := time.NewTimer(softQuitTimeout)
+		hardTimer := time.NewTimer(softQuitTimeout + hardQuitTimeout)
+
+		quitUnblocked := make(chan struct{})
+		go func() {
+			quitBlockers.Wait()
+			close(quitUnblocked)
+		}()
+
+		// Start soft quitting
+		cancel()
+
+		// Drain the channel during the quit process so sends don't block long
+		stopDrainingStartQuit := make(chan struct{})
+		go func() {
+			for {
+				select {
+				case <-startQuit:
+				case <-stopDrainingStartQuit:
+					return
+				}
+			}
+		}()
+		defer close(stopDrainingStartQuit)
+
+		select {
+		case now := <-softTimer.C:
+			l.Warn("soft quit timed out", "blockers", quitBlockers.Active(), "timeout", softQuitTimeout,
+				"totalElapsed", now.Sub(quitStart))
+			outputConcurrencyDebugProfiles("softQuitFail")
+		case <-quitUnblocked:
+			l.Info("soft quit", "timeout", softQuitTimeout, "totalElapsed", time.Since(quitStart))
+			didSoftQuit = true
+			cancelHardQuitCtx()
+			return true
+		}
+
+		// Stop soft quitting and start hard quitting
+		cancelSoftQuitCtx()
+
+		select {
+		case now := <-hardTimer.C:
+			l.Error("hard quit timed out", "blockers", quitBlockers.Active(), "timeout", hardQuitTimeout,
+				"totalElapsed", now.Sub(quitStart))
+			outputConcurrencyDebugProfiles("hardQuitFail")
+		case <-quitUnblocked:
+			l.Info("hard quit", "timeout", hardQuitTimeout, "totalElapsed", time.Since(quitStart))
+			return true
+		}
+
+		// Stop hard quitting
+		cancelHardQuitCtx()
+
+		return false
 	}()
 
-	close(shouldQuit)
-	quitGroup.Wait()
+	if completedQuit {
+		// Try to close the database so we can warn if there are still open connections
+		//
+		// Note that if a river job doesn't respond to its context being cancelled we
+		// still want river to be able to update the database before exiting. This means
+		// we prefer the database be available during the hard quit so we can't start
+		// closing earlier.
+		closeDBStart := time.Now()
+		didCloseDB := make(chan struct{})
+		go func() {
+			env.DB.Close()
+			close(didCloseDB)
+		}()
+		select {
+		case <-didCloseDB:
+			l.Info("closed database", "time", time.Since(closeDBStart))
+		case <-time.After(100 * time.Millisecond):
+			l.Warn("failed to close database: check for open connections",
+				"stats", env.DBStats(), "waited", time.Since(closeDBStart))
+			outputConcurrencyDebugProfiles("dbCloseFail")
+		}
+
+		if !didSoftQuit || dumpOnQuit.Load() {
+			outputConcurrencyDebugProfiles("quit")
+		}
+
+		os.Exit(0)
+	} else {
+		// Briefly wait to probably give tasks the chance to log in response to the hard quit failing
+		time.Sleep(100 * time.Millisecond)
+
+		if dumpOnQuit.Load() {
+			outputConcurrencyDebugProfiles("quit")
+		}
+
+		l.Error("Force quitting")
+
+		os.Exit(1)
+	}
+}
+
+func outputConcurrencyDebugProfiles(label string) {
+	if label == "" {
+		label = "dbg"
+	}
+
+	prefix := fmt.Sprintf("[%s] ", label)
+
+	var pprofBuf bytes.Buffer
+
+	if err := pprof.Lookup("goroutine").WriteTo(&pprofBuf, 2); err != nil {
+		_, _ = pprofBuf.WriteString("outputConcurrencyDebugProfiles goroutine: " + err.Error())
+	}
+
+	for _, name := range []string{"threadcreate", "block", "mutex"} {
+		if err := pprof.Lookup(name).WriteTo(&pprofBuf, 1); err != nil {
+			_, _ = pprofBuf.WriteString("outputConcurrencyDebugProfiles " + name + ": " + err.Error())
+		}
+	}
+
+	b := bytes.NewBuffer(make([]byte, 0, pprofBuf.Len()*2))
+	fmt.Fprintf(b, "%s%s\n", prefix, time.Now())
+	for r := bufio.NewReader(&pprofBuf); ; {
+		pprofLine, readErr := r.ReadBytes('\n')
+		if readErr != nil {
+			break
+		}
+		b.WriteString(prefix)
+		b.Write(pprofLine)
+	}
+	b.WriteString("\n\n")
+
+	_, _ = b.WriteTo(os.Stderr)
 }
