@@ -3,7 +3,7 @@ export RUST_LOG := "watchexec_cli=error"
 set dotenv-filename := "./backend/.env"
 
 dev:
-    zellij delete-session plantopo >/dev/null; true
+    zellij delete-session --force plantopo >/dev/null; true
     zellij --new-session-with-layout layout.kdl --session plantopo
 
 check:
