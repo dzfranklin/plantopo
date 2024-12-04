@@ -42,9 +42,19 @@ func NewServer(env *pconfig.Env) *http.Server {
 }
 
 func NewAdminServer(env *pconfig.Env) *http.Server {
-	routes := admin.Routes(env)
+	mux := http.NewServeMux()
+
+	mux.Handle("/admin/", admin.Routes(env))
+
+	mux.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Location", "/admin")
+		w.Header().Add("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusFound)
+		_, _ = w.Write([]byte(`Redirecting...`))
+	})
+
 	return &http.Server{
-		Handler: instrumentRequests(recoverPanic(env, papi.AssignRequestID(routes))),
+		Handler: instrumentRequests(recoverPanic(env, papi.AssignRequestID(mux))),
 		Addr:    fmt.Sprintf("0.0.0.0:%d", env.Config.Server.AdminPort),
 	}
 }
