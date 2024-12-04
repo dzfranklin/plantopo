@@ -23,7 +23,7 @@ layout {
 
             pane {
                 command "watchexec"
-                args "--restart" "bin=\"$(mktemp -d -t plantopo.XXXXXXXXXX)/api\" && printf \"\\nBuilding ./cmd/api\\n\\n\" && time go build -race -o $bin ./cmd/api && printf \"\\nRunning ./cmd/api ($bin)\\n\\n\" && $bin"
+                args "--restart" "bin=\"./out/api\" && printf \"\\nBuilding ./cmd/api\\n\\n\" && time go build -race -o \"$bin\" ./cmd/api && printf \"\\nRunning ./cmd/api ($bin)\\n\\n\" && $bin"
                 cwd "backend"
             }
         }
