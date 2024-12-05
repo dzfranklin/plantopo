@@ -9,8 +9,7 @@
     "build": "next build",
     "test": "vitest",
     "start": "npm run build && next start",
-    "lint": "prettier . --check && next lint",
-    "build:dependency-report": "npx license-checker --json | jq 'to_entries | sort_by(.key) | map({name: .key, publisher: .value.publisher, licenses: .value.licenses, repository: .value.repository})' > dependencyReport.json",
+    "lint": "prettier . --check && next lint && tsc --noEmit --project tsconfig.json",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
@@ -58,6 +57,7 @@
     "inter-ui": "^4.0.2",
     "k6": "^0.0.0",
     "leaflet": "^1.9.4",
+    "license-checker-rseidelsohn": "^4.4.2",
     "luxon": "^3.5.0",
     "mapbox-gl": "^3.4.0",
     "maplibre-gl": "^4.7.1",
@@ -128,7 +128,7 @@
     "prettier": "^3.3.2",
     "storybook": "^8.2.9",
     "tailwindcss": "^3.4.1",
-    "tsx": "^4.19.1",
+    "tsx": "^4.19.2",
     "typescript": "^5.5.4",
     "vitest": "^2.1.1"
   },

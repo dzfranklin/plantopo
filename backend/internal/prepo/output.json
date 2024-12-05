@@ -1,0 +1,7 @@
+{
+"type": "FeatureCollection",
+"name": "default",
+"features": [
+{ "type": "Feature", "properties": { "mvt_id": 1, "id": "t_06a54d4gwhsh54wa75wsmwwar8", "owner_id": "u_248h248h248h248h248h248h28", "name": "Edinburgh to Perth (other user)" }, "geometry": { "type": "LineString", "coordinates": [ [ 3008.0, 893.0 ], [ 2239.0, 3242.0 ] ] } }
+]
+}

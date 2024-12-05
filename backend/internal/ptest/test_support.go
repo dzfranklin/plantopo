@@ -1,10 +1,10 @@
 package ptest
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"github.com/dzfranklin/plantopo/backend/internal/pconfig"
+	"github.com/dzfranklin/plantopo/backend/internal/pmigrate"
 	"github.com/dzfranklin/plantopo/backend/internal/psqlc"
 	rdbdump "github.com/hdt3213/rdb/helper"
 	"github.com/jackc/pgx/v5"
@@ -28,8 +28,8 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -323,19 +323,36 @@ func runMigrations(connString string) {
 	if err != nil {
 		panic(err)
 	}
+	defer dbPool.Close()
+
 	riverMigrator := rivermigrate.New(riverpgxv5.New(dbPool), nil)
 	_, err = riverMigrator.Migrate(context.Background(), rivermigrate.DirectionUp, nil)
 	if err != nil {
 		panic(err)
 	}
-	dbPool.Close()
 
-	var out bytes.Buffer
-	cmd := exec.Command("tern", "migrate", "--conn-string", connString)
-	cmd.Dir = GitRoot() + "/backend/migrations"
-	cmd.Stdout = &out
-	if err := cmd.Run(); err != nil {
-		panic(out.String())
+	conn, err := dbPool.Acquire(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Release()
+	pgConn := conn.Conn().PgConn()
+
+	genResults, err := pgConn.Exec(context.Background(), pmigrate.SQLToGenerateMigrationsSQL).ReadAll()
+	if err != nil {
+		panic(err)
+	}
+
+	var migrationSQL strings.Builder
+	for _, genResult := range genResults {
+		for _, row := range genResult.Rows {
+			stmt := row[0]
+			migrationSQL.Write(stmt)
+		}
+	}
+
+	if _, err := pgConn.Exec(context.Background(), migrationSQL.String()).ReadAll(); err != nil {
+		panic(err)
 	}
 }
 
@@ -412,10 +429,6 @@ func GitRoot() string {
 
 		curr = filepath.Dir(curr)
 	}
-}
-
-func DiscardLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
 func NewTestLogger(t *testing.T) *slog.Logger {

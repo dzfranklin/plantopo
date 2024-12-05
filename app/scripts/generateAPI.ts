@@ -1,3 +1,6 @@
+#!/bin/sh
+':' //; exec npm --prefix "$(dirname "$0")" exec tsx "$0" "$@"
+
 import fs from 'node:fs';
 import openapiTS, { astToString, COMMENT_HEADER } from 'openapi-typescript';
 import ts from 'typescript';

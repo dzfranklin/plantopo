@@ -82,7 +82,7 @@ export default function Page() {
             <li key={entry.name}>
               <a href={entry.repository ?? undefined}>{entry.name}</a>{' '}
               {entry.publisher && <span>by {entry.publisher}</span>}{' '}
-              <span>({entry.licenses})</span>
+              <span>({entry.licenses.join(' OR ')})</span>
             </li>
           ))}
         </ul>

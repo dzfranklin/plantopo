@@ -1,2 +1,4 @@
 tsconfig.json
 mockServiceWorker.js
+dependencyReport.json
+scripts/

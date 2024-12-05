@@ -1,59 +1,18 @@
+nprocs := `(test -f /proc/cpuinfo && grep -c 'processor' /proc/cpuinfo) || \
+    (command -v sysctl 2>&1 >/dev/null && sysctl hw.ncpu | grep -o '[0-9]\+') \
+    || echo 1`
+
 export RUST_LOG := "watchexec_cli=error"
 
-set dotenv-filename := "./backend/.env"
+make:
+    make -j{{nprocs}} -s
+
+test:
+    make test
 
 dev:
     zellij delete-session --force plantopo >/dev/null; true
     zellij --new-session-with-layout layout.kdl --session plantopo
-
-check:
-    ./scripts/check-all.sh
-
-gen:
-    cd backend && test ! -f .env.local || cat .env.local | cut -d '=' -f 1 | xargs -I {} echo {}= >.env.local.example
-    cd app && test ! -f .env.local || cat .env.local | cut -d '=' -f 1 | xargs -I {} echo {}= >.env.local.example
-
-    cd app && npm run --silent build:dependency-report
-    cd backend && mockery --log-level=warn
-    just api-schema-gen
-    just sqlc-gen
-
-backend-test-watch:
-    cd ./backend && watchexec --clear=clear --restart go test -race ./...
-
-api-schema-watch:
-    watchexec --watch ./api/schema just api-schema-gen
-
-api-schema-gen:
-    redocly lint ./api/schema/openapi.yaml \
-      --skip-rule operation-operationId \
-      --skip-rule operation-4xx-response \
-      --skip-rule tag-description \
-      --skip-rule operation-operationId \
-      --skip-rule no-server-example.com \
-      --skip-rule info-license
-
-    redocly bundle ./api/schema/openapi.yaml -o backend/internal/papi/schema.gen.json
-    cd backend && ogen \
-      -loglevel warn \
-      -target internal/papi -package papi \
-      -clean \
-      ./internal/papi/schema.gen.json
-
-    cd app && npx tsx ./api/genCmd.ts ../backend/internal/papi/schema.gen.json ./api/v1.d.ts && \
-        npx prettier --write ./api/v1.d.ts
-
-sqlc-watch:
-    cd backend && watchexec \
-      --watch ./sqlc.yaml --watch ./migrations --watch ./internal/psqlc/queries \
-      just sqlc-gen
-
-sqlc-gen:
-    cd backend && sqlc generate
-
-river-ui:
-    docker pull ghcr.io/riverqueue/riverui:latest
-    docker run -p 4003:8080 --env "DATABASE_URL=postgres://plantopo:password@host.docker.internal:5432/plantopo?sslmode=disable" ghcr.io/riverqueue/riverui:latest
 
 migration name:
     tern --migrations backend/migrations new {{name}}

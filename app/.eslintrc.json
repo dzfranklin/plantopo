@@ -1,4 +1,5 @@
 {
+  "ignorePatterns": ["scripts/*"],
   "extends": [
     "next",
     "prettier",

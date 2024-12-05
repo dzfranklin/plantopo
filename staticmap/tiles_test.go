@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"github.com/dzfranklin/plantopo/backend/internal/ptest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io"
 	"log/slog"
 	"sync"
 	"testing"
@@ -14,7 +14,7 @@ func Test_tileCache(t *testing.T) {
 	var requestsMu sync.Mutex
 	var requests int
 
-	subject := newTileCache(ptest.DiscardLogger(), func(_ context.Context, _ *slog.Logger, z, x, y int) ([]byte, error) {
+	subject := newTileCache(discardLogger(), func(_ context.Context, _ *slog.Logger, z, x, y int) ([]byte, error) {
 		requestsMu.Lock()
 		requests++
 		requestsMu.Unlock()
@@ -42,4 +42,8 @@ func Test_tileCache(t *testing.T) {
 	// duplication if requests take very little time. That is fine because
 	// duplication doesn't need to be perfect as it is only to reduce upstream load.
 	assert.Less(t, requests, 10)
+}
+
+func discardLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }

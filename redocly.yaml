@@ -1,0 +1,12 @@
+extends:
+  - recommended
+
+apis:
+  v1:
+    root: ./api/schema/openapi.yaml
+    rules:
+      operation-operationId: off
+      operation-4xx-response: off
+      tag-description: off
+      "no-server-example.com": off
+      info-license: off
