@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/pprof"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -24,7 +25,7 @@ import (
 - Spawn tasks
 - Wait for a quit request
 - Quit. If at any point quitBlockers becomes empty skip to the end
-	- Cancel ctx
+	- Cancel mainCtx
 	- Wait for softQuitTimeout then cancel softQuitCtx
 	- Wait for hardQuitTimeout then cancel hardQuitCtx
 	- Wait for a fraction of a second then exit the program.
@@ -41,7 +42,7 @@ var hardQuitTimeout = 2 * time.Second
 var startQuit = make(chan struct{})                                           // If sent to the server will enter quitting state if not already quitting
 var hardQuitCtx, cancelHardQuitCtx = context.WithCancel(context.Background()) // Cancelled when tasks should give up on hard quitting
 var softQuitCtx, cancelSoftQuitCtx = context.WithCancel(hardQuitCtx)          // Cancelled when tasks should give up on soft quitting
-var ctx, cancel = context.WithCancel(softQuitCtx)                             // Cancelled when tasks should start quitting
+var mainCtx, cancel = context.WithCancel(softQuitCtx)                         // Cancelled when tasks should start quitting
 var quitBlockers LabelledWaitGroup
 var dumpOnQuit atomic.Bool
 
@@ -70,7 +71,7 @@ func startJobWorkers() {
 			return
 		}
 
-		<-ctx.Done()
+		<-mainCtx.Done()
 
 		l.Info("stopping job workers")
 		stopStart := time.Now()
@@ -98,11 +99,18 @@ func startJobWorkers() {
 
 func startServer() {
 	quitBlockers.Do("server", func() {
+		var wg sync.WaitGroup
+		defer wg.Wait()
+
 		srv := NewServer(env)
 
+		wg.Add(1)
 		go func() {
-			<-ctx.Done()
+			defer wg.Done()
 
+			<-mainCtx.Done()
+
+			shutdownStart := time.Now()
 			l.Info("shutting down server")
 
 			// First stop listening and try waiting for active connections to go idle
@@ -118,17 +126,18 @@ func startServer() {
 
 				l.Warn("hard stopped server")
 			}
+			l.Info("shutdown shutdown", "time", time.Since(shutdownStart))
 		}()
 
 		l.Info("running server", "addr", srv.Addr, "domain", env.Config.Server.Domain)
 		srvErr := srv.ListenAndServe()
-		if ctx.Err() == nil {
+		if mainCtx.Err() == nil {
 			l.Error("server stopped unexpectedly, requesting quit", plog.Error(srvErr))
 			startQuit <- struct{}{}
 		} else if srvErr != nil && !errors.Is(srvErr, http.ErrServerClosed) {
 			l.Error("server error (intending to stop)", plog.Error(srvErr))
 		} else {
-			l.Info("server stopped")
+			l.Info("server closed")
 		}
 	})
 }
@@ -138,7 +147,7 @@ func startAdminServer() {
 		srv := NewAdminServer(env)
 
 		go func() {
-			<-ctx.Done()
+			<-mainCtx.Done()
 			if closeErr := srv.Close(); closeErr != nil {
 				l.Error("admin server close failed", plog.Error(closeErr))
 			}
@@ -146,7 +155,7 @@ func startAdminServer() {
 
 		l.Info("running admin server", "addr", srv.Addr)
 		srvErr := srv.ListenAndServe()
-		if ctx.Err() == nil {
+		if mainCtx.Err() == nil {
 			l.Error("admin server stopped unexpectedly", plog.Error(srvErr))
 		} else if srvErr != nil && !errors.Is(srvErr, http.ErrServerClosed) {
 			l.Error("admin server error (intending to stop)", plog.Error(srvErr))
@@ -161,7 +170,7 @@ func startMetaServer() {
 		srv := NewMetaServer(env)
 
 		go func() {
-			<-ctx.Done()
+			<-mainCtx.Done()
 			if closeErr := srv.Close(); closeErr != nil {
 				l.Error("meta server close failed", plog.Error(closeErr))
 			}
@@ -169,7 +178,7 @@ func startMetaServer() {
 
 		l.Info("running meta server", "addr", srv.Addr)
 		srvErr := srv.ListenAndServe()
-		if ctx.Err() == nil {
+		if mainCtx.Err() == nil {
 			l.Error("meta server stopped unexpectedly", plog.Error(srvErr))
 		} else if srvErr != nil && !errors.Is(srvErr, http.ErrServerClosed) {
 			l.Error("meta server error (intending to stop)", plog.Error(srvErr))
@@ -182,8 +191,8 @@ func startMetaServer() {
 func startGeophotosIndexer() {
 	quitBlockers.Do("geophotos_indexer", func() {
 		svc := pgeophotos.New(env)
-		runErr := svc.RunIndexer(ctx)
-		if ctx.Err() != nil {
+		runErr := svc.RunIndexer(mainCtx)
+		if mainCtx.Err() != nil {
 			l.Error("geophotos indexer stopped unexpectedly", plog.Error(runErr))
 		} else {
 			l.Info("geophotos indexer stopped")
@@ -351,6 +360,7 @@ func outputConcurrencyDebugProfiles(label string) {
 	}
 
 	b := bytes.NewBuffer(make([]byte, 0, pprofBuf.Len()*2))
+	fmt.Fprint(b, "\n\n")
 	fmt.Fprintf(b, "%s%s\n", prefix, time.Now())
 	for r := bufio.NewReader(&pprofBuf); ; {
 		pprofLine, readErr := r.ReadBytes('\n')

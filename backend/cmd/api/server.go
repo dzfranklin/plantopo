@@ -37,6 +37,7 @@ func NewServer(env *pconfig.Env) *http.Server {
 		Handler: instrumentRequests(recoverPanic(env, papi.AssignRequestID(enableCORS(env, mux)))),
 		Addr:    fmt.Sprintf("0.0.0.0:%d", env.Config.Server.Port),
 	}
+	papi.WrapHandlerWithOnShutdownMiddleware(srv)
 
 	return srv
 }

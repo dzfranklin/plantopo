@@ -126,6 +126,8 @@ func (h *phandler) MunroAccessReportIDStatusUpdatesGet(w http.ResponseWriter, r 
 	ticker := time.NewTicker(time.Second * 30)
 	defer ticker.Stop()
 
+	onShutdown := ServerOnShutdown(r.Context())
+
 	for {
 		select {
 		case update := <-updates:
@@ -142,6 +144,10 @@ func (h *phandler) MunroAccessReportIDStatusUpdatesGet(w http.ResponseWriter, r 
 			if _, err := fmt.Fprintln(w, ":keepalive"); err != nil {
 				return
 			}
+		case <-r.Context().Done():
+			return
+		case <-onShutdown:
+			return
 		}
 
 		if err := rc.Flush(); err != nil {
