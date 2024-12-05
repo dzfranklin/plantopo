@@ -146,7 +146,7 @@ func (s *Service) WatchStatus(ctx context.Context, report string) (<-chan Status
 	lastID = status.ID
 
 	go func() {
-		defer func() { close(out) }()
+		defer close(out)
 
 		for {
 			results, err := s.rdb.XRead(ctx, &redis.XReadArgs{
