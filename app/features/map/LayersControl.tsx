@@ -3,14 +3,17 @@ import {
   baseStyles,
   OverlayStyle,
   overlayStyles,
+  StyleVariables,
+  StyleVariableSpec,
 } from '@/features/map/style';
 import { ReactNode, useMemo, useState } from 'react';
 import { Dialog } from '@/components/dialog';
 import { Button } from '@/components/button';
 import cls from '@/cls';
 import { Checkbox, CheckboxField } from '@/components/checkbox';
-import { Label } from '@headlessui/react';
+import { Select } from '@/components/select';
 import { useDebugMode } from '@/hooks/debugMode';
+import { Field, Label } from '@/components/fieldset';
 
 const baseStylesByCountry = Object.values(baseStyles).reduce((acc, item) => {
   const existing = acc.get(item.country);
@@ -35,6 +38,8 @@ export interface LayersControlProps {
   setActiveBase: (_: BaseStyle) => void;
   activeOverlays: OverlayStyle[];
   setActiveOverlays: (overlayStyles: OverlayStyle[]) => void;
+  variables: StyleVariables;
+  setVariables: (variables: StyleVariables) => void;
   debugMenu?: ReactNode;
 }
 
@@ -63,6 +68,8 @@ function LayersDialog({
   setActiveBase,
   activeOverlays,
   setActiveOverlays,
+  variables,
+  setVariables,
   debugMenu,
   isOpen,
   onClose,
@@ -109,6 +116,13 @@ function LayersDialog({
                       );
                     }
                   }}
+                  variables={variables.overlay?.[item.id] ?? {}}
+                  setVariables={(v) =>
+                    setVariables({
+                      ...variables,
+                      overlay: { ...variables.overlay, [item.id]: v },
+                    })
+                  }
                 />
               </li>
             ))}
@@ -211,15 +225,66 @@ function OverlayControl({
   item,
   isActive,
   setActive,
+  variables,
+  setVariables,
 }: {
   item: OverlayStyle;
   isActive: boolean;
   setActive: (value: boolean) => void;
+  variables: Record<string, string>;
+  setVariables: (_: Record<string, string>) => void;
 }) {
+  const hasVariables = item.variables && Object.keys(item.variables).length > 0;
+
   return (
-    <CheckboxField>
-      <Checkbox checked={isActive} onChange={() => setActive(!isActive)} />
-      <Label>{item.name}</Label>
-    </CheckboxField>
+    <div>
+      <CheckboxField>
+        <Checkbox checked={isActive} onChange={() => setActive(!isActive)} />
+        <Label>{item.name}</Label>
+      </CheckboxField>
+
+      {isActive && hasVariables && (
+        <div className="ml-8 my-4">
+          {Object.entries(item.variables!)
+            .sort(([_aID, { label: aName }], [_bID, { label: bName }]) =>
+              aName.localeCompare(bName),
+            )
+            .map(([id, spec]) => (
+              <VariableControl
+                key={id}
+                spec={spec}
+                value={variables[id] ?? spec.defaultValue}
+                setValue={(v) => setVariables({ ...variables, [id]: v })}
+              />
+            ))}
+        </div>
+      )}
+    </div>
   );
+}
+
+function VariableControl({
+  spec,
+  value,
+  setValue,
+}: {
+  spec: StyleVariableSpec;
+  value: string;
+  setValue: (value: string) => void;
+}) {
+  switch (spec.type) {
+    case 'select':
+      return (
+        <Field className="flex flex-row items-baseline gap-4">
+          <Label>{spec.label}</Label>
+          <Select value={value} onChange={(e) => setValue(e.target.value)}>
+            {spec.options.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      );
+  }
 }

@@ -17,7 +17,9 @@ import {
   BaseStyleID,
   baseStyles,
   defaultBaseStyle,
+  defaultStyleVariables,
   OverlayStyle,
+  StyleVariables,
 } from './style';
 import { LayersControl } from './LayersControl';
 import { CameraOptions, MapManager, MapManagerInitialView } from './MapManager';
@@ -162,6 +164,12 @@ export default function MapComponentImpl(props: MapComponentProps) {
 
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
 
+  const [variables, setVariables] = useState<StyleVariables>(
+    defaultStyleVariables,
+  );
+  const variablesRef = useRef<StyleVariables>(variables);
+  variablesRef.current = variables;
+
   // Controls
 
   const [layersPortal, layersControl] = usePortalControl(
@@ -171,6 +179,8 @@ export default function MapComponentImpl(props: MapComponentProps) {
         setActiveBase={setBaseStyle}
         activeOverlays={activeOverlays}
         setActiveOverlays={setActiveOverlays}
+        variables={variables}
+        setVariables={setVariables}
         debugMenu={<MapDebugMenu mapRef={mapRef} />}
       />
     </div>,
@@ -279,7 +289,10 @@ export default function MapComponentImpl(props: MapComponentProps) {
 
       explorerMapRef.current && syncExplorerMap(map.m, explorerMapRef.current);
 
-      map.setOverlays(activeOverlaysRef.current);
+      map.setOverlays(
+        activeOverlaysRef.current,
+        variablesRef.current['overlay'],
+      );
 
       if (propsRef.current.geojson) {
         map.setGeoJSON(
@@ -374,8 +387,8 @@ export default function MapComponentImpl(props: MapComponentProps) {
   }, []);
 
   useEffect(() => {
-    mapRef.current?.setOverlays(activeOverlays);
-  }, [activeOverlays]);
+    mapRef.current?.setOverlays(activeOverlays, variables.overlay);
+  }, [activeOverlays, variables.overlay]);
 
   const prevGeoJSON = useRef<GeoJSON | undefined>(undefined);
   useEffect(() => {

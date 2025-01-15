@@ -22,6 +22,8 @@ export const Default: Story = {
     setActiveBase: () => {},
     activeOverlays: [],
     setActiveOverlays: () => {},
+    variables: {},
+    setVariables: () => {},
   },
   render: () => <Container />,
 };
@@ -35,6 +37,8 @@ function Container() {
       setActiveBase={setActiveBase}
       activeOverlays={activeOverlays}
       setActiveOverlays={setActiveOverlays}
+      variables={{}}
+      setVariables={() => {}}
     />
   );
 }

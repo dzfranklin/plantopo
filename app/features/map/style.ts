@@ -24,8 +24,26 @@ export interface BaseStyle {
 export interface OverlayStyle {
   id: string;
   name: string;
+  variables?: Record<string, StyleVariableSpec>;
   sources?: Record<string, ml.SourceSpecification>;
   layers?: ml.LayerSpecification[];
+}
+
+export interface StyleVariables {
+  overlay?: Record<string, Record<string, string>>;
+}
+
+export interface StyleVariablesSpec {
+  overlay?: Record<string, Record<string, StyleVariableSpec>>;
+}
+
+export type StyleVariableSpec = SelectStyleVariable;
+
+export interface SelectStyleVariable {
+  type: 'select';
+  label: string;
+  defaultValue: string;
+  options: { name: string; value: string }[];
 }
 
 const defaultGlyphs =
@@ -433,6 +451,38 @@ const overlayStyleList: OverlayStyle[] = [
     ],
   },
   {
+    id: 'icon_eu_h_snow',
+    name: 'EU Snow Depth Forecast (ICON-EU, ~7km resolution)',
+    variables: {
+      HOUR: {
+        type: 'select',
+        label: 'Time',
+        defaultValue: '000h',
+        options: [
+          { name: 'Today', value: '000h' },
+          { name: 'Tomorrow', value: '024h' },
+          { name: '+2d', value: '048h' },
+          { name: '+3d', value: '072h' },
+          { name: '+4d', value: '096h' },
+          { name: '+5d', value: '120h' },
+        ],
+      },
+    },
+    sources: {
+      default: {
+        type: 'raster',
+        url: 'https://plantopo-storage.b-cdn.net/weather-maps/icon_eu_h_snow/__HOUR__/source.json',
+      },
+    },
+    layers: [
+      {
+        id: 'raster',
+        type: 'raster',
+        source: 'default',
+      },
+    ],
+  },
+  {
     id: 'paper-maps',
     name: 'Paper Maps',
     sources: {
@@ -510,3 +560,20 @@ const overlayStyleList: OverlayStyle[] = [
 
 export const overlayStyles: Record<string, OverlayStyle> =
   overlayStyleList.reduce((acc, item) => ({ ...acc, [item.id]: item }), {});
+
+export const defaultStyleVariables: StyleVariables = {
+  overlay: {},
+};
+for (const overlayStyle of Object.values(overlayStyles)) {
+  if (
+    overlayStyle.variables &&
+    Object.keys(overlayStyle.variables).length > 0
+  ) {
+    defaultStyleVariables.overlay![overlayStyle.id] = Object.fromEntries(
+      Object.entries(overlayStyle.variables).map(([id, spec]) => [
+        id,
+        spec.defaultValue,
+      ]),
+    );
+  }
+}

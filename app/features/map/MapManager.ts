@@ -1,6 +1,6 @@
 import * as ml from 'maplibre-gl';
 import { GeoJSON } from 'geojson';
-import { BaseStyle, OverlayStyle } from '@/features/map/style';
+import { BaseStyle, OverlayStyle, StyleVariables } from '@/features/map/style';
 import { fitBoundsFor } from '@/features/map/util';
 import { stringCmp } from '@/stringCmp';
 
@@ -64,7 +64,7 @@ export class MapManager {
     this.m.remove();
   }
 
-  setOverlays(overlays: OverlayStyle[]) {
+  setOverlays(overlays: OverlayStyle[], variables: StyleVariables['overlay']) {
     for (const layer of this._addedOverlayLayers) {
       this.m.removeLayer(layer);
     }
@@ -82,7 +82,14 @@ export class MapManager {
     for (const overlay of sortedOverlays) {
       const prefix = `overlay:${overlay.id}:`;
 
-      for (const [id, source] of Object.entries(overlay.sources ?? {})) {
+      const overlaySources = overlay.sources ?? {};
+      for (const id in overlaySources) {
+        let source = overlaySources[id]!;
+
+        if (variables && Object.hasOwn(variables, overlay.id)) {
+          source = applyVariablesToSource(source, variables[overlay.id]!);
+        }
+
         this._addedOverlaySources.push(prefix + id);
         this.m.addSource(prefix + id, source);
       }
@@ -208,4 +215,19 @@ function rewriteLayer(
   }
 
   return out;
+}
+
+function applyVariablesToSource(
+  source: ml.SourceSpecification,
+  variables: Record<string, string>,
+) {
+  if ('url' in source && typeof source.url === 'string') {
+    let url = source.url;
+    for (const [k, v] of Object.entries(variables)) {
+      url = url.replaceAll('__' + k + '__', v);
+    }
+    source = { ...source, url };
+  }
+
+  return source;
 }
