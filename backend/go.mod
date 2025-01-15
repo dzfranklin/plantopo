@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	cgt.name/pkg/go-mwclient v1.3.0
 	github.com/DataDog/go-sqllexer v0.0.14
-	github.com/airbusgeo/godal v0.0.12
+	github.com/airbusgeo/godal v0.0.13
 	github.com/andybalholm/cascadia v1.3.2
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/cridenour/go-postgis v1.0.0
