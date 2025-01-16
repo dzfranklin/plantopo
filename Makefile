@@ -20,6 +20,9 @@ export REDOCLY_SUPPRESS_UPDATE_NOTICE := true
 export PATH := $(realpath out):$(PATH)
 
 SHELLCHECK_MARKERS := $(patsubst %.sh,out/%_shellcheck.marker,$(shell find . -name '*.sh' -exec sh -c 'git check-ignore -q "{}" || echo "{}"' \;))
+APP_SOURCES := $(shell find app ! -path 'app/.next/*' ! -path 'app/node_modules/*')
+BACKEND_SOURCES := $(shell find backend)
+STATICMAP_SOURCES := $(shell find staticmap)
 
 .PHONY: build
 build: \
@@ -34,7 +37,7 @@ clean:
 test: backend_test staticmap_test app_test $(SHELLCHECK_MARKERS)
 
 .PHONY: sql
-sql: $(SQLC) backend/sqlc.yaml backend/migrations backend/internal/psqlc/queries
+sql: $(SQLC) backend/sqlc.yaml $(shell find backend/migrations) $(shell find backend/internal/psqlc/queries)
 	$(eval scratch := $(shell mktemp -d))
 	cd backend && env "$$(cat .env .env.local | grep DATABASE_URL | xargs)" "$(shell realpath $(SQLC))" generate
 	printf '[database]\n$(shell cat backend/.env backend/.env.local | grep DATABASE_URL | tail -n 1 | sed 's/DATABASE_URL/conn_string/')' >$(scratch)/tern.conf
@@ -62,19 +65,19 @@ backend_test: \
 	out/backend_gofmt.marker \
 	out/backend_go_mod_tidy.marker
 
-out/backend_go_test.marker: $(TERN) out/backend_codegen.marker backend
+out/backend_go_test.marker: $(TERN) out/backend_codegen.marker $(BACKEND_SOURCES)
 	cd backend && go test -race -timeout 1m -short ./...
 	mkdir -p out && touch out/backend_go_test.marker
 
-out/backend_staticcheck.marker: $(STATICCHECK) out/backend_codegen.marker backend
+out/backend_staticcheck.marker: $(STATICCHECK) out/backend_codegen.marker $(BACKEND_SOURCES)
 	cd backend && "$(shell realpath $(STATICCHECK))" ./...
 	mkdir -p out && touch out/backend_staticcheck.marker
 
-out/backend_gofmt.marker: out/backend_codegen.marker backend
+out/backend_gofmt.marker: out/backend_codegen.marker $(BACKEND_SOURCES)
 	cd backend && test -z "$$(gofmt -l .)"
 	mkdir -p out && touch out/backend_gofmt.marker
 
-out/backend_go_mod_tidy.marker: out/backend_codegen.marker backend
+out/backend_go_mod_tidy.marker: out/backend_codegen.marker $(BACKEND_SOURCES)
 	cd backend && go mod tidy -diff
 	mkdir -p out && touch out/backend_go_mod_tidy.marker
 
@@ -85,19 +88,19 @@ staticmap_test: \
 	out/staticmap_gofmt.marker \
 	out/staticmap_go_mod_tidy.marker
 
-out/staticmap_go_test.marker: staticmap
+out/staticmap_go_test.marker: $(STATICMAP_SOURCES)
 	cd staticmap && go test -race ./...
 	mkdir -p out && touch out/staticmap_go_test.marker
 
-out/staticmap_staticcheck.marker: $(STATICCHECK) staticmap
+out/staticmap_staticcheck.marker: $(STATICCHECK) $(STATICMAP_SOURCES)
 	cd staticmap && "$(shell realpath $(STATICCHECK))" ./...
 	mkdir -p out && touch out/staticmap_staticcheck.marker
 
-out/staticmap_gofmt.marker: staticmap
+out/staticmap_gofmt.marker: $(STATICMAP_SOURCES)
 	cd staticmap && test -z "$$(gofmt -l .)"
 	mkdir -p out && touch out/staticmap_gofmt.marker
 
-out/staticmap_go_mod_tidy.marker: staticmap
+out/staticmap_go_mod_tidy.marker: $(STATICMAP_SOURCES)
 	cd staticmap && go mod tidy -diff
 	mkdir -p out && touch out/staticmap_go_mod_tidy.marker
 
@@ -117,19 +120,19 @@ app_test: \
 	out/app_typecheck.marker \
 	out/app_vitest.marker
 
-out/app_vitest.marker: app out/app_codegen.marker app/node_modules
+out/app_vitest.marker: $(APP_SOURCES) out/app_codegen.marker app/node_modules
 	cd app && npm exec vitest -- --run
 	mkdir -p out && touch out/app_vitest.marker
 
-out/app_prettier.marker: app out/app_codegen.marker app/node_modules
+out/app_prettier.marker: $(APP_SOURCES) out/app_codegen.marker app/node_modules
 	cd app && npm exec prettier -- --check --log-level warn .
 	mkdir -p out && touch out/app_prettier.marker
 
-out/app_next_lint.marker: app out/app_codegen.marker app/node_modules
+out/app_next_lint.marker: $(APP_SOURCES) out/app_codegen.marker app/node_modules
 	cd app && ../scripts/quiet-success.sh npm exec next -- lint --max-warnings 0 --quiet
 	mkdir -p out && touch out/app_next_lint.marker
 
-out/app_typecheck.marker: app out/app_codegen.marker app/node_modules
+out/app_typecheck.marker: $(APP_SOURCES) out/app_codegen.marker app/node_modules
 	cd app && tsc --noEmit --project tsconfig.json
 	mkdir -p out && touch out/app_typecheck.marker
 
@@ -167,7 +170,7 @@ out/backend_mockery.marker: $(MOCKERY) $(shell find backend -name '*.go' ! -name
 	cd backend && "$(shell realpath $(MOCKERY))" --log-level=warn
 	mkdir -p out && touch out/backend_mockery.marker
 
-out/api_schema.json: api/schema
+out/api_schema.json: $(shell find api/schema)
 	./scripts/quiet-success.sh npm exec --package=@redocly/cli@$(REDOCLY_VERSION) --yes -- \
 		redocly lint
 	./scripts/quiet-success.sh npm exec --package=@redocly/cli@$(REDOCLY_VERSION) --yes -- \
