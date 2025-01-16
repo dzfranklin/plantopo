@@ -452,7 +452,12 @@ const overlayStyleList: OverlayStyle[] = [
   },
   {
     id: 'icon_eu_h_snow',
-    name: 'EU Snow Depth Forecast (ICON-EU, ~7km resolution)',
+    name: 'Snow Depth Forecast',
+    details:
+      'Snow depth forecast by ICON-EU (~7km resolution) from Deutscher Wetterdienst. Updated every day around 4am UTC.',
+    region: 'Europe',
+    versionMessageURL:
+      'https://plantopo-weather.b-cdn.net/icon_eu_h_snow/version_message.txt',
     variables: {
       HOUR: {
         type: 'select',
