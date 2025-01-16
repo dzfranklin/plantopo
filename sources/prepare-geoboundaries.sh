@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -euox pipefail
 
 release="CGAZ/geoBoundariesCGAZ_ADM0.geojson"
@@ -10,6 +11,7 @@ tippecanoe --output /tmp/geoboundaries.pmtiles --force \
   --attribution '<a href="https://www.geoboundaries.org/">geoBoundaries</a>' \
   --generate-ids \
   -zg \
+  --no-tile-stats \
   -L adm0:/tmp/geoboundaries_adm0.json
 
 filename="geoboundaries.pmtiles"

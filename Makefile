@@ -19,6 +19,8 @@ export REDOCLY_SUPPRESS_UPDATE_NOTICE := true
 
 export PATH := $(realpath out):$(PATH)
 
+SHELLCHECK_MARKERS := $(patsubst %.sh,out/%_shellcheck.marker,$(shell find . -name '*.sh' -exec sh -c 'git check-ignore -q "{}" || echo "{}"' \;))
+
 .PHONY: build
 build: \
 	out/app_codegen.marker \
@@ -29,7 +31,7 @@ clean:
 	test ! -d out || rm -r out
 
 .PHONY: test
-test: backend_test staticmap_test app_test
+test: backend_test staticmap_test app_test $(SHELLCHECK_MARKERS)
 
 .PHONY: sql
 sql: $(SQLC) backend/sqlc.yaml backend/migrations backend/internal/psqlc/queries
@@ -202,3 +204,7 @@ $(SQLC):
 	tar --extract --file $(scratch)/sqlc.tar.gz --to-stdout sqlc >$(SQLC)
 	chmod +x $(SQLC)
 	rm -r $(scratch)
+
+out/%_shellcheck.marker: %.sh
+	shellcheck $<
+	mkdir -p $$(dirname -- "$@") && touch $@
