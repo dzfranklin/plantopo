@@ -37,7 +37,6 @@ import { InspectFeaturesDialog } from './InspectFeaturesDialog';
 import { MapSearchComponent, SearchResult } from './search/MapSearchComponent';
 import { centroidOf } from '@/geo';
 import { useDebugMode } from '@/hooks/debugMode';
-import FrameRateControl from '@mapbox/mapbox-gl-framerate';
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { LinearMeasureControl } from './LinearMeasureControl';
@@ -91,6 +90,8 @@ ml.addProtocol(
     metadata: true, // required to show attribution
   }).tile,
 );
+
+const debugFramerateControlPosition = 'bottom-left';
 
 export default function MapComponentImpl(props: MapComponentProps) {
   // Inputs
@@ -267,9 +268,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
       map.m.addControl(new OSLogoControl());
     }
 
-    if (debugModeRef.current) {
-      map.m.addControl(new FrameRateControl(), 'bottom-left');
-    }
+    map.setShowFrameRateControl(debugModeRef.current);
 
     // Events
 
@@ -437,6 +436,13 @@ export default function MapComponentImpl(props: MapComponentProps) {
       mapRef.current.m.setMaxBounds(props.maxBounds);
     }
   }, [props.maxBounds]);
+
+  useEffect(() => {
+    mapRef.current?.setShowFrameRateControl(debugMode);
+    return () => {
+      mapRef.current?.setShowFrameRateControl(false);
+    };
+  }, [debugMode]);
 
   return (
     <div

@@ -14,3 +14,7 @@ html {
     font-family: 'InterVariable', 'system-ui';
   }
 }
+
+.inline-prose a {
+  text-decoration: underline;
+}

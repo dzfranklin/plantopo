@@ -1,8 +1,14 @@
 import * as ml from 'maplibre-gl';
 import { GeoJSON } from 'geojson';
-import { BaseStyle, OverlayStyle, StyleVariables } from '@/features/map/style';
+import {
+  BaseStyle,
+  OverlayStyle,
+  styleGlyphs,
+  StyleVariables,
+} from '@/features/map/style';
 import { fitBoundsFor } from '@/features/map/util';
 import { stringCmp } from '@/stringCmp';
+import FrameRateControl from '@mapbox/mapbox-gl-framerate';
 
 export type CameraOptions = {
   lng: number;
@@ -16,6 +22,8 @@ export type MapManagerInitialView =
   | { at: CameraOptions }
   | { fit: ml.LngLatBoundsLike; options?: ml.FitBoundsOptions };
 
+const frameRateControlPosition = 'bottom-left';
+
 export class MapManager {
   readonly m: ml.Map;
   readonly baseStyle: BaseStyle;
@@ -23,6 +31,8 @@ export class MapManager {
   private _addedOverlaySources: string[] = [];
   private _addedOverlayLayers: string[] = [];
   private _addedLayers: string[] = [];
+
+  private _frameRateControl: FrameRateControl | null = null;
 
   constructor(props: {
     container: HTMLDivElement;
@@ -34,7 +44,6 @@ export class MapManager {
 
     const opts: ml.MapOptions = {
       container: props.container,
-      style: props.baseStyle.style,
       interactive: props.interactive,
     };
 
@@ -54,6 +63,13 @@ export class MapManager {
     }
 
     this.m = new ml.Map(opts);
+
+    this.m.setStyle(props.baseStyle.style, {
+      diff: false,
+      transformStyle: (_prev, next) => {
+        return { ...next, glyphs: styleGlyphs };
+      },
+    });
 
     this.m.on('styleimagemissing', (evt) =>
       this._onStyleImageMissing(evt as ml.MapStyleImageMissingEvent),
@@ -190,6 +206,24 @@ export class MapManager {
       return;
     }
     this.m.flyTo(opts, eventData);
+  }
+
+  setShowFrameRateControl(show: boolean) {
+    if (show) {
+      if (this._frameRateControl === null) {
+        this._frameRateControl = new FrameRateControl();
+        this.m.addControl(this._frameRateControl, frameRateControlPosition);
+      } else {
+        return;
+      }
+    } else {
+      if (this._frameRateControl === null) {
+        return;
+      } else {
+        this.m.removeControl(this._frameRateControl);
+        this._frameRateControl = null;
+      }
+    }
   }
 
   debugValues(): Record<string, unknown> {

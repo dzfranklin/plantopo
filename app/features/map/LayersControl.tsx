@@ -14,18 +14,20 @@ import { Checkbox, CheckboxField } from '@/components/checkbox';
 import { Select } from '@/components/select';
 import { useDebugMode } from '@/hooks/debugMode';
 import { Field, Label } from '@/components/fieldset';
+import { useQuery } from '@tanstack/react-query';
 
-const baseStylesByCountry = Object.values(baseStyles).reduce((acc, item) => {
-  const existing = acc.get(item.country);
+const baseStylesByRegion = Object.values(baseStyles).reduce((acc, item) => {
+  const region = item.region ?? 'Global';
+  const existing = acc.get(region);
   if (existing) {
     existing.add(item);
   } else {
-    acc.set(item.country, new Set([item]));
+    acc.set(region, new Set([item]));
   }
   return acc;
 }, new Map<string, Set<BaseStyle>>());
 
-const baseStyleCountries = Array.from(baseStylesByCountry.keys()).filter(
+const baseStyleRegions = Array.from(baseStylesByRegion.keys()).filter(
   (country) => country !== 'Global',
 );
 
@@ -77,21 +79,26 @@ function LayersDialog({
   const debugMode = useDebugMode();
 
   return (
-    <Dialog open={isOpen} onClose={() => onClose()} className="relative">
+    <Dialog
+      open={isOpen}
+      onClose={() => onClose()}
+      className="relative"
+      size="xl"
+    >
       <div className="space-y-8">
         <div>
           <p className="font-semibold mb-4">Base layer</p>
           <ul className="space-y-4">
-            <BaseStyleCountryGroup
-              country={'Global'}
+            <BaseStyleRegionGroup
+              region={'Global'}
               baseStyle={activeBase}
               setBaseStyle={setActiveBase}
             />
 
-            {baseStyleCountries.map((country) => (
-              <BaseStyleCountryGroup
-                key={country}
-                country={country}
+            {baseStyleRegions.map((region) => (
+              <BaseStyleRegionGroup
+                key={region}
+                region={region}
                 baseStyle={activeBase}
                 setBaseStyle={setActiveBase}
               />
@@ -146,28 +153,28 @@ function LayersDialog({
   );
 }
 
-function BaseStyleCountryGroup({
-  country,
+function BaseStyleRegionGroup({
+  region,
   baseStyle,
   setBaseStyle,
 }: {
-  country: string;
+  region: string;
   baseStyle: BaseStyle;
   setBaseStyle: (_: BaseStyle) => void;
 }) {
   const entries = useMemo(
     () =>
-      Array.from(baseStylesByCountry.get(country) ?? []).sort((a, b) =>
+      Array.from(baseStylesByRegion.get(region) ?? []).sort((a, b) =>
         a.name.localeCompare(b.name),
       ),
-    [country],
+    [region],
   );
 
   if (entries.length === 0) return null;
 
   return (
     <div>
-      <p className="text-sm mb-1">{country}</p>
+      <p className="text-sm mb-1">{region}</p>
       <ul className="grid grid-cols-[repeat(auto-fit,63px)] gap-x-1 gap-y-2 -ml-[3px]">
         {entries.map((entry) => (
           <LayerButton
@@ -234,31 +241,86 @@ function OverlayControl({
   variables: Record<string, string>;
   setVariables: (_: Record<string, string>) => void;
 }) {
-  const hasVariables = item.variables && Object.keys(item.variables).length > 0;
+  return (
+    <div className="mb-1">
+      <CheckboxField>
+        <Checkbox checked={isActive} onChange={() => setActive(!isActive)} />
+        <Label>
+          <span className="font-medium">{item.name}</span>
+          {item.region !== undefined && (
+            <div className="inline-block py-1 px-2 mx-1 bg-gray-300 rounded-md text-xs tracking-wide">
+              {item.region}
+            </div>
+          )}
+        </Label>
+      </CheckboxField>
+
+      {isActive && (
+        <div className="ml-8 mt-1 mb-4 flex flex-col gap-y-3 text-sm text-slate-700">
+          {item.details !== undefined && (
+            <p
+              className="whitespace-pre-line inline-prose"
+              dangerouslySetInnerHTML={{ __html: item.details }}
+            />
+          )}
+
+          <VariablesControl
+            spec={item.variables}
+            values={variables}
+            setValues={setVariables}
+          />
+
+          <VersionMessage url={item.versionMessageURL} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VersionMessage({ url }: { url: string | undefined }) {
+  const versionMessageQuery = useQuery({
+    queryKey: ['VersionMessage', url],
+    enabled: url !== undefined,
+    queryFn: async () => {
+      if (!url) return;
+      const resp = await fetch(url);
+      if (resp.status !== 200) throw new Error('status ' + resp.status);
+      return await resp.text();
+    },
+  });
+
+  if (versionMessageQuery.data) {
+    return <p className="text-xs mt-1">{versionMessageQuery.data}</p>;
+  } else {
+    return null;
+  }
+}
+
+function VariablesControl({
+  spec,
+  values,
+  setValues,
+}: {
+  spec: Record<string, StyleVariableSpec> | undefined;
+  values: Record<string, string>;
+  setValues: (_: Record<string, string>) => void;
+}) {
+  if (!spec || Object.keys(spec).length === 0) return null;
 
   return (
     <div>
-      <CheckboxField>
-        <Checkbox checked={isActive} onChange={() => setActive(!isActive)} />
-        <Label>{item.name}</Label>
-      </CheckboxField>
-
-      {isActive && hasVariables && (
-        <div className="ml-8 my-4">
-          {Object.entries(item.variables!)
-            .sort(([_aID, { label: aName }], [_bID, { label: bName }]) =>
-              aName.localeCompare(bName),
-            )
-            .map(([id, spec]) => (
-              <VariableControl
-                key={id}
-                spec={spec}
-                value={variables[id] ?? spec.defaultValue}
-                setValue={(v) => setVariables({ ...variables, [id]: v })}
-              />
-            ))}
-        </div>
-      )}
+      {Object.entries(spec)
+        .sort(([_aID, { label: aName }], [_bID, { label: bName }]) =>
+          aName.localeCompare(bName),
+        )
+        .map(([id, spec]) => (
+          <VariableControl
+            key={id}
+            spec={spec}
+            value={values[id] ?? spec.defaultValue}
+            setValue={(v) => setValues({ ...values, [id]: v })}
+          />
+        ))}
     </div>
   );
 }

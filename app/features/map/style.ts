@@ -15,7 +15,7 @@ export type BaseStyleID = z.infer<typeof baseStyleIDSchema>;
 
 export interface BaseStyle {
   id: BaseStyleID;
-  country: string;
+  region?: string;
   name: string;
   preview: string;
   style: string | ml.StyleSpecification;
@@ -24,6 +24,9 @@ export interface BaseStyle {
 export interface OverlayStyle {
   id: string;
   name: string;
+  region?: string;
+  details?: string;
+  versionMessageURL?: string;
   variables?: Record<string, StyleVariableSpec>;
   sources?: Record<string, ml.SourceSpecification>;
   layers?: ml.LayerSpecification[];
@@ -31,10 +34,6 @@ export interface OverlayStyle {
 
 export interface StyleVariables {
   overlay?: Record<string, Record<string, string>>;
-}
-
-export interface StyleVariablesSpec {
-  overlay?: Record<string, Record<string, StyleVariableSpec>>;
 }
 
 export type StyleVariableSpec = SelectStyleVariable;
@@ -46,7 +45,8 @@ export interface SelectStyleVariable {
   options: { name: string; value: string }[];
 }
 
-const defaultGlyphs =
+// The glyphs property in each baseStyle will be overridden with styleGlyphs so we can reliably use it in overlays
+export const styleGlyphs =
   'https://api.maptiler.com/fonts/{fontstack}/{range}.pbf?key=' + MAPTILER_KEY;
 
 // Adding FSTopo would require mirroring https://data.fs.usda.gov/geodata/rastergateway/states-regions/quad-index.php I think, ~200GB by rough approximation
@@ -59,7 +59,6 @@ const geoboundariesSource: ml.SourceSpecification = {
 export const baseStyles: Record<BaseStyleID, BaseStyle> = {
   topo: {
     id: 'topo',
-    country: 'Global',
     name: 'Topo',
     preview: '/style-preview/maptiler_outdoor_v2_60x60.png',
     style:
@@ -67,7 +66,7 @@ export const baseStyles: Record<BaseStyleID, BaseStyle> = {
   },
   streets: {
     id: 'streets',
-    country: 'Global',
+    region: 'Global',
     name: 'Streets',
     preview: '/style-preview/maptiler_streets_v2_60x60.png',
     style:
@@ -75,7 +74,7 @@ export const baseStyles: Record<BaseStyleID, BaseStyle> = {
   },
   satellite: {
     id: 'satellite',
-    country: 'Global',
+    region: 'Global',
     name: 'Satellite',
     preview: '/style-preview/landsat_60x60.png',
     style:
@@ -83,12 +82,12 @@ export const baseStyles: Record<BaseStyleID, BaseStyle> = {
   },
   os: {
     id: 'os',
-    country: 'Great Britain',
+    region: 'Great Britain',
     name: 'OS',
     preview: '/style-preview/os_explorer_60x60.png',
     style: {
       version: 8,
-      glyphs: defaultGlyphs,
+      glyphs: styleGlyphs,
       bearing: 0,
       pitch: 0,
       center: [0, 0],
@@ -135,12 +134,12 @@ export const baseStyles: Record<BaseStyleID, BaseStyle> = {
   },
   'usgs-imagery-topo': {
     id: 'usgs-imagery-topo',
-    country: 'United States of America',
+    region: 'United States of America',
     name: 'USGS Imagery',
     preview: '/style-preview/usgs_imagery_topo_60x60.png',
     style: {
       version: 8,
-      glyphs: defaultGlyphs,
+      glyphs: styleGlyphs,
       bearing: 0,
       pitch: 0,
       center: [0, 0],
@@ -168,12 +167,12 @@ export const baseStyles: Record<BaseStyleID, BaseStyle> = {
   },
   'usgs-topo': {
     id: 'usgs-topo',
-    country: 'United States of America',
+    region: 'United States of America',
     name: 'USGS',
     preview: '/style-preview/usgs_topo_60x60.png',
     style: {
       version: 8,
-      glyphs: defaultGlyphs,
+      glyphs: styleGlyphs,
       bearing: 0,
       pitch: 0,
       center: [0, 0],
@@ -207,6 +206,8 @@ const overlayStyleList: OverlayStyle[] = [
   {
     id: 'geophotos_coverage',
     name: 'Geophotos coverage',
+    details:
+      'Geophotos is a project I am working on that will show photos of natural areas around the world. This shows the areas covered by my database.',
     sources: {
       default: {
         type: 'vector',
@@ -247,7 +248,10 @@ const overlayStyleList: OverlayStyle[] = [
   },
   {
     id: 'scot_core_paths',
-    name: 'Core Paths (Scotland)',
+    name: 'Core Paths',
+    details:
+      'Core paths are paths, waterways or any other means of crossing land to facilitate, promote and manage the exercise of access rights under the Land Reform (Scotland) Act 2003, and are identified as such in access authority core paths plan.\n\nThere are, intentionally, no set physical standards for core paths. This means that core paths can physically be anything from a faint line across a field to a fully constructed path, track or pavement.',
+    region: 'Scotland',
     sources: {
       default: {
         type: 'vector',
@@ -280,7 +284,10 @@ const overlayStyleList: OverlayStyle[] = [
   },
   {
     id: 'scot_wild_land_areas_2014',
-    name: 'Wild Land Areas 2014 (Scotland)',
+    name: 'Wild Land Areas',
+    details:
+      'NatureScot identified 42 wild land areas following a detailed analysis in 2014 of where wildness can be found across all of Scotland’s landscapes.',
+    region: 'Scotland',
     sources: {
       default: {
         type: 'vector',
@@ -322,7 +329,10 @@ const overlayStyleList: OverlayStyle[] = [
   },
   {
     id: 'caledonian_pinewood_inventory',
-    name: 'Caledonian Pinewood Inventory (Scotland)',
+    name: 'Caledonian Pinewood Inventory',
+    details:
+      'Inventoried by Scottish Forestry based on the 1959 book <i>The Native Pinewoods of Scotland</i> by Steven and Carlisle. Some of the pinewood fragments which they thought were too small to form discreet pinewood habitats, have also been considered. In all cases the balance of probability suggests that they are genuinely native, that is, descended from one generation to another by natural seeding.',
+    region: 'Scotland',
     sources: {
       default: {
         type: 'vector',
@@ -379,7 +389,10 @@ const overlayStyleList: OverlayStyle[] = [
   },
   {
     id: 'bgs_mining_hazard_ex_coal',
-    name: 'British Geological Survey Mining Hazard (not including coal)',
+    name: 'Mining Hazard',
+    details:
+      'The BGS mining hazard (not including coal) 1 km hex grid dataset provides a generalised overview of the likelihood for mining to have occurred. It provides a national-scale summary of the presence of mining and an indication of the level of hazard associated with old workings.',
+    region: 'Great Britain',
     sources: {
       default: {
         type: 'vector',
@@ -427,14 +440,41 @@ const overlayStyleList: OverlayStyle[] = [
             10, 2,
             15, 3,
           ],
-          'line-color': '#a8a8a8',
+          'line-color': 'rgba(168,168,168,0.6)',
+        },
+      },
+      {
+        id: 'adm0-label',
+        type: 'symbol',
+        source: 'default',
+        'source-layer': 'adm0_label',
+        minzoom: 5,
+        layout: {
+          'text-field': '{shapeName}',
+          'text-font': ['Roboto Bold', 'Noto Sans Bold'],
+          'text-line-height': 1.2,
+          'text-max-width': 8.25,
+          'text-padding': 0,
+          // prettier-ignore
+          'text-size': ['interpolate', ['linear'], ['zoom'],
+            5, 10,
+            8, 20,
+          ],
+        },
+        paint: {
+          'text-color': '#423e3e',
+          'text-halo-color': '#f7f7f7',
+          'text-halo-blur': 1.6,
+          'text-halo-width': 1.4,
         },
       },
     ],
   },
   {
     id: 'global_human_settlement_urbanisation',
-    name: 'Degree of Urbanisation (1km resolution)',
+    name: 'Degree of Urbanisation',
+    details:
+      'Copernicus EMS derived the degree of urbanisation from built-up surfaces detected in 2018 satellite imagery and extrapolation from 2005-2014 population censuses. Very low and low density rural grid cells are omitted from this layer for visual clarity.',
     sources: {
       default: {
         type: 'raster',
@@ -476,7 +516,7 @@ const overlayStyleList: OverlayStyle[] = [
     sources: {
       default: {
         type: 'raster',
-        url: 'https://plantopo-storage.b-cdn.net/weather-maps/icon_eu_h_snow/__HOUR__/source.json',
+        url: 'https://plantopo-weather.b-cdn.net/icon_eu_h_snow/__HOUR__.json',
       },
     },
     layers: [
@@ -490,6 +530,8 @@ const overlayStyleList: OverlayStyle[] = [
   {
     id: 'paper-maps',
     name: 'Paper Maps',
+    details:
+      'My work-in-progress database of paper maps. Contribute at <a href="https://github.com/dzfranklin/paper-maps" target="_blank">github.com/dzfranklin/paper-maps</a>.',
     sources: {
       default: {
         type: 'vector',
