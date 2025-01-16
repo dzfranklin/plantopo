@@ -19,6 +19,7 @@ tippecanoe --output /tmp/caledonian_pinewood_inventory.pmtiles --force \
   --drop-smallest-as-needed \
   --base-zoom=g \
   --minimum-zoom=0 --maximum-zoom=14 \
+  --no-tile-stats \
   /tmp/caledonian_pinewood_inventory_wgs84.json
 
 filename="caledonian_pinewood_inventory.pmtiles"

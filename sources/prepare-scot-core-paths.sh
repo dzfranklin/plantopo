@@ -13,6 +13,7 @@ tippecanoe --output /tmp/core_paths.pmtiles --force \
   --generate-ids \
   --drop-smallest-as-needed \
   --base-zoom=g \
+  --no-tile-stats \
   /tmp/core_paths_wgs84.json
 
 filename="scot_core_paths.pmtiles"

@@ -19,6 +19,7 @@ tippecanoe --output /tmp/bgs_mining_hazard_ex_coal.pmtiles --force \
   --generate-ids \
   --base-zoom=g \
   -zg \
+  --no-tile-stats \
   /tmp/bgs_mining_hazard_ex_coal.json
 
 filename="bgs_mining_hazard_ex_coal.pmtiles"

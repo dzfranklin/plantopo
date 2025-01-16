@@ -15,6 +15,7 @@ tippecanoe --output /tmp/scot_wild_land_areas_2014.pmtiles --force \
   --generate-ids \
   --drop-smallest-as-needed \
   --base-zoom=g \
+  --no-tile-stats \
   /tmp/scot_wild_land_areas_2014.json
 
 filename="scot_wild_land_areas_2014.pmtiles"
