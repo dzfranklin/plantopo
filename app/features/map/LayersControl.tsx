@@ -1,12 +1,13 @@
 import {
   BaseStyle,
   baseStyles,
+  DynamicOverlayStyle,
   OverlayStyle,
   overlayStyles,
   StyleVariables,
   StyleVariableSpec,
 } from '@/features/map/style';
-import { ReactNode, useMemo, useState } from 'react';
+import { Fragment, ReactNode, useEffect, useMemo, useState } from 'react';
 import { Dialog } from '@/components/dialog';
 import { Button } from '@/components/button';
 import cls from '@/cls';
@@ -15,6 +16,10 @@ import { Select } from '@/components/select';
 import { useDebugMode } from '@/hooks/debugMode';
 import { Field, Label } from '@/components/fieldset';
 import { useQuery } from '@tanstack/react-query';
+import * as ml from 'maplibre-gl';
+import { applyVariablesToSource } from '@/features/map/MapManager';
+import { PMTiles } from 'pmtiles';
+import { useMapManager } from '@/features/map/useMap';
 
 const baseStylesByRegion = Object.values(baseStyles).reduce((acc, item) => {
   const region = item.region ?? 'Global';
@@ -38,8 +43,10 @@ const overlayStyleList = Object.values(overlayStyles).sort((a, b) =>
 export interface LayersControlProps {
   activeBase: BaseStyle;
   setActiveBase: (_: BaseStyle) => void;
-  activeOverlays: OverlayStyle[];
-  setActiveOverlays: (overlayStyles: OverlayStyle[]) => void;
+  activeOverlays: (OverlayStyle | DynamicOverlayStyle)[];
+  setActiveOverlays: (
+    overlayStyles: (OverlayStyle | DynamicOverlayStyle)[],
+  ) => void;
   variables: StyleVariables;
   setVariables: (variables: StyleVariables) => void;
   debugMenu?: ReactNode;
@@ -123,7 +130,7 @@ function LayersDialog({
                       );
                     }
                   }}
-                  variables={variables.overlay?.[item.id] ?? {}}
+                  variables={variables.overlay?.[item.id]}
                   setVariables={(v) =>
                     setVariables({
                       ...variables,
@@ -235,10 +242,10 @@ function OverlayControl({
   variables,
   setVariables,
 }: {
-  item: OverlayStyle;
+  item: OverlayStyle | DynamicOverlayStyle;
   isActive: boolean;
   setActive: (value: boolean) => void;
-  variables: Record<string, string>;
+  variables: Record<string, string> | undefined;
   setVariables: (_: Record<string, string>) => void;
 }) {
   return (
@@ -256,30 +263,74 @@ function OverlayControl({
       </CheckboxField>
 
       {isActive && (
-        <div className="ml-8 mt-1 mb-4 flex flex-col gap-y-3 text-sm text-slate-700">
-          {item.details !== undefined && (
-            <p
-              className="whitespace-pre-line inline-prose"
-              dangerouslySetInnerHTML={{ __html: item.details }}
-            />
-          )}
-
-          <VariablesControl
-            spec={item.variables}
-            values={variables}
-            setValues={setVariables}
-          />
-
-          <VersionMessage url={item.versionMessageURL} />
-        </div>
+        <ActiveOverlayDetails
+          item={item}
+          variables={variables}
+          setVariables={setVariables}
+        />
       )}
     </div>
   );
 }
 
-function VersionMessage({ url }: { url: string | undefined }) {
+function ActiveOverlayDetails({
+  item,
+  variables,
+  setVariables,
+}: {
+  item: OverlayStyle | DynamicOverlayStyle;
+  variables: Record<string, string> | undefined;
+  setVariables: (_: Record<string, string>) => void;
+}) {
+  const manager = useMapManager();
+  const [resolvedItem, setResolvedItem] = useState<OverlayStyle | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    if ('dynamic' in item) {
+      manager.resolveDynamicOverlay(item).then((v) => {
+        if (!cancelled) setResolvedItem(v);
+      });
+    } else {
+      setResolvedItem(item);
+    }
+    return () => {
+      cancelled = true;
+      setResolvedItem(null);
+    };
+  }, [item, manager]);
+
+  if (!resolvedItem) return null;
+
+  return (
+    <div className="ml-8 mt-2 mb-4 flex flex-col gap-y-2 text-sm text-slate-700">
+      {resolvedItem.details !== undefined && (
+        <p
+          className="whitespace-pre-line inline-prose"
+          dangerouslySetInnerHTML={{ __html: resolvedItem.details }}
+        />
+      )}
+
+      <LayerVariablesControl
+        spec={resolvedItem.variables}
+        values={variables}
+        setValues={setVariables}
+      />
+
+      <div>
+        <OverlayLayerAttributionControl
+          item={resolvedItem}
+          variables={variables}
+        />
+
+        <LayerVersionMessage url={resolvedItem.versionMessageURL} />
+      </div>
+    </div>
+  );
+}
+
+function LayerVersionMessage({ url }: { url: string | undefined }) {
   const versionMessageQuery = useQuery({
-    queryKey: ['VersionMessage', url],
+    queryKey: ['LayerVersionMessage', url],
     enabled: url !== undefined,
     queryFn: async () => {
       if (!url) return;
@@ -296,19 +347,19 @@ function VersionMessage({ url }: { url: string | undefined }) {
   }
 }
 
-function VariablesControl({
+function LayerVariablesControl({
   spec,
   values,
   setValues,
 }: {
   spec: Record<string, StyleVariableSpec> | undefined;
-  values: Record<string, string>;
+  values: Record<string, string> | undefined;
   setValues: (_: Record<string, string>) => void;
 }) {
   if (!spec || Object.keys(spec).length === 0) return null;
 
   return (
-    <div>
+    <div className="mb-1">
       {Object.entries(spec)
         .sort(([_aID, { label: aName }], [_bID, { label: bName }]) =>
           aName.localeCompare(bName),
@@ -317,7 +368,7 @@ function VariablesControl({
           <VariableControl
             key={id}
             spec={spec}
-            value={values[id] ?? spec.defaultValue}
+            value={values?.[id] ?? spec.options[0]?.value}
             setValue={(v) => setValues({ ...values, [id]: v })}
           />
         ))}
@@ -331,7 +382,7 @@ function VariableControl({
   setValue,
 }: {
   spec: StyleVariableSpec;
-  value: string;
+  value: string | undefined;
   setValue: (value: string) => void;
 }) {
   switch (spec.type) {
@@ -349,4 +400,125 @@ function VariableControl({
         </Field>
       );
   }
+}
+
+function OverlayLayerAttributionControl({
+  item,
+  variables,
+}: {
+  item: OverlayStyle;
+  variables: Record<string, string> | undefined;
+}) {
+  const [attributions, setAttributions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [failedCount, setFailedCount] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setAttributions([]);
+    setIsLoading(true);
+    setFailedCount(0);
+
+    if (!item.sources) {
+      setIsLoading(false);
+      return;
+    }
+
+    Promise.all(
+      Object.entries(item.sources).map(([id, s]) =>
+        resolveSourceAttribution(s, item.variables, variables).then(
+          (value) => ({ id, value }),
+          (error) => ({ id, error }),
+        ),
+      ),
+    ).then((entries) => {
+      let failures = 0;
+      const values: string[] = [];
+
+      for (const entry of entries) {
+        if ('error' in entry) {
+          console.warn('failed to fetch attribution', entry.id, entry.error);
+          failures++;
+        } else if (entry.value !== undefined && entry.value.trim() !== '') {
+          values.push(entry.value);
+        }
+      }
+
+      if (!cancelled) {
+        setIsLoading(false);
+        setFailedCount(failures);
+        setAttributions(values);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [item, variables]);
+
+  if (isLoading) {
+    return 'Credit: loading...';
+  } else if (attributions.length === 0 && failedCount === 0) {
+    return null;
+  } else {
+    return (
+      <p className="inline-prose">
+        {'Credit: '}
+        {attributions.map((v, i) => (
+          <Fragment key={i}>
+            <span dangerouslySetInnerHTML={{ __html: v }} />
+            {i < attributions.length - 2 && ', '}
+            {i === attributions.length - 2 && ', and'}
+          </Fragment>
+        ))}
+        {failedCount > 0 && (
+          <span>(failed to load attribution for {failedCount} sources)</span>
+        )}
+      </p>
+    );
+  }
+}
+
+async function resolveSourceAttribution(
+  source: ml.SourceSpecification,
+  variableSpec: Record<string, StyleVariableSpec> | undefined,
+  variables: Record<string, string> | undefined,
+): Promise<string | undefined> {
+  if ('attribution' in source && typeof source.attribution === 'string') {
+    if (source.attribution.trim() === '') {
+      return undefined;
+    } else {
+      return source.attribution;
+    }
+  }
+
+  if (variableSpec) {
+    source = applyVariablesToSource(source, variableSpec, variables);
+  }
+
+  if ('url' in source && typeof source.url === 'string') {
+    if (source.url.startsWith('pmtiles://')) {
+      const url = source.url.substring(10);
+      const pm = new PMTiles(url);
+      const data = (await pm.getTileJson(url)) as Record<string, unknown>;
+      if ('attribution' in data && typeof data.attribution === 'string') {
+        return data.attribution;
+      }
+    } else {
+      const resp = await fetch(source.url);
+      if (resp.status < 200 || resp.status >= 300) {
+        throw new Error(
+          `failed to fetch ${source.url}: got status ${resp.status}`,
+        );
+      }
+
+      const data = (await resp.json()) as ml.SourceSpecification;
+      if ('attribution' in data && typeof data.attribution === 'string') {
+        return data.attribution;
+      }
+    }
+  }
+
+  return undefined;
 }

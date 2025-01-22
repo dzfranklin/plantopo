@@ -17,7 +17,7 @@ import {
   BaseStyleID,
   baseStyles,
   defaultBaseStyle,
-  defaultStyleVariables,
+  DynamicOverlayStyle,
   OverlayStyle,
   StyleVariables,
 } from './style';
@@ -91,8 +91,6 @@ ml.addProtocol(
   }).tile,
 );
 
-const debugFramerateControlPosition = 'bottom-left';
-
 export default function MapComponentImpl(props: MapComponentProps) {
   // Inputs
 
@@ -155,8 +153,11 @@ export default function MapComponentImpl(props: MapComponentProps) {
     });
   }, []);
 
-  const [activeOverlays, setActiveOverlays] = useState<OverlayStyle[]>([]);
-  const activeOverlaysRef = useRef<OverlayStyle[]>(activeOverlays);
+  const [activeOverlays, setActiveOverlays] = useState<
+    (OverlayStyle | DynamicOverlayStyle)[]
+  >([]);
+  const activeOverlaysRef =
+    useRef<(OverlayStyle | DynamicOverlayStyle)[]>(activeOverlays);
   activeOverlaysRef.current = activeOverlays;
 
   const [inspectFeatures, setInspectFeatures] = useState<
@@ -165,9 +166,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
 
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
 
-  const [variables, setVariables] = useState<StyleVariables>(
-    defaultStyleVariables,
-  );
+  const [variables, setVariables] = useState<StyleVariables>({});
   const variablesRef = useRef<StyleVariables>(variables);
   variablesRef.current = variables;
 
@@ -478,22 +477,22 @@ export default function MapComponentImpl(props: MapComponentProps) {
         </div>
       </div>
 
-      {interactive && layersPortal}
-      {interactive && searchPortal}
+      {mapState && (
+        <MapContext.Provider value={mapState}>
+          {interactive && layersPortal}
+          {interactive && searchPortal}
 
-      <InspectFeaturesDialog
-        show={inspectFeatures.length > 0}
-        onClose={() => setInspectFeatures([])}
-        features={inspectFeatures}
-      />
+          <InspectFeaturesDialog
+            show={inspectFeatures.length > 0}
+            onClose={() => setInspectFeatures([])}
+            features={inspectFeatures}
+          />
 
-      <div className="absolute inset-0 pointer-events-none">
-        {mapState && (
-          <MapContext.Provider value={mapState}>
+          <div className="absolute inset-0 pointer-events-none">
             {props.children}
-          </MapContext.Provider>
-        )}
-      </div>
+          </div>
+        </MapContext.Provider>
+      )}
     </div>
   );
 }

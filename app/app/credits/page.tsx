@@ -60,6 +60,11 @@ export default function Page() {
           <li>
             Data from <a href="https://en.wikipedia.org">Wikipedia</a>
           </li>
+          <li>
+            <a href="https://datahub.metoffice.gov.uk/">
+              Data supplied by the Met Office
+            </a>
+          </li>
           <li>Map sources as attributed on each map</li>
         </ul>
 

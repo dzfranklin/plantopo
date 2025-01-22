@@ -32,8 +32,14 @@ export interface OverlayStyle {
   layers?: ml.LayerSpecification[];
 }
 
+type NonDynamicOverlayStyleProps = 'id' | 'name' | 'region';
+export type DynamicOverlayStyle = Pick<
+  OverlayStyle,
+  NonDynamicOverlayStyleProps
+> & { dynamic: () => Promise<Omit<OverlayStyle, NonDynamicOverlayStyleProps>> };
+
 export interface StyleVariables {
-  overlay?: Record<string, Record<string, string>>;
+  overlay?: Record<string, Record<string, string>>; // overlay id -> variable -> value
 }
 
 export type StyleVariableSpec = SelectStyleVariable;
@@ -41,7 +47,6 @@ export type StyleVariableSpec = SelectStyleVariable;
 export interface SelectStyleVariable {
   type: 'select';
   label: string;
-  defaultValue: string;
   options: { name: string; value: string }[];
 }
 
@@ -202,7 +207,7 @@ export const baseStyles: Record<BaseStyleID, BaseStyle> = {
 
 export const defaultBaseStyle = baseStyles['topo'];
 
-const overlayStyleList: OverlayStyle[] = [
+const overlayStyleList: (OverlayStyle | DynamicOverlayStyle)[] = [
   {
     id: 'geophotos_coverage',
     name: 'Geophotos coverage',
@@ -212,6 +217,7 @@ const overlayStyleList: OverlayStyle[] = [
       default: {
         type: 'vector',
         url: 'https://pmtiles.plantopo.com/geophotos.json',
+        attribution: '',
       },
     },
     // prettier-ignore
@@ -502,7 +508,6 @@ const overlayStyleList: OverlayStyle[] = [
       HOUR: {
         type: 'select',
         label: 'Time',
-        defaultValue: '000h',
         options: [
           { name: 'Today', value: '000h' },
           { name: 'Tomorrow', value: '024h' },
@@ -526,6 +531,60 @@ const overlayStyleList: OverlayStyle[] = [
         source: 'default',
       },
     ],
+  },
+  {
+    id: 'met_scotland_daytime_average_precipitation_accumulation',
+    name: 'Daytime Precipitation',
+    region: 'Scotland',
+    details:
+      'Daytime precipitation (6am - 6pm) in average mm/hr. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
+    dynamic: async () => {
+      // TODO: this is a mess in terms of data flow, think through
+
+      const metaResp = await fetch(
+        'https://plantopo-weather.b-cdn.net/met_scotland_daytime_average_precipitation_accumulation/meta.json',
+      );
+      if (!metaResp.ok) throw new Error('Failed to fetch meta.json');
+
+      const metaSpec = z.object({
+        versionMessage: z.string(),
+        dates: z
+          .object({
+            date: z.string().date(),
+            tilejson: z.string().url(),
+          })
+          .array(),
+      });
+      const meta = metaSpec.parse(await metaResp.json());
+
+      // TODO: version message
+
+      return {
+        sources: {
+          default: {
+            type: 'raster',
+            url: '__URL__',
+          },
+        },
+        layers: [
+          {
+            id: 'raster',
+            type: 'raster',
+            source: 'default',
+          },
+        ],
+        variables: {
+          URL: {
+            type: 'select',
+            label: 'Day',
+            options: meta.dates.map(({ date, tilejson }) => ({
+              name: date, // TODO: format
+              value: tilejson,
+            })),
+          },
+        },
+      };
+    },
   },
   {
     id: 'paper-maps',
@@ -605,22 +664,5 @@ const overlayStyleList: OverlayStyle[] = [
   },
 ];
 
-export const overlayStyles: Record<string, OverlayStyle> =
+export const overlayStyles: Record<string, OverlayStyle | DynamicOverlayStyle> =
   overlayStyleList.reduce((acc, item) => ({ ...acc, [item.id]: item }), {});
-
-export const defaultStyleVariables: StyleVariables = {
-  overlay: {},
-};
-for (const overlayStyle of Object.values(overlayStyles)) {
-  if (
-    overlayStyle.variables &&
-    Object.keys(overlayStyle.variables).length > 0
-  ) {
-    defaultStyleVariables.overlay![overlayStyle.id] = Object.fromEntries(
-      Object.entries(overlayStyle.variables).map(([id, spec]) => [
-        id,
-        spec.defaultValue,
-      ]),
-    );
-  }
-}

@@ -2,13 +2,16 @@ import * as ml from 'maplibre-gl';
 import { GeoJSON } from 'geojson';
 import {
   BaseStyle,
+  DynamicOverlayStyle,
   OverlayStyle,
   styleGlyphs,
   StyleVariables,
+  StyleVariableSpec,
 } from '@/features/map/style';
 import { fitBoundsFor } from '@/features/map/util';
 import { stringCmp } from '@/stringCmp';
 import FrameRateControl from '@mapbox/mapbox-gl-framerate';
+import { Overlay } from 'ol';
 
 export type CameraOptions = {
   lng: number;
@@ -80,7 +83,10 @@ export class MapManager {
     this.m.remove();
   }
 
-  setOverlays(overlays: OverlayStyle[], variables: StyleVariables['overlay']) {
+  async setOverlays(
+    overlays: (OverlayStyle | DynamicOverlayStyle)[],
+    variables: StyleVariables['overlay'],
+  ) {
     for (const layer of this._addedOverlayLayers) {
       this.m.removeLayer(layer);
     }
@@ -95,16 +101,25 @@ export class MapManager {
       .slice()
       .sort((a, b) => stringCmp(a.id, b.id));
 
-    for (const overlay of sortedOverlays) {
+    const resolvedOverlays = await Promise.all(
+      sortedOverlays.map((v) =>
+        'dynamic' in v ? this.resolveDynamicOverlay(v) : Promise.resolve(v),
+      ),
+    );
+
+    for (const overlay of resolvedOverlays) {
+      console.info(overlay);
       const prefix = `overlay:${overlay.id}:`;
 
       const overlaySources = overlay.sources ?? {};
       for (const id in overlaySources) {
         let source = overlaySources[id]!;
 
-        if (variables && Object.hasOwn(variables, overlay.id)) {
-          source = applyVariablesToSource(source, variables[overlay.id]!);
-        }
+        source = applyVariablesToSource(
+          source,
+          overlay.variables,
+          variables?.[overlay.id],
+        );
 
         this._addedOverlaySources.push(prefix + id);
         this.m.addSource(prefix + id, source);
@@ -226,6 +241,21 @@ export class MapManager {
     }
   }
 
+  private _resolvedOverlays = new Map<string, Promise<OverlayStyle>>();
+
+  resolveDynamicOverlay(style: DynamicOverlayStyle): Promise<OverlayStyle> {
+    const existing = this._resolvedOverlays.get(style.id);
+    if (existing) {
+      return existing;
+    }
+
+    const p: Promise<OverlayStyle> = style
+      .dynamic()
+      .then((v) => ({ ...style, ...v }));
+    this._resolvedOverlays.set(style.id, p);
+    return p;
+  }
+
   debugValues(): Record<string, unknown> {
     return {
       baseStyle: this.baseStyle,
@@ -251,14 +281,28 @@ function rewriteLayer(
   return out;
 }
 
-function applyVariablesToSource(
+export function applyVariablesToSource(
   source: ml.SourceSpecification,
-  variables: Record<string, string>,
+  variableSpec: Record<string, StyleVariableSpec> | undefined,
+  variables: Record<string, string> | undefined,
 ) {
+  if (!variableSpec) return source;
+
   if ('url' in source && typeof source.url === 'string') {
     let url = source.url;
-    for (const [k, v] of Object.entries(variables)) {
-      url = url.replaceAll('__' + k + '__', v);
+    for (const [variable, spec] of Object.entries(variableSpec)) {
+      let value = variables?.[variable];
+      if (value === undefined) {
+        switch (spec.type) {
+          case 'select': {
+            if (spec.options.length === 0) continue;
+            value = spec.options[0]!.value;
+            break;
+          }
+        }
+      }
+
+      url = url.replaceAll('__' + variable + '__', value);
     }
     source = { ...source, url };
   }

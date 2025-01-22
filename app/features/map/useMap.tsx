@@ -4,7 +4,7 @@ import { MapManager } from '@/features/map/MapManager';
 
 export const MapContext = createContext<MapManager | null>(null);
 
-function useMapManager(): MapManager {
+export function useMapManager(): MapManager {
   const value = useContext(MapContext);
   if (!value) throw new Error('not a child of MapComponent');
   return value;
