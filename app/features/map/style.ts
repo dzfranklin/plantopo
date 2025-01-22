@@ -540,7 +540,7 @@ const overlayStyleList: (OverlayStyle | DynamicOverlayStyle)[] = [
     name: 'Daytime Precipitation',
     region: 'Scotland',
     details:
-      'Daytime precipitation (6am - 6pm) in average mm/hr. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
+      'Daytime (6am - 6pm) precipitation accumulation in average mm/hr. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
     dynamic: async () => {
       // TODO: this is a mess in terms of data flow, think through
 
