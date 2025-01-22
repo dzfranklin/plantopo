@@ -529,6 +529,9 @@ const overlayStyleList: (OverlayStyle | DynamicOverlayStyle)[] = [
         id: 'raster',
         type: 'raster',
         source: 'default',
+        paint: {
+          'raster-resampling': 'nearest',
+        },
       },
     ],
   },
@@ -571,6 +574,9 @@ const overlayStyleList: (OverlayStyle | DynamicOverlayStyle)[] = [
             id: 'raster',
             type: 'raster',
             source: 'default',
+            paint: {
+              'raster-resampling': 'nearest',
+            },
           },
         ],
         variables: {
