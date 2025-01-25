@@ -1,6 +1,7 @@
 import { MAPTILER_KEY } from '@/env';
 import { z } from 'zod';
 import * as ml from 'maplibre-gl';
+import { DateTime } from 'luxon';
 
 export const baseStyleIDSchema = z.enum([
   'topo',
@@ -26,17 +27,16 @@ export interface OverlayStyle {
   name: string;
   region?: string;
   details?: string;
-  versionMessageURL?: string;
+  versionMessage?: string;
+  legendURL?: string;
   variables?: Record<string, StyleVariableSpec>;
   sources?: Record<string, ml.SourceSpecification>;
   layers?: ml.LayerSpecification[];
 }
 
-type NonDynamicOverlayStyleProps = 'id' | 'name' | 'region';
-export type DynamicOverlayStyle = Pick<
-  OverlayStyle,
-  NonDynamicOverlayStyleProps
-> & { dynamic: () => Promise<Omit<OverlayStyle, NonDynamicOverlayStyleProps>> };
+export type DynamicOverlayStyle = OverlayStyle & {
+  dynamic: () => Promise<Omit<OverlayStyle, 'id' | 'name'>>;
+};
 
 export interface StyleVariables {
   overlay?: Record<string, Record<string, string>>; // overlay id -> variable -> value
@@ -500,28 +500,13 @@ const overlayStyleList: (OverlayStyle | DynamicOverlayStyle)[] = [
     id: 'icon_eu_h_snow',
     name: 'Snow Depth Forecast',
     details:
-      'Snow depth forecast by ICON-EU (~7km resolution) from Deutscher Wetterdienst. Updated every day around 4am UTC.',
+      'Snow depth forecast by ICON-EU (~7km resolution) from Deutscher Wetterdienst. In metres. Updated every day around 4am UTC.',
     region: 'Europe',
-    versionMessageURL:
-      'https://plantopo-weather.b-cdn.net/icon_eu_h_snow/version_message.txt',
-    variables: {
-      HOUR: {
-        type: 'select',
-        label: 'Time',
-        options: [
-          { name: 'Today', value: '000h' },
-          { name: 'Tomorrow', value: '024h' },
-          { name: '+2d', value: '048h' },
-          { name: '+3d', value: '072h' },
-          { name: '+4d', value: '096h' },
-          { name: '+5d', value: '120h' },
-        ],
-      },
-    },
+    legendURL: 'https://plantopo-weather.b-cdn.net/icon_eu_h_snow/legend.html',
     sources: {
       default: {
         type: 'raster',
-        url: 'https://plantopo-weather.b-cdn.net/icon_eu_h_snow/__HOUR__.json',
+        url: '__URL__',
       },
     },
     layers: [
@@ -531,9 +516,46 @@ const overlayStyleList: (OverlayStyle | DynamicOverlayStyle)[] = [
         source: 'default',
         paint: {
           'raster-resampling': 'nearest',
+          'raster-opacity': 0.8,
         },
       },
     ],
+    dynamic: async () => {
+      const metaResp = await fetch(
+        'https://plantopo-weather.b-cdn.net/icon_eu_h_snow/meta.json',
+      );
+      if (!metaResp.ok) throw new Error('Failed to fetch meta.json');
+
+      const metaSpec = z.object({
+        modelRun: z.string().datetime(),
+        versionMessage: z.string(),
+        hours: z
+          .object({
+            hour: z.number(),
+            tilejson: z.string().url(),
+          })
+          .array(),
+      });
+      const meta = metaSpec.parse(await metaResp.json());
+
+      const modelRun = DateTime.fromISO(meta.modelRun);
+
+      return {
+        versionMessage: meta.versionMessage,
+        variables: {
+          URL: {
+            type: 'select',
+            label: 'Time',
+            options: meta.hours.map(({ hour, tilejson }) => ({
+              name: modelRun
+                .plus({ hours: hour })
+                .toLocaleString(DateTime.DATETIME_SHORT),
+              value: tilejson,
+            })),
+          },
+        },
+      };
+    },
   },
   {
     id: 'met_scotland_daytime_average_precipitation_accumulation',
@@ -541,9 +563,26 @@ const overlayStyleList: (OverlayStyle | DynamicOverlayStyle)[] = [
     region: 'Scotland',
     details:
       'Daytime (6am - 6pm) precipitation accumulation in average mm/hr. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
+    legendURL:
+      'https://plantopo-weather.b-cdn.net/met_scotland_daytime_average_precipitation_accumulation/legend.html',
+    sources: {
+      default: {
+        type: 'raster',
+        url: '__URL__',
+      },
+    },
+    layers: [
+      {
+        id: 'raster',
+        type: 'raster',
+        source: 'default',
+        paint: {
+          'raster-resampling': 'nearest',
+          'raster-opacity': 0.8,
+        },
+      },
+    ],
     dynamic: async () => {
-      // TODO: this is a mess in terms of data flow, think through
-
       const metaResp = await fetch(
         'https://plantopo-weather.b-cdn.net/met_scotland_daytime_average_precipitation_accumulation/meta.json',
       );
@@ -560,33 +599,252 @@ const overlayStyleList: (OverlayStyle | DynamicOverlayStyle)[] = [
       });
       const meta = metaSpec.parse(await metaResp.json());
 
-      // TODO: version message
-
       return {
-        sources: {
-          default: {
-            type: 'raster',
-            url: '__URL__',
-          },
-        },
-        layers: [
-          {
-            id: 'raster',
-            type: 'raster',
-            source: 'default',
-            paint: {
-              'raster-resampling': 'nearest',
-            },
-          },
-        ],
+        versionMessage: meta.versionMessage,
         variables: {
           URL: {
             type: 'select',
             label: 'Day',
             options: meta.dates.map(({ date, tilejson }) => ({
-              name: date, // TODO: format
+              name: DateTime.fromISO(date).toLocaleString(DateTime.DATE_SHORT),
               value: tilejson,
             })),
+          },
+        },
+      };
+    },
+  },
+  {
+    id: 'met_scotland_temperature_daytime_min',
+    name: 'Daytime Low Temperature',
+    region: 'Scotland',
+    details:
+      'Daytime (6am - 6pm) low temperature in degrees celsius. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
+    legendURL:
+      'https://plantopo-weather.b-cdn.net/met_scotland_temperature/legend.html',
+    sources: {
+      default: {
+        type: 'raster',
+        url: '__URL__',
+      },
+    },
+    layers: [
+      {
+        id: 'raster',
+        type: 'raster',
+        source: 'default',
+        paint: {
+          'raster-resampling': 'nearest',
+          'raster-opacity': 0.8,
+        },
+      },
+    ],
+    dynamic: async () => {
+      const metaResp = await fetch(
+        'https://plantopo-weather.b-cdn.net/met_scotland_temperature/meta.json',
+      );
+      if (!metaResp.ok) throw new Error('Failed to fetch meta.json');
+
+      const metaSpec = z.object({
+        versionMessage: z.string(),
+        dates: z
+          .object({
+            date: z.string().date(),
+            daytime_min_tilejson: z.string().url(),
+          })
+          .array(),
+      });
+      const meta = metaSpec.parse(await metaResp.json());
+
+      return {
+        versionMessage: meta.versionMessage,
+        variables: {
+          URL: {
+            type: 'select',
+            label: 'Day',
+            options: meta.dates.map(({ date, daytime_min_tilejson }) => ({
+              name: DateTime.fromISO(date).toLocaleString(DateTime.DATE_SHORT),
+              value: daytime_min_tilejson,
+            })),
+          },
+        },
+      };
+    },
+  },
+  {
+    id: 'met_scotland_temperature_daytime_max',
+    name: 'Daytime High Temperature',
+    region: 'Scotland',
+    details:
+      'Daytime (6am - 6pm) high temperature in degrees celsius. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
+    legendURL:
+      'https://plantopo-weather.b-cdn.net/met_scotland_temperature/legend.html',
+    sources: {
+      default: {
+        type: 'raster',
+        url: '__URL__',
+      },
+    },
+    layers: [
+      {
+        id: 'raster',
+        type: 'raster',
+        source: 'default',
+        paint: {
+          'raster-resampling': 'nearest',
+          'raster-opacity': 0.8,
+        },
+      },
+    ],
+    dynamic: async () => {
+      const metaResp = await fetch(
+        'https://plantopo-weather.b-cdn.net/met_scotland_temperature/meta.json',
+      );
+      if (!metaResp.ok) throw new Error('Failed to fetch meta.json');
+
+      const metaSpec = z.object({
+        versionMessage: z.string(),
+        dates: z
+          .object({
+            date: z.string().date(),
+            daytime_max_tilejson: z.string().url(),
+          })
+          .array(),
+      });
+      const meta = metaSpec.parse(await metaResp.json());
+
+      return {
+        versionMessage: meta.versionMessage,
+        variables: {
+          URL: {
+            type: 'select',
+            label: 'Day',
+            options: meta.dates.map(({ date, daytime_max_tilejson }) => ({
+              name: DateTime.fromISO(date).toLocaleString(DateTime.DATE_SHORT),
+              value: daytime_max_tilejson,
+            })),
+          },
+        },
+      };
+    },
+  },
+  {
+    id: 'met_scotland_temperature_nighttime_min',
+    name: 'Nighttime Low Temperature',
+    region: 'Scotland',
+    details:
+      'Nighttime (6pm - 6am the next day) low temperature in degrees celsius. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
+    legendURL:
+      'https://plantopo-weather.b-cdn.net/met_scotland_temperature/legend.html',
+    sources: {
+      default: {
+        type: 'raster',
+        url: '__URL__',
+      },
+    },
+    layers: [
+      {
+        id: 'raster',
+        type: 'raster',
+        source: 'default',
+        paint: {
+          'raster-resampling': 'nearest',
+          'raster-opacity': 0.8,
+        },
+      },
+    ],
+    dynamic: async () => {
+      const metaResp = await fetch(
+        'https://plantopo-weather.b-cdn.net/met_scotland_temperature/meta.json',
+      );
+      if (!metaResp.ok) throw new Error('Failed to fetch meta.json');
+
+      const metaSpec = z.object({
+        versionMessage: z.string(),
+        dates: z
+          .object({
+            date: z.string().date(),
+            nighttime_min_tilejson: z.string().url().optional(),
+          })
+          .array(),
+      });
+      const meta = metaSpec.parse(await metaResp.json());
+
+      return {
+        versionMessage: meta.versionMessage,
+        variables: {
+          URL: {
+            type: 'select',
+            label: 'Day',
+            options: meta.dates
+              .filter((v) => v.nighttime_min_tilejson)
+              .map(({ date, nighttime_min_tilejson }) => ({
+                name: DateTime.fromISO(date).toLocaleString(
+                  DateTime.DATE_SHORT,
+                ),
+                value: nighttime_min_tilejson!,
+              })),
+          },
+        },
+      };
+    },
+  },
+  {
+    id: 'met_scotland_temperature_nighttime_max',
+    name: 'Nighttime High Temperature',
+    region: 'Scotland',
+    details:
+      'Nighttime (6pm - 6am the next day) high temperature in degrees celsius. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
+    legendURL:
+      'https://plantopo-weather.b-cdn.net/met_scotland_temperature/legend.html',
+    sources: {
+      default: {
+        type: 'raster',
+        url: '__URL__',
+      },
+    },
+    layers: [
+      {
+        id: 'raster',
+        type: 'raster',
+        source: 'default',
+        paint: {
+          'raster-resampling': 'nearest',
+          'raster-opacity': 0.8,
+        },
+      },
+    ],
+    dynamic: async () => {
+      const metaResp = await fetch(
+        'https://plantopo-weather.b-cdn.net/met_scotland_temperature/meta.json',
+      );
+      if (!metaResp.ok) throw new Error('Failed to fetch meta.json');
+
+      const metaSpec = z.object({
+        versionMessage: z.string(),
+        dates: z
+          .object({
+            date: z.string().date(),
+            nighttime_max_tilejson: z.string().url().optional(),
+          })
+          .array(),
+      });
+      const meta = metaSpec.parse(await metaResp.json());
+
+      return {
+        versionMessage: meta.versionMessage,
+        variables: {
+          URL: {
+            type: 'select',
+            label: 'Day',
+            options: meta.dates
+              .filter((v) => v.nighttime_max_tilejson)
+              .map(({ date, nighttime_max_tilejson }) => ({
+                name: DateTime.fromISO(date).toLocaleString(
+                  DateTime.DATE_SHORT,
+                ),
+                value: nighttime_max_tilejson!,
+              })),
           },
         },
       };

@@ -15,11 +15,13 @@ import { Checkbox, CheckboxField } from '@/components/checkbox';
 import { Select } from '@/components/select';
 import { useDebugMode } from '@/hooks/debugMode';
 import { Field, Label } from '@/components/fieldset';
-import { useQuery } from '@tanstack/react-query';
 import * as ml from 'maplibre-gl';
 import { applyVariablesToSource } from '@/features/map/MapManager';
 import { PMTiles } from 'pmtiles';
 import { useMapManager } from '@/features/map/useMap';
+import Skeleton from '@/components/Skeleton';
+import { useQuery } from '@tanstack/react-query';
+import InlineAlert from '@/components/InlineAlert';
 
 const baseStylesByRegion = Object.values(baseStyles).reduce((acc, item) => {
   const region = item.region ?? 'Global';
@@ -274,7 +276,7 @@ function OverlayControl({
 }
 
 function ActiveOverlayDetails({
-  item,
+  item: maybeDynamicItem,
   variables,
   setVariables,
 }: {
@@ -283,68 +285,48 @@ function ActiveOverlayDetails({
   setVariables: (_: Record<string, string>) => void;
 }) {
   const manager = useMapManager();
-  const [resolvedItem, setResolvedItem] = useState<OverlayStyle | null>(null);
+  const [item, setItem] = useState<OverlayStyle | null>(null);
   useEffect(() => {
     let cancelled = false;
-    if ('dynamic' in item) {
-      manager.resolveDynamicOverlay(item).then((v) => {
-        if (!cancelled) setResolvedItem(v);
+    if ('dynamic' in maybeDynamicItem) {
+      manager.resolveDynamicOverlay(maybeDynamicItem).then((v) => {
+        if (!cancelled) setItem(v);
       });
     } else {
-      setResolvedItem(item);
+      setItem(maybeDynamicItem);
     }
     return () => {
       cancelled = true;
-      setResolvedItem(null);
+      setItem(null);
     };
-  }, [item, manager]);
+  }, [maybeDynamicItem, manager]);
 
-  if (!resolvedItem) return null;
+  if (!item) return null;
 
   return (
     <div className="ml-8 mt-2 mb-4 flex flex-col gap-y-2 text-sm text-slate-700">
-      {resolvedItem.details !== undefined && (
+      {item.legendURL !== undefined && <LayerLegend url={item.legendURL} />}
+
+      {item.details !== undefined && (
         <p
           className="whitespace-pre-line inline-prose"
-          dangerouslySetInnerHTML={{ __html: resolvedItem.details }}
+          dangerouslySetInnerHTML={{ __html: item.details }}
         />
       )}
 
       <LayerVariablesControl
-        spec={resolvedItem.variables}
+        spec={item.variables}
         values={variables}
         setValues={setVariables}
       />
 
       <div>
-        <OverlayLayerAttributionControl
-          item={resolvedItem}
-          variables={variables}
-        />
+        <OverlayLayerAttributionControl item={item} variables={variables} />
 
-        <LayerVersionMessage url={resolvedItem.versionMessageURL} />
+        <p className="text-xs mt-1">{item.versionMessage}</p>
       </div>
     </div>
   );
-}
-
-function LayerVersionMessage({ url }: { url: string | undefined }) {
-  const versionMessageQuery = useQuery({
-    queryKey: ['LayerVersionMessage', url],
-    enabled: url !== undefined,
-    queryFn: async () => {
-      if (!url) return;
-      const resp = await fetch(url);
-      if (resp.status !== 200) throw new Error('status ' + resp.status);
-      return await resp.text();
-    },
-  });
-
-  if (versionMessageQuery.data) {
-    return <p className="text-xs mt-1">{versionMessageQuery.data}</p>;
-  } else {
-    return null;
-  }
 }
 
 function LayerVariablesControl({
@@ -521,4 +503,32 @@ async function resolveSourceAttribution(
   }
 
   return undefined;
+}
+
+function LayerLegend({ url }: { url: string }) {
+  const query = useQuery({
+    queryKey: ['LayerLegend', url],
+    queryFn: (context) =>
+      fetch(url, { signal: context.signal }).then((r) => r.text()),
+    staleTime: Infinity,
+  });
+
+  if (query.error) {
+    return (
+      <InlineAlert variant="error">Error: failed to load legend</InlineAlert>
+    );
+  }
+
+  return (
+    <div className="p-1 text-xs h-full min-h-5 max-h-32 overflow-y-auto">
+      {query.data ? (
+        <div
+          className="w-full h-full"
+          dangerouslySetInnerHTML={{ __html: query.data }}
+        />
+      ) : (
+        <Skeleton height="20px" width="100%" inline />
+      )}
+    </div>
+  );
 }

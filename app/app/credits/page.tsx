@@ -72,6 +72,17 @@ export default function Page() {
 
         <h3>Visual resources</h3>
         <ul>
+          <li>
+            Some weather color schemes adapted from maps by the Met Office. See
+            for example
+            <a href="https://weather.metoffice.gov.uk/maps-and-charts/uk-weather-map">
+              weather.metoffice.gov.uk/maps-and-charts/uk-weather-map
+            </a>{' '}
+            and
+            <a href="https://www.metoffice.gov.uk/blog/2023/no-need-to-see-red-over-met-office-colour-scale">
+              www.metoffice.gov.uk/blog/2023/no-need-to-see-red-over-met-office-colour-scale
+            </a>
+          </li>
           {nounprojectCredit.map((entry, i) => (
             <li key={i}>
               {entry.name} by {entry.author} from{' '}

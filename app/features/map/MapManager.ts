@@ -108,7 +108,6 @@ export class MapManager {
     );
 
     for (const overlay of resolvedOverlays) {
-      console.info(overlay);
       const prefix = `overlay:${overlay.id}:`;
 
       const overlaySources = overlay.sources ?? {};
