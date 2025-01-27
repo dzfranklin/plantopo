@@ -257,6 +257,14 @@ export default function MapComponentImpl(props: MapComponentProps) {
       map.m.addControl(searchControl, 'top-left');
       map.m.addControl(new ml.NavigationControl());
       measureControlRef.current && map.m.addControl(measureControlRef.current);
+      map.m.addControl(
+        new ml.GeolocateControl({
+          positionOptions: {
+            enableHighAccuracy: true,
+          },
+          trackUserLocation: true,
+        }),
+      );
     }
 
     if (!props.minimal) {
