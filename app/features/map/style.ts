@@ -851,6 +851,126 @@ const overlayStyleList: (OverlayStyle | DynamicOverlayStyle)[] = [
     },
   },
   {
+    id: 'met_scotland_wind_gust_daytime_max',
+    name: 'Daytime Wind Gust',
+    region: 'Scotland',
+    details:
+      'Daytime (6am - 6pm) max wind gust in mph. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
+    legendURL:
+      'https://plantopo-weather.b-cdn.net/met_scotland_wind_gust/legend.html',
+    sources: {
+      default: {
+        type: 'raster',
+        url: '__URL__',
+      },
+    },
+    layers: [
+      {
+        id: 'raster',
+        type: 'raster',
+        source: 'default',
+        paint: {
+          'raster-resampling': 'nearest',
+          'raster-opacity': 0.8,
+        },
+      },
+    ],
+    dynamic: async () => {
+      const metaResp = await fetch(
+        'https://plantopo-weather.b-cdn.net/met_scotland_wind_gust/meta.json',
+      );
+      if (!metaResp.ok) throw new Error('Failed to fetch meta.json');
+
+      const metaSpec = z.object({
+        versionMessage: z.string(),
+        dates: z
+          .object({
+            date: z.string().date(),
+            daytime_max_tilejson: z.string().url(),
+          })
+          .array(),
+      });
+      const meta = metaSpec.parse(await metaResp.json());
+
+      return {
+        versionMessage: meta.versionMessage,
+        variables: {
+          URL: {
+            type: 'select',
+            label: 'Day',
+            options: meta.dates.map((v) => ({
+              name: DateTime.fromISO(v.date).toLocaleString(
+                DateTime.DATE_SHORT,
+              ),
+              value: v.daytime_max_tilejson,
+            })),
+          },
+        },
+      };
+    },
+  },
+  {
+    id: 'met_scotland_wind_gust_nighttime_max',
+    name: 'Nighttime Wind Gust',
+    region: 'Scotland',
+    details:
+      'Nighttime (6pm - 6am the next day) max wind gust in mph. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
+    legendURL:
+      'https://plantopo-weather.b-cdn.net/met_scotland_wind_gust/legend.html',
+    sources: {
+      default: {
+        type: 'raster',
+        url: '__URL__',
+      },
+    },
+    layers: [
+      {
+        id: 'raster',
+        type: 'raster',
+        source: 'default',
+        paint: {
+          'raster-resampling': 'nearest',
+          'raster-opacity': 0.8,
+        },
+      },
+    ],
+    dynamic: async () => {
+      const metaResp = await fetch(
+        'https://plantopo-weather.b-cdn.net/met_scotland_wind_gust/meta.json',
+      );
+      if (!metaResp.ok) throw new Error('Failed to fetch meta.json');
+
+      const metaSpec = z.object({
+        versionMessage: z.string(),
+        dates: z
+          .object({
+            date: z.string().date(),
+            nighttime_max_tilejson: z.string().url().optional(),
+          })
+          .array(),
+      });
+      const meta = metaSpec.parse(await metaResp.json());
+
+      return {
+        versionMessage: meta.versionMessage,
+        variables: {
+          URL: {
+            type: 'select',
+            label: 'Day',
+            options: meta.dates
+              .filter((v) => v.nighttime_max_tilejson)
+              .map((v) => ({
+                name: DateTime.fromISO(v.date).toLocaleString(
+                  DateTime.DATE_SHORT,
+                ),
+                value: v.nighttime_max_tilejson!,
+              })),
+          },
+        },
+      };
+    },
+  },
+  {
     id: 'paper-maps',
     name: 'Paper Maps',
     details:
