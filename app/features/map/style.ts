@@ -337,7 +337,7 @@ const overlayStyleList: (OverlayStyle | DynamicOverlayStyle)[] = [
     id: 'caledonian_pinewood_inventory',
     name: 'Caledonian Pinewood Inventory',
     details:
-      'Inventoried by Scottish Forestry based on the 1959 book <i>The Native Pinewoods of Scotland</i> by Steven and Carlisle. Some of the pinewood fragments which they thought were too small to form discreet pinewood habitats, have also been considered. In all cases the balance of probability suggests that they are genuinely native, that is, descended from one generation to another by natural seeding.',
+      'Inventoried by Scottish Forestry based on the 1959 book <i>The Native Pinewoods of Scotland</i> by Steven and Carlisle. Some of the pinewood fragments which they thought were too small to form discreet pinewood habitats have also been considered. In all cases the balance of probability suggests that they are genuinely native, that is, descended from one generation to another by natural seeding.',
     region: 'Scotland',
     sources: {
       default: {
