@@ -43,7 +43,7 @@ export const Layout = forwardRef(
             {children}
           </div>
         </StackedLayout>
-        <Footer />
+        {!fullBleed && <Footer />}
       </div>
     );
   },

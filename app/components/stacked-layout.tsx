@@ -101,11 +101,15 @@ export function StackedLayout({
       </header>
 
       {/* Content */}
-      <main className={cls('flex flex-1 flex-col pb-2 lg:px-2')}>
+      <main
+        className={cls('flex flex-1 flex-col', !fullBleed && 'pb-2 lg:px-2')}
+      >
         <div
           className={cls(
-            'grow lg:rounded-lg lg:bg-white lg:shadow-sm lg:ring-1 lg:ring-zinc-950/5',
-            fullBleed ? 'overflow-clip' : 'p-6 lg:p-10',
+            'grow',
+            fullBleed
+              ? 'overflow-clip'
+              : 'lg:rounded-lg lg:bg-white lg:shadow-sm lg:ring-1 lg:ring-zinc-950/5 p-6 lg:p-10',
           )}
         >
           <div

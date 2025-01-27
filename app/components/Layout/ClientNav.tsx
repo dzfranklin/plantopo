@@ -16,39 +16,61 @@ import {
   ArrowRightStartOnRectangleIcon,
   Cog8ToothIcon,
 } from '@heroicons/react/20/solid';
+import { ChevronDownIcon } from '@heroicons/react/16/solid';
 import { Button } from '@/components/button';
 
-interface NavItem {
+interface BasicNavItem {
   label: string;
   url: string;
 }
 
+type NavItem = BasicNavItem | { label: string; dropdown: BasicNavItem[] };
+
 function useNavItems(): NavItem[] {
   const user = useUser();
+  const items: NavItem[] = [];
+  items.push({ label: 'Home', url: '/' });
+  items.push({ label: 'Map', url: '/map' });
   if (user) {
-    return [
-      { label: 'Home', url: '/' },
-      { label: 'Tracks', url: '/tracks' },
-      { label: 'Tools', url: '/tools' },
-    ];
-  } else {
-    return [
-      { label: 'Home', url: '/' },
-      { label: 'Map', url: '/map' },
-      { label: 'Tools', url: '/tools' },
-    ];
+    items.push({ label: 'Tracks', url: '/tracks' });
   }
+  items.push({ label: 'Tools', url: '/tools' });
+  items.push({
+    label: 'About',
+    dropdown: [
+      { label: 'Status', url: 'https://status.plantopo.com' },
+      { label: 'Source', url: 'https://github.com/dzfranklin/plantopo' },
+      { label: 'Credits', url: '/credits' },
+    ],
+  });
+  return items;
 }
 
 export function NavbarNavItemsSection() {
   const navItems = useNavItems();
   return (
     <NavbarSection className="max-lg:hidden">
-      {navItems.map(({ label, url }) => (
-        <NavbarItem key={label} href={url}>
-          {label}
-        </NavbarItem>
-      ))}
+      {navItems.map((n, i) =>
+        'url' in n ? (
+          <NavbarItem key={i} href={n.url}>
+            {n.label}
+          </NavbarItem>
+        ) : (
+          <Dropdown key={i}>
+            <DropdownButton as={NavbarItem}>
+              {n.label}
+              <ChevronDownIcon />
+            </DropdownButton>
+            <DropdownMenu>
+              {n.dropdown.map((v) => (
+                <DropdownItem key={v.url} href={v.url}>
+                  {v.label}
+                </DropdownItem>
+              ))}
+            </DropdownMenu>
+          </Dropdown>
+        ),
+      )}
     </NavbarSection>
   );
 }
@@ -57,11 +79,27 @@ export function SidebarNavItemsSection() {
   const navItems = useNavItems();
   return (
     <SidebarSection>
-      {navItems.map(({ label, url }) => (
-        <SidebarItem key={label} href={url}>
-          {label}
-        </SidebarItem>
-      ))}
+      {navItems.map((n, i) =>
+        'url' in n ? (
+          <SidebarItem key={i} href={n.url}>
+            {n.label}
+          </SidebarItem>
+        ) : (
+          <Dropdown key={i}>
+            <DropdownButton as={SidebarItem}>
+              {n.label}
+              <ChevronDownIcon />
+            </DropdownButton>
+            <DropdownMenu className="min-w-52" anchor="bottom start">
+              {n.dropdown.map((v) => (
+                <DropdownItem key={v.url} href={v.url}>
+                  {v.label}
+                </DropdownItem>
+              ))}
+            </DropdownMenu>
+          </Dropdown>
+        ),
+      )}
     </SidebarSection>
   );
 }
