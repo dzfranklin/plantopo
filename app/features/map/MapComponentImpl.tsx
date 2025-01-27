@@ -21,7 +21,7 @@ import {
   OverlayStyle,
   StyleVariables,
 } from './style';
-import { LayersControl } from './LayersControl';
+import { LayersControl, LayersControlButton } from './LayersControl';
 import { CameraOptions, MapManager, MapManagerInitialView } from './MapManager';
 import { fitBoundsFor, queryRenderedFeatures } from './util';
 import { InitialView, loadInitialView, storeInitialView } from './initialView';
@@ -170,19 +170,13 @@ export default function MapComponentImpl(props: MapComponentProps) {
   const variablesRef = useRef<StyleVariables>(variables);
   variablesRef.current = variables;
 
+  const [layersOpen, setLayersOpen] = useState(false);
+
   // Controls
 
-  const [layersPortal, layersControl] = usePortalControl(
+  const [layersControlButtonPortal, layersControlButton] = usePortalControl(
     <div className="hidden @[300px]:block h-[63px] w-[63px] m-[10px] pointer-events-auto">
-      <LayersControl
-        activeBase={baseStyle}
-        setActiveBase={setBaseStyle}
-        activeOverlays={activeOverlays}
-        setActiveOverlays={setActiveOverlays}
-        variables={variables}
-        setVariables={setVariables}
-        debugMenu={<MapDebugMenu mapRef={mapRef} />}
-      />
+      <LayersControlButton isOpen={layersOpen} setIsOpen={setLayersOpen} />
     </div>,
     'layers-control',
   );
@@ -253,7 +247,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
     // Controls
 
     if (interactive) {
-      map.m.addControl(layersControl, 'bottom-left');
+      map.m.addControl(layersControlButton, 'bottom-left');
       map.m.addControl(searchControl, 'top-left');
       map.m.addControl(new ml.NavigationControl());
       measureControlRef.current && map.m.addControl(measureControlRef.current);
@@ -350,7 +344,13 @@ export default function MapComponentImpl(props: MapComponentProps) {
       mapRef.current = null;
       setMapState(null);
     };
-  }, [baseStyle, layersControl, searchControl, interactive, props.minimal]);
+  }, [
+    baseStyle,
+    layersControlButton,
+    searchControl,
+    interactive,
+    props.minimal,
+  ]);
 
   // Sync
 
@@ -487,7 +487,7 @@ export default function MapComponentImpl(props: MapComponentProps) {
 
       {mapState && (
         <MapContext.Provider value={mapState}>
-          {interactive && layersPortal}
+          {interactive && layersControlButtonPortal}
           {interactive && searchPortal}
 
           <InspectFeaturesDialog
@@ -499,6 +499,18 @@ export default function MapComponentImpl(props: MapComponentProps) {
           <div className="absolute inset-0 pointer-events-none">
             {props.children}
           </div>
+
+          <LayersControl
+            activeBase={baseStyle}
+            setActiveBase={setBaseStyle}
+            activeOverlays={activeOverlays}
+            setActiveOverlays={setActiveOverlays}
+            variables={variables}
+            setVariables={setVariables}
+            debugMenu={<MapDebugMenu mapRef={mapRef} />}
+            isOpen={layersOpen}
+            setIsOpen={setLayersOpen}
+          />
         </MapContext.Provider>
       )}
     </div>

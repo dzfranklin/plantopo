@@ -249,7 +249,7 @@ export const IconButton = React.forwardRef(function Button(
   const classes = clsx(
     className,
     // Base
-    'rounded-full relative isolate inline-flex items-center justify-center gap-x-2 border text-base/6 font-semibold',
+    'rounded-full relative isolate inline-flex items-center justify-center gap-x-2 text-base/6 font-semibold',
     // Sizing
     'p-[calc(theme(spacing[1.5])-1px)] text-sm/6',
     // Focus
@@ -257,7 +257,10 @@ export const IconButton = React.forwardRef(function Button(
     // Disabled
     'data-[disabled]:opacity-50',
     // Outline
-    'border-zinc-950/10 text-zinc-600 data-[active]:bg-zinc-950/[2.5%] data-[hover]:bg-zinc-950/[2.5%]',
+    props.plain
+      ? 'data-[active]:bg-zinc-950/[7%] data-[hover]:bg-zinc-950/[7%]'
+      : 'border border-zinc-950/10 data-[active]:bg-zinc-950/[2.5%] data-[hover]:bg-zinc-950/[2.5%]',
+    'text-zinc-600',
   );
 
   const formStatus = useFormStatus();

@@ -8,8 +8,6 @@ import {
   StyleVariableSpec,
 } from '@/features/map/style';
 import { Fragment, ReactNode, useEffect, useMemo, useState } from 'react';
-import { Dialog } from '@/components/dialog';
-import { Button } from '@/components/button';
 import cls from '@/cls';
 import { Checkbox, CheckboxField } from '@/components/checkbox';
 import { Select } from '@/components/select';
@@ -22,6 +20,8 @@ import { useMapManager } from '@/features/map/useMap';
 import Skeleton from '@/components/Skeleton';
 import { useQuery } from '@tanstack/react-query';
 import InlineAlert from '@/components/InlineAlert';
+import { ChevronDownIcon } from '@heroicons/react/16/solid';
+import { IconButton } from '@/components/button';
 
 const baseStylesByRegion = Object.values(baseStyles).reduce((acc, item) => {
   const region = item.region ?? 'Global';
@@ -43,6 +43,8 @@ const overlayStyleList = Object.values(overlayStyles).sort((a, b) =>
 );
 
 export interface LayersControlProps {
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
   activeBase: BaseStyle;
   setActiveBase: (_: BaseStyle) => void;
   activeOverlays: (OverlayStyle | DynamicOverlayStyle)[];
@@ -54,27 +56,22 @@ export interface LayersControlProps {
   debugMenu?: ReactNode;
 }
 
-export function LayersControl(props: LayersControlProps) {
-  const [expanded, setExpanded] = useState(false);
+export interface LayersControlButtonProps {
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+}
 
+export function LayersControlButton(props: LayersControlButtonProps) {
   return (
-    <>
-      <LayerButton
-        preview={'/style-preview/landsat_60x60.png'}
-        label="Layers"
-        onClick={() => setExpanded(true)}
-      />
-
-      <LayersDialog
-        {...props}
-        isOpen={expanded}
-        onClose={() => setExpanded(false)}
-      />
-    </>
+    <LayerButton
+      preview={'/style-preview/landsat_60x60.png'}
+      label="Layers"
+      onClick={() => props.setIsOpen(!props.isOpen)}
+    />
   );
 }
 
-function LayersDialog({
+export function LayersControl({
   activeBase,
   setActiveBase,
   activeOverlays,
@@ -83,82 +80,81 @@ function LayersDialog({
   setVariables,
   debugMenu,
   isOpen,
-  onClose,
-}: LayersControlProps & { isOpen: boolean; onClose: () => void }) {
+  setIsOpen,
+}: LayersControlProps) {
   const debugMode = useDebugMode();
 
-  return (
-    <Dialog
-      open={isOpen}
-      onClose={() => onClose()}
-      className="relative"
-      size="xl"
-    >
-      <div className="space-y-8">
-        <div>
-          <p className="font-semibold mb-4">Base layer</p>
-          <ul className="space-y-4">
-            <BaseStyleRegionGroup
-              region={'Global'}
-              baseStyle={activeBase}
-              setBaseStyle={setActiveBase}
-            />
+  if (!isOpen) return;
 
-            {baseStyleRegions.map((region) => (
+  return (
+    <div className="z-10 absolute top-[10px] left-[10px] bottom-[10px] w-[calc(100%-20px)] md:max-w-96">
+      <div className="relative h-full max-h-full rounded bg-white p-4 overflow-y-auto">
+        <div className="space-y-8">
+          <div>
+            <p className="font-semibold mb-4">Base layer</p>
+            <ul className="space-y-4">
               <BaseStyleRegionGroup
-                key={region}
-                region={region}
+                region={'Global'}
                 baseStyle={activeBase}
                 setBaseStyle={setActiveBase}
               />
-            ))}
-          </ul>
-        </div>
 
-        <div>
-          <p className="font-semibold mb-4">Overlays</p>
-          <ul>
-            {overlayStyleList.map((item) => (
-              <li key={item.id}>
-                <OverlayControl
-                  item={item}
-                  isActive={activeOverlays.some((v) => v.id === item.id)}
-                  setActive={(value) => {
-                    if (value) {
-                      setActiveOverlays([...activeOverlays, item]);
-                    } else {
-                      setActiveOverlays(
-                        activeOverlays.filter((v) => v.id !== item.id),
-                      );
-                    }
-                  }}
-                  variables={variables.overlay?.[item.id]}
-                  setVariables={(v) =>
-                    setVariables({
-                      ...variables,
-                      overlay: { ...variables.overlay, [item.id]: v },
-                    })
-                  }
+              {baseStyleRegions.map((region) => (
+                <BaseStyleRegionGroup
+                  key={region}
+                  region={region}
+                  baseStyle={activeBase}
+                  setBaseStyle={setActiveBase}
                 />
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {debugMode && (
-          <div>
-            <p className="font-semibold mb-4">Debug menu</p>
-            {debugMenu}
+              ))}
+            </ul>
           </div>
-        )}
+
+          <div>
+            <p className="font-semibold mb-4">Overlays</p>
+            <ul>
+              {overlayStyleList.map((item) => (
+                <li key={item.id}>
+                  <OverlayControl
+                    item={item}
+                    isActive={activeOverlays.some((v) => v.id === item.id)}
+                    setActive={(value) => {
+                      if (value) {
+                        setActiveOverlays([...activeOverlays, item]);
+                      } else {
+                        setActiveOverlays(
+                          activeOverlays.filter((v) => v.id !== item.id),
+                        );
+                      }
+                    }}
+                    variables={variables.overlay?.[item.id]}
+                    setVariables={(v) =>
+                      setVariables({
+                        ...variables,
+                        overlay: { ...variables.overlay, [item.id]: v },
+                      })
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {debugMode && (
+            <div>
+              <p className="font-semibold mb-4">Debug menu</p>
+              {debugMenu}
+            </div>
+          )}
+        </div>
       </div>
 
-      <Dialog.Actions>
-        <Button color="primary" onClick={() => onClose()}>
-          Done
-        </Button>
-      </Dialog.Actions>
-    </Dialog>
+      <div className="absolute top-1 right-1">
+        <IconButton plain={true} onClick={() => setIsOpen(false)}>
+          <ChevronDownIcon className="h-5" />
+        </IconButton>
+      </div>
+    </div>
   );
 }
 
