@@ -243,7 +243,7 @@ export const Button = React.forwardRef(function Button(
 });
 
 export const IconButton = React.forwardRef(function Button(
-  { className, children, disableWith, ...props }: ButtonProps,
+  { className, children, disableWith, plain, ...props }: ButtonProps,
   ref: React.ForwardedRef<HTMLElement>,
 ) {
   const classes = clsx(
@@ -257,7 +257,7 @@ export const IconButton = React.forwardRef(function Button(
     // Disabled
     'data-[disabled]:opacity-50',
     // Outline
-    props.plain
+    plain
       ? 'data-[active]:bg-zinc-950/[7%] data-[hover]:bg-zinc-950/[7%]'
       : 'border border-zinc-950/10 data-[active]:bg-zinc-950/[2.5%] data-[hover]:bg-zinc-950/[2.5%]',
     'text-zinc-600',
