@@ -4,6 +4,7 @@ import {
   DynamicOverlayStyle,
   OverlayStyle,
   overlayStyles,
+  StyleLegend,
   StyleVariables,
   StyleVariableSpec,
 } from '@/features/map/style';
@@ -22,6 +23,7 @@ import { useQuery } from '@tanstack/react-query';
 import InlineAlert from '@/components/InlineAlert';
 import { ChevronDownIcon } from '@heroicons/react/16/solid';
 import { IconButton } from '@/components/button';
+import { assertOK } from '@/fetch';
 
 const baseStylesByRegion = Object.values(baseStyles).reduce((acc, item) => {
   const region = item.region ?? 'Global';
@@ -301,7 +303,7 @@ function ActiveOverlayDetails({
 
   return (
     <div className="ml-8 mt-2 mb-4 flex flex-col gap-y-2 text-sm text-slate-700">
-      {item.legendURL !== undefined && <LayerLegend url={item.legendURL} />}
+      {item.legend && <LayerLegend legend={item.legend} />}
 
       {item.details !== undefined && (
         <p
@@ -518,11 +520,13 @@ async function fetchAttribution(url: string): Promise<string | undefined> {
   }
 }
 
-function LayerLegend({ url }: { url: string }) {
+function LayerLegend({ legend }: { legend: StyleLegend }) {
   const query = useQuery({
-    queryKey: ['LayerLegend', url],
+    queryKey: ['LayerLegend', legend.sourceURL],
     queryFn: (context) =>
-      fetch(url, { signal: context.signal }).then((r) => r.text()),
+      fetch(legend.sourceURL, { signal: context.signal }).then(
+        (r) => assertOK(r) && r.text(),
+      ),
     staleTime: Infinity,
   });
 
@@ -536,7 +540,7 @@ function LayerLegend({ url }: { url: string }) {
     <div className="p-1 text-xs h-full min-h-5 max-h-32 overflow-y-auto">
       {query.data ? (
         <div
-          className="w-full h-full"
+          className="w-full h-full [&_.legend-layer-content]:opacity-80"
           dangerouslySetInnerHTML={{ __html: query.data }}
         />
       ) : (

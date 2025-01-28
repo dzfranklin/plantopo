@@ -11,3 +11,4 @@ export type {
   OverlayStyle,
   DynamicOverlayStyle,
 } from './overlays/OverlayStyle';
+export type { StyleLegend } from './StyleLegend';

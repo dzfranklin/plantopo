@@ -3,6 +3,7 @@ import {
   LayerSpecification as MLLayerSpecification,
   SourceSpecification as MLSourceSpecification,
 } from 'maplibre-gl';
+import { StyleLegend } from '../StyleLegend';
 
 export interface OverlayStyle {
   id: string;
@@ -10,7 +11,7 @@ export interface OverlayStyle {
   region?: string;
   details?: string;
   versionMessage?: string;
-  legendURL?: string;
+  legend?: StyleLegend;
   variables?: Record<string, StyleVariableSpec>;
   sources?: Record<string, MLSourceSpecification>;
   layers?: MLLayerSpecification[];

@@ -1,8 +1,10 @@
-import { DynamicOverlayStyle } from '@/features/map/style';
+import { DynamicOverlayStyle, OverlayStyle } from '@/features/map/style';
 import { z } from 'zod';
 import { wait } from '@/time';
 import { DateTime } from 'luxon';
 import { zDate, zDateTime } from '@/parsing';
+
+const layerOpacity = 0.8;
 
 const base: Partial<DynamicOverlayStyle> = {
   sources: {
@@ -18,10 +20,14 @@ const base: Partial<DynamicOverlayStyle> = {
       source: 'default',
       paint: {
         'raster-resampling': 'nearest',
-        'raster-opacity': 0.8,
+        'raster-opacity': layerOpacity,
       },
     },
   ],
+};
+
+const legendBase: Partial<OverlayStyle['legend']> = {
+  layerContentOpacity: layerOpacity,
 };
 
 const metaCache = new Map<string, Promise<unknown>>();
@@ -104,7 +110,11 @@ export const weatherOverlays: DynamicOverlayStyle[] = [
     details:
       'Snow depth forecast by ICON-EU (~7km resolution) from Deutscher Wetterdienst. In metres. Updated every day around 4am UTC.',
     region: 'Europe',
-    legendURL: 'https://plantopo-weather.b-cdn.net/icon_eu_h_snow/legend.html',
+    legend: {
+      ...legendBase,
+      sourceURL:
+        'https://plantopo-weather.b-cdn.net/icon_eu_h_snow/legend.html',
+    },
     dynamic: async () => {
       const meta = await fetchMeta(
         'https://plantopo-weather.b-cdn.net/icon_eu_h_snow/meta.json',
@@ -141,8 +151,11 @@ export const weatherOverlays: DynamicOverlayStyle[] = [
     region: 'Scotland',
     details:
       'Daytime (6am - 6pm) precipitation accumulation in average mm/hr. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
-    legendURL:
-      'https://plantopo-weather.b-cdn.net/met_scotland_daytime_average_precipitation_accumulation/legend.html',
+    legend: {
+      ...legendBase,
+      sourceURL:
+        'https://plantopo-weather.b-cdn.net/met_scotland_daytime_average_precipitation_accumulation/legend.html',
+    },
     dynamic: async () => {
       const meta = await fetchMeta(
         'https://plantopo-weather.b-cdn.net/met_scotland_daytime_average_precipitation_accumulation/meta.json',
@@ -179,8 +192,11 @@ export const weatherOverlays: DynamicOverlayStyle[] = [
     region: 'Scotland',
     details:
       'Daytime (6am - 6pm) low temperature in degrees celsius. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
-    legendURL:
-      'https://plantopo-weather.b-cdn.net/met_scotland_temperature/legend.html',
+    legend: {
+      ...legendBase,
+      sourceURL:
+        'https://plantopo-weather.b-cdn.net/met_scotland_temperature/legend.html',
+    },
     dynamic: async () => {
       const meta = await fetchMeta(
         'https://plantopo-weather.b-cdn.net/met_scotland_temperature/meta.json',
@@ -217,8 +233,11 @@ export const weatherOverlays: DynamicOverlayStyle[] = [
     region: 'Scotland',
     details:
       'Daytime (6am - 6pm) high temperature in degrees celsius. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
-    legendURL:
-      'https://plantopo-weather.b-cdn.net/met_scotland_temperature/legend.html',
+    legend: {
+      ...legendBase,
+      sourceURL:
+        'https://plantopo-weather.b-cdn.net/met_scotland_temperature/legend.html',
+    },
     dynamic: async () => {
       const meta = await fetchMeta(
         'https://plantopo-weather.b-cdn.net/met_scotland_temperature/meta.json',
@@ -255,8 +274,11 @@ export const weatherOverlays: DynamicOverlayStyle[] = [
     region: 'Scotland',
     details:
       'Nighttime (6pm - 6am the next day) low temperature in degrees celsius. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
-    legendURL:
-      'https://plantopo-weather.b-cdn.net/met_scotland_temperature/legend.html',
+    legend: {
+      ...legendBase,
+      sourceURL:
+        'https://plantopo-weather.b-cdn.net/met_scotland_temperature/legend.html',
+    },
     dynamic: async () => {
       const meta = await fetchMeta(
         'https://plantopo-weather.b-cdn.net/met_scotland_temperature/meta.json',
@@ -295,8 +317,11 @@ export const weatherOverlays: DynamicOverlayStyle[] = [
     region: 'Scotland',
     details:
       'Nighttime (6pm - 6am the next day) high temperature in degrees celsius. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
-    legendURL:
-      'https://plantopo-weather.b-cdn.net/met_scotland_temperature/legend.html',
+    legend: {
+      ...legendBase,
+      sourceURL:
+        'https://plantopo-weather.b-cdn.net/met_scotland_temperature/legend.html',
+    },
     dynamic: async () => {
       const meta = await fetchMeta(
         'https://plantopo-weather.b-cdn.net/met_scotland_temperature/meta.json',
@@ -335,8 +360,11 @@ export const weatherOverlays: DynamicOverlayStyle[] = [
     region: 'Scotland',
     details:
       'Daytime (6am - 6pm) max wind gust in mph. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
-    legendURL:
-      'https://plantopo-weather.b-cdn.net/met_scotland_wind_gust/legend.html',
+    legend: {
+      ...legendBase,
+      sourceURL:
+        'https://plantopo-weather.b-cdn.net/met_scotland_wind_gust/legend.html',
+    },
     dynamic: async () => {
       const meta = await fetchMeta(
         'https://plantopo-weather.b-cdn.net/met_scotland_wind_gust/meta.json',
@@ -373,8 +401,11 @@ export const weatherOverlays: DynamicOverlayStyle[] = [
     region: 'Scotland',
     details:
       'Nighttime (6pm - 6am the next day) max wind gust in mph. Computed from the Met Office UK 2km model. Updated every day around 5:30am UTC.',
-    legendURL:
-      'https://plantopo-weather.b-cdn.net/met_scotland_wind_gust/legend.html',
+    legend: {
+      ...legendBase,
+      sourceURL:
+        'https://plantopo-weather.b-cdn.net/met_scotland_wind_gust/legend.html',
+    },
     dynamic: async () => {
       const meta = await fetchMeta(
         'https://plantopo-weather.b-cdn.net/met_scotland_wind_gust/meta.json',
