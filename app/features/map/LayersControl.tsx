@@ -458,6 +458,8 @@ function OverlayLayerAttributionControl({
   }
 }
 
+const attributionFetchCache = new Map<string, Promise<string | undefined>>();
+
 async function resolveSourceAttribution(
   source: ml.SourceSpecification,
   variableSpec: Record<string, StyleVariableSpec> | undefined,
@@ -476,29 +478,44 @@ async function resolveSourceAttribution(
   }
 
   if ('url' in source && typeof source.url === 'string') {
-    if (source.url.startsWith('pmtiles://')) {
-      const url = source.url.substring(10);
-      const pm = new PMTiles(url);
-      const data = (await pm.getTileJson(url)) as Record<string, unknown>;
-      if ('attribution' in data && typeof data.attribution === 'string') {
-        return data.attribution;
-      }
-    } else {
-      const resp = await fetch(source.url);
-      if (resp.status < 200 || resp.status >= 300) {
-        throw new Error(
-          `failed to fetch ${source.url}: got status ${resp.status}`,
-        );
-      }
+    const url = source.url;
 
-      const data = (await resp.json()) as ml.SourceSpecification;
-      if ('attribution' in data && typeof data.attribution === 'string') {
-        return data.attribution;
-      }
+    if (attributionFetchCache.has(url)) {
+      return attributionFetchCache.get(url);
+    }
+
+    const p = fetchAttribution(url);
+    attributionFetchCache.set(url, p);
+    try {
+      return await p;
+    } catch (err) {
+      attributionFetchCache.delete(url);
+      throw err;
     }
   }
 
   return undefined;
+}
+
+async function fetchAttribution(url: string): Promise<string | undefined> {
+  if (url.startsWith('pmtiles://')) {
+    url = url.substring(10);
+    const pm = new PMTiles(url);
+    const data = (await pm.getTileJson(url)) as Record<string, unknown>;
+    if ('attribution' in data && typeof data.attribution === 'string') {
+      return data.attribution;
+    }
+  } else {
+    const resp = await fetch(url);
+    if (resp.status < 200 || resp.status >= 300) {
+      throw new Error(`failed to fetch ${url}: status ${resp.status}`);
+    }
+
+    const data = (await resp.json()) as ml.SourceSpecification;
+    if ('attribution' in data && typeof data.attribution === 'string') {
+      return data.attribution;
+    }
+  }
 }
 
 function LayerLegend({ url }: { url: string }) {
