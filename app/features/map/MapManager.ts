@@ -11,7 +11,6 @@ import {
 import { fitBoundsFor } from '@/features/map/util';
 import { stringCmp } from '@/stringCmp';
 import FrameRateControl from '@mapbox/mapbox-gl-framerate';
-import { Overlay } from 'ol';
 
 export type CameraOptions = {
   lng: number;
@@ -240,19 +239,12 @@ export class MapManager {
     }
   }
 
-  private _resolvedOverlays = new Map<string, Promise<OverlayStyle>>();
-
-  resolveDynamicOverlay(style: DynamicOverlayStyle): Promise<OverlayStyle> {
-    const existing = this._resolvedOverlays.get(style.id);
-    if (existing) {
-      return existing;
-    }
-
-    const p: Promise<OverlayStyle> = style
-      .dynamic()
-      .then((v) => ({ ...style, ...v }));
-    this._resolvedOverlays.set(style.id, p);
-    return p;
+  async resolveDynamicOverlay(
+    style: DynamicOverlayStyle,
+  ): Promise<OverlayStyle> {
+    // the dynamic function is expected to coalesce in-flight requests and cache internally to the extent reasonable.
+    const dyn = await style.dynamic();
+    return { ...style, ...dyn };
   }
 
   debugValues(): Record<string, unknown> {
