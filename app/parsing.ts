@@ -30,3 +30,10 @@ export const zDate = z
     }
     return parsed;
   });
+
+export function isObjectWith<K extends string>(
+  v: unknown,
+  k: K,
+): v is { [k in K]: unknown } {
+  return typeof v === 'object' && !Array.isArray(v) && v !== null && k in v;
+}

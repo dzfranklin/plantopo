@@ -24,6 +24,7 @@ import InlineAlert from '@/components/InlineAlert';
 import { ChevronDownIcon } from '@heroicons/react/16/solid';
 import { IconButton } from '@/components/button';
 import { assertOK } from '@/fetch';
+import { isObjectWith } from '@/parsing';
 
 const baseStylesByRegion = Object.values(baseStyles).reduce((acc, item) => {
   const region = item.region ?? 'Global';
@@ -503,9 +504,12 @@ async function fetchAttribution(url: string): Promise<string | undefined> {
   if (url.startsWith('pmtiles://')) {
     url = url.substring(10);
     const pm = new PMTiles(url);
-    const data = (await pm.getTileJson(url)) as Record<string, unknown>;
-    if ('attribution' in data && typeof data.attribution === 'string') {
-      return data.attribution;
+    const meta = await pm.getMetadata();
+    if (
+      isObjectWith(meta, 'attribution') &&
+      typeof meta.attribution === 'string'
+    ) {
+      return meta.attribution;
     }
   } else {
     const resp = await fetch(url);
