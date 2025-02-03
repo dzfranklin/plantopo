@@ -7,9 +7,11 @@ import { bgsMiningHazardExCoalOverlay } from '@/features/map/style/overlays/bgsM
 import { globalHumanSettlementUrbanisationOverlay } from '@/features/map/style/overlays/globalHumanSettlementUrbanisation';
 import { paperMapsOverlay } from '@/features/map/style/overlays/paperMaps';
 import { weatherOverlays } from '@/features/map/style/overlays/weather';
+import { busStopsUKOverlay } from '@/features/map/style/overlays/busStopsUK';
 
 const overlayStyleList: (OverlayStyle | DynamicOverlayStyle)[] = [
   bgsMiningHazardExCoalOverlay,
+  busStopsUKOverlay,
   caledonianPinewoodInventoryOverlay,
   geophotosOverlay,
   globalHumanSettlementUrbanisationOverlay,
