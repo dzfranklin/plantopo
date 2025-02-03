@@ -8882,7 +8882,7 @@
     "repository": "https://github.com/blakeembrey/pluralize"
   },
   {
-    "name": "pmtiles@3.2.0",
+    "name": "pmtiles@4.2.1",
     "publisher": "Brandon Liu",
     "licenses": [
       "BSD-3-Clause"
