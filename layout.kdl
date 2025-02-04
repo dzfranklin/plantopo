@@ -29,6 +29,14 @@ layout {
         }
     }
 
+    tab name="Storybook" {
+        pane {
+            command "npm"
+            args "run" "storybook" "--" "--no-open"
+            cwd "app"
+        }
+    }
+
     tab name="Minio" {
         pane {
             command "./scripts/dev-minio.sh"
