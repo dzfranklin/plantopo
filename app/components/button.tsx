@@ -243,7 +243,7 @@ export const Button = React.forwardRef(function Button(
 });
 
 export const IconButton = React.forwardRef(function Button(
-  { className, children, disableWith, plain, ...props }: ButtonProps,
+  { className, children, disableWith, plain, small, ...props }: ButtonProps,
   ref: React.ForwardedRef<HTMLElement>,
 ) {
   const classes = clsx(
@@ -251,7 +251,9 @@ export const IconButton = React.forwardRef(function Button(
     // Base
     'rounded-full relative isolate inline-flex items-center justify-center gap-x-2 text-base/6 font-semibold',
     // Sizing
-    'p-[calc(theme(spacing[1.5])-1px)] text-sm/6',
+    small
+      ? 'p-[calc(theme(spacing[0.5])-1px)] text-xs/6'
+      : 'p-[calc(theme(spacing[1.5])-1px)] text-sm/6',
     // Focus
     'focus:outline-none data-[focus]:outline data-[focus]:outline-2 data-[focus]:outline-offset-2 data-[focus]:outline-blue-500',
     // Disabled

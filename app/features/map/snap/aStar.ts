@@ -12,10 +12,10 @@ export function aStarPathSearch(
 ): HighwaySegment[] | null {
   const cameFrom = new Map<number, HighwaySegment>();
 
-  const gScore = new DefaultMap<number, number>(Infinity);
+  const gScore = DefaultMap.of<number, number>(Infinity);
   gScore.set(start.id, 0);
 
-  const fScore = new DefaultMap<number, number>(Infinity);
+  const fScore = DefaultMap.of<number, number>(Infinity);
   fScore.set(start.id, heuristic(start, goal));
 
   const openSet = new OpenSet(fScore);

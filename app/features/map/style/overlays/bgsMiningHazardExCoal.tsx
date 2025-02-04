@@ -1,4 +1,5 @@
 import type { OverlayStyle } from './OverlayStyle';
+import { KVTable } from '@/components/KVTable';
 
 export const bgsMiningHazardExCoalOverlay: OverlayStyle = {
   id: 'bgs_mining_hazard_ex_coal',
@@ -6,6 +7,15 @@ export const bgsMiningHazardExCoalOverlay: OverlayStyle = {
   details:
     'The BGS mining hazard (not including coal) 1 km hex grid dataset provides a generalised overview of the likelihood for mining to have occurred. It provides a national-scale summary of the presence of mining and an indication of the level of hazard associated with old workings. Classes Low and NA are omitted for clarity.',
   region: 'Great Britain',
+  inspect: (f) => (
+    <KVTable
+      entries={[
+        ['Class', f.properties.Class],
+        ['Version', f.properties.Version],
+        ['Legend', f.properties.Legend],
+      ]}
+    />
+  ),
   sources: {
     default: {
       type: 'vector',

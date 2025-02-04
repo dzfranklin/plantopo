@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="StorybookProjectConfigState">
+    <option name="componentSubDirectory" value="." />
     <option name="defaultDirectory" value="$PROJECT_DIR$/app/stories" />
-    <option name="useDefaultDirectory" value="true" />
+    <option name="useCSF7plus" value="true" />
+    <option name="useComponentSubDirectory" value="true" />
   </component>
 </project>

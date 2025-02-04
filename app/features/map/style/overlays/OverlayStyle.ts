@@ -4,6 +4,7 @@ import {
   SourceSpecification as MLSourceSpecification,
 } from 'maplibre-gl';
 import { StyleLegend } from '../StyleLegend';
+import { InspectFn } from '../InspectFeature';
 
 export interface OverlayStyle {
   id: string;
@@ -15,6 +16,7 @@ export interface OverlayStyle {
   variables?: Record<string, StyleVariableSpec>;
   sources?: Record<string, MLSourceSpecification>;
   layers?: MLLayerSpecification[];
+  inspect?: InspectFn;
 }
 
 export type DynamicOverlayStyle = OverlayStyle & {

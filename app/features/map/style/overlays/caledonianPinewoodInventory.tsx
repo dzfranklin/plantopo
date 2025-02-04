@@ -1,3 +1,4 @@
+import { KVTable } from '@/components/KVTable';
 import type { OverlayStyle } from './OverlayStyle';
 
 export const caledonianPinewoodInventoryOverlay: OverlayStyle = {
@@ -6,6 +7,21 @@ export const caledonianPinewoodInventoryOverlay: OverlayStyle = {
   details:
     'Inventoried by Scottish Forestry based on the 1959 book <i>The Native Pinewoods of Scotland</i> by Steven and Carlisle. Some of the pinewood fragments which they thought were too small to form discreet pinewood habitats have also been considered. In all cases the balance of probability suggests that they are genuinely native, that is, descended from one generation to another by natural seeding.',
   region: 'Scotland',
+  inspect: (f) => (
+    <KVTable
+      entries={[
+        ['PINEID', f.properties.PINEID],
+        ['PINENAME', f.properties.PINENAME],
+        ['FEATDESC', f.properties.FEATDESC],
+        ['NGR', f.properties.NGR],
+        ['BIOCHEM', f.properties.BIOCHEM],
+        ['COREAREA', f.properties.COREAREA],
+        ['REGENAREA', f.properties.REGENAREA],
+        ['BUFFERAREA', f.properties.BUFFERAREA],
+        ['TOTALAREA', f.properties.TOTALAREA],
+      ]}
+    />
+  ),
   sources: {
     default: {
       type: 'vector',

@@ -1,10 +1,31 @@
 import type { OverlayStyle } from './OverlayStyle';
+import { KVTable } from '@/components/KVTable';
 
 export const busStopsUKOverlay: OverlayStyle = {
   id: 'bus_stops_uk',
   name: 'Bus Stops',
   details: 'Bus stops in England, Scotland, and Wales',
   region: 'Great Britain',
+  inspect: (f) => (
+    <KVTable
+      entries={[
+        ['Common name', f.properties.CommonName],
+        ['Indicator', f.properties.Indicator],
+        ['ATCO code', f.properties.ATCOCode],
+        [
+          null,
+          <a
+            key="link"
+            href={'https://bustimes.org/stops/' + f.properties.ATCOCode}
+            target="_blank"
+            className="link"
+          >
+            Timetable
+          </a>,
+        ],
+      ]}
+    />
+  ),
   sources: {
     default: {
       type: 'vector',

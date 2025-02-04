@@ -78,7 +78,7 @@ Dialog.Title = function DialogTitle({
       {...props}
       className={clsx(
         className,
-        'text-balance text-lg/6 font-semibold text-zinc-950 sm:text-base/6',
+        'mb-6 text-balance text-lg/6 font-semibold text-zinc-950 sm:text-base/6',
       )}
     />
   );
@@ -104,7 +104,7 @@ Dialog.Body = function DialogBody({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<'div'>) {
-  return <div {...props} className={clsx(className, 'mt-6')} />;
+  return <div {...props} className={clsx(className)} />;
 };
 
 Dialog.Actions = function DialogActions({

@@ -1,4 +1,5 @@
 import type { OverlayStyle } from './OverlayStyle';
+import { KVTable } from '@/components/KVTable';
 
 export const scotWildLandAreasOverlay: OverlayStyle = {
   id: 'scot_wild_land_areas_2014',
@@ -6,6 +7,18 @@ export const scotWildLandAreasOverlay: OverlayStyle = {
   details:
     'NatureScot identified 42 wild land areas following a detailed analysis in 2014 of where wildness can be found across all of Scotland’s landscapes.',
   region: 'Scotland',
+  inspect: (f) => (
+    <KVTable
+      entries={[
+        ['NAME', f.properties.NAME],
+        ['ID', f.properties.ID],
+        ['COMPLETE', f.properties.COMPLETE],
+        ['COMMENTS', f.properties.COMMENTS],
+        ['AREA_HA', f.properties.AREA_HA],
+        ['NEW_AREA_H', f.properties.NEW_AREA_H],
+      ]}
+    />
+  ),
   sources: {
     default: {
       type: 'vector',

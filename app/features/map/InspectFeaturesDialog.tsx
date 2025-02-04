@@ -75,6 +75,8 @@ function InspectFeature({ feature }: { feature: ml.MapGeoJSONFeature }) {
           <JSONView data={feature.layer} />
         </details>
       )}
+
+      <JSONView data={feature} collapsed />
     </div>
   );
 }

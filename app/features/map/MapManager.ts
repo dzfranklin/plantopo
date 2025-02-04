@@ -8,9 +8,17 @@ import {
   StyleVariables,
   StyleVariableSpec,
 } from '@/features/map/style';
-import { fitBoundsFor } from '@/features/map/util';
+import { fitBoundsFor, queryRenderedFeatures } from '@/features/map/util';
 import { stringCmp } from '@/stringCmp';
 import FrameRateControl from '@mapbox/mapbox-gl-framerate';
+import { createRoot, Root } from 'react-dom/client';
+import {
+  InspectionPopupData,
+  inspectPopupContents,
+} from '@/features/map/InspectPopup';
+import DefaultMap from '@/DefaultMap';
+import { InspectFeature } from '@/features/map/style/InspectFeature';
+import { createElement } from '@/domUtil';
 
 export type CameraOptions = {
   lng: number;
@@ -26,12 +34,17 @@ export type MapManagerInitialView =
 
 const frameRateControlPosition = 'bottom-left';
 
+const overlayLayerID = (overlayID: string, layerID: string) =>
+  `overlay:${overlayID}:${layerID}`;
+
+const overlaySourceID = (overlayID: string, sourceID: string) =>
+  `overlay:${overlayID}:${sourceID}`;
+
 export class MapManager {
   readonly m: ml.Map;
   readonly baseStyle: BaseStyle;
 
-  private _addedOverlaySources: string[] = [];
-  private _addedOverlayLayers: string[] = [];
+  private _overlays: OverlayStyle[] = [];
   private _addedLayers: string[] = [];
 
   private _frameRateControl: FrameRateControl | null = null;
@@ -76,6 +89,8 @@ export class MapManager {
     this.m.on('styleimagemissing', (evt) =>
       this._onStyleImageMissing(evt as ml.MapStyleImageMissingEvent),
     );
+
+    this.m.on('click', (evt) => this._onClick(evt));
   }
 
   remove() {
@@ -86,15 +101,29 @@ export class MapManager {
     overlays: (OverlayStyle | DynamicOverlayStyle)[],
     variables: StyleVariables['overlay'],
   ) {
-    for (const layer of this._addedOverlayLayers) {
-      this.m.removeLayer(layer);
-    }
-    this._addedOverlayLayers = [];
+    for (const overlay of this._overlays) {
+      if (overlay.id.includes(':')) {
+        throw new Error('Overlay ID cannot contain ":", got: ' + overlay.id);
+      }
 
-    for (const source of this._addedOverlaySources) {
-      this.m.removeSource(source);
+      for (const layer of overlay.layers ?? []) {
+        if (layer.id.includes(':')) {
+          throw new Error(
+            'Layer ID cannot contain ":", got: ' +
+              layer.id +
+              ' in ' +
+              overlay.id,
+          );
+        }
+
+        this.m.removeLayer(overlayLayerID(overlay.id, layer.id));
+      }
+
+      for (const sourceID of Object.keys(overlay.sources ?? {})) {
+        this.m.removeSource(overlaySourceID(overlay.id, sourceID));
+      }
     }
-    this._addedOverlaySources = [];
+    this._overlays = [];
 
     const sortedOverlays = overlays
       .slice()
@@ -107,11 +136,11 @@ export class MapManager {
     );
 
     for (const overlay of resolvedOverlays) {
-      const prefix = `overlay:${overlay.id}:`;
+      this._overlays.push(overlay);
 
       const overlaySources = overlay.sources ?? {};
-      for (const id in overlaySources) {
-        let source = overlaySources[id]!;
+      for (const sourceID in overlaySources) {
+        let source = overlaySources[sourceID]!;
 
         source = applyVariablesToSource(
           source,
@@ -119,13 +148,11 @@ export class MapManager {
           variables?.[overlay.id],
         );
 
-        this._addedOverlaySources.push(prefix + id);
-        this.m.addSource(prefix + id, source);
+        this.m.addSource(overlaySourceID(overlay.id, sourceID), source);
       }
 
       for (const layer of overlay.layers ?? []) {
-        this._addedOverlayLayers.push(prefix + layer.id);
-        this.m.addLayer(rewriteLayer(layer, prefix));
+        this.m.addLayer(rewriteLayer(overlay.id, layer));
       }
     }
   }
@@ -239,6 +266,109 @@ export class MapManager {
     }
   }
 
+  private _lastInspectRoot: Root | null = null;
+  private _lastInspectPopup: ml.Popup | null = null;
+
+  private _onClick(evt: ml.MapMouseEvent) {
+    // Inspect area clicked
+
+    const targets = this._overlays
+      .filter((o) => o.inspect)
+      .flatMap((o) => o.layers?.map((l) => overlayLayerID(o.id, l.id)) ?? []);
+    const queried = queryRenderedFeatures(evt.target, evt.point, 3, {
+      layers: targets,
+    });
+
+    // source -> (sourceLayer or null if not present) -> id
+    const addedIDsBySourceLayer: DefaultMap<
+      string,
+      DefaultMap<string | null, Set<string | number>>
+    > = DefaultMap.with(() => DefaultMap.with(() => new Set()));
+
+    const inspections: InspectionPopupData[] = [];
+
+    for (const qf of queried) {
+      let shouldAdd = false;
+      if (qf.id === undefined) {
+        shouldAdd = true;
+      } else {
+        const idSet = addedIDsBySourceLayer
+          .get(qf.source)
+          .get(qf.sourceLayer ?? null);
+        if (!idSet.has(qf.id)) {
+          shouldAdd = true;
+          idSet.add(qf.id);
+        }
+      }
+
+      if (!shouldAdd) {
+        continue;
+      }
+
+      const f: InspectFeature = {
+        type: qf.type,
+        geometry: qf.geometry,
+        properties: qf.properties,
+      };
+
+      if (qf.layer.id.startsWith('overlay:')) {
+        const [_prefix, overlayID, layerID] = qf.layer.id.split(':');
+
+        if (!overlayID || !layerID) {
+          throw new Error('Unexpected overlay layer ID: ' + qf.layer.id);
+        }
+
+        const overlay = this._overlays.find((o) => o.id === overlayID);
+        if (!overlay) {
+          throw new Error('Unknown overlay: ' + overlayID);
+        }
+        if (!overlay.inspect) {
+          throw new Error('Expected overlay to have inspect: ' + overlayID);
+        }
+
+        const body = overlay.inspect(f);
+        inspections.push({
+          sourceName: overlay.name,
+          body,
+        });
+      } else {
+        throw new Error('Unexpected target layer: ' + qf.layer.id);
+      }
+    }
+
+    if (inspections.length === 0) {
+      return;
+    }
+
+    inspections.reverse();
+
+    // Render
+
+    const node = createElement({
+      tag: 'div',
+      style: { width: '100%', height: '100%' },
+    });
+
+    const root = createRoot(node);
+
+    root.render(inspectPopupContents(inspections));
+
+    const popup = new ml.Popup({
+      className:
+        '[&_.maplibregl-popup-content]:w-[260px] [&_.maplibregl-popup-content]:h-[330px]',
+    })
+      .setLngLat(evt.lngLat)
+      .setDOMContent(node);
+
+    this._lastInspectPopup?.remove();
+    this._lastInspectRoot?.unmount();
+
+    this._lastInspectPopup = popup;
+    this._lastInspectRoot = root;
+
+    popup.addTo(this.m);
+  }
+
   async resolveDynamicOverlay(
     style: DynamicOverlayStyle,
   ): Promise<OverlayStyle> {
@@ -250,25 +380,21 @@ export class MapManager {
   debugValues(): Record<string, unknown> {
     return {
       baseStyle: this.baseStyle,
-      addedOverlaySources: this._addedOverlaySources,
-      addedOverlayLayers: this._addedOverlayLayers,
+      overlays: this._overlays,
       addedLayers: this._addedLayers,
     };
   }
 }
 
 function rewriteLayer(
+  overlayID: string,
   layer: ml.LayerSpecification,
-  prefix: string,
 ): ml.LayerSpecification {
   const out = { ...layer };
-
-  out.id = prefix + out.id;
-
+  out.id = overlayLayerID(overlayID, layer.id);
   if ('source' in out) {
-    out.source = prefix + out.source;
+    out.source = overlaySourceID(overlayID, out.source);
   }
-
   return out;
 }
 
