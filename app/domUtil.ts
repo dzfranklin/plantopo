@@ -7,7 +7,7 @@ type Options = {
   style?: Partial<CSSStyleDeclaration>;
 } & Record<string, unknown>;
 
-type ChildOptions = Options | HTMLElement | string;
+type ChildOptions = Options | HTMLElement | string | null | undefined | false;
 
 export function createElement(options: Options) {
   const node = document.createElement(options.tag || 'div');
@@ -39,14 +39,24 @@ export function createElement(options: Options) {
       : [options.contents];
 
     for (const childOpts of contents) {
-      if (typeof childOpts === 'string') {
-        node.innerText = childOpts;
-      } else if (childOpts instanceof HTMLElement) {
-        node.append(childOpts);
-      } else {
-        const child = createElement(childOpts);
-        node.append(child);
+      if (
+        childOpts === undefined ||
+        childOpts === null ||
+        childOpts === false
+      ) {
+        continue;
       }
+
+      let childNode;
+      if (typeof childOpts === 'string') {
+        childNode = document.createTextNode(childOpts);
+      } else if (childOpts instanceof HTMLElement) {
+        childNode = childOpts;
+      } else {
+        childNode = createElement(childOpts);
+      }
+
+      node.appendChild(childNode);
     }
   }
 
