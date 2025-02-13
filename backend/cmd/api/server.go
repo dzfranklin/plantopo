@@ -34,7 +34,7 @@ func NewServer(env *pconfig.Env) *http.Server {
 	mux.Handle("/webhooks/", webhookSrv)
 
 	srv := &http.Server{
-		Handler: instrumentRequests(recoverPanic(env, papi.AssignRequestID(enableCORS(env, mux)))),
+		Handler: enableCORS(env, instrumentRequests(papi.AssignRequestID(recoverPanic(env, mux)))),
 		Addr:    fmt.Sprintf("0.0.0.0:%d", env.Config.Server.Port),
 	}
 	papi.WrapHandlerWithOnShutdownMiddleware(srv)
