@@ -1,5 +1,6 @@
 import { OverlayStyle } from './OverlayStyle';
 import { KVTable } from '@/components/KVTable';
+import { API_ENDPOINT } from '@/env';
 
 export const sepaStationsOverlay: OverlayStyle = {
   id: 'sepa_water_level_stations',
@@ -7,7 +8,7 @@ export const sepaStationsOverlay: OverlayStyle = {
   sources: {
     default: {
       type: 'geojson',
-      data: 'https://api.pt.internal/api/v1/sepa-stations',
+      data: API_ENDPOINT + 'sepa-stations',
       attribution:
         '<a href="https://timeseriesdoc.sepa.org.uk/" target="_blank">SEPA</a>',
     },
