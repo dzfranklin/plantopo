@@ -9,6 +9,7 @@ import (
 	"github.com/dzfranklin/plantopo/backend/internal/penv"
 	"github.com/dzfranklin/plantopo/backend/internal/pgeophotos"
 	"github.com/dzfranklin/plantopo/backend/internal/plog"
+	"github.com/dzfranklin/plantopo/backend/internal/psepa"
 	_ "go.uber.org/automaxprocs"
 	"net/http"
 	"os"
@@ -49,6 +50,7 @@ var dumpOnQuit atomic.Bool
 func main() {
 	startSignalHandlers()
 
+	go psepa.UpdateLoop(l)
 	startJobWorkers()
 	startServer()
 	startAdminServer()

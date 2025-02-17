@@ -1,0 +1,2 @@
+x-ts-type: geojson.FeatureCollection
+example: {type: FeatureCollection, features: [{type: Feature, properties: {key: value}, geometry: {type: Point, coordinates: [51, 0]}}]}

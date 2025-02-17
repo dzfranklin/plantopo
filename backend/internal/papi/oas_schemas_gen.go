@@ -350,6 +350,8 @@ func (s *ElevationPostReq) SetCoordinates(val [][]float64) {
 	s.Coordinates = val
 }
 
+type FeatureCollection jx.Raw
+
 type Geometry jx.Raw
 
 // Ref: #/components/schemas/Geophoto

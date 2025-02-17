@@ -104,6 +104,12 @@ type Handler interface {
 	//
 	// POST /munro-access/request
 	MunroAccessRequestPost(ctx context.Context, req *MunroAccessRequestPostReq) (*MunroAccessRequestPostOK, error)
+	// SepaStationsGet implements GET /sepa-stations operation.
+	//
+	// List SEPA monitoring stations as GeoJSON.
+	//
+	// GET /sepa-stations
+	SepaStationsGet(ctx context.Context) (FeatureCollection, error)
 	// SettingsGet implements GET /settings operation.
 	//
 	// Get settings.

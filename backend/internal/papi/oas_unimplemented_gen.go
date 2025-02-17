@@ -157,6 +157,15 @@ func (UnimplementedHandler) MunroAccessRequestPost(ctx context.Context, req *Mun
 	return r, ht.ErrNotImplemented
 }
 
+// SepaStationsGet implements GET /sepa-stations operation.
+//
+// List SEPA monitoring stations as GeoJSON.
+//
+// GET /sepa-stations
+func (UnimplementedHandler) SepaStationsGet(ctx context.Context) (r FeatureCollection, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // SettingsGet implements GET /settings operation.
 //
 // Get settings.

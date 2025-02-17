@@ -1,0 +1,11 @@
+get:
+  summary: List SEPA monitoring stations as GeoJSON
+  responses:
+    '200':
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/FeatureCollection.yaml"
+    default:
+      $ref: "../components/responses/DefaultErrorResponse.yaml"

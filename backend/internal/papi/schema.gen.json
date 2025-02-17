@@ -1228,6 +1228,26 @@
           }
         }
       }
+    },
+    "/sepa-stations": {
+      "get": {
+        "summary": "List SEPA monitoring stations as GeoJSON",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureCollection"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/DefaultErrorResponse"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1817,6 +1837,27 @@
           "countryCode2",
           "geometry"
         ]
+      },
+      "FeatureCollection": {
+        "x-ts-type": "geojson.FeatureCollection",
+        "example": {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "properties": {
+                "key": "value"
+              },
+              "geometry": {
+                "type": "Point",
+                "coordinates": [
+                  51,
+                  0
+                ]
+              }
+            }
+          ]
+        }
       }
     },
     "responses": {

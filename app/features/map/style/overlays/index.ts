@@ -8,6 +8,7 @@ import { globalHumanSettlementUrbanisationOverlay } from '@/features/map/style/o
 import { paperMapsOverlay } from '@/features/map/style/overlays/paperMaps';
 import { weatherOverlays } from '@/features/map/style/overlays/weather';
 import { busStopsUKOverlay } from '@/features/map/style/overlays/busStopsUK';
+import { sepaStationsOverlay } from '@/features/map/style/overlays/sepaStations';
 
 const overlayStyleList: (OverlayStyle | DynamicOverlayStyle)[] = [
   bgsMiningHazardExCoalOverlay,
@@ -16,6 +17,7 @@ const overlayStyleList: (OverlayStyle | DynamicOverlayStyle)[] = [
   geophotosOverlay,
   globalHumanSettlementUrbanisationOverlay,
   paperMapsOverlay,
+  sepaStationsOverlay,
   scotCorePathsOverlay,
   scotWildLandAreasOverlay,
   ...weatherOverlays,

@@ -65,6 +65,8 @@ paths:
     $ref: paths/geophotos.yaml
   /geosearch:
     $ref: paths/geosearch.yaml
+  /sepa-stations:
+    $ref: paths/sepa-stations.yaml
 components:
   securitySchemes:
     bearer:

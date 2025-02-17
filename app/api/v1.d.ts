@@ -716,6 +716,43 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/sepa-stations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List SEPA monitoring stations as GeoJSON */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['FeatureCollection'];
+          };
+        };
+        default: components['responses']['DefaultErrorResponse'];
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/settings': {
     parameters: {
       query?: never;
@@ -1103,6 +1140,25 @@ export interface components {
     ElevationPostReq: {
       coordinates: [number, number][];
     };
+    /** @example {
+     *       "type": "FeatureCollection",
+     *       "features": [
+     *         {
+     *           "type": "Feature",
+     *           "properties": {
+     *             "key": "value"
+     *           },
+     *           "geometry": {
+     *             "type": "Point",
+     *             "coordinates": [
+     *               51,
+     *               0
+     *             ]
+     *           }
+     *         }
+     *       ]
+     *     } */
+    FeatureCollection: geojson.FeatureCollection;
     /** @example {
      *       "type": "Point",
      *       "coordinates": [

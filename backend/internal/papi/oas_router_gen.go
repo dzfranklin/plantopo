@@ -489,26 +489,62 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 
 				elem = origElem
-			case 's': // Prefix: "settings"
+			case 's': // Prefix: "se"
 				origElem := elem
-				if l := len("settings"); len(elem) >= l && elem[0:l] == "settings" {
+				if l := len("se"); len(elem) >= l && elem[0:l] == "se" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
 				if len(elem) == 0 {
-					// Leaf node.
-					switch r.Method {
-					case "GET":
-						s.handleSettingsGetRequest([0]string{}, elemIsEscaped, w, r)
-					case "PUT":
-						s.handleSettingsPutRequest([0]string{}, elemIsEscaped, w, r)
-					default:
-						s.notAllowed(w, r, "GET,PUT")
+					break
+				}
+				switch elem[0] {
+				case 'p': // Prefix: "pa-stations"
+					origElem := elem
+					if l := len("pa-stations"); len(elem) >= l && elem[0:l] == "pa-stations" {
+						elem = elem[l:]
+					} else {
+						break
 					}
 
-					return
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "GET":
+							s.handleSepaStationsGetRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "GET")
+						}
+
+						return
+					}
+
+					elem = origElem
+				case 't': // Prefix: "ttings"
+					origElem := elem
+					if l := len("ttings"); len(elem) >= l && elem[0:l] == "ttings" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "GET":
+							s.handleSettingsGetRequest([0]string{}, elemIsEscaped, w, r)
+						case "PUT":
+							s.handleSettingsPutRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, "GET,PUT")
+						}
+
+						return
+					}
+
+					elem = origElem
 				}
 
 				elem = origElem
@@ -1288,36 +1324,76 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 				}
 
 				elem = origElem
-			case 's': // Prefix: "settings"
+			case 's': // Prefix: "se"
 				origElem := elem
-				if l := len("settings"); len(elem) >= l && elem[0:l] == "settings" {
+				if l := len("se"); len(elem) >= l && elem[0:l] == "se" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
 				if len(elem) == 0 {
-					// Leaf node.
-					switch method {
-					case "GET":
-						r.name = "SettingsGet"
-						r.summary = "Get settings"
-						r.operationID = ""
-						r.pathPattern = "/settings"
-						r.args = args
-						r.count = 0
-						return r, true
-					case "PUT":
-						r.name = "SettingsPut"
-						r.summary = "Update settings"
-						r.operationID = ""
-						r.pathPattern = "/settings"
-						r.args = args
-						r.count = 0
-						return r, true
-					default:
-						return
+					break
+				}
+				switch elem[0] {
+				case 'p': // Prefix: "pa-stations"
+					origElem := elem
+					if l := len("pa-stations"); len(elem) >= l && elem[0:l] == "pa-stations" {
+						elem = elem[l:]
+					} else {
+						break
 					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "GET":
+							r.name = "SepaStationsGet"
+							r.summary = "List SEPA monitoring stations as GeoJSON"
+							r.operationID = ""
+							r.pathPattern = "/sepa-stations"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+					elem = origElem
+				case 't': // Prefix: "ttings"
+					origElem := elem
+					if l := len("ttings"); len(elem) >= l && elem[0:l] == "ttings" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "GET":
+							r.name = "SettingsGet"
+							r.summary = "Get settings"
+							r.operationID = ""
+							r.pathPattern = "/settings"
+							r.args = args
+							r.count = 0
+							return r, true
+						case "PUT":
+							r.name = "SettingsPut"
+							r.summary = "Update settings"
+							r.operationID = ""
+							r.pathPattern = "/settings"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+					elem = origElem
 				}
 
 				elem = origElem

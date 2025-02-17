@@ -24,6 +24,7 @@ type Options struct {
 	SaveCookies bool
 	// Whether to return ErrHTTPStatus for status codes >= 400
 	ErrOnStatus bool
+	Client      *http.Client
 }
 
 type ErrHTTPStatus struct {
