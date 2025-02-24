@@ -9,7 +9,7 @@ import {
 } from '@tanstack/react-query';
 import { ReactNode } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
-import { DebugModeProvider } from '@/hooks/debugMode';
+import { DebugModeProvider, useDebugMode } from '@/hooks/debugMode';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { HighwayGraphProvider } from '@/features/map/snap/provider';
 
@@ -79,6 +79,15 @@ function getQueryClient() {
   }
 }
 
+function ReactQueryDevtoolsWrapper() {
+  const debugMode = useDebugMode();
+  if (debugMode) {
+    return (
+      <ReactQueryDevtools initialIsOpen={false} buttonPosition="top-left" />
+    );
+  }
+}
+
 export default function Providers({
   children,
   forceDebugModeAllowed,
@@ -95,7 +104,7 @@ export default function Providers({
   return (
     <QueryClientProvider client={queryClient}>
       <DebugModeProvider forceAllowed={forceDebugModeAllowed}>
-        <ReactQueryDevtools initialIsOpen={false} />
+        <ReactQueryDevtoolsWrapper />
         <HighwayGraphProvider>
           <Toaster position="top-center" />
           {children}
