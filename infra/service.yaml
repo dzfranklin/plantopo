@@ -4,8 +4,7 @@ metadata:
   name: api
   namespace: pt
 spec:
-  type: LoadBalancer
-  externalTrafficPolicy: Local
+  type: ClusterIP
   ports:
     - port: 80
       name: http
@@ -19,8 +18,7 @@ metadata:
   name: admin
   namespace: pt
 spec:
-  type: LoadBalancer
-  externalTrafficPolicy: Local
+  type: ClusterIP
   ports:
     - port: 80
       name: http
