@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# TODO: but I've since made it differently
+
+gdal_translate -of COG \
+    -projwin -11.2551 61.1725 2.9018 49.144 \
+    -co NUM_THREADS=ALL_CPUS --config GDAL_CACHEMAX "25%" \
+    -co PREDICTOR=2 -CO BIGTIFF=IF_SAFER -co BLOCKSIZE=512 -co RESAMPLING=BILINEAR -co OVERVIEWS=IGNORE_EXISTING \
+    copernicus-dem-30m/copernicus-dem-30m.vrt gb_copernicus_dem_30m_cog.tif
+
+# vs
+
+gdal_translate -of COG \
+    -co NUM_THREADS=ALL_CPUS --config GDAL_CACHEMAX "25%" \
+    -co COMPRESS=ZSTD -co PREDICTOR=2 -co LEVEL=3 -CO BIGTIFF=YES -co BLOCKSIZE=512 -co RESAMPLING=BILINEAR -co OVERVIEWS=IGNORE_EXISTING \
+    copernicus-dem-30m/copernicus-dem-30m.vrt copernicus_dem_30m_cog.tif
+
+# END TODO
+
 mkdir work
 cd work
 
@@ -61,5 +78,6 @@ cd compressed
 find . -name '*.tif' >tile_list
 gdalbuildvrt -strict -resolution highest -input_file_list tile_list copernicus-dem-30m.vrt
 rm tile_list
+
 
 echo "Now you need to upload the compressed directory to bunny cdn"
