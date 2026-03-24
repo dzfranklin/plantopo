@@ -5,7 +5,25 @@ loadEnvFile(".test.env");
 
 export default defineConfig({
   test: {
-    globalSetup: ["packages/api/src/test/globalSetup.ts"],
-    setupFiles: ["packages/api/src/test/setup.ts"],
+    projects: [
+      {
+        test: {
+          name: "api",
+          include: ["packages/api/src/**/*.test.ts"],
+          globalSetup: ["packages/api/src/test/globalSetup.ts"],
+          setupFiles: ["packages/api/src/test/setup.ts"],
+          environment: "node",
+        },
+      },
+      {
+        test: {
+          name: "web",
+          include: ["packages/web/src/**/*.test.tsx"],
+          globalSetup: ["packages/web/src/test/globalSetup.ts"],
+          setupFiles: ["packages/web/src/test/setup.ts"],
+          environment: "jsdom",
+        },
+      },
+    ],
   },
 });
