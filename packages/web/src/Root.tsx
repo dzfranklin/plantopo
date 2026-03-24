@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { Suspense, lazy, useState } from "react";
+import { BrowserRouter } from "react-router-dom";
 
 import type { AppRouter } from "@pt/api";
 
-import App from "./App.tsx";
-import { ErrorBoundary } from "./ErrorBoundary.tsx";
+import { AppRoutes } from "./routes.tsx";
 import { TRPCProvider } from "./trpc.ts";
 
 const ReactQueryDevtools = import.meta.env.DEV
@@ -27,11 +27,9 @@ export function Root() {
   return (
     <QueryClientProvider client={queryClient}>
       <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-        <ErrorBoundary>
-          <Suspense>
-            <App />
-          </Suspense>
-        </ErrorBoundary>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
       </TRPCProvider>
       {ReactQueryDevtools && (
         <Suspense>
