@@ -1,0 +1,25 @@
+{
+  "name": "@pt/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "server": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "@pt/shared": "*",
+    "@trpc/server": "^11.15.0",
+    "drizzle-orm": "^0.45.1",
+    "express": "^5.2.1",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@pt/web": "*",
+    "@types/express": "^5.0.6",
+    "@types/pg": "^8.20.0",
+    "tsx": "^4.21.0"
+  }
+}

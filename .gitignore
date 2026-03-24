@@ -1,0 +1,14 @@
+*.local.json
+
+node_modules/
+dist/
+.DS_Store
+.npm/
+.node_repl_history
+
+*.log
+npm-debug.log*
+pids
+*.pid
+*.seed
+*.tsbuildinfo

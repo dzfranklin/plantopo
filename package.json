@@ -1,0 +1,38 @@
+{
+  "name": "plantopo",
+  "version": "0.1.0",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dzfranklin/plantopo.git"
+  },
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "tsx --env-file=.development.env packages/api/src/server.dev.ts",
+    "db:generate": "node --env-file=.development.env node_modules/.bin/drizzle-kit generate",
+    "db:migrate": "tsx --env-file=.development.env packages/api/src/migrate.ts",
+    "start": "npm -w packages/web run build && tsx packages/api/src/server.ts",
+    "check": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/api/tsconfig.json && tsc --noEmit -p packages/web/tsconfig.app.json && eslint --fix . && prettier --write --log-level warn .",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
+    "@types/node": "^24.12.0",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9.39.4",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.57.0",
+    "vitest": "^4.1.1"
+  }
+}
