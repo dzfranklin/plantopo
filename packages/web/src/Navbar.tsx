@@ -6,27 +6,32 @@ export function Navbar() {
   const { data: session } = useSession();
 
   return (
-    <nav>
-      <span>PlanTopo</span>{" "}
+    <nav className="flex items-center gap-3 px-4 py-2 text-sm">
+      <span className="font-semibold">PlanTopo</span>
       {session ? (
         <>
           {session.user.image && (
             <img
               src={session.user.image}
               alt={session.user.name ?? ""}
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                objectFit: "cover",
-              }}
+              className="w-7 h-7 rounded-full object-cover"
             />
           )}
           <span>{session.user.name}</span>
-          <button onClick={signOut}>Sign out</button>
+          <button
+            onClick={signOut}
+            className="px-2 py-1 rounded border border-gray-300 hover:bg-gray-100"
+          >
+            Sign out
+          </button>
         </>
       ) : (
-        <Link to="/login">Sign in</Link>
+        <Link
+          to="/login"
+          className="px-2 py-1 rounded border border-gray-300 hover:bg-gray-100"
+        >
+          Sign in
+        </Link>
       )}
     </nav>
   );
