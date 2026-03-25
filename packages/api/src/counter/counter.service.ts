@@ -1,3 +1,5 @@
+import type { User } from "better-auth";
+
 import { db } from "../db.js";
 import { counterTable } from "./counter.schema.js";
 
@@ -14,7 +16,14 @@ export async function getCount(): Promise<number> {
   return row!.value;
 }
 
-export async function setCount(value: number): Promise<number> {
+export async function setCount(
+  value: number,
+  user: User | null,
+): Promise<number> {
+  console.log(
+    "setCount called by",
+    user ? user.email + ":" + user.id : "anonymous",
+  );
   await ensureRow();
   const [row] = await db.update(counterTable).set({ value }).returning();
   return row!.value;

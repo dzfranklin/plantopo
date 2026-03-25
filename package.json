@@ -11,10 +11,10 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "tsx --env-file=.development.env packages/api/src/server.dev.ts",
+    "dev": "tsx --env-file=.development.env packages/api/src/server.ts",
     "db:generate": "node --env-file=.development.env node_modules/.bin/drizzle-kit generate",
     "db:migrate": "tsx --env-file=.development.env packages/api/src/migrate.ts",
-    "start": "npm -w packages/web run build && tsx packages/api/src/server.ts",
+    "start": "npm -w packages/web run build && tsx --env-file=.development.env packages/api/src/server.ts",
     "check": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/api/tsconfig.json && tsc --noEmit -p packages/web/tsconfig.app.json && eslint --fix . && prettier --write --log-level warn .",
     "test": "vitest run",
     "test:watch": "vitest",

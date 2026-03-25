@@ -104,8 +104,8 @@ second consumer appears.
 ## Authentication
 
 Better Auth handles authn/authz. Auth routes are mounted directly on Express
-(`/api/auth/*`), separate from tRPC — there is no reason to wrap Better Auth
-endpoints as tRPC procedures.
+(`/api/v1/auth/*path`), separate from tRPC — there is no reason to wrap Better
+Auth endpoints as tRPC procedures.
 
 ### Server Setup
 
@@ -117,7 +117,16 @@ import { bearer } from "better-auth/plugins";
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg" }),
   plugins: [bearer()],
-  emailAndPassword: { enabled: true },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    },
+    github: {
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    },
+  },
 });
 ```
 
@@ -125,6 +134,27 @@ export const auth = betterAuth({
 // server.ts — mount BEFORE express.json()
 app.all("/api/auth/*splat", toNodeHandler(auth));
 ```
+
+### Local Dev
+
+Register `http://localhost:3000/api/auth/callback/google` and
+`http://localhost:3000/api/auth/callback/github` in separate dev OAuth apps
+(Google Cloud Console and GitHub OAuth Apps). Put the credentials in
+`.development.env` (gitignored).
+
+For the test suite, a dev-only Express route signs in as a fixture user without
+going through OAuth:
+
+```ts
+// Only mounted when NODE_ENV !== "production"
+app.post("/api/dev/sign-in-as/:userId", async (req, res) => {
+  const session = await auth.api.createSession({ userId: req.params.userId });
+  // set cookie and return token so tests can use either
+});
+```
+
+Tests call this endpoint in setup to get a session, avoiding any OAuth
+round-trip.
 
 ### tRPC Context
 
@@ -364,3 +394,5 @@ plan/
 Not needed between web client and API (deployed as a single artifact, always in
 sync). For the Android app, handle with a `/v1/` prefix or client version header
 when breaking changes arise. Not needed at launch.
+
+## Logging

@@ -26,7 +26,11 @@ export function Root() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+      <TRPCProvider
+        trpcClient={trpcClient}
+        queryClient={queryClient}
+        keyPrefix="trpc"
+      >
         <BrowserRouter>
           <AppRoutes />
         </BrowserRouter>

@@ -13,7 +13,14 @@ export async function setup() {
   const app = express();
   app.use(
     "/api/v1/trpc",
-    trpcExpress.createExpressMiddleware({ router: appRouter }),
+    trpcExpress.createExpressMiddleware({
+      router: appRouter,
+      createContext: ({ req }) => {
+        const header = req.headers["x-test-session"];
+        const session = typeof header === "string" ? JSON.parse(header) : null;
+        return { session };
+      },
+    }),
   );
 
   await new Promise<void>((resolve) => {

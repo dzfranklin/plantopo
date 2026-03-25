@@ -7,5 +7,5 @@ export const counterRouter = router({
   count: publicProcedure.query(() => getCount()),
   setCount: publicProcedure
     .input(z.number())
-    .mutation(({ input }) => setCount(input)),
+    .mutation(({ input, ctx }) => setCount(input, ctx.session?.user ?? null)),
 });

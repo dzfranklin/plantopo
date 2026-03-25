@@ -1,4 +1,6 @@
 *.local.json
+.development.env
+.test.env
 
 node_modules/
 dist/
