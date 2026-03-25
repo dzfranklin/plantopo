@@ -5,6 +5,7 @@ loadEnvFile(".test.env");
 
 export default defineConfig({
   test: {
+    silent: "passed-only",
     projects: [
       {
         test: {

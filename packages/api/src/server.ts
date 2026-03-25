@@ -1,11 +1,13 @@
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import express from "express";
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { auth } from "./auth/auth.js";
 import { env } from "./env.js";
+import { bindLog, logStore, logger } from "./logger.js";
 import { appRouter } from "./router.js";
 
 const app = express();
@@ -16,17 +18,25 @@ if (isDev) {
   app.use((_req, _res, next) => setTimeout(next, 50));
 }
 
+app.use((_req, _res, next) => {
+  logStore.run({ reqId: randomUUID() }, next);
+});
+
 app.all("/api/v1/auth/*path", toNodeHandler(auth));
 
 app.use(
   "/api/v1/trpc",
   trpcExpress.createExpressMiddleware({
     router: appRouter,
-    createContext: async ({ req }) => ({
-      session: await auth.api
+    createContext: async ({ req }) => {
+      const session = await auth.api
         .getSession({ headers: fromNodeHeaders(req.headers) })
-        .catch(() => null),
-    }),
+        .catch(() => null);
+      if (session) {
+        bindLog({ userId: session.user.id });
+      }
+      return { session };
+    },
   }),
 );
 
@@ -75,7 +85,8 @@ if (isDev) {
 }
 
 app.listen(4000, () => {
-  console.log(
-    `Server running on http://localhost:4000 (${isDev ? "dev" : "production"})`,
+  logger.info(
+    { port: 4000, env: isDev ? "dev" : "production" },
+    "Server listening",
   );
 });

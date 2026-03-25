@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createTRPCClient, httpBatchLink } from "@trpc/client";
+import { TRPCClientError, createTRPCClient, httpBatchLink } from "@trpc/client";
 import { Suspense, lazy, useState } from "react";
 import { BrowserRouter } from "react-router-dom";
 
@@ -17,7 +17,26 @@ const ReactQueryDevtools = import.meta.env.DEV
   : null;
 
 export function Root() {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            throwOnError: true,
+            retry: (failureCount, error) => {
+              if (
+                error instanceof TRPCClientError &&
+                error.data?.code === "UNAUTHORIZED"
+              ) {
+                return false;
+              }
+              return failureCount < 3;
+            },
+          },
+          mutations: { throwOnError: true },
+        },
+      }),
+  );
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
       links: [httpBatchLink({ url: "/api/v1/trpc" })],

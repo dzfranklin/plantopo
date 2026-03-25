@@ -3,6 +3,7 @@ import express from "express";
 import type { Server } from "node:http";
 
 import { appRouter, db } from "@pt/api";
+import { logStore } from "@pt/api/logger";
 import { setupDb } from "@pt/api/test/setupDb";
 
 let server: Server;
@@ -11,6 +12,9 @@ export async function setup() {
   await setupDb();
 
   const app = express();
+  app.use((_req, _res, next) => {
+    logStore.run({ reqId: "1" }, next);
+  });
   app.use(
     "/api/v1/trpc",
     trpcExpress.createExpressMiddleware({

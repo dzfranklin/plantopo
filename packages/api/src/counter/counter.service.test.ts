@@ -8,11 +8,11 @@ describe("counter service", () => {
   });
 
   it("sets and returns the new value", async () => {
-    expect(await setCount(42, null)).toBe(42);
+    expect(await setCount(42)).toBe(42);
   });
 
   it("getCount reflects setCount", async () => {
-    await setCount(7, null);
+    await setCount(7);
     expect(await getCount()).toBe(7);
   });
 });

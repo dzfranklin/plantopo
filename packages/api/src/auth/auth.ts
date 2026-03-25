@@ -4,6 +4,7 @@ import { bearer } from "better-auth/plugins";
 
 import { db } from "../db.js";
 import { env } from "../env.js";
+import { getLog } from "../logger.js";
 import * as schema from "./auth.schema.js";
 
 const socialProviders: Parameters<typeof betterAuth>[0]["socialProviders"] = {};
@@ -14,7 +15,7 @@ if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
     clientSecret: env.GOOGLE_CLIENT_SECRET,
   };
 } else {
-  console.log("Skipping Google provider");
+  getLog().info("Skipping Google provider");
 }
 
 if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
@@ -23,7 +24,7 @@ if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
     clientSecret: env.GITHUB_CLIENT_SECRET,
   };
 } else {
-  console.log("Skipping GitHub provider");
+  getLog().info("Skipping GitHub provider");
 }
 
 export const auth = betterAuth({

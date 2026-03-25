@@ -4,6 +4,7 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { Navbar } from "./Navbar.tsx";
 import { useSession } from "./auth/auth-client.ts";
+import ErrorTest from "./test/ErrorTest.tsx";
 
 const App = lazy(() => import("./App.tsx"));
 const Counter = lazy(() => import("./counter/Counter.tsx"));
@@ -49,6 +50,9 @@ export function AppRoutes() {
               <Route path="/trips" element={<TripList />} />
               <Route path="/trips/:tripId" element={<TripEditor />} />
             </Route>
+
+            <Route path="/unauth-counter" element={<Counter />} />
+            <Route path="/error-test" element={<ErrorTest />} />
 
             <Route path="*" element={<NotFound />} />
           </Route>

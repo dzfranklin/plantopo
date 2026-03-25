@@ -19,20 +19,10 @@ export default function Counter() {
       onMutate: async (newCount) => {
         if (!optimistic) return;
         await queryClient.cancelQueries(trpc.counter.count.queryFilter());
-        const previous = queryClient.getQueryData(
-          trpc.counter.count.queryKey(),
-        );
         queryClient.setQueryData(trpc.counter.count.queryKey(), newCount);
-        return { previous };
       },
       onSuccess: (newCount) => {
         queryClient.setQueryData(trpc.counter.count.queryKey(), newCount);
-      },
-      onError: (_err, _newCount, context) => {
-        queryClient.setQueryData(
-          trpc.counter.count.queryKey(),
-          context?.previous,
-        );
       },
     }),
   );
