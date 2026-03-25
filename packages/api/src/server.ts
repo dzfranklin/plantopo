@@ -4,6 +4,7 @@ import { serializeSignedCookie } from "better-call";
 import express from "express";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { createServer } from "node:http";
 import { resolve } from "node:path";
 
 import { auth } from "./auth/auth.js";
@@ -114,9 +115,11 @@ async function renderWithSession(
     .end(html.replace("</head>", `${script}\n</head>`));
 }
 
+const httpServer = createServer(app);
+
 if (isDev) {
   const { createDevMiddleware } = await import("@pt/web/dev");
-  const { middleware, getIndexHtml } = await createDevMiddleware();
+  const { middleware, getIndexHtml } = await createDevMiddleware(httpServer);
 
   app.use(middleware);
 
@@ -143,7 +146,7 @@ if (isDev) {
   });
 }
 
-app.listen(4000, () => {
+httpServer.listen(4000, () => {
   logger.info(
     { port: 4000, env: isDev ? "dev" : "production" },
     "Server listening",
