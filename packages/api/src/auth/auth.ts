@@ -34,6 +34,8 @@ export const auth = betterAuth({
   baseURL: `${env.BETTER_AUTH_URL}/api/v1/auth`,
   socialProviders,
   session: {
+    expiresIn: 365 * 24 * 60 * 60, // 365 days
+    updateAge: 24 * 60 * 60, // 24 hours
     cookieCache: {
       enabled: true,
       maxAge: 15 * 60, // 15 minutes
