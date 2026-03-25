@@ -6,6 +6,7 @@ import { Navbar } from "./Navbar.tsx";
 import { useSession } from "./auth/auth-client.ts";
 
 const App = lazy(() => import("./App.tsx"));
+const Counter = lazy(() => import("./counter/Counter.tsx"));
 const TripList = lazy(() => import("./trips/TripList.tsx"));
 const TripEditor = lazy(() => import("./trips/TripEditor.tsx"));
 const Login = lazy(() => import("./auth/Login.tsx"));
@@ -44,6 +45,7 @@ export function AppRoutes() {
             <Route index element={<App />} />
 
             <Route element={<RequireAuth />}>
+              <Route path="/counter" element={<Counter />} />
               <Route path="/trips" element={<TripList />} />
               <Route path="/trips/:tripId" element={<TripEditor />} />
             </Route>
