@@ -2,7 +2,7 @@ import { Suspense, lazy } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
-import { Navbar } from "./Navbar.tsx";
+import { Navbar, NavbarFooter } from "./Navbar.tsx";
 import { useSession } from "./auth/auth-client.ts";
 import ErrorTest from "./test/ErrorTest.tsx";
 
@@ -11,6 +11,7 @@ const Counter = lazy(() => import("./counter/Counter.tsx"));
 const TripList = lazy(() => import("./trips/TripList.tsx"));
 const TripEditor = lazy(() => import("./trips/TripEditor.tsx"));
 const Login = lazy(() => import("./auth/Login.tsx"));
+const RecordTrack = lazy(() => import("./record-track/RecordTrack.tsx"));
 const NotFound = lazy(() => import("./NotFound.tsx"));
 
 function RequireAuth() {
@@ -37,10 +38,13 @@ export function AppRoutes() {
 
           <Route
             element={
-              <>
+              <div className="grid min-h-svh sm:[grid-template-areas:'header_header''content_content'] [grid-template-areas:'header_header''content_content''footer_footer'] grid-rows-[auto_1fr_auto] sm:grid-rows-[auto_1fr]">
                 <Navbar />
-                <Outlet />
-              </>
+                <div style={{ gridArea: "content" }}>
+                  <Outlet />
+                </div>
+                <NavbarFooter />
+              </div>
             }
           >
             <Route index element={<App />} />
@@ -51,6 +55,7 @@ export function AppRoutes() {
               <Route path="/trips/:tripId" element={<TripEditor />} />
             </Route>
 
+            <Route path="/record-track" element={<RecordTrack />} />
             <Route path="/unauth-counter" element={<Counter />} />
             <Route path="/error-test" element={<ErrorTest />} />
 
