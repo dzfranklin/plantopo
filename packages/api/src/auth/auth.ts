@@ -7,6 +7,7 @@ import { db } from "../db.js";
 import { env } from "../env.js";
 import { getLog } from "../logger.js";
 import * as schema from "./auth.schema.js";
+import { createNativeSessionInitToken } from "./auth.service.js";
 
 const socialProviders: Parameters<typeof betterAuth>[0]["socialProviders"] = {};
 
@@ -53,14 +54,19 @@ export const auth = betterAuth({
       const newSession = ctx.context.newSession;
       if (!newSession) return;
       const returned = ctx.context.returned;
+
       // The redirect is an APIError with a location header (from better-call's ctx.redirect())
       const location: string | null | undefined =
         returned instanceof Response
           ? returned.headers.get("location")
           : (returned as APIError)?.headers?.get?.("location");
+
       if (location?.startsWith("plantopo://oauth-callback")) {
+        const initToken = await createNativeSessionInitToken(
+          newSession.session.token,
+        );
         const url = new URL(location);
-        url.searchParams.set("token", newSession.session.token);
+        url.searchParams.set("token", initToken);
         throw ctx.redirect(url.toString());
       }
     }),

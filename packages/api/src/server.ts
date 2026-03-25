@@ -7,6 +7,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { auth } from "./auth/auth.js";
+import { exchangeNativeSessionInitToken } from "./auth/auth.service.js";
 import { env } from "./env.js";
 import { bindLog, logStore, logger } from "./logger.js";
 import { appRouter } from "./router.js";
@@ -23,11 +24,27 @@ app.use((_req, _res, next) => {
   logStore.run({ reqId: randomUUID() }, next);
 });
 
-app.post("/api/v1/refresh-session", async (req, res) => {
+// Flow: The native app opens /login in a custom tab, the user logs in via
+// OAuth, then we redirect to a custom URL scheme with a short-lived one-time
+// initiation token in the query (see auth.ts). The native app calls this
+// endpoint to exchange that token for a session cookie and API token, then sets
+// that cookie in its webview's cookie jar.
+//
+// Request: POST /api/v1/native-session Authorization: Bearer <initToken>
+// Response: 200 OK Set-Cookie: sessionToken=... {"token": "api-token"}
+app.post("/api/v1/native-session", async (req, res) => {
   const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  if (!token) {
+  const initToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+  if (!initToken) {
     res.status(400).send("Error: Missing token");
+    return;
+  }
+
+  const token = await exchangeNativeSessionInitToken(initToken);
+  if (!token) {
+    res.status(401).send("Error: Invalid or expired token");
     return;
   }
 
@@ -35,7 +52,7 @@ app.post("/api/v1/refresh-session", async (req, res) => {
     .getSession({ headers: new Headers({ authorization: `Bearer ${token}` }) })
     .catch(() => null);
   if (!session) {
-    res.status(401).send("Error: Invalid token");
+    res.status(401).send("Error: Invalid session");
     return;
   }
 
@@ -53,7 +70,11 @@ app.post("/api/v1/refresh-session", async (req, res) => {
     },
   );
 
-  res.setHeader("set-cookie", signedCookie).status(200).end();
+  res
+    .setHeader("set-cookie", signedCookie)
+    .setHeader("content-type", "application/json")
+    .status(200)
+    .send(JSON.stringify({ token }));
 });
 
 app.all("/api/v1/auth/*path", toNodeHandler(auth));

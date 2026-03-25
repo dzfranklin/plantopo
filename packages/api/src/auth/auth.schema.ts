@@ -73,6 +73,15 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+// Short-lived one-time tokens issued after OAuth, exchanged by the native app
+// for a session cookie.
+export const nativeSessionInitToken = pgTable("native_session_init_token", {
+  token: text("token").primaryKey(),
+  sessionToken: text("session_token").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),

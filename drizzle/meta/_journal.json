@@ -15,6 +15,13 @@
       "when": 1774393895109,
       "tag": "0001_stale_mephistopheles",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774468093949,
+      "tag": "0002_native_session_init_token",
+      "breakpoints": true
     }
   ]
 }
