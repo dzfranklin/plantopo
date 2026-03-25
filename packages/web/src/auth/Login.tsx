@@ -26,6 +26,8 @@ function SocialButton({
 }
 
 export default function Login() {
+  if (window.Native) throw new Error("Login page loaded in native");
+
   const [searchParams] = useSearchParams();
   const callbackURL = searchParams.get("returnTo") ?? "/";
 

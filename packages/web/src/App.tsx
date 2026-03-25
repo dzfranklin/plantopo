@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 import { HELLO_WORLD } from "@pt/shared";
 
 import "./App.css";
@@ -17,6 +19,7 @@ function App() {
         <div>
           <h1>Get started</h1>
           <p>Message from shared: {HELLO_WORLD}</p>
+          <Link to="/counter">View counter example</Link>
         </div>
       </section>
 

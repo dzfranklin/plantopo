@@ -8,7 +8,15 @@ export function Navbar() {
   return (
     <nav className="flex items-center gap-3 px-4 py-2 text-sm">
       <span className="font-semibold">PlanTopo</span>
-      {session ? (
+      {!session && !window.Native && (
+        <Link
+          to="/login"
+          className="px-2 py-1 rounded border border-gray-300 hover:bg-gray-100"
+        >
+          Sign in
+        </Link>
+      )}
+      {session && (
         <>
           {session.user.image && (
             <img
@@ -25,13 +33,6 @@ export function Navbar() {
             Sign out
           </button>
         </>
-      ) : (
-        <Link
-          to="/login"
-          className="px-2 py-1 rounded border border-gray-300 hover:bg-gray-100"
-        >
-          Sign in
-        </Link>
       )}
     </nav>
   );

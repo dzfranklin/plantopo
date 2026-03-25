@@ -1,5 +1,6 @@
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
+import { serializeSignedCookie } from "better-call";
 import express from "express";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -22,27 +23,37 @@ app.use((_req, _res, next) => {
   logStore.run({ reqId: randomUUID() }, next);
 });
 
-app.post("/api/v1/complete-native-login", express.json(), async (req, res) => {
-  const token = req.body?.token;
-  if (!token || typeof token !== "string") {
-    res.status(400).json({ error: "Missing token" });
+app.post("/api/v1/refresh-session", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  if (!token) {
+    res.status(400).send("Error: Missing token");
     return;
   }
-  // Call getSession with asResponse:true so the bearer plugin hook runs
-  // and sets the session cookie in the response headers
-  const sessionRes = await auth.api
-    .getSession({
-      headers: new Headers({ authorization: `Bearer ${token}` }),
-      asResponse: true,
-    })
+
+  const session = await auth.api
+    .getSession({ headers: new Headers({ authorization: `Bearer ${token}` }) })
     .catch(() => null);
-  if (!sessionRes || !sessionRes.ok) {
-    res.status(401).json({ error: "Invalid token" });
+  if (!session) {
+    res.status(401).send("Error: Invalid token");
     return;
   }
-  const cookieHeader = sessionRes.headers.get("set-cookie");
-  if (!cookieHeader) throw new Error("No set-cookie header from auth API");
-  res.setHeader("set-cookie", cookieHeader).status(201).end();
+
+  const ctx = await auth.$context;
+  const cookieName = ctx.authCookies.sessionToken.name;
+  const cookieAttrs = ctx.authCookies.sessionToken.attributes;
+  const maxAge = ctx.sessionConfig.expiresIn;
+  const signedCookie = await serializeSignedCookie(
+    cookieName,
+    token,
+    ctx.secret,
+    {
+      ...cookieAttrs,
+      maxAge,
+    },
+  );
+
+  res.setHeader("set-cookie", signedCookie).status(200).end();
 });
 
 app.all("/api/v1/auth/*path", toNodeHandler(auth));
@@ -65,15 +76,21 @@ app.use(
 
 app.all("/api/*path", (_req, res) => res.status(404).end());
 
-async function injectSession(
+async function renderWithSession(
   html: string,
-  reqHeaders: Record<string, string | string[] | undefined>,
-): Promise<string> {
+  req: express.Request,
+  res: express.Response,
+) {
   const session = await auth.api
-    .getSession({ headers: fromNodeHeaders(reqHeaders) })
+    .getSession({ headers: fromNodeHeaders(req.headers), returnHeaders: true })
     .catch(() => null);
-  const script = `<script>window.__INITIAL_SESSION__ = JSON.parse(${JSON.stringify(JSON.stringify(session))});</script>`;
-  return html.replace("</head>", `${script}\n</head>`);
+  if (session?.headers) {
+    session.headers.forEach((value, key) => res.setHeader(key, value));
+  }
+  const script = `<script>window.__INITIAL_SESSION__ = JSON.parse(${JSON.stringify(JSON.stringify(session?.response))});</script>`;
+  res
+    .setHeader("Content-Type", "text/html")
+    .end(html.replace("</head>", `${script}\n</head>`));
 }
 
 if (isDev) {
@@ -85,8 +102,7 @@ if (isDev) {
   app.get("*path", async (req, res, next) => {
     try {
       const html = await getIndexHtml(req.originalUrl);
-      const injected = await injectSession(html, req.headers);
-      res.setHeader("Content-Type", "text/html").end(injected);
+      await renderWithSession(html, req, res);
     } catch (e) {
       next(e);
     }
@@ -99,8 +115,7 @@ if (isDev) {
 
   app.get("*path", async (req, res, next) => {
     try {
-      const injected = await injectSession(indexHTML, req.headers);
-      res.setHeader("Content-Type", "text/html").end(injected);
+      await renderWithSession(indexHTML, req, res);
     } catch (e) {
       next(e);
     }

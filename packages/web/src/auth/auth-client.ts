@@ -30,6 +30,11 @@ export function useSession() {
 }
 
 export function signOut() {
+  if (window.Native) {
+    window.Native.logout();
+    return;
+  }
+
   return authClient.signOut({
     fetchOptions: {
       onSuccess: () => {
