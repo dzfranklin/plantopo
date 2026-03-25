@@ -2,7 +2,7 @@ import { Suspense, lazy } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
-import { Navbar, NavbarFooter } from "./Navbar.tsx";
+import { Navbar, NavbarMobileFooter } from "./Navbar.tsx";
 import { useSession } from "./auth/auth-client.ts";
 import ErrorTest from "./test/ErrorTest.tsx";
 
@@ -43,7 +43,7 @@ export function AppRoutes() {
                 <div style={{ gridArea: "content" }}>
                   <Outlet />
                 </div>
-                <NavbarFooter />
+                <NavbarMobileFooter />
               </div>
             }
           >
