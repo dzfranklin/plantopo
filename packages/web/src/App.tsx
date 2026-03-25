@@ -1,53 +1,11 @@
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
-
 import { HELLO_WORLD } from "@pt/shared";
 
 import "./App.css";
 import heroImg from "./assets/hero.png";
 import reactLogo from "./assets/react.svg";
 import viteLogo from "./assets/vite.svg";
-import { useTRPC } from "./trpc.ts";
 
 function App() {
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
-
-  const { data: count } = useSuspenseQuery(trpc.counter.count.queryOptions());
-
-  const setCount = useMutation(
-    trpc.counter.setCount.mutationOptions({
-      onSuccess: (newCount) => {
-        queryClient.setQueryData(trpc.counter.count.queryKey(), newCount);
-      },
-    }),
-  );
-
-  const optimisticSetCount = useMutation(
-    trpc.counter.setCount.mutationOptions({
-      onMutate: async (newCount) => {
-        await queryClient.cancelQueries(trpc.counter.count.queryFilter());
-        const previous = queryClient.getQueryData(
-          trpc.counter.count.queryKey(),
-        );
-        queryClient.setQueryData(trpc.counter.count.queryKey(), newCount);
-        return { previous };
-      },
-      onSuccess: (newCount) => {
-        queryClient.setQueryData(trpc.counter.count.queryKey(), newCount);
-      },
-      onError: (_err, _newCount, context) => {
-        queryClient.setQueryData(
-          trpc.counter.count.queryKey(),
-          context?.previous,
-        );
-      },
-    }),
-  );
-
   return (
     <>
       <section id="center">
@@ -60,15 +18,6 @@ function App() {
           <h1>Get started</h1>
           <p>Message from shared: {HELLO_WORLD}</p>
         </div>
-        <button className="counter" onClick={() => setCount.mutate(count + 1)}>
-          Count = {count}
-        </button>
-        <button
-          className="counter"
-          onClick={() => optimisticSetCount.mutate(count + 1)}
-        >
-          Optimistic count = {count}
-        </button>
       </section>
 
       <div className="ticks"></div>
