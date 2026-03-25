@@ -3,6 +3,7 @@ import { Component, type ReactNode } from "react";
 
 import type { AppRouter } from "@pt/api";
 
+import { AppError } from "./AppError.js";
 import { logger } from "./logger.js";
 
 interface Props {
@@ -59,12 +60,16 @@ export class ErrorBoundary extends Component<Props, State> {
           : undefined;
 
       const customMessage =
-        this.state.error instanceof TRPCClientError
-          ? trpcMessage(this.state.error)
-          : null;
+        this.state.error instanceof AppError
+          ? this.state.error.message
+          : this.state.error instanceof TRPCClientError
+            ? trpcMessage(this.state.error)
+            : null;
 
       const errorMessage =
-        this.state.error instanceof Error ? this.state.error.message : null;
+        !customMessage && this.state.error instanceof Error
+          ? this.state.error.message
+          : null;
 
       return (
         <div className="flex min-h-screen items-center justify-center bg-gray-50">

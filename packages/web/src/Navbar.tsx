@@ -1,5 +1,11 @@
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -7,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { RiGridLine, RiMenuLine, RiRecordCircleLine } from "@remixicon/react";
 import { VisuallyHidden } from "radix-ui";
-import { type ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { Link, useMatch } from "react-router-dom";
 import { Drawer } from "vaul";
 
@@ -117,6 +123,7 @@ function MobileMenuSheetTab({
 function MobileMenuSheet() {
   const { data: session } = useSession();
   const navTabs = session ? NAV_TABS : UNAUTH_NAV_TABS;
+  const [debugOpen, setDebugOpen] = useState(false);
 
   return (
     <Drawer.Root direction="left" autoFocus>
@@ -180,8 +187,25 @@ function MobileMenuSheet() {
               )
             )}
           </div>
+
+          {window.Native && import.meta.env.DEV && (
+            <div className="flex flex-col px-2 pb-2">
+              <hr className="my-2" />
+              <Button variant="secondary" onClick={() => setDebugOpen(true)}>
+                Debug
+              </Button>
+            </div>
+          )}
         </Drawer.Content>
       </Drawer.Portal>
+      <Dialog open={debugOpen} onOpenChange={setDebugOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Debug</DialogTitle>
+          </DialogHeader>
+          <Button onClick={() => window.location.reload()}>Reload</Button>
+        </DialogContent>
+      </Dialog>
     </Drawer.Root>
   );
 }
@@ -231,7 +255,7 @@ export function NavbarMobileFooter() {
   return (
     <nav
       style={{ gridArea: "footer" }}
-      className="flex sm:hidden border-t border-gray-200 bg-white"
+      className="flex sm:hidden border-t border-gray-200 bg-white sticky bottom-0"
     >
       {navTabs.map((tab) => (
         <MobileNavTab
