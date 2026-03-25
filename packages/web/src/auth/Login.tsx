@@ -8,17 +8,15 @@ import { authClient } from "./auth-client.ts";
 function SocialButton({
   icon,
   label,
-  provider,
-  callbackURL,
+  onClick,
 }: {
   icon: React.ReactNode;
   label: string;
-  provider: string;
-  callbackURL: string;
+  onClick: () => void;
 }) {
   return (
     <button
-      onClick={() => authClient.signIn.social({ provider, callbackURL })}
+      onClick={onClick}
       className="flex gap-4 justify-center items-center w-62.5 h-10 px-4 rounded-sm shadow-sm border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
     >
       {icon}
@@ -38,14 +36,19 @@ export default function Login() {
         <SocialButton
           icon={<GoogleIcon />}
           label="Sign in with Google"
-          provider="google"
-          callbackURL={callbackURL}
+          onClick={() =>
+            authClient.signIn.social({ provider: "google", callbackURL })
+          }
         />
         <SocialButton
           icon={<GitHubIcon />}
           label="Sign in with GitHub"
-          provider="github"
-          callbackURL={callbackURL}
+          onClick={() =>
+            authClient.signIn.social({
+              provider: "github",
+              callbackURL,
+            })
+          }
         />
       </div>
     </div>

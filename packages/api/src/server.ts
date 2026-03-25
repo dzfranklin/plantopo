@@ -22,6 +22,29 @@ app.use((_req, _res, next) => {
   logStore.run({ reqId: randomUUID() }, next);
 });
 
+app.post("/api/v1/complete-native-login", express.json(), async (req, res) => {
+  const token = req.body?.token;
+  if (!token || typeof token !== "string") {
+    res.status(400).json({ error: "Missing token" });
+    return;
+  }
+  // Call getSession with asResponse:true so the bearer plugin hook runs
+  // and sets the session cookie in the response headers
+  const sessionRes = await auth.api
+    .getSession({
+      headers: new Headers({ authorization: `Bearer ${token}` }),
+      asResponse: true,
+    })
+    .catch(() => null);
+  if (!sessionRes || !sessionRes.ok) {
+    res.status(401).json({ error: "Invalid token" });
+    return;
+  }
+  const cookieHeader = sessionRes.headers.get("set-cookie");
+  if (!cookieHeader) throw new Error("No set-cookie header from auth API");
+  res.setHeader("set-cookie", cookieHeader).status(201).end();
+});
+
 app.all("/api/v1/auth/*path", toNodeHandler(auth));
 
 app.use(

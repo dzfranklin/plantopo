@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { type APIError, createAuthMiddleware } from "better-auth/api";
 import { bearer } from "better-auth/plugins";
 
 import { db } from "../db.js";
@@ -40,5 +41,28 @@ export const auth = betterAuth({
       enabled: true,
       maxAge: 15 * 60, // 15 minutes
     },
+  },
+  trustedOrigins: [
+    "http://localhost:4000",
+    "http://10.0.2.2:4000",
+    "plantopo://oauth",
+  ],
+  hooks: {
+    after: createAuthMiddleware(async (ctx) => {
+      if (!ctx.path.startsWith("/callback/")) return;
+      const newSession = ctx.context.newSession;
+      if (!newSession) return;
+      const returned = ctx.context.returned;
+      // The redirect is an APIError with a location header (from better-call's ctx.redirect())
+      const location: string | null | undefined =
+        returned instanceof Response
+          ? returned.headers.get("location")
+          : (returned as APIError)?.headers?.get?.("location");
+      if (location?.startsWith("plantopo://oauth-callback")) {
+        const url = new URL(location);
+        url.searchParams.set("token", newSession.session.token);
+        throw ctx.redirect(url.toString());
+      }
+    }),
   },
 });
