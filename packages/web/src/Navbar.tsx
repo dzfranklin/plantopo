@@ -7,7 +7,10 @@ export function Navbar() {
 
   return (
     <nav className="flex items-center gap-3 px-4 py-2 text-sm">
-      <span className="font-semibold">PlanTopo</span>
+      <Link className="font-semibold" to="/">
+        PlanTopo
+      </Link>
+
       {!session && !window.Native && (
         <Link
           to="/login"
@@ -16,6 +19,7 @@ export function Navbar() {
           Sign in
         </Link>
       )}
+
       {session && (
         <>
           {session.user.image && (
