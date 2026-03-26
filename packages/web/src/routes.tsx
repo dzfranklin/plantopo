@@ -8,12 +8,10 @@ import ErrorTest from "./test/ErrorTest.tsx";
 
 const HomePage = lazy(() => import("./HomePage.tsx"));
 const CounterPage = lazy(() => import("./counter/CounterPage.tsx"));
-const TripListPage = lazy(() => import("./trips/TripListPage.tsx"));
-const TripEditorPage = lazy(() => import("./trips/TripEditorPage.tsx"));
+const TripListPage = lazy(() => import("./trip/TripListPage.tsx"));
+const TripEditorPage = lazy(() => import("./trip/TripEditorPage.tsx"));
 const LoginPage = lazy(() => import("./auth/LoginPage.tsx"));
-const RecordTrackPage = lazy(
-  () => import("./record-track/RecordTrackPage.tsx"),
-);
+const RecordTrackPage = lazy(() => import("./track/RecordTrackPage.tsx"));
 const NotFoundPage = lazy(() => import("./NotFoundPage.tsx"));
 const DevMapPage = lazy(() => import("./dev/DevMapPage.tsx"));
 
