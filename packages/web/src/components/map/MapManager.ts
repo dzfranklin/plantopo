@@ -1,31 +1,39 @@
-import ml from "maplibre-gl";
+import ml, { GeolocateControl } from "maplibre-gl";
 
 import { buildStyle } from "./styleBuilder";
 import type { MapProps } from "./types";
 import { attachZoomSnap } from "./zoomSnap";
 
 export class MapManager {
-  private _map: ml.Map | null;
+  private _m: ml.Map | null;
   private _detachZoomSnap: (() => void) | null = null;
-
-  get map(): ml.Map | null {
-    return this._map;
-  }
-
   private _lastStyleDeps: unknown[] | undefined;
-  private _pendingStyle: ml.StyleSpecification | null = null;
+  private _lastInteractiveDeps: unknown[] | undefined;
+  private _lastGeojsonDeps: unknown[] | undefined;
   private _controls: ml.IControl[] = [];
-  private _interactive: boolean | undefined = undefined;
+  private _cameraBeforeStyleLoad: ml.CameraOptions | null = null;
 
   private _onError = (e: ml.ErrorEvent) =>
     console.error("[MapManager]", e.error);
 
+  private _onstyledata = () => {
+    if (!this._m) return;
+    if (this._cameraBeforeStyleLoad) {
+      this._m.jumpTo(this._cameraBeforeStyleLoad);
+      this._cameraBeforeStyleLoad = null;
+    }
+  };
+
+  private _onstyledataloading = () => {
+    this._cameraBeforeStyleLoad = this._getCameraOptions();
+  };
+
   private _getCameraOptions(): ml.CameraOptions {
     return {
-      center: this._map!.getCenter(),
-      zoom: this._map!.getZoom(),
-      pitch: this._map!.getPitch(),
-      bearing: this._map!.getBearing(),
+      center: this._m!.getCenter(),
+      zoom: this._m!.getZoom(),
+      pitch: this._m!.getPitch(),
+      bearing: this._m!.getBearing(),
     };
   }
 
@@ -35,79 +43,116 @@ export class MapManager {
     inner.style.height = "100%";
     container.appendChild(inner);
 
-    this._map = new ml.Map({
+    this._m = new ml.Map({
       container: inner,
       style: buildStyle(initialProps),
       interactive: initialProps.interactive ?? false,
       hash: initialProps.hash,
       minZoom: 1, // Otherwise minZoom is fractional, which interacts poorly with our snapping
     });
-    this._map.on("error", this._onError);
-    this._detachZoomSnap = attachZoomSnap(this._map);
+    this._m.on("error", this._onError);
+    this._m.on("styledata", this._onstyledata);
+    this._m.on("styledataloading", this._onstyledataloading);
+    this._detachZoomSnap = attachZoomSnap(this._m);
     this._applyInteractive(initialProps);
   }
 
+  get map(): ml.Map | null {
+    return this._m;
+  }
+
   destroy() {
-    if (!this._map) return;
+    if (!this._m) return;
     this._detachZoomSnap?.();
     this._detachZoomSnap = null;
-    this._map.getContainer().remove();
-    if (this._map.loaded()) {
-      this._map.remove();
-      this._map = null;
+    this._m.getContainer().remove();
+    if (this._m.loaded()) {
+      this._m.remove();
+      this._m = null;
     } else {
-      this._map.once("load", () => {
-        this._map?.remove();
-        this._map = null;
+      this._m.once("load", () => {
+        this._m?.remove();
+        this._m = null;
       });
     }
   }
 
   jumpTo(options: ml.CameraOptions) {
-    if (!this._map) return;
-    if (this._map.isStyleLoaded()) {
-      this._map.jumpTo(options);
+    if (!this._m) return;
+    if (this._m.isStyleLoaded()) {
+      this._m.jumpTo(options);
     } else {
-      this._map.once("style.load", () => this._map?.jumpTo(options));
+      this._m.once("style.load", () => this._m?.jumpTo(options));
     }
   }
 
   // Called every React render
   setProps(props: MapProps) {
-    if (!this._map) return;
+    if (!this._m) return;
 
+    const didChangeStyle = this._applyStyle(props);
     this._applyInteractive(props);
+    this._applyGeojson(props, didChangeStyle);
+  }
 
-    const styleDeps = [props.baseStyle];
-    if (
-      !this._lastStyleDeps ||
-      styleDeps.some((v, i) => v !== this._lastStyleDeps![i])
-    ) {
-      this._lastStyleDeps = styleDeps;
-      const style = buildStyle(props);
-      if (this._map.isStyleLoaded()) {
-        this._pendingStyle = null;
-        const camera = this._getCameraOptions();
-        this._map.setStyle(style, { diff: true });
-        this._map.once("style.load", () => this._map?.jumpTo(camera));
-      } else {
-        if (!this._pendingStyle) {
-          this._map.once("load", () => {
-            if (this._pendingStyle) {
-              const camera = this._getCameraOptions();
-              this._map?.setStyle(this._pendingStyle, { diff: true });
-              this._pendingStyle = null;
-              this._map?.once("style.load", () => this._map?.jumpTo(camera));
-            }
-          });
-        }
-        this._pendingStyle = style;
-      }
-    } else if (this._map.loaded()) {
-      // Style hasn't changed, just update the GeoJSON data
-      const source = this._map.getSource("geojson") as
-        | ml.GeoJSONSource
-        | undefined;
+  private _applyStyle(props: MapProps): boolean {
+    if (!this._m) return false;
+    const lastDeps = this._lastStyleDeps;
+    const deps = [props.baseStyle];
+    this._lastStyleDeps = deps;
+    if (this._depsEq(lastDeps, deps)) return false;
+
+    this._lastStyleDeps = deps;
+    const style = buildStyle(props);
+    this._m.setStyle(style, { diff: !!this._m.isStyleLoaded() });
+    return true;
+  }
+
+  private _applyInteractive(props: MapProps) {
+    if (!this._m) return;
+    const lastDeps = this._lastInteractiveDeps;
+    const deps = [props.interactive];
+    this._lastInteractiveDeps = deps;
+    if (this._depsEq(lastDeps, deps)) return;
+
+    const { interactive } = props;
+
+    const method = interactive ? "enable" : "disable";
+    this._m.scrollZoom[method]();
+    this._m.boxZoom[method]();
+    this._m.dragRotate[method]();
+    this._m.dragPan[method]();
+    this._m.keyboard[method]();
+    this._m.doubleClickZoom[method]();
+    this._m.touchZoomRotate[method]();
+    this._m.touchPitch[method]();
+
+    for (const control of this._controls) {
+      this._m.removeControl(control);
+    }
+    this._controls = [];
+    if (interactive) {
+      const nav = new ml.NavigationControl();
+      const scale = new ml.ScaleControl();
+      const geoloc = new GeolocateControl({
+        trackUserLocation: !!window.Native,
+      });
+      this._m.addControl(nav);
+      this._m.addControl(scale);
+      this._m.addControl(geoloc);
+      this._controls = [nav, scale, geoloc];
+    }
+  }
+
+  private _applyGeojson(props: MapProps, didChangeStyle: boolean) {
+    if (!this._m) return;
+    const lastDeps = this._lastGeojsonDeps;
+    const deps = [props.geojson];
+    this._lastGeojsonDeps = deps;
+    if (this._depsEq(lastDeps, deps)) return;
+
+    if (!didChangeStyle) {
+      const source = this._m.getSource("geojson") as ml.GeoJSONSource;
       if (source) {
         source.setData(
           props.geojson ?? { type: "FeatureCollection", features: [] },
@@ -116,33 +161,12 @@ export class MapManager {
     }
   }
 
-  private _applyInteractive(props: MapProps) {
-    const { interactive } = props;
-    if (!this._map || interactive === this._interactive) return;
-    this._interactive = interactive;
-
-    const method = interactive ? "enable" : "disable";
-    this._map.scrollZoom[method]();
-    this._map.boxZoom[method]();
-    this._map.dragRotate[method]();
-    this._map.dragPan[method]();
-    this._map.keyboard[method]();
-    this._map.doubleClickZoom[method]();
-    this._map.touchZoomRotate[method]();
-    this._map.touchPitch[method]();
-
-    for (const control of this._controls) {
-      this._map.removeControl(control);
+  private _depsEq(lastDeps: unknown[] | undefined, deps: unknown[]): boolean {
+    if (!lastDeps) return false;
+    if (lastDeps.length != deps.length) return false;
+    for (let i = 0; i < deps.length; i++) {
+      if (lastDeps[i] != deps[i]) return false;
     }
-    this._controls = [];
-    if (interactive) {
-      const nav = new ml.NavigationControl();
-      const scale = new ml.ScaleControl();
-      const geoloc = new ml.GeolocateControl({});
-      this._map.addControl(nav);
-      this._map.addControl(scale);
-      this._map.addControl(geoloc);
-      this._controls = [nav, scale, geoloc];
-    }
+    return true;
   }
 }
