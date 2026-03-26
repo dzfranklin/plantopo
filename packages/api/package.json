@@ -12,7 +12,6 @@
     "server": "tsx src/server.ts"
   },
   "dependencies": {
-    "@pt/shared": "*",
     "@trpc/server": "^11.15.0",
     "better-auth": "^1.5.6",
     "drizzle-orm": "^0.45.1",

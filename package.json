@@ -11,19 +11,20 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "tsx --env-file=.development.env packages/api/src/server.ts",
+    "dev": "NODE_ENV=development tsx packages/api/src/server.ts",
     "dev:android-devtools": "adb reverse tcp:8097 tcp:8097 && react-devtools",
-    "db:generate": "node --env-file=.development.env node_modules/.bin/drizzle-kit generate",
-    "db:migrate": "tsx --env-file=.development.env packages/api/src/migrate.ts",
-    "db:studio": "node --env-file=.development.env node_modules/.bin/drizzle-kit studio",
-    "start": "npm -w packages/web run build && tsx --env-file=.development.env packages/api/src/server.ts",
-    "check": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/api/tsconfig.json && tsc --noEmit -p packages/web/tsconfig.app.json && eslint --fix . && prettier --write --log-level warn .",
+    "db:generate": "NODE_ENV=development tsx scripts/with-api-env.tsx drizzle-kit generate",
+    "db:migrate": "NODE_ENV=development tsx packages/api/src/migrate.ts",
+    "db:studio": "NODE_ENV=development tsx scripts/with-api-env.tsx drizzle-kit studio",
+    "local-prod": "bash scripts/local-prod.sh",
+    "check": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/api/tsconfig.json && tsc --noEmit -p packages/web/tsconfig.json && eslint --fix . && prettier --write --log-level warn .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepare": "husky"
+    "prepare": "[ \"$npm_command\" = \"ci\" ] || husky"
   },
   "dependencies": {
     "@types/geojson": "^7946.0.16",
+    "dotenv": "^17.3.1",
     "react-devtools": "^7.0.1",
     "zod": "^4.3.6"
   },
@@ -35,6 +36,7 @@
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@types/node": "^24.12.0",
     "drizzle-kit": "^0.31.10",
+    "esbuild": "^0.27.4",
     "eslint": "^9.39.4",
     "husky": "^9.1.7",
     "jsdom": "^29.0.1",

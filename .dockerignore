@@ -1,16 +1,20 @@
+# From .gitignore
 *.local.json
-*.local
-.*.env
-
+*.env
 node_modules/
 dist/
 .DS_Store
 .npm/
 .node_repl_history
-
 *.log
 npm-debug.log*
 pids
 *.pid
 *.seed
 *.tsbuildinfo
+
+# Additional
+.git
+.vscode
+.claude
+packages/web/dist/

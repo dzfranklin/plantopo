@@ -1,0 +1,41 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+
+      - name: Check
+        run: |
+          npx tsc --noEmit -p packages/shared/tsconfig.json
+          npx tsc --noEmit -p packages/api/tsconfig.json
+          npx tsc --noEmit -p packages/web/tsconfig.json
+          npx eslint .
+          npx prettier --check .
+
+      - name: Test
+        run: npm test
+        env:
+          DATABASE_URL: postgres://postgres@localhost/plantopo_test

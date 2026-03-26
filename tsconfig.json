@@ -1,5 +1,4 @@
 {
-  "files": [],
-  "exclude": [".claude"],
-  "references": [{ "path": "./packages/shared" }, { "path": "./packages/api" }]
+  "include": [],
+  "exclude": [".claude"]
 }

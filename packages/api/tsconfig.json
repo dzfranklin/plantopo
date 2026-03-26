@@ -2,10 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
-    "composite": true,
-    "outDir": "dist",
-    "rootDir": "src"
+    "paths": { "@pt/shared": ["../shared/src/index.ts"] }
   },
-  "include": ["src"],
-  "references": [{ "path": "../shared" }]
+  "include": ["src"]
 }

@@ -1,3 +1,5 @@
+import "./loadEnv.js";
+
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import { serializeSignedCookie } from "better-call";
@@ -5,7 +7,7 @@ import express from "express";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
-import { resolve } from "node:path";
+import path from "node:path";
 
 import { auth } from "./auth/auth.js";
 import { exchangeNativeSessionInitToken } from "./auth/auth.service.js";
@@ -134,7 +136,7 @@ if (isDev) {
 } else {
   app.use(express.static(env.WEB_DIST, { index: false }));
 
-  const indexPath = resolve(env.WEB_DIST, "index.html");
+  const indexPath = path.resolve(env.WEB_DIST, "index.html");
   const indexHTML = await readFile(indexPath, "utf-8");
 
   app.get("*path", async (req, res, next) => {
@@ -152,3 +154,6 @@ httpServer.listen(4000, () => {
     "Server listening",
   );
 });
+
+process.on("SIGINT", () => process.exit(0));
+process.on("SIGTERM", () => process.exit(0));

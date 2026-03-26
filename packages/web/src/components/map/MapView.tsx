@@ -1,5 +1,7 @@
 import type ml from "maplibre-gl";
+
 import "maplibre-gl/dist/maplibre-gl.css";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { MapManager } from "./MapManager";

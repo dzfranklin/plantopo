@@ -1,0 +1,17 @@
+[Unit]
+Description=PlanTopo API
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/dzfranklin/plantopo-api:initial
+PublishPort=3030:3030
+Network=host
+EnvironmentFile=/etc/plantopo/api.env
+
+[Service]
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

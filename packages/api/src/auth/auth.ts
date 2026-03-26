@@ -33,7 +33,7 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   plugins: [bearer()],
   secret: env.BETTER_AUTH_SECRET,
-  baseURL: `${env.BETTER_AUTH_URL}/api/v1/auth`,
+  baseURL: `${env.APP_URL}/api/v1/auth`,
   socialProviders,
   session: {
     expiresIn: 365 * 24 * 60 * 60, // 365 days
@@ -44,9 +44,11 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: [
+    "http://localhost:3030",
     "http://localhost:4000",
     "http://10.0.2.2:4000",
     "plantopo://oauth",
+    "https://plantopo.com",
   ],
   hooks: {
     after: createAuthMiddleware(async (ctx) => {

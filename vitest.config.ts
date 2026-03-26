@@ -1,7 +1,4 @@
-import { loadEnvFile } from "node:process";
 import { defineConfig } from "vitest/config";
-
-loadEnvFile(".test.env");
 
 export default defineConfig({
   test: {
@@ -17,6 +14,7 @@ export default defineConfig({
         },
       },
       {
+        extends: "./packages/web/vite.config.js",
         test: {
           name: "web",
           include: ["packages/web/src/**/*.test.tsx"],

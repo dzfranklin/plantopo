@@ -1,3 +1,11 @@
 {
-  "cSpell.words": ["plantopo", "treeifyError", "unproject", "uuidv4"]
+  "cSpell.words": [
+    "createdb",
+    "plantopo",
+    "psql",
+    "treeifyError",
+    "unproject",
+    "uuidv4",
+    "vite"
+  ]
 }

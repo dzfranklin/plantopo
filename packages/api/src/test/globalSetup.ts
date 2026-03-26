@@ -1,3 +1,5 @@
+import "../loadEnv.js";
+
 import { setupDb } from "./setupDb.js";
 
 export async function setup() {
