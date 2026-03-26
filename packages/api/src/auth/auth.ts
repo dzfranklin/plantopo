@@ -5,7 +5,7 @@ import { bearer } from "better-auth/plugins";
 
 import { db } from "../db.js";
 import { env } from "../env.js";
-import { getLog } from "../logger.js";
+import { getLog, logger } from "../logger.js";
 import * as schema from "./auth.schema.js";
 import { createNativeSessionInitToken } from "./auth.service.js";
 
@@ -29,6 +29,8 @@ if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
   getLog().info("Skipping GitHub provider");
 }
 
+const authLogger = logger.child({ module: "auth" });
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
   plugins: [bearer()],
@@ -50,6 +52,87 @@ export const auth = betterAuth({
     "plantopo://oauth",
     "https://plantopo.com",
   ],
+  logger: {
+    disableColors: true,
+    level: "info",
+    log: (level, message, ...args) => {
+      authLogger[level]({ meta: args }, message);
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          authLogger.info(
+            { userId: user.id, email: user.email },
+            "user signed up",
+          );
+        },
+      },
+      delete: {
+        after: async (user) => {
+          authLogger.info(
+            { userId: user.id, email: user.email },
+            "user deleted",
+          );
+        },
+      },
+    },
+    account: {
+      create: {
+        after: async (account) => {
+          authLogger.info(
+            {
+              id: account.id,
+              userId: account.userId,
+              provider: account.providerId,
+            },
+            "account linked",
+          );
+        },
+      },
+      delete: {
+        after: async (account) => {
+          authLogger.info(
+            {
+              id: account.id,
+              userId: account.userId,
+              provider: account.providerId,
+            },
+            "account unlinked",
+          );
+        },
+      },
+    },
+    session: {
+      create: {
+        after: async (session) => {
+          authLogger.info(
+            {
+              userId: session.userId,
+              ipAddress: session.ipAddress,
+              userAgent: session.userAgent,
+              sessionId: session.id,
+            },
+            "session created",
+          );
+        },
+      },
+      delete: {
+        after: async (session) => {
+          authLogger.info(
+            {
+              userId: session.userId,
+              sessionId: session.id,
+              ipAddress: session.ipAddress,
+              userAgent: session.userAgent,
+            },
+            "session deleted",
+          );
+        },
+      },
+    },
+  },
   hooks: {
     after: createAuthMiddleware(async (ctx) => {
       if (!ctx.path.startsWith("/callback/")) return;
