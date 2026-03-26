@@ -24,6 +24,7 @@ interface NavTab {
   label: string;
   icon: ReactNode;
   requireAuth?: boolean;
+  nativeOnly?: boolean;
 }
 
 const NAV_TABS: NavTab[] = [
@@ -38,8 +39,9 @@ const NAV_TABS: NavTab[] = [
     label: "Track",
     icon: <RiRecordCircleLine size={24} aria-hidden="true" />,
     requireAuth: true,
+    nativeOnly: true,
   },
-];
+].filter((tab) => !tab.nativeOnly || window.Native);
 
 const UNAUTH_NAV_TABS: NavTab[] = NAV_TABS.filter((tab) => !tab.requireAuth);
 
