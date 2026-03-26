@@ -39,12 +39,8 @@ export default function RecordTrack() {
   useEffect(() => {
     let centeredForRecordingId: string | undefined;
     window.onRecordTrackState = (raw) => {
-      let state: RecordTrackState;
-      if (import.meta.env.DEV) {
-        state = RecordTrackStateSchema.parse(raw);
-      } else {
-        state = raw as RecordTrackState;
-      }
+      if (import.meta.env.DEV) RecordTrackStateSchema.parse(raw);
+      const state = raw as RecordTrackState;
 
       setState(state);
       const point = state.recording?.points.at(-1);
