@@ -57,6 +57,7 @@ jobs:
         run: |
           install -m 600 /dev/null /tmp/deploy_key
           echo "$DEPLOY_SSH_KEY" > /tmp/deploy_key
+          tailscale status --peers
           ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            plantopo@box.reindeer-neon.ts.net \
             /opt/plantopo/deploy.sh ghcr.io/${{ github.repository }}-api:${{ needs.build-and-push.outputs.image_tag }}
