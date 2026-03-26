@@ -1,10 +1,13 @@
 import z from "zod";
 
+import type { MapManager } from "./MapManager";
+
 export interface MapProps {
   interactive?: boolean;
   hash?: boolean | string;
   baseStyle?: z.infer<typeof BaseStyleSchema>;
   geojson?: GeoJSON.FeatureCollection | GeoJSON.Feature | null;
+  onManager?: (manager: MapManager) => void;
 }
 const sourceURLSchema = z.string().startsWith("https://");
 const boundsSchema = z.tuple([z.number(), z.number(), z.number(), z.number()]);

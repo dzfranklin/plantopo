@@ -20,6 +20,15 @@ export class MapManager {
   private _onError = (e: ml.ErrorEvent) =>
     console.error("[MapManager]", e.error);
 
+  private _getCameraOptions(): ml.CameraOptions {
+    return {
+      center: this._map!.getCenter(),
+      zoom: this._map!.getZoom(),
+      pitch: this._map!.getPitch(),
+      bearing: this._map!.getBearing(),
+    };
+  }
+
   constructor(container: HTMLDivElement, initialProps: MapProps) {
     const inner = document.createElement("div");
     inner.style.width = "100%";
@@ -53,6 +62,16 @@ export class MapManager {
     }
   }
 
+  jumpTo(options: ml.CameraOptions) {
+    if (!this._map) return;
+    if (this._map.isStyleLoaded()) {
+      console.log("Jumping to", options);
+      this._map.jumpTo(options);
+    } else {
+      this._map.once("style.load", () => this._map?.jumpTo(options));
+    }
+  }
+
   // Called every React render
   setProps(props: MapProps) {
     if (!this._map) return;
@@ -66,15 +85,19 @@ export class MapManager {
     ) {
       this._lastStyleDeps = styleDeps;
       const style = buildStyle(props);
-      if (this._map.loaded()) {
+      if (this._map.isStyleLoaded()) {
         this._pendingStyle = null;
+        const camera = this._getCameraOptions();
         this._map.setStyle(style, { diff: true });
+        this._map.once("style.load", () => this._map?.jumpTo(camera));
       } else {
         if (!this._pendingStyle) {
           this._map.once("load", () => {
             if (this._pendingStyle) {
+              const camera = this._getCameraOptions();
               this._map?.setStyle(this._pendingStyle, { diff: true });
               this._pendingStyle = null;
+              this._map?.once("style.load", () => this._map?.jumpTo(camera));
             }
           });
         }

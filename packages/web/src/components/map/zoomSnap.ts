@@ -17,9 +17,9 @@ export function attachZoomSnap(map: ml.Map): () => void {
     const orig = e.originalEvent as Event | undefined;
     if (!orig) return;
     let clientX: number, clientY: number;
-    const touch =
-      "touches" in orig ? (orig as TouchEvent).touches.item(0) : null;
-    if (touch) {
+    if ("touches" in orig) {
+      const touch = (orig as TouchEvent).touches.item(0);
+      if (!touch) return; // double-tap: finger already lifted
       clientX = touch.clientX;
       clientY = touch.clientY;
     } else {
