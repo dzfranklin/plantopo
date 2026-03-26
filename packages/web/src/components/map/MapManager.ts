@@ -40,6 +40,7 @@ export class MapManager {
       style: buildStyle(initialProps),
       interactive: initialProps.interactive ?? false,
       hash: initialProps.hash,
+      minZoom: 1, // Otherwise minZoom is fractional, which interacts poorly with our snapping
     });
     this._map.on("error", this._onError);
     this._detachZoomSnap = attachZoomSnap(this._map);
