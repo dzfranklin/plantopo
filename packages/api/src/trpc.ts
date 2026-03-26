@@ -39,7 +39,7 @@ const loggingMiddleware = t.middleware(async ({ path, type, input, next }) => {
     if (err.code === "INTERNAL_SERVER_ERROR") {
       log.error({ ...inputLog, err: err.cause }, "error handling trpc request");
     } else {
-      log.info({ ...inputLog, code: err.code }, "trpc error response");
+      log.info({ ...inputLog, err }, "trpc error response");
     }
   }
   return result;

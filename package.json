@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "dev": "tsx --env-file=.development.env packages/api/src/server.ts",
+    "dev:android-devtools": "adb reverse tcp:8097 tcp:8097 && react-devtools",
     "db:generate": "node --env-file=.development.env node_modules/.bin/drizzle-kit generate",
     "db:migrate": "tsx --env-file=.development.env packages/api/src/migrate.ts",
     "db:studio": "node --env-file=.development.env node_modules/.bin/drizzle-kit studio",
@@ -22,6 +23,8 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@types/geojson": "^7946.0.16",
+    "react-devtools": "^7.0.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {

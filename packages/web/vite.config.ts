@@ -4,11 +4,24 @@ import path from "path";
 import { defineConfig } from "vite";
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [tailwindcss(), react()],
+export default defineConfig(({ command }) => ({
+  plugins: [
+    tailwindcss(),
+    react(),
+    command === "serve" && {
+      name: "react-devtools",
+      transformIndexHtml: () => [
+        {
+          tag: "script",
+          attrs: { src: "http://localhost:8097" },
+          injectTo: "head-prepend",
+        },
+      ],
+    },
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-});
+}));

@@ -1,5 +1,3 @@
-const { RecordTrackState } = import("./record-track/types.js");
-
 interface Window {
   enableDevtools?: () => void;
 
@@ -10,5 +8,5 @@ interface Window {
     stopRecordingTrack: () => void;
   };
 
-  onRecordTrackState?: ((state: RecordTrackState) => void) | undefined;
+  onRecordTrackState?: ((state: unknown) => void) | undefined;
 }

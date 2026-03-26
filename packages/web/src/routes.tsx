@@ -13,6 +13,7 @@ const TripEditor = lazy(() => import("./trips/TripEditor.tsx"));
 const Login = lazy(() => import("./auth/Login.tsx"));
 const RecordTrack = lazy(() => import("./record-track/RecordTrack.tsx"));
 const NotFound = lazy(() => import("./NotFound.tsx"));
+const DevMap = lazy(() => import("./dev/DevMap.tsx"));
 
 function RequireAuth() {
   const { data: session } = useSession();
@@ -58,6 +59,7 @@ export function AppRoutes() {
             <Route path="/record-track" element={<RecordTrack />} />
             <Route path="/unauth-counter" element={<Counter />} />
             <Route path="/error-test" element={<ErrorTest />} />
+            <Route path="/dev/map" element={<DevMap />} />
 
             <Route path="*" element={<NotFound />} />
           </Route>
