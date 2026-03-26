@@ -66,7 +66,6 @@ export class MapManager {
   jumpTo(options: ml.CameraOptions) {
     if (!this._map) return;
     if (this._map.isStyleLoaded()) {
-      console.log("Jumping to", options);
       this._map.jumpTo(options);
     } else {
       this._map.once("style.load", () => this._map?.jumpTo(options));
