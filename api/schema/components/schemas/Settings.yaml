@@ -1,7 +1,0 @@
-type: object
-properties:
-  units:
-    type: string
-    enum:
-      - metric
-      - customary

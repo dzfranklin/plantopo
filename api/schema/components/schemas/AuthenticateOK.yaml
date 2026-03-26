@@ -1,9 +1,0 @@
-type: object
-properties:
-  token:
-    $ref: ./Token.yaml
-  user:
-    $ref: ./User.yaml
-required:
-  - token
-  - user
