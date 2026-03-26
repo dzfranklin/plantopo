@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button.tsx";
 import {
   useMutation,
   useQueryClient,
@@ -33,13 +34,13 @@ export default function Counter() {
       <span className="text-6xl font-bold tabular-nums text-gray-900">
         {count}
       </span>
-      <button
-        className="px-6 py-3 bg-blue-600 text-white text-lg font-medium rounded-xl hover:bg-blue-700 active:scale-95 transition-all disabled:opacity-50"
+      <Button
         onClick={() => setCount.mutate(count + 1)}
         disabled={setCount.isPending}
+        size="lg"
       >
         Increment
-      </button>
+      </Button>
       <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
         <input
           type="checkbox"
