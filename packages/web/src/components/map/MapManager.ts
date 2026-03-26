@@ -44,7 +44,7 @@ export class MapManager {
     });
     this._map.on("error", this._onError);
     this._detachZoomSnap = attachZoomSnap(this._map);
-    this._applyInteractive(initialProps.interactive);
+    this._applyInteractive(initialProps);
   }
 
   destroy() {
@@ -76,7 +76,7 @@ export class MapManager {
   setProps(props: MapProps) {
     if (!this._map) return;
 
-    this._applyInteractive(props.interactive);
+    this._applyInteractive(props);
 
     const styleDeps = [props.baseStyle];
     if (
@@ -116,7 +116,8 @@ export class MapManager {
     }
   }
 
-  private _applyInteractive(interactive: boolean | undefined) {
+  private _applyInteractive(props: MapProps) {
+    const { interactive } = props;
     if (!this._map || interactive === this._interactive) return;
     this._interactive = interactive;
 
@@ -137,9 +138,11 @@ export class MapManager {
     if (interactive) {
       const nav = new ml.NavigationControl();
       const scale = new ml.ScaleControl();
+      const geoloc = new ml.GeolocateControl({});
       this._map.addControl(nav);
       this._map.addControl(scale);
-      this._controls = [nav, scale];
+      this._map.addControl(geoloc);
+      this._controls = [nav, scale, geoloc];
     }
   }
 }
