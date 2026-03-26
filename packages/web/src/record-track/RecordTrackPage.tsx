@@ -22,7 +22,7 @@ function jumpToPoint(manager: MapManager, point: RecordedTrackPoint) {
   manager.jumpTo({ center: [point.longitude, point.latitude], zoom: 13 });
 }
 
-export default function RecordTrack() {
+export default function RecordTrackPage() {
   if (!window.Native) throw new NativeRequiredError();
 
   const managerRef = useRef<MapManager | null>(null);

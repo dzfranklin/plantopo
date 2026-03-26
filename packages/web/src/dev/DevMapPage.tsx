@@ -67,7 +67,7 @@ const SAMPLE_GEOJSON: GeoJSON.FeatureCollection = {
   ],
 };
 
-export default function DevMap() {
+export default function DevMapPage() {
   const [interactive, setInteractive] = useState(true);
   const [hash, setHash] = useState(true);
   const [geojsonEnabled, setGeojsonEnabled] = useState(false);

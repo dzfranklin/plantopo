@@ -25,7 +25,7 @@ function SocialButton({
   );
 }
 
-export default function Login() {
+export default function LoginPage() {
   if (window.Native) throw new Error("Login page loaded in native");
 
   const [searchParams] = useSearchParams();

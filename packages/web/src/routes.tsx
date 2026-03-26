@@ -6,14 +6,16 @@ import { Navbar, NavbarMobileFooter } from "./Navbar.tsx";
 import { useSession } from "./auth/auth-client.ts";
 import ErrorTest from "./test/ErrorTest.tsx";
 
-const App = lazy(() => import("./App.tsx"));
-const Counter = lazy(() => import("./counter/Counter.tsx"));
-const TripList = lazy(() => import("./trips/TripList.tsx"));
-const TripEditor = lazy(() => import("./trips/TripEditor.tsx"));
-const Login = lazy(() => import("./auth/Login.tsx"));
-const RecordTrack = lazy(() => import("./record-track/RecordTrack.tsx"));
-const NotFound = lazy(() => import("./NotFound.tsx"));
-const DevMap = lazy(() => import("./dev/DevMap.tsx"));
+const HomePage = lazy(() => import("./HomePage.tsx"));
+const CounterPage = lazy(() => import("./counter/CounterPage.tsx"));
+const TripListPage = lazy(() => import("./trips/TripListPage.tsx"));
+const TripEditorPage = lazy(() => import("./trips/TripEditorPage.tsx"));
+const LoginPage = lazy(() => import("./auth/LoginPage.tsx"));
+const RecordTrackPage = lazy(
+  () => import("./record-track/RecordTrackPage.tsx"),
+);
+const NotFoundPage = lazy(() => import("./NotFoundPage.tsx"));
+const DevMapPage = lazy(() => import("./dev/DevMapPage.tsx"));
 
 function RequireAuth() {
   const { data: session } = useSession();
@@ -35,7 +37,7 @@ export function AppRoutes() {
     <ErrorBoundary>
       <Suspense>
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<LoginPage />} />
 
           <Route
             element={
@@ -48,20 +50,20 @@ export function AppRoutes() {
               </div>
             }
           >
-            <Route index element={<App />} />
+            <Route index element={<HomePage />} />
 
             <Route element={<RequireAuth />}>
-              <Route path="/counter" element={<Counter />} />
-              <Route path="/trips" element={<TripList />} />
-              <Route path="/trips/:tripId" element={<TripEditor />} />
+              <Route path="/counter" element={<CounterPage />} />
+              <Route path="/trips" element={<TripListPage />} />
+              <Route path="/trips/:tripId" element={<TripEditorPage />} />
             </Route>
 
-            <Route path="/record-track" element={<RecordTrack />} />
-            <Route path="/unauth-counter" element={<Counter />} />
+            <Route path="/record-track" element={<RecordTrackPage />} />
+            <Route path="/unauth-counter" element={<CounterPage />} />
             <Route path="/error-test" element={<ErrorTest />} />
-            <Route path="/dev/map" element={<DevMap />} />
+            <Route path="/dev/map" element={<DevMapPage />} />
 
-            <Route path="*" element={<NotFound />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
       </Suspense>

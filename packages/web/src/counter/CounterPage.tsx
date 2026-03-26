@@ -8,7 +8,7 @@ import { useState } from "react";
 
 import { useTRPC } from "../trpc.ts";
 
-export default function Counter() {
+export default function CounterPage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [optimistic, setOptimistic] = useState(true);
