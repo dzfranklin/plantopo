@@ -8,6 +8,7 @@ import { logger } from "./logger.js";
 
 const db = drizzle(env.DATABASE_URL);
 
+logger.info("Running migrations...");
 await migrate(db, { migrationsFolder: "drizzle" });
 logger.info("Migrations complete");
 
