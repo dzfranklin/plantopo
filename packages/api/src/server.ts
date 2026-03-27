@@ -27,6 +27,10 @@ app.use((_req, _res, next) => {
   logStore.run({ reqId: randomUUID() }, next);
 });
 
+app.get("/_status", (_req, res) => {
+  res.status(200).send("OK");
+});
+
 // Flow: The native app opens /login in a custom tab, the user logs in via
 // OAuth, then we redirect to a custom URL scheme with a short-lived one-time
 // initiation token in the query (see auth.ts). The native app calls this

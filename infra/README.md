@@ -77,11 +77,29 @@ set -e
 [ "$(id -un)" = "plantopo" ] || { echo "Must be run as plantopo"; exit 1; }
 [ -n "$1" ] || { echo "Usage: $0 <image>"; exit 1; }
 IMAGE=$1
+
 export XDG_RUNTIME_DIR=/run/user/$(id -u)
+
 podman pull "$IMAGE"
+
 sed -i "s|^Image=.*|Image=$IMAGE|" /home/plantopo/.config/containers/systemd/plantopo-api.container
+
 systemctl --user daemon-reload
 systemctl --user restart plantopo-api.service
+
+systemctl --user is-active plantopo-api.service
+
+i=0
+while [ $i -lt 30 ]; do
+  if curl -sf --max-time 1 http://localhost:3030/_status > /dev/null 2>&1; then
+    echo "Service is up"
+    break
+  fi
+  i=$((i + 1))
+  sleep 1
+done
+[ $i -lt 30 ] || { echo "Timeout waiting for /_status"; exit 1; }
+
 SYSTEMD_COLORS=0 systemctl --user status --no-pager plantopo-api.service
 ```
 
