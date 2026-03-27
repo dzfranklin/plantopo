@@ -77,11 +77,12 @@ set -e
 [ "$(id -un)" = "plantopo" ] || { echo "Must be run as plantopo"; exit 1; }
 [ -n "$1" ] || { echo "Usage: $0 <image>"; exit 1; }
 IMAGE=$1
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
 podman pull "$IMAGE"
 sed -i "s|^Image=.*|Image=$IMAGE|" /home/plantopo/.config/containers/systemd/plantopo-api.container
 systemctl --user daemon-reload
 systemctl --user restart plantopo-api.service
-systemctl --user is-active plantopo-api.service
+SYSTEMD_COLORS=0 systemctl --user status --no-pager plantopo-api.service
 ```
 
 ### 6. Enable and start the service
