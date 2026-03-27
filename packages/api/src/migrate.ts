@@ -6,8 +6,6 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { env } from "./env.js";
 import { logger } from "./logger.js";
 
-logger.info("Starting migration...");
-
 logger.info("Connecting to database...");
 const db = drizzle(env.DATABASE_URL);
 

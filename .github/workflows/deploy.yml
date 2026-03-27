@@ -35,7 +35,9 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          tags: ghcr.io/${{ github.repository }}-api:${{ github.event.workflow_run.head_sha || github.sha }}
+          tags: |
+            ghcr.io/${{ github.repository }}-api:${{ github.event.workflow_run.head_sha || github.sha }}
+            ghcr.io/${{ github.repository }}-api:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
