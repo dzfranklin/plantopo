@@ -125,6 +125,7 @@ export class MapManager {
     const method = interactive ? "enable" : "disable";
     this._m.scrollZoom[method]();
     this._m.dragRotate[method]();
+    this._m.dragPan[method]();
     this._m.keyboard[method]();
     this._m.doubleClickZoom[method]();
     this._m.touchZoomRotate[method]();
