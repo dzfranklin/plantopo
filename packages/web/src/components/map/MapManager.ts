@@ -19,6 +19,7 @@ export class MapManager {
   private _onstyledata = () => {
     if (!this._m) return;
     if (this._cameraBeforeStyleLoad) {
+      // TODO: I suspect this is causing a bug. Repro: In dev page enable hash, zoom, click reset. Expected: same camera. Actual: camera zero.
       this._m.jumpTo(this._cameraBeforeStyleLoad);
       this._cameraBeforeStyleLoad = null;
     }
@@ -49,6 +50,10 @@ export class MapManager {
       interactive: initialProps.interactive ?? false,
       hash: initialProps.hash,
       minZoom: 1, // Otherwise minZoom is fractional, which interacts poorly with our snapping
+      zoomSnap: 1, // Only applies during discrete zoom operations
+      pitchWithRotate: false,
+      maxPitch: 0, // disable pitch to simplify custom overlays
+      boxZoom: false, // Wouldn't work well with our snapping
     });
     this._m.on("error", this._onError);
     this._m.on("styledata", this._onstyledata);
@@ -119,13 +124,10 @@ export class MapManager {
 
     const method = interactive ? "enable" : "disable";
     this._m.scrollZoom[method]();
-    this._m.boxZoom[method]();
     this._m.dragRotate[method]();
-    this._m.dragPan[method]();
     this._m.keyboard[method]();
     this._m.doubleClickZoom[method]();
     this._m.touchZoomRotate[method]();
-    this._m.touchPitch[method]();
 
     for (const control of this._controls) {
       this._m.removeControl(control);
