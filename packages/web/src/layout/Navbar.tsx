@@ -67,11 +67,11 @@ function UserMenuDesktop({
         <DropdownMenuItem asChild>
           <Link to="/settings">Settings</Link>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={signOut}>Sign out</DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => setDebugOpen(true)}>
           Debug
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={signOut}>Sign out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
