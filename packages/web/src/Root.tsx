@@ -5,7 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 
 import type { AppRouter } from "@pt/api";
 
-import { isUnauthorizedError } from "./lib/errors.ts";
+import { isUnauthorizedError } from "./errors.ts";
 import { logger } from "./logger.ts";
 import { AppRoutes } from "./routes.tsx";
 import { TRPCProvider } from "./trpc.ts";

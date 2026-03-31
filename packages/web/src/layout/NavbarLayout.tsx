@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 
-import { cn } from "../lib/utils.ts";
+import { cn } from "../cn.ts";
 import { Navbar, NavbarMobileFooter } from "./Navbar.tsx";
 
 export function NavbarLayout() {

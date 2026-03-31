@@ -4,7 +4,7 @@ import { Component, type ReactNode } from "react";
 import type { AppRouter } from "@pt/api";
 
 import { AppError } from "./AppError.js";
-import { isUnauthorizedError } from "./lib/errors.js";
+import { isUnauthorizedError } from "./errors.js";
 import { logger } from "./logger.js";
 
 interface Props {
