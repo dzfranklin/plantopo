@@ -12,7 +12,7 @@ export function NavbarLayout() {
         "sm:grid-rows-[auto_1fr] sm:[grid-template-areas:'header_header''content_content']",
       )}>
       <Navbar />
-      <div style={{ gridArea: "content" }}>
+      <div style={{ gridArea: "content" }} className="overflow-x-hidden">
         <Outlet />
       </div>
       <NavbarMobileFooter />
