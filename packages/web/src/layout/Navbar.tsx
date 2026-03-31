@@ -17,7 +17,7 @@ import { type ReactNode, useState } from "react";
 import { Link, useMatch } from "react-router-dom";
 import { Drawer } from "vaul";
 
-import { signOut, useSession } from "./auth/auth-client";
+import { signOut, useSession } from "../auth/auth-client";
 
 interface NavTab {
   to: string;

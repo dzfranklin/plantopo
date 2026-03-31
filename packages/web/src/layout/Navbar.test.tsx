@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { TEST_USER } from "@pt/api/test/setupDb";
 
+import { renderWithProviders } from "../test/render.tsx";
 import { Navbar } from "./Navbar.tsx";
-import { renderWithProviders } from "./test/render.tsx";
 
 describe("Navbar", () => {
   it("shows the logged-in user's name", async () => {

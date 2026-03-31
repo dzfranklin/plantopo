@@ -2,8 +2,8 @@ import { Suspense, lazy } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
-import { Navbar, NavbarMobileFooter } from "./Navbar.tsx";
 import { useSession } from "./auth/auth-client.ts";
+import { NavbarLayout } from "./layout/NavbarLayout.tsx";
 import ErrorTest from "./test/ErrorTest.tsx";
 
 const HomePage = lazy(() => import("./HomePage.tsx"));
@@ -37,17 +37,7 @@ export function AppRoutes() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
 
-          <Route
-            element={
-              <div className="grid min-h-svh sm:[grid-template-areas:'header_header''content_content'] [grid-template-areas:'header_header''content_content''footer_footer'] grid-rows-[auto_1fr_auto] sm:grid-rows-[auto_1fr]">
-                <Navbar />
-                <div style={{ gridArea: "content" }}>
-                  <Outlet />
-                </div>
-                <NavbarMobileFooter />
-              </div>
-            }
-          >
+          <Route element={<NavbarLayout />}>
             <Route index element={<HomePage />} />
 
             <Route element={<RequireAuth />}>
