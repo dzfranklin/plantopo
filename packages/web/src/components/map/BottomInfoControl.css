@@ -1,0 +1,94 @@
+.maplibregl-map .maplibregl-ctrl-bottom-right {
+  left: 106px; /* always leave room for OS logo */
+}
+
+.bottom-info-control {
+  float: right;
+  clear: both;
+  pointer-events: auto;
+  transform: translate(0);
+  margin: 0;
+
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  max-width: 100%;
+
+  background-color: #f2f2f2;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.bottom-info-control-attrib {
+  font:
+    10px "Source Sans Pro",
+    Arial,
+    sans-serif;
+
+  color: #1f1f1f;
+  max-width: 450px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bottom-info-control-attrib-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bottom-info-control-expand-attrib {
+  display: block;
+  color: #1f1f1f;
+  flex-shrink: 0;
+}
+
+.bottom-info-control-scale {
+  font:
+    10px "Source Sans Pro",
+    Arial,
+    sans-serif;
+  color: #1f1f1f;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bottom-info-control-scale-bar {
+  box-sizing: border-box;
+  border-left: 2px solid #1f1f1f;
+  border-right: 2px solid #1f1f1f;
+  border-bottom: 2px solid #1f1f1f;
+  height: calc(1em - 3px);
+  flex-shrink: 0;
+}
+
+@media only screen and (max-width: 420px) {
+  .bottom-info-control-attrib {
+    display: none;
+  }
+
+  .bottom-info-control-expand-attrib {
+    display: block;
+  }
+}
+
+.bottom-info-control-os-logo {
+  display: none;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  margin: 0;
+  z-index: 1000;
+  pointer-events: none;
+  padding: 8px;
+  width: 90px;
+  height: 24px;
+  background-image: url(/os-attribution-logo.svg);
+  background-position: center;
+  background-repeat: no-repeat;
+  box-sizing: content-box;
+}

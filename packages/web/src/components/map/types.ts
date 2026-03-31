@@ -8,6 +8,7 @@ export interface MapProps {
   baseStyle?: z.infer<typeof BaseStyleSchema>;
   geojson?: GeoJSON.FeatureCollection | GeoJSON.Feature | null;
   onManager?: (manager: MapManager) => void;
+  onShowAttributions?: (html: string) => void;
   triggerGeolocationControl?: boolean;
 }
 const sourceURLSchema = z.string().startsWith("https://");

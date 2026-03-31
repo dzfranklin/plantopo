@@ -108,6 +108,7 @@ function baseStyleSource(
   optionalBaseStyle: MapProps["baseStyle"],
 ): ml.RasterSourceSpecification {
   const baseStyle = optionalBaseStyle ?? "thunderforest";
+  const year = new Date().getFullYear().toString();
   if (typeof baseStyle === "string") {
     switch (baseStyle) {
       case "thunderforest": {
@@ -127,6 +128,9 @@ function baseStyleSource(
         return {
           type: "raster",
           url: "https://tiles.plantopo.com/tilejson/os_leisure.json",
+          attribution:
+            `<a href="https://www.ordnancesurvey.co.uk/governance/crown-copyright" target="_blank">Contains OS data &copy; Crown copyright and database rights ${year}</a>` +
+            ' | <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap</a>',
         };
       }
       case "satellite": {
@@ -140,7 +144,7 @@ function baseStyleSource(
           tileSize: 256,
           minzoom: 0,
           maxzoom: 21,
-          attribution: "Map data &copy; Google",
+          attribution: "Map data &copy; Google " + year,
         };
       }
     }

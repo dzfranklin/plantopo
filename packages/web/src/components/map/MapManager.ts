@@ -1,5 +1,6 @@
-import ml, { GeolocateControl } from "maplibre-gl";
+import ml from "maplibre-gl";
 
+import { BottomInfoControl } from "./BottomInfoControl";
 import { buildStyle } from "./styleBuilder";
 import type { MapProps } from "./types";
 import { attachZoomSnap } from "./zoomSnap";
@@ -54,10 +55,17 @@ export class MapManager {
       pitchWithRotate: false,
       maxPitch: 0, // disable pitch to simplify custom overlays
       boxZoom: false, // Wouldn't work well with our snapping
+      attributionControl: false, // in our BottomInfoControl
     });
+
+    this._m.addControl(
+      new BottomInfoControl(initialProps.onShowAttributions ?? (() => {})),
+    );
+
     this._m.on("error", this._onError);
     this._m.on("styledata", this._onstyledata);
     this._m.on("styledataloading", this._onstyledataloading);
+
     this._detachZoomSnap = attachZoomSnap(this._m);
     this._applyInteractive(initialProps);
   }
@@ -136,14 +144,12 @@ export class MapManager {
     this._controls = [];
     if (interactive) {
       const nav = new ml.NavigationControl();
-      const scale = new ml.ScaleControl();
-      const geoloc = new GeolocateControl({
+      const geoloc = new ml.GeolocateControl({
         trackUserLocation: !!window.Native,
       });
-      this._m.addControl(nav);
-      this._m.addControl(scale);
-      this._m.addControl(geoloc);
-      this._controls = [nav, scale, geoloc];
+      this._m.addControl(nav, "top-right");
+      this._m.addControl(geoloc, "top-right");
+      this._controls = [nav, geoloc];
     }
   }
 

@@ -2,6 +2,13 @@ import type ml from "maplibre-gl";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { MapManager } from "./MapManager";
@@ -21,10 +28,15 @@ export function MapView(props: MapProps) {
   initialPropsRef.current = props;
 
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
-
+  const [attributionModalHTML, setAttributionModalHTML] = useState<
+    string | null
+  >(null);
   const containerRef = useCallback((container: HTMLDivElement | null) => {
     if (container) {
-      const manager = new MapManager(container, initialPropsRef.current);
+      const manager = new MapManager(container, {
+        ...initialPropsRef.current,
+        onShowAttributions: (html) => setAttributionModalHTML(html),
+      });
       managerRef.current = manager;
       initialPropsRef.current.onManager?.(manager);
       manager.map?.on("contextmenu", (e) => {
@@ -49,6 +61,21 @@ export function MapView(props: MapProps) {
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+      <Dialog
+        open={attributionModalHTML !== null}
+        onOpenChange={(open) => {
+          if (!open) setAttributionModalHTML(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Attribution</DialogTitle>
+          </DialogHeader>
+          <DialogDescription
+            dangerouslySetInnerHTML={{ __html: attributionModalHTML ?? "" }}
+          />
+        </DialogContent>
+      </Dialog>
       {contextMenu && (
         <div
           style={{
