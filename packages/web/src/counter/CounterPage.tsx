@@ -29,9 +29,9 @@ export default function CounterPage() {
   );
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+    <main className="flex min-h-[60vh] flex-col items-center justify-center gap-6">
       <h1 className="text-2xl font-semibold text-gray-800">Counter</h1>
-      <span className="text-6xl font-bold tabular-nums text-gray-900">
+      <span className="text-6xl font-bold text-gray-900 tabular-nums">
         {count}
       </span>
       <Button
@@ -41,12 +41,12 @@ export default function CounterPage() {
       >
         Increment
       </Button>
-      <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+      <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
         <input
           type="checkbox"
           checked={optimistic}
           onChange={(e) => setOptimistic(e.target.checked)}
-          className="w-4 h-4 accent-blue-600"
+          className="h-4 w-4 accent-blue-600"
         />
         Optimistic update
       </label>

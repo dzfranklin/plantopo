@@ -17,7 +17,7 @@ function SocialButton({
   return (
     <button
       onClick={onClick}
-      className="flex gap-4 justify-center items-center w-62.5 h-10 px-4 rounded-sm shadow-sm border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+      className="flex h-10 w-62.5 items-center justify-center gap-4 rounded-sm border border-gray-200 bg-white px-4 shadow-sm transition-colors hover:bg-gray-50"
     >
       {icon}
       <span className="text-sm font-medium">{label}</span>
@@ -32,9 +32,9 @@ export default function LoginPage() {
   const callbackURL = searchParams.get("returnTo") ?? "/";
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-      <h1 className="text-2xl font-semibold text-gray-900 mb-10">PlanTopo</h1>
-      <div className="w-87.5 flex flex-col items-center gap-3">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
+      <h1 className="mb-10 text-2xl font-semibold text-gray-900">PlanTopo</h1>
+      <div className="flex w-87.5 flex-col items-center gap-3">
         <SocialButton
           icon={<GoogleIcon />}
           label="Sign in with Google"

@@ -67,15 +67,15 @@ export default function RecordTrackPage() {
   if (!state) return <div>Loading...</div>;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 min-h-0">
+    <div className="flex h-full flex-col">
+      <div className="min-h-0 flex-1">
         <MapView interactive geojson={geojson} onManager={onManager} />
       </div>
 
-      <div className="p-4 flex items-center justify-between gap-4 border-t">
+      <div className="flex items-center justify-between gap-4 border-t p-4">
         {state.recording ? (
           <>
-            <div className="text-sm text-muted-foreground">
+            <div className="text-muted-foreground text-sm">
               <div>{state.recording.name || "Unnamed recording"}</div>
               <div>{state.recording.points.length} points</div>
             </div>

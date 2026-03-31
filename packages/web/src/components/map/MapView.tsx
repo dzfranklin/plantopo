@@ -83,12 +83,12 @@ export function MapView(props: MapProps) {
             left: contextMenu.x,
             top: contextMenu.y,
           }}
-          className="z-50 min-w-32 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+          className="bg-popover text-popover-foreground z-50 min-w-32 overflow-hidden rounded-md border p-1 shadow-md"
           onPointerDown={(e) => e.stopPropagation()}
         >
           {import.meta.env.DEV && (
             <button
-              className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+              className="hover:bg-accent hover:text-accent-foreground relative flex w-full cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none"
               onClick={() => {
                 const w = window as unknown as Record<string, unknown>;
                 const varName = !w._map

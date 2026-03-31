@@ -19,7 +19,7 @@ function DesktopNavTab({ to, label }: { to: string; label: string }) {
   return (
     <Link
       to={to}
-      className={`px-3 py-1 text-sm rounded ${active ? "font-medium text-gray-900" : "text-gray-500 hover:text-gray-900"}`}
+      className={`rounded px-3 py-1 text-sm ${active ? "font-medium text-gray-900" : "text-gray-500 hover:text-gray-900"}`}
     >
       {label}
     </Link>
@@ -57,15 +57,15 @@ function UserMenuDesktop({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 rounded-md px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 cursor-pointer transition-colors">
+      <DropdownMenuTrigger className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900">
         {session.user.image ? (
           <img
             src={session.user.image}
             alt={session.user.name ?? ""}
-            className="w-6 h-6 rounded-full object-cover"
+            className="h-6 w-6 rounded-full object-cover"
           />
         ) : (
-          <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs font-medium text-gray-600">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-300 text-xs font-medium text-gray-600">
             {session.user.name?.[0]?.toUpperCase()}
           </div>
         )}
@@ -93,17 +93,17 @@ export function Navbar() {
   return (
     <nav
       style={{ gridArea: "header" }}
-      className="flex items-center gap-3 px-4 py-2 text-sm border-b border-gray-200"
+      className="flex items-center gap-3 border-b border-gray-200 px-4 py-2 text-sm"
     >
       <div className="sm:hidden">
         <MobileMenuSheet setDebugOpen={setDebugOpen} />
       </div>
 
-      <Link className="hidden sm:block font-semibold" to="/">
+      <Link className="hidden font-semibold sm:block" to="/">
         PlanTopo
       </Link>
 
-      <div className="hidden sm:flex items-center gap-1">
+      <div className="hidden items-center gap-1 sm:flex">
         {navTabs.map((tab) => (
           <DesktopNavTab key={tab.to} to={tab.to} label={tab.label} />
         ))}
@@ -131,7 +131,7 @@ export function NavbarMobileFooter() {
   return (
     <nav
       style={{ gridArea: "footer" }}
-      className="flex sm:hidden border-t border-gray-200 bg-white sticky bottom-0"
+      className="sticky bottom-0 flex border-t border-gray-200 bg-white sm:hidden"
     >
       {navTabs.map((tab) => (
         <MobileNavTab

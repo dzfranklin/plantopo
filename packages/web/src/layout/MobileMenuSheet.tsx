@@ -48,7 +48,7 @@ export function MobileMenuSheet({
           <Drawer.Title>Menu</Drawer.Title>
           <Drawer.Description>Navigation menu</Drawer.Description>
         </VisuallyHidden.Root>
-        <Drawer.Content className="fixed inset-y-0 left-0 z-50 w-64 flex flex-col gap-0 bg-white">
+        <Drawer.Content className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col gap-0 bg-white">
           <div className="flex flex-col">
             <Link className="px-4 pt-3 pb-0.5 font-semibold" to="/">
               PlanTopo
@@ -67,20 +67,20 @@ export function MobileMenuSheet({
           <div className="mt-auto flex flex-col">
             <hr className="my-2" />
             {session ? (
-              <div className="flex flex-col p-2 gap-2">
+              <div className="flex flex-col gap-2 p-2">
                 <div className="flex items-center gap-3">
                   {session.user.image && (
                     <img
                       src={session.user.image}
                       alt={session.user.name ?? ""}
-                      className="w-8 h-8 rounded-full object-cover"
+                      className="h-8 w-8 rounded-full object-cover"
                     />
                   )}
                   <div className="min-w-0">
-                    <div className="text-sm font-medium truncate">
+                    <div className="truncate text-sm font-medium">
                       {session.user.name}
                     </div>
-                    <div className="text-xs text-gray-500 truncate">
+                    <div className="truncate text-xs text-gray-500">
                       {session.user.email}
                     </div>
                   </div>
