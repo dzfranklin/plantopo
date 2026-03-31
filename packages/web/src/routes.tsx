@@ -7,6 +7,7 @@ import { NavbarLayout } from "./layout/NavbarLayout.tsx";
 import ErrorTest from "./test/ErrorTest.tsx";
 
 const HomePage = lazy(() => import("./HomePage.tsx"));
+const MapPage = lazy(() => import("./map/MapPage.tsx"));
 const TripListPage = lazy(() => import("./trip/TripListPage.tsx"));
 const TripEditorPage = lazy(() => import("./trip/TripEditorPage.tsx"));
 const LoginPage = lazy(() => import("./auth/LoginPage.tsx"));
@@ -49,6 +50,7 @@ export function AppRoutes() {
 
           <Route element={<NavbarLayout />}>
             <Route index element={<HomePage />} />
+            <Route path="/map" element={<MapPage />} />
 
             <Route element={<RequireAuth />}>
               <Route path="/trips" element={<TripListPage />} />

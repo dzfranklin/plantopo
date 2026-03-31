@@ -1,4 +1,8 @@
-import { RiRecordCircleLine, RiSettings3Line } from "@remixicon/react";
+import {
+  RiEarthLine,
+  RiRecordCircleLine,
+  RiSettings3Line,
+} from "@remixicon/react";
 import type { ReactNode } from "react";
 
 import { useSession } from "@/auth/auth-client";
@@ -12,6 +16,11 @@ export interface NavTab {
 }
 
 const BASE: NavTab[] = [
+  {
+    to: "/map",
+    label: "Map",
+    icon: <RiEarthLine size={24} aria-hidden="true" />,
+  },
   {
     to: "/record-track",
     label: "Track",
