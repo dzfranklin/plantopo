@@ -14,17 +14,17 @@ export default function SettingsPage() {
   const { user } = useRequiredSession();
 
   return (
-    <div className="m-8 mx-auto w-full max-w-4xl">
-      <div className="mb-8 flex items-center gap-4">
+    <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-8">
+      <div className="mb-6 flex items-center gap-4">
         <UserAvatar user={user} className="h-10 w-10 text-base" />
         <div>
           <p className="font-medium">{user.name}</p>
           <p className="text-sm text-gray-500">{user.email}</p>
         </div>
       </div>
-      <div className="flex gap-8">
-        <nav className="w-48 shrink-0">
-          <ul className="flex flex-col gap-1">
+      <div className="flex flex-col gap-6 sm:flex-row sm:gap-8">
+        <nav className="shrink-0 sm:w-48">
+          <ul className="flex flex-row gap-1 sm:flex-col">
             {navItems.map(({ to, label, icon: Icon }) => (
               <li key={to}>
                 <NavLink
@@ -44,7 +44,7 @@ export default function SettingsPage() {
             ))}
           </ul>
         </nav>
-        <main className="flex-1">
+        <main className="min-w-0 flex-1">
           <Outlet />
         </main>
       </div>

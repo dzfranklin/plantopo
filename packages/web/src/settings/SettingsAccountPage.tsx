@@ -134,14 +134,14 @@ export default function SettingsAccountPage() {
   const nameDirty = name !== (user.name ?? "");
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex min-w-0 flex-col gap-10">
       <Section title="Display name">
         <form
           onSubmit={e => {
             e.preventDefault();
             updateName.mutate(name);
           }}
-          className="flex items-center gap-2">
+          className="flex flex-wrap items-center gap-2">
           <Input
             value={name}
             onChange={e => setName(e.target.value)}
@@ -204,8 +204,8 @@ export default function SettingsAccountPage() {
             <li
               key={passkey.id}
               className="flex items-center justify-between gap-4 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <PasskeyIcon className="h-4 w-4" />
+              <div className="flex min-w-0 items-center gap-2">
+                <PasskeyIcon className="h-4 w-4 shrink-0" />
                 {editingPasskeyId === passkey.id ? (
                   <form
                     onSubmit={e => {
@@ -219,7 +219,7 @@ export default function SettingsAccountPage() {
                     <Input
                       value={editingPasskeyName}
                       onChange={e => setEditingPasskeyName(e.target.value)}
-                      className="h-7 w-48"
+                      className="h-7 w-32 min-w-0 sm:w-48"
                       autoFocus
                     />
                     <Button
@@ -237,7 +237,7 @@ export default function SettingsAccountPage() {
                     </Button>
                   </form>
                 ) : (
-                  <span>{passkey.name ?? passkey.id}</span>
+                  <span className="truncate">{passkey.name ?? passkey.id}</span>
                 )}
               </div>
               {editingPasskeyId !== passkey.id && (
@@ -297,8 +297,8 @@ export default function SettingsAccountPage() {
               <li
                 key={session.id}
                 className="flex items-start justify-between gap-4 text-sm">
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-col">
+                  <div className="flex min-w-0 items-center gap-2">
                     {isCurrent && (
                       <span className="shrink-0 text-xs font-medium text-green-600">
                         this device
@@ -306,18 +306,18 @@ export default function SettingsAccountPage() {
                     )}
                     {session.userAgent && (
                       <span
-                        className="shrink truncate text-xs text-gray-600"
+                        className="truncate text-xs text-gray-600"
                         title={session.userAgent}>
                         {session.userAgent}
                       </span>
                     )}
                     {session.ipAddress && (
-                      <span className="text-xs text-gray-600">
+                      <span className="shrink-0 text-xs text-gray-600">
                         {session.ipAddress}
                       </span>
                     )}
                   </div>
-                  <div className="flex gap-3 text-xs text-gray-400">
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-400">
                     <span>
                       Signed in{" "}
                       {new Date(session.createdAt).toLocaleDateString()}
