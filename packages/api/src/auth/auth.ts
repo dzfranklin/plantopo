@@ -39,6 +39,15 @@ export const auth = betterAuth({
   baseURL: `${env.APP_URL}/api/v1/auth`,
   socialProviders,
   errorURL: `${env.APP_URL}/auth-error`,
+  user: {
+    additionalFields: {
+      prefs: {
+        type: "json",
+        required: true,
+        defaultValue: {},
+      },
+    },
+  },
   session: {
     expiresIn: 365 * 24 * 60 * 60, // 365 days
     updateAge: 24 * 60 * 60, // 24 hours
@@ -146,7 +155,9 @@ export const auth = betterAuth({
       const location: string | null | undefined =
         returned instanceof Response
           ? returned.headers.get("location")
-          : (returned as APIError)?.headers?.get?.("location");
+          : ((returned as APIError)?.headers as Headers | undefined)?.get?.(
+              "location",
+            );
 
       if (location?.startsWith("plantopo://oauth-callback")) {
         const initToken = await createNativeSessionInitToken(

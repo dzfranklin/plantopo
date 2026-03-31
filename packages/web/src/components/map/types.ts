@@ -1,11 +1,14 @@
 import z from "zod";
 
+import { CustomBaseStyleSchema } from "@pt/shared";
+
 import type { MapManager } from "./MapManager";
 
 export interface MapProps {
   interactive?: boolean;
   hash?: boolean | string;
   baseStyle?: z.infer<typeof BaseStyleSchema>;
+  distanceUnit?: "km" | "mi";
   /** GeoJSON data to display on the map.
    * Supports [simplestyle](https://github.com/mapbox/simplestyle-spec/tree/master/1.1.0). */
   geojson?: GeoJSON.FeatureCollection | GeoJSON.Feature | null;
@@ -13,8 +16,6 @@ export interface MapProps {
   onShowAttributions?: (html: string) => void;
   triggerGeolocationControl?: boolean;
 }
-const sourceURLSchema = z.string().startsWith("https://");
-const boundsSchema = z.tuple([z.number(), z.number(), z.number(), z.number()]);
 
 export const BuiltinBaseStyleSchema = z.enum([
   "thunderforest",
@@ -22,17 +23,22 @@ export const BuiltinBaseStyleSchema = z.enum([
   "satellite",
 ]);
 
-export const CustomBaseStyleSchema = z.object({
-  type: z.literal("raster"),
-  url: sourceURLSchema.optional(),
-  tiles: z.array(sourceURLSchema).nonempty().optional(),
-  bounds: boundsSchema.optional(),
-  minzoom: z.number().optional(),
-  maxzoom: z.number().optional(),
-  tileSize: z.number().optional(),
-  scheme: z.enum(["xyz", "tms"]).optional(),
-  attribution: z.string().optional(),
-});
+export type BuiltinBaseStyle = z.infer<typeof BuiltinBaseStyleSchema>;
+
+export const BUILTIN_STYLE_META: Record<
+  BuiltinBaseStyle,
+  { label: string; thumbnail: string }
+> = {
+  thunderforest: {
+    label: "Thunderforest",
+    thumbnail: "/layer-thunderforest-thumbnail.png",
+  },
+  os: { label: "OS", thumbnail: "/layer-os-thumbnail.png" },
+  satellite: {
+    label: "Satellite",
+    thumbnail: "/layer-satellite-thumbnail.png",
+  },
+};
 
 export const BaseStyleSchema = z.union([
   BuiltinBaseStyleSchema,

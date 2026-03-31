@@ -7,7 +7,14 @@ import {
   SIMPLE_STYLE_LAYER_SPECS,
   THUNDERFOREST_SOURCE,
 } from "./style";
-import type { MapProps } from "./types";
+import type { BuiltinBaseStyle, MapProps } from "./types";
+
+const BUILTIN_SOURCES: Record<BuiltinBaseStyle, ml.RasterSourceSpecification> =
+  {
+    thunderforest: THUNDERFOREST_SOURCE,
+    os: OS_SOURCE,
+    satellite: SATELLITE_SOURCE,
+  };
 
 export function buildStyle(props: MapProps): ml.StyleSpecification {
   return {
@@ -49,12 +56,7 @@ function baseStyleSource(
 ): ml.RasterSourceSpecification {
   const baseStyle = optionalBaseStyle ?? "thunderforest";
   if (typeof baseStyle === "string") {
-    // prettier-ignore
-    switch (baseStyle) {
-      case "thunderforest": return THUNDERFOREST_SOURCE;
-      case "os": return OS_SOURCE;
-      case "satellite": return SATELLITE_SOURCE;
-    }
+    return BUILTIN_SOURCES[baseStyle];
   } else {
     return baseStyle;
   }

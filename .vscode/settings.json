@@ -3,6 +3,7 @@
     ".css": "tailwindcss"
   },
   "tailwindCSS.classFunctions": ["cn"],
+  "tailwindCSS.lint.suggestCanonicalClasses": "ignore",
   "cSpell.words": [
     "createdb",
     "doesn",

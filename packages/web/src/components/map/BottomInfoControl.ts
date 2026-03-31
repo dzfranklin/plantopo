@@ -15,9 +15,20 @@ export class BottomInfoControl implements ml.IControl {
   private _scaleBar: HTMLDivElement | undefined;
   private _osLogo: HTMLDivElement | undefined;
   private _onShowAttributions: (html: string) => void;
+  private _distanceUnit: "km" | "mi";
 
-  constructor(onShowAttributions: (html: string) => void) {
+  constructor(
+    onShowAttributions: (html: string) => void,
+    distanceUnit: "km" | "mi" = "km",
+  ) {
     this._onShowAttributions = onShowAttributions;
+    this._distanceUnit = distanceUnit;
+  }
+
+  setDistanceUnit(unit: "km" | "mi") {
+    if (this._distanceUnit === unit) return;
+    this._distanceUnit = unit;
+    this._updateScale();
   }
 
   onAdd(map: ml.Map): HTMLElement {
@@ -180,15 +191,31 @@ export class BottomInfoControl implements ml.IControl {
 
     let distance: number;
     let unit: string;
-    if (maxMeters >= 1000) {
-      distance = getRoundNum(maxMeters / 1000);
-      unit = "km";
+    let inputValue: number;
+    if (this._distanceUnit === "mi") {
+      const maxMiles = maxMeters / 1609.344;
+      if (maxMiles >= 1) {
+        distance = getRoundNum(maxMiles);
+        unit = "mi";
+        inputValue = maxMiles;
+      } else {
+        const maxYards = maxMeters / 0.9144;
+        distance = getRoundNum(maxYards);
+        unit = "yd";
+        inputValue = maxYards;
+      }
     } else {
-      distance = getRoundNum(maxMeters);
-      unit = "m";
+      if (maxMeters >= 1000) {
+        distance = getRoundNum(maxMeters / 1000);
+        unit = "km";
+        inputValue = maxMeters / 1000;
+      } else {
+        distance = getRoundNum(maxMeters);
+        unit = "m";
+        inputValue = maxMeters;
+      }
     }
 
-    const inputValue = maxMeters >= 1000 ? maxMeters / 1000 : maxMeters;
     const ratio = distance / inputValue;
     this._scaleLabel.textContent = `${distance}\u00a0${unit}`;
     this._scaleBar.style.width = `${Math.round(maxWidth * ratio)}px`;

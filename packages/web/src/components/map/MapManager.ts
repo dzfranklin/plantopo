@@ -12,6 +12,7 @@ export class MapManager {
   private _lastInteractiveDeps: unknown[] | undefined;
   private _lastGeojsonDeps: unknown[] | undefined;
   private _controls: ml.IControl[] = [];
+  private _bottomInfoControl: BottomInfoControl | null = null;
   private _cameraBeforeStyleLoad: ml.CameraOptions | null = null;
 
   private _onError = (e: ml.ErrorEvent) =>
@@ -58,9 +59,11 @@ export class MapManager {
       attributionControl: false, // in our BottomInfoControl
     });
 
-    this._m.addControl(
-      new BottomInfoControl(initialProps.onShowAttributions ?? (() => {})),
+    this._bottomInfoControl = new BottomInfoControl(
+      initialProps.onShowAttributions ?? (() => {}),
+      initialProps.distanceUnit,
     );
+    this._m.addControl(this._bottomInfoControl);
 
     this._m.on("error", this._onError);
     this._m.on("styledata", this._onstyledata);
@@ -106,6 +109,9 @@ export class MapManager {
     const didChangeStyle = this._applyStyle(props);
     this._applyInteractive(props);
     this._applyGeojson(props, didChangeStyle);
+    if (props.distanceUnit) {
+      this._bottomInfoControl?.setDistanceUnit(props.distanceUnit);
+    }
   }
 
   private _applyStyle(props: MapProps): boolean {
@@ -128,7 +134,7 @@ export class MapManager {
     this._lastInteractiveDeps = deps;
     if (this._depsEq(lastDeps, deps)) return;
 
-    const { interactive } = props;
+    const interactive = props.interactive ?? true;
 
     const method = interactive ? "enable" : "disable";
     this._m.scrollZoom[method]();

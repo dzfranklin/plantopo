@@ -2,6 +2,7 @@ import { RiAddLine, RiDeleteBinLine, RiPencilLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { Section } from "./Section";
 import { PasskeyIcon } from "@/auth/PasskeyIcon";
 import { authClient, signOut, useRequiredSession } from "@/auth/auth-client";
 import { providersInfo } from "@/auth/providers";
@@ -9,29 +10,6 @@ import { authKeys } from "@/auth/queryKeys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usePageTitle } from "@/usePageTitle";
-
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section>
-      <div>
-        <h3 className="text-base font-semibold">{title}</h3>
-        <hr className="mt-1 mb-4" />
-        {description && (
-          <p className="mb-2 text-sm text-gray-500">{description}</p>
-        )}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 export default function SettingsAccountPage() {
   usePageTitle("Account settings");

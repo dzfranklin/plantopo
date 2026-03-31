@@ -32,3 +32,27 @@ export const RecordedTrackSchema = z.object({
 export type RecordedTrackStatus = z.infer<typeof RecordingStatusSchema>;
 export type RecordedTrackPoint = z.infer<typeof TrackPointSchema>;
 export type RecordedTrack = z.infer<typeof RecordedTrackSchema>;
+
+const sourceURLSchema = z.string().startsWith("https://");
+const boundsSchema = z.tuple([z.number(), z.number(), z.number(), z.number()]);
+
+export const CustomBaseStyleSchema = z.object({
+  type: z.literal("raster"),
+  url: sourceURLSchema.optional(),
+  tiles: z.array(sourceURLSchema).nonempty().optional(),
+  bounds: boundsSchema.optional(),
+  minzoom: z.number().optional(),
+  maxzoom: z.number().optional(),
+  tileSize: z.number().optional(),
+  scheme: z.enum(["xyz", "tms"]).optional(),
+  attribution: z.string().optional(),
+});
+
+export const UserPrefsSchema = z.object({
+  distanceUnit: z.enum(["km", "mi"]).default("km"),
+  customBaseStylesByName: z
+    .record(z.string(), CustomBaseStyleSchema)
+    .default({}),
+});
+
+export type UserPrefs = z.infer<typeof UserPrefsSchema>;

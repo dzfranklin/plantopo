@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { RecordedTrack, RecordedTrackPoint } from "@pt/shared";
 
 import { NativeRequiredError } from "../AppError.js";
-import { MapManager, MapView } from "../components/map/index.js";
+import { AppMap, MapManager } from "../components/map/index.js";
 import { type RecordTrackState, RecordTrackStateSchema } from "./types.js";
 import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/usePageTitle.js";
@@ -72,7 +72,7 @@ export default function RecordTrackPage() {
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1">
-        <MapView interactive geojson={geojson} onManager={onManager} />
+        <AppMap geojson={geojson} onManager={onManager} />
       </div>
 
       <div className="flex items-center justify-between gap-4 border-t p-4">
