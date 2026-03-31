@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { createAuthClient } from "better-auth/react";
 
+import { authKeys } from "./queryKeys";
+
 export const authClient: ReturnType<typeof createAuthClient> = createAuthClient(
   { baseURL: window.location.origin + "/api/v1/auth" },
 );
@@ -11,11 +13,11 @@ declare global {
   }
 }
 
-type Session = typeof authClient.$Infer.Session;
+export type Session = typeof authClient.$Infer.Session;
 
 export function useSession() {
   return useQuery({
-    queryKey: ["session"],
+    queryKey: authKeys.session(),
     queryFn: async () => {
       const { data, error } = await authClient.getSession();
       if (error) throw error;
@@ -27,6 +29,12 @@ export function useSession() {
     },
     staleTime: 60 * 60 * 1000, // 1 hour
   });
+}
+
+export function useRequiredSession() {
+  const data = useSession().data;
+  if (!data) throw new Error("Expected session");
+  return data;
 }
 
 export function signOut() {

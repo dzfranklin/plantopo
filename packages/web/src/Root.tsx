@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { TRPCClientError, createTRPCClient, httpBatchLink } from "@trpc/client";
+import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { Suspense, lazy, useEffect, useState } from "react";
 import { BrowserRouter } from "react-router-dom";
 
 import type { AppRouter } from "@pt/api";
 
+import { isUnauthorizedError } from "./lib/errors.ts";
+import { logger } from "./logger.ts";
 import { AppRoutes } from "./routes.tsx";
 import { TRPCProvider } from "./trpc.ts";
 
@@ -18,11 +20,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       throwOnError: true,
-      retry: (failureCount, error) => {
-        if (
-          error instanceof TRPCClientError &&
-          error.data?.code === "UNAUTHORIZED"
-        ) {
+      retry: (failureCount, err) => {
+        if (isUnauthorizedError(err)) {
+          logger.warn({ err }, "Unauthorized error, not retrying");
           return false;
         }
 

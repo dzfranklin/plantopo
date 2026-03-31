@@ -4,6 +4,7 @@ import { Component, type ReactNode } from "react";
 import type { AppRouter } from "@pt/api";
 
 import { AppError } from "./AppError.js";
+import { isUnauthorizedError } from "./lib/errors.js";
 import { logger } from "./logger.js";
 
 interface Props {
@@ -42,11 +43,9 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   render() {
-    if (this.state.error) {
-      if (
-        this.state.error instanceof TRPCClientError &&
-        this.state.error.data?.code === "UNAUTHORIZED"
-      ) {
+    const err = this.state.error;
+    if (err) {
+      if (isUnauthorizedError(err)) {
         const returnTo = encodeURIComponent(
           window.location.pathname + window.location.search,
         );
@@ -55,21 +54,19 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       const reqId =
-        this.state.error instanceof TRPCClientError
-          ? (this.state.error.data?.reqId as string | undefined)
+        err instanceof TRPCClientError
+          ? (err.data?.reqId as string | undefined)
           : undefined;
 
       const customMessage =
-        this.state.error instanceof AppError
-          ? this.state.error.message
-          : this.state.error instanceof TRPCClientError
-            ? trpcMessage(this.state.error)
+        err instanceof AppError
+          ? err.message
+          : err instanceof TRPCClientError
+            ? trpcMessage(err)
             : null;
 
       const errorMessage =
-        !customMessage && this.state.error instanceof Error
-          ? this.state.error.message
-          : null;
+        !customMessage && err instanceof Error ? err.message : null;
 
       return (
         <div className="flex min-h-screen items-center justify-center bg-gray-50">

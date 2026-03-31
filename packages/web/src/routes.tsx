@@ -14,6 +14,7 @@ const LoginPage = lazy(() => import("./auth/LoginPage.tsx"));
 const RecordTrackPage = lazy(() => import("./track/RecordTrackPage.tsx"));
 const NotFoundPage = lazy(() => import("./NotFoundPage.tsx"));
 const DevMapPage = lazy(() => import("./dev/DevMapPage.tsx"));
+const DevErrorPage = lazy(() => import("./dev/DevErrorsPage.tsx"));
 
 function RequireAuth() {
   const { data: session } = useSession();
@@ -50,6 +51,7 @@ export function AppRoutes() {
             <Route path="/unauth-counter" element={<CounterPage />} />
             <Route path="/error-test" element={<ErrorTest />} />
             <Route path="/dev/map" element={<DevMapPage />} />
+            <Route path="/dev/errors" element={<DevErrorPage />} />
 
             <Route path="*" element={<NotFoundPage />} />
           </Route>
