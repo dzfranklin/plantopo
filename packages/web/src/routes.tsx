@@ -54,9 +54,9 @@ export function AppRoutes() {
               <Route path="/counter" element={<CounterPage />} />
               <Route path="/trips" element={<TripListPage />} />
               <Route path="/trips/:tripId" element={<TripEditorPage />} />
+              <Route path="/record-track" element={<RecordTrackPage />} />
             </Route>
 
-            <Route path="/record-track" element={<RecordTrackPage />} />
             <Route path="/unauth-counter" element={<CounterPage />} />
             <Route path="/error-test" element={<ErrorTest />} />
             <Route path="/dev/map" element={<DevMapPage />} />
