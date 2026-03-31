@@ -60,7 +60,8 @@ export const auth = betterAuth({
     "http://localhost:3030",
     "http://localhost:4000",
     "http://10.0.2.2:4000",
-    "plantopo://oauth",
+    "plantopo://oauth-callback",
+    "plantopo-debug://oauth-callback",
     "https://plantopo.com",
   ],
   logger: {
@@ -159,7 +160,10 @@ export const auth = betterAuth({
               "location",
             );
 
-      if (location?.startsWith("plantopo://oauth-callback")) {
+      if (
+        location?.startsWith("plantopo://oauth-callback") ||
+        location?.startsWith("plantopo-debug://oauth-callback")
+      ) {
         const initToken = await createNativeSessionInitToken(
           newSession.session.token,
         );
