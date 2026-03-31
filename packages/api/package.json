@@ -5,8 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./test/setupDb": "./src/test/setupDb.ts",
-    "./logger": "./src/logger.ts"
+    "./webTestSupport": "./src/test/webTestSupport.ts"
   },
   "scripts": {
     "server": "tsx src/server.ts"

@@ -5,7 +5,7 @@ import { type ReactNode, Suspense } from "react";
 import { MemoryRouter } from "react-router-dom";
 
 import type { AppRouter } from "@pt/api";
-import { TEST_SESSION } from "@pt/api/test/setupDb";
+import { TEST_SESSION } from "@pt/api/webTestSupport";
 
 import { TRPCProvider } from "../trpc.ts";
 

@@ -2,9 +2,7 @@ import * as trpcExpress from "@trpc/server/adapters/express";
 import express from "express";
 import type { Server } from "node:http";
 
-import { appRouter, db } from "@pt/api";
-import { logStore } from "@pt/api/logger";
-import { setupDb } from "@pt/api/test/setupDb";
+import { appRouter, db, logStore, setupDb } from "@pt/api/webTestSupport";
 
 let server: Server;
 
