@@ -109,7 +109,7 @@ export function MobileMenuSheet({
             )}
           </div>
 
-          {window.Native && import.meta.env.DEV && (
+          {window.Native && (
             <div className="flex flex-col px-2 pb-2">
               <hr className="my-2" />
               <Button variant="secondary" onClick={() => setDebugOpen(true)}>
