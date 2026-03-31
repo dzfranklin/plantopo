@@ -1,11 +1,18 @@
 {
+  "files.associations": {
+    ".css": "tailwindcss"
+  },
+  "tailwindCSS.classFunctions": ["cn"],
   "cSpell.words": [
     "createdb",
     "plantopo",
     "psql",
+    "shadcn",
     "treeifyError",
     "unproject",
     "uuidv4",
+    "vaul",
     "vite"
-  ]
+  ],
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
 }
