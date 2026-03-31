@@ -56,22 +56,26 @@ function UserMenuDesktop({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900">
+      <DropdownMenuTrigger className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900">
         <UserAvatar user={session.user} />
-        <span>{session.user.name}</span>
+        <span className="max-w-42 truncate">{session.user.name}</span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-56">
+      <DropdownMenuContent align="end" className="min-w-56 text-base">
         <DropdownMenuItem disabled>
-          <span className="truncate">{session.user.email}</span>
+          <span className="truncate text-xs">{session.user.email}</span>
         </DropdownMenuItem>
-        <DropdownMenuItem asChild>
+        <DropdownMenuItem className="text-sm/relaxed" asChild>
           <Link to="/settings">Settings</Link>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setDebugOpen(true)}>
+        <DropdownMenuItem
+          className="text-sm/relaxed"
+          onClick={() => setDebugOpen(true)}>
           Debug
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signOut}>Sign out</DropdownMenuItem>
+        <DropdownMenuItem className="text-sm/relaxed" onClick={signOut}>
+          Sign out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
