@@ -1,7 +1,7 @@
 import { RiMenuLine } from "@remixicon/react";
 import { VisuallyHidden } from "radix-ui";
-import { type ReactNode } from "react";
-import { Link, useMatch } from "react-router-dom";
+import { type ReactNode, useEffect, useState } from "react";
+import { Link, useLocation, useMatch } from "react-router-dom";
 import { Drawer } from "vaul";
 
 import { signOut, useSession } from "../auth/auth-client";
@@ -35,9 +35,16 @@ export function MobileMenuSheet({
 }) {
   const { data: session } = useSession();
   const navTabs = useNavTabs({ includeSettings: true });
+  const [open, setOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOpen(false);
+  }, [location]);
 
   return (
-    <Drawer.Root direction="left" autoFocus>
+    <Drawer.Root direction="left" autoFocus open={open} onOpenChange={setOpen}>
       <Drawer.Trigger className="flex items-center text-gray-600 hover:text-gray-900">
         <RiMenuLine size={20} aria-hidden="true" />
       </Drawer.Trigger>
