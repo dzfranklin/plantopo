@@ -1,4 +1,8 @@
-import { RiGridLine, RiRecordCircleLine } from "@remixicon/react";
+import {
+  RiGridLine,
+  RiRecordCircleLine,
+  RiSettings3Line,
+} from "@remixicon/react";
 import type { ReactNode } from "react";
 
 import { useSession } from "@/auth/auth-client";
@@ -27,10 +31,18 @@ const BASE: NavTab[] = [
   },
 ];
 
+const SETTINGS_TAB: NavTab = {
+  to: "/settings",
+  label: "Settings",
+  icon: <RiSettings3Line size={24} aria-hidden="true" />,
+  requireAuth: true,
+};
+
 const NAV_TABS = BASE.filter(t => !t.nativeOnly || window.Native);
 const UNAUTH_NAV_TABS = NAV_TABS.filter(t => !t.requireAuth);
 
-export function useNavTabs() {
+export function useNavTabs({ includeSettings = false } = {}) {
   const session = useSession().data;
-  return session ? NAV_TABS : UNAUTH_NAV_TABS;
+  const base = session ? NAV_TABS : UNAUTH_NAV_TABS;
+  return includeSettings ? [...base, SETTINGS_TAB] : base;
 }

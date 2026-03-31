@@ -22,6 +22,13 @@
       "when": 1774468093949,
       "tag": "0002_native_session_init_token",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774963229546,
+      "tag": "0003_passkey",
+      "breakpoints": true
     }
   ]
 }

@@ -1,3 +1,4 @@
+import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { type APIError, createAuthMiddleware } from "better-auth/api";
@@ -33,10 +34,11 @@ const authLogger = logger.child({ module: "auth" });
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
-  plugins: [bearer()],
+  plugins: [bearer(), passkey()],
   secret: env.BETTER_AUTH_SECRET,
   baseURL: `${env.APP_URL}/api/v1/auth`,
   socialProviders,
+  errorURL: `${env.APP_URL}/auth-error`,
   session: {
     expiresIn: 365 * 24 * 60 * 60, // 365 days
     updateAge: 24 * 60 * 60, // 24 hours

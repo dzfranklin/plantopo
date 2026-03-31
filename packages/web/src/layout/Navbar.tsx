@@ -105,9 +105,12 @@ export function Navbar() {
       </div>
 
       {!session && !window.Native && (
-        <div className="ml-auto">
-          <Button asChild>
+        <div className="ml-auto flex gap-2">
+          <Button asChild variant="outline">
             <Link to="/login">Sign in</Link>
+          </Button>
+          <Button asChild>
+            <Link to="/signup">Sign up</Link>
           </Button>
         </div>
       )}

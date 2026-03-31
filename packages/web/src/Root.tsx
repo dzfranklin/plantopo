@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 
 import type { AppRouter } from "@pt/api";
 
+import { Toaster } from "./components/ui/sonner.tsx";
 import { isUnauthorizedError } from "./errors.ts";
 import { logger } from "./logger.ts";
 import { AppRoutes } from "./routes.tsx";
@@ -58,6 +59,7 @@ export function Root() {
           <AppRoutes />
         </BrowserRouter>
       </TRPCProvider>
+      <Toaster />
       {devtoolsEnabled && (
         <Suspense>
           <ReactQueryDevtools />

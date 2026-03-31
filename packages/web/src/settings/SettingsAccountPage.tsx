@@ -1,6 +1,8 @@
+import { RiAddLine, RiDeleteBinLine, RiPencilLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { PasskeyIcon } from "@/auth/PasskeyIcon";
 import { authClient, signOut, useRequiredSession } from "@/auth/auth-client";
 import { providersInfo } from "@/auth/providers";
 import { authKeys } from "@/auth/queryKeys";
@@ -21,7 +23,7 @@ function Section({
     <section>
       <div>
         <h3 className="text-base font-semibold">{title}</h3>
-        <hr className="my-2" />
+        <hr className="mt-1 mb-4" />
         {description && (
           <p className="mb-2 text-sm text-gray-500">{description}</p>
         )}
@@ -38,6 +40,8 @@ export default function SettingsAccountPage() {
   const queryClient = useQueryClient();
 
   const [name, setName] = useState(user.name ?? "");
+  const [editingPasskeyId, setEditingPasskeyId] = useState<string | null>(null);
+  const [editingPasskeyName, setEditingPasskeyName] = useState("");
 
   const { data: accounts } = useQuery({
     queryKey: authKeys.accounts(),
@@ -52,6 +56,15 @@ export default function SettingsAccountPage() {
     queryKey: authKeys.sessions(),
     queryFn: async () => {
       const { data, error } = await authClient.listSessions();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: passkeys } = useQuery({
+    queryKey: authKeys.passkeys(),
+    queryFn: async () => {
+      const { data, error } = await authClient.passkey.listUserPasskeys();
       if (error) throw error;
       return data;
     },
@@ -87,6 +100,37 @@ export default function SettingsAccountPage() {
     },
   });
 
+  const addPasskey = useMutation({
+    mutationFn: async () => {
+      const { error } = await authClient.passkey.addPasskey();
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authKeys.passkeys() });
+    },
+  });
+
+  const deletePasskey = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await authClient.passkey.deletePasskey({ id });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authKeys.passkeys() });
+    },
+  });
+
+  const updatePasskey = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      const { error } = await authClient.passkey.updatePasskey({ id, name });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authKeys.passkeys() });
+      setEditingPasskeyId(null);
+    },
+  });
+
   const nameDirty = name !== (user.name ?? "");
 
   return (
@@ -101,7 +145,7 @@ export default function SettingsAccountPage() {
           <Input
             value={name}
             onChange={e => setName(e.target.value)}
-            className="max-w-xs"
+            className="max-w-xs flex-1"
           />
           <Button type="submit" disabled={!nameDirty || updateName.isPending}>
             Save
@@ -150,6 +194,99 @@ export default function SettingsAccountPage() {
           different social account that uses the same email address (
           {user.email}).
         </p>
+      </Section>
+
+      <Section
+        title="Passkeys"
+        description="Passkeys enable you to securely sign in using your device. Don't create passkeys on shared devices.">
+        <ul className="flex flex-col gap-2">
+          {passkeys?.map(passkey => (
+            <li
+              key={passkey.id}
+              className="flex items-center justify-between gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <PasskeyIcon className="h-4 w-4" />
+                {editingPasskeyId === passkey.id ? (
+                  <form
+                    onSubmit={e => {
+                      e.preventDefault();
+                      updatePasskey.mutate({
+                        id: passkey.id,
+                        name: editingPasskeyName,
+                      });
+                    }}
+                    className="flex items-center gap-2">
+                    <Input
+                      value={editingPasskeyName}
+                      onChange={e => setEditingPasskeyName(e.target.value)}
+                      className="h-7 w-48"
+                      autoFocus
+                    />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={!editingPasskeyName || updatePasskey.isPending}>
+                      Save
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingPasskeyId(null)}>
+                      Cancel
+                    </Button>
+                  </form>
+                ) : (
+                  <span>{passkey.name ?? passkey.id}</span>
+                )}
+              </div>
+              {editingPasskeyId !== passkey.id && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setEditingPasskeyId(passkey.id);
+                      setEditingPasskeyName(passkey.name ?? "");
+                    }}>
+                    <RiPencilLine className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deletePasskey.mutate(passkey.id)}
+                    disabled={deletePasskey.isPending}>
+                    <RiDeleteBinLine className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+        {deletePasskey.isError && (
+          <p className="text-destructive mt-2 text-xs">
+            {deletePasskey.error?.message ?? "Failed to delete passkey"}
+          </p>
+        )}
+        {updatePasskey.isError && (
+          <p className="text-destructive mt-2 text-xs">
+            {updatePasskey.error?.message ?? "Failed to rename passkey"}
+          </p>
+        )}
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-3"
+          onClick={() => addPasskey.mutate()}
+          disabled={addPasskey.isPending}>
+          <RiAddLine className="h-4 w-4" />
+          Add passkey
+        </Button>
+        {addPasskey.isError && (
+          <p className="text-destructive mt-2 text-xs">
+            {addPasskey.error?.message ?? "Failed to add passkey"}
+          </p>
+        )}
       </Section>
 
       <Section title="Sessions">

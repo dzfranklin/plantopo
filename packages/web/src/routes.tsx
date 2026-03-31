@@ -11,6 +11,7 @@ const CounterPage = lazy(() => import("./counter/CounterPage.tsx"));
 const TripListPage = lazy(() => import("./trip/TripListPage.tsx"));
 const TripEditorPage = lazy(() => import("./trip/TripEditorPage.tsx"));
 const LoginPage = lazy(() => import("./auth/LoginPage.tsx"));
+const SignUpPage = lazy(() => import("./auth/SignUpPage.tsx"));
 const RecordTrackPage = lazy(() => import("./track/RecordTrackPage.tsx"));
 const NotFoundPage = lazy(() => import("./NotFoundPage.tsx"));
 const SettingsPage = lazy(() => import("./settings/SettingsPage.tsx"));
@@ -44,6 +45,7 @@ export function AppRoutes() {
       <Suspense>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignUpPage />} />
 
           <Route element={<NavbarLayout />}>
             <Route index element={<HomePage />} />

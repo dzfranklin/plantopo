@@ -1,11 +1,13 @@
+import { passkeyClient } from "@better-auth/passkey/client";
 import { useQuery } from "@tanstack/react-query";
 import { createAuthClient } from "better-auth/react";
 
 import { authKeys } from "./queryKeys";
 
-export const authClient: ReturnType<typeof createAuthClient> = createAuthClient(
-  { baseURL: window.location.origin + "/api/v1/auth" },
-);
+export const authClient = createAuthClient({
+  baseURL: window.location.origin + "/api/v1/auth",
+  plugins: [passkeyClient()],
+});
 
 declare global {
   interface Window {

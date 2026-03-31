@@ -34,7 +34,7 @@ export function MobileMenuSheet({
   setDebugOpen: (open: boolean) => void;
 }) {
   const { data: session } = useSession();
-  const navTabs = useNavTabs();
+  const navTabs = useNavTabs({ includeSettings: true });
 
   return (
     <Drawer.Root direction="left" autoFocus>
@@ -47,8 +47,8 @@ export function MobileMenuSheet({
           <Drawer.Title>Menu</Drawer.Title>
           <Drawer.Description>Navigation menu</Drawer.Description>
         </VisuallyHidden.Root>
-        <Drawer.Content className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col gap-0 bg-white">
-          <div className="flex flex-col">
+        <Drawer.Content className="fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col gap-0 bg-white">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
             <Link className="px-4 pt-3 pb-0.5 font-semibold" to="/">
               PlanTopo
             </Link>
@@ -90,9 +90,12 @@ export function MobileMenuSheet({
               </div>
             ) : (
               !window.Native && (
-                <div className="flex flex-col px-4 py-2">
-                  <Button asChild className="w-full">
+                <div className="flex flex-row gap-2 px-4 py-2">
+                  <Button asChild variant="outline" className="flex-1">
                     <Link to="/login">Sign in</Link>
+                  </Button>
+                  <Button asChild className="flex-1">
+                    <Link to="/signup">Sign up</Link>
                   </Button>
                 </div>
               )
