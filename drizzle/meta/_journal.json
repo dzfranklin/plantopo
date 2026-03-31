@@ -36,6 +36,20 @@
       "when": 1774978999225,
       "tag": "0004_prefs",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1774987229635,
+      "tag": "0005_strava_connection",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1774988314776,
+      "tag": "0006_strava_oauth_state",
+      "breakpoints": true
     }
   ]
 }

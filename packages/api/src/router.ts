@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 
 import { counterRouter } from "./counter/counter.router.js";
+import { stravaRouter } from "./strava/strava.router.js";
 import { trackRouter } from "./track/track.router.js";
 import { publicProcedure, router } from "./trpc.js";
 
@@ -17,6 +18,7 @@ export const appRouter = router({
   ping: publicProcedure.query(() => "pong"),
   counter: counterRouter,
   track: trackRouter,
+  strava: stravaRouter,
   ...(process.env.NODE_ENV === "test" ? { test: testRouter } : {}),
 });
 

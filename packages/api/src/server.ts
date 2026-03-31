@@ -14,6 +14,7 @@ import { exchangeNativeSessionInitToken } from "./auth/auth.service.js";
 import { env } from "./env.js";
 import { bindLog, logStore, logger } from "./logger.js";
 import { appRouter } from "./router.js";
+import { registerStravaRoutes } from "./strava/strava.routes.js";
 
 const app = express();
 const isDev = process.env.NODE_ENV !== "production";
@@ -85,6 +86,8 @@ app.post("/api/v1/native-session", async (req, res) => {
 });
 
 app.all("/api/v1/auth/*path", toNodeHandler(auth));
+
+registerStravaRoutes(app);
 
 app.use(
   "/api/v1/trpc",

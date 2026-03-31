@@ -1,6 +1,7 @@
 import { RiAddLine, RiDeleteBinLine, RiPencilLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router";
 
 import { Section } from "./Section";
 import { PasskeyIcon } from "@/auth/PasskeyIcon";
@@ -9,6 +10,7 @@ import { providersInfo } from "@/auth/providers";
 import { authKeys } from "@/auth/queryKeys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useTRPC } from "@/trpc";
 import { usePageTitle } from "@/usePageTitle";
 
 export default function SettingsAccountPage() {
@@ -16,10 +18,32 @@ export default function SettingsAccountPage() {
 
   const { session: currentSession, user } = useRequiredSession();
   const queryClient = useQueryClient();
+  const trpc = useTRPC();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [name, setName] = useState(user.name ?? "");
   const [editingPasskeyId, setEditingPasskeyId] = useState<string | null>(null);
   const [editingPasskeyName, setEditingPasskeyName] = useState("");
+
+  const [stravaStatus, setStravaStatus] = useState(() =>
+    searchParams.get("strava"),
+  );
+  useEffect(() => {
+    if (stravaStatus) {
+      setSearchParams(
+        p => {
+          p.delete("strava");
+          return p;
+        },
+        { replace: true },
+      );
+      if (stravaStatus === "connected") {
+        queryClient.invalidateQueries({
+          queryKey: trpc.strava.account.queryOptions().queryKey,
+        });
+      }
+    }
+  }, [stravaStatus, setSearchParams, queryClient, trpc]);
 
   const { data: accounts } = useQuery({
     queryKey: authKeys.accounts(),
@@ -75,6 +99,19 @@ export default function SettingsAccountPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: authKeys.accounts() });
+    },
+  });
+
+  const { data: stravaAccount } = useQuery(trpc.strava.account.queryOptions());
+
+  const disconnectStrava = useMutation({
+    ...trpc.strava.disconnect.mutationOptions(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: authKeys.accounts() });
+      queryClient.invalidateQueries({
+        queryKey: trpc.strava.account.queryOptions().queryKey,
+      });
+      setStravaStatus(null);
     },
   });
 
@@ -136,31 +173,83 @@ export default function SettingsAccountPage() {
         )}
       </Section>
 
+      <Section title="Integrations">
+        {stravaAccount ? (
+          <div className="flex items-center justify-between gap-4 text-sm text-gray-600">
+            <span>
+              <img
+                src={stravaAccount.athlete.profile}
+                className="mr-4 inline-block h-8 w-8"
+              />{" "}
+              Connected to Strava ({stravaAccount.athlete.firstname}{" "}
+              {stravaAccount.athlete.lastname})
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => disconnectStrava.mutate()}
+              disabled={disconnectStrava.isPending}>
+              Disconnect
+            </Button>
+          </div>
+        ) : (
+          <a href="/api/v1/strava/connect">
+            <img
+              src="/btn_strava_connect_with_orange.svg"
+              alt="Connect with Strava"
+              className="h-[48px]"
+            />
+          </a>
+        )}
+        {stravaStatus === "connected" && (
+          <p className="mt-2 text-sm text-green-600">
+            Strava connected successfully.
+          </p>
+        )}
+        {stravaStatus === "denied" && (
+          <p className="mt-2 text-sm text-gray-500">
+            Strava connection cancelled.
+          </p>
+        )}
+        {stravaStatus === "error" && (
+          <p className="text-destructive mt-2 text-sm">
+            Failed to connect Strava. Please try again.
+          </p>
+        )}
+        {disconnectStrava.isError && (
+          <p className="text-destructive mt-2 text-xs">
+            {disconnectStrava.error?.message ?? "Failed to disconnect Strava"}
+          </p>
+        )}
+      </Section>
+
       <Section
         title="Connected social accounts"
         description="The social accounts you use to sign in.">
         <ul className="flex flex-col gap-2">
-          {accounts?.map(account => {
-            const info =
-              providersInfo[account.providerId as keyof typeof providersInfo];
-            return (
-              <li
-                key={account.id}
-                className="flex items-center justify-between gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  {info?.icon ?? null}
-                  {info?.label ?? account.providerId}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => unlinkAccount.mutate(account.providerId)}
-                  disabled={unlinkAccount.isPending}>
-                  Disconnect
-                </Button>
-              </li>
-            );
-          })}
+          {accounts
+            ?.filter(a => a.providerId !== "strava")
+            .map(account => {
+              const info =
+                providersInfo[account.providerId as keyof typeof providersInfo];
+              return (
+                <li
+                  key={account.id}
+                  className="flex items-center justify-between gap-4 text-sm text-gray-600">
+                  <div className="flex items-center gap-2">
+                    {info?.icon ?? null}
+                    {info?.label ?? account.providerId}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => unlinkAccount.mutate(account.providerId)}
+                    disabled={unlinkAccount.isPending}>
+                    Disconnect
+                  </Button>
+                </li>
+              );
+            })}
         </ul>
         {unlinkAccount.isError && (
           <p className="text-destructive mt-2 text-xs">
