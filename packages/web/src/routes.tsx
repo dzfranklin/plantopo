@@ -64,8 +64,7 @@ export function AppRoutes() {
               </Route>
             </Route>
 
-            <Route path="/error-test" element={<ErrorTest />} />
-
+            <Route path="/dev/error-test" element={<ErrorTest />} />
             <Route path="/dev/mapview" element={<DevMapViewPage />} />
             <Route path="/dev/map" element={<DevMapPage />} />
             <Route path="/dev/errors" element={<DevErrorPage />} />
