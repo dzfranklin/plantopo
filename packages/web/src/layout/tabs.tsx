@@ -1,6 +1,7 @@
-import { useSession } from "@/auth/auth-client";
 import { RiGridLine, RiRecordCircleLine } from "@remixicon/react";
 import type { ReactNode } from "react";
+
+import { useSession } from "@/auth/auth-client";
 
 export interface NavTab {
   to: string;
@@ -26,8 +27,8 @@ const BASE: NavTab[] = [
   },
 ];
 
-const NAV_TABS = BASE.filter((t) => !t.nativeOnly || window.Native);
-const UNAUTH_NAV_TABS = NAV_TABS.filter((t) => !t.requireAuth);
+const NAV_TABS = BASE.filter(t => !t.nativeOnly || window.Native);
+const UNAUTH_NAV_TABS = NAV_TABS.filter(t => !t.requireAuth);
 
 export function useNavTabs() {
   const session = useSession().data;

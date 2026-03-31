@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button.tsx";
 import {
   useMutation,
   useQueryClient,
@@ -7,6 +6,7 @@ import {
 import { useState } from "react";
 
 import { useTRPC } from "../trpc.ts";
+import { Button } from "@/components/ui/button.tsx";
 
 export default function CounterPage() {
   const trpc = useTRPC();
@@ -17,12 +17,12 @@ export default function CounterPage() {
 
   const setCount = useMutation(
     trpc.counter.setCount.mutationOptions({
-      onMutate: async (newCount) => {
+      onMutate: async newCount => {
         if (!optimistic) return;
         await queryClient.cancelQueries(trpc.counter.count.queryFilter());
         queryClient.setQueryData(trpc.counter.count.queryKey(), newCount);
       },
-      onSuccess: (newCount) => {
+      onSuccess: newCount => {
         queryClient.setQueryData(trpc.counter.count.queryKey(), newCount);
       },
     }),
@@ -37,15 +37,14 @@ export default function CounterPage() {
       <Button
         onClick={() => setCount.mutate(count + 1)}
         disabled={setCount.isPending}
-        size="lg"
-      >
+        size="lg">
         Increment
       </Button>
       <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600">
         <input
           type="checkbox"
           checked={optimistic}
-          onChange={(e) => setOptimistic(e.target.checked)}
+          onChange={e => setOptimistic(e.target.checked)}
           className="h-4 w-4 accent-blue-600"
         />
         Optimistic update

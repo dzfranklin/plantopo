@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { RiMenuLine } from "@remixicon/react";
 import { VisuallyHidden } from "radix-ui";
 import { type ReactNode } from "react";
@@ -7,6 +6,7 @@ import { Drawer } from "vaul";
 
 import { signOut, useSession } from "../auth/auth-client";
 import { useNavTabs } from "./tabs";
+import { Button } from "@/components/ui/button";
 
 function MobileMenuSheetTab({
   to,
@@ -21,8 +21,7 @@ function MobileMenuSheetTab({
   return (
     <Link
       to={to}
-      className={`flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-100 ${active ? "font-medium text-gray-900" : "text-gray-700"}`}
-    >
+      className={`flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-100 ${active ? "font-medium text-gray-900" : "text-gray-700"}`}>
       {icon}
       {label}
     </Link>
@@ -54,7 +53,7 @@ export function MobileMenuSheet({
               PlanTopo
             </Link>
             <hr className="my-2" />
-            {navTabs.map((tab) => (
+            {navTabs.map(tab => (
               <MobileMenuSheetTab
                 key={tab.to}
                 to={tab.to}

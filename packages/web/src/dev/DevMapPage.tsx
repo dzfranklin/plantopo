@@ -1,10 +1,10 @@
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
 import { MapView } from "../components/map/MapView";
 import { BaseStyleSchema, type MapProps } from "../components/map/types";
 import { Checkbox } from "../components/ui/checkbox";
 import { Input } from "../components/ui/input";
+import { Button } from "@/components/ui/button";
 
 const SAMPLE_GEOJSON: GeoJSON.FeatureCollection = {
   type: "FeatureCollection",
@@ -85,7 +85,7 @@ export default function DevMapPage() {
         <label className="flex items-center gap-2">
           <Checkbox
             checked={interactive}
-            onCheckedChange={(checked) => setInteractive(checked === true)}
+            onCheckedChange={checked => setInteractive(checked === true)}
           />
           interactive
         </label>
@@ -95,23 +95,21 @@ export default function DevMapPage() {
             type="number"
             min={1}
             value={count}
-            onChange={(e) =>
-              setCount(Math.max(1, parseInt(e.target.value) || 1))
-            }
+            onChange={e => setCount(Math.max(1, parseInt(e.target.value) || 1))}
             className="w-16"
           />
         </label>
         <label className="flex items-center gap-2">
           <Checkbox
             checked={hash}
-            onCheckedChange={(checked) => setHash(checked === true)}
+            onCheckedChange={checked => setHash(checked === true)}
           />
           hash
         </label>
         <label className="flex items-center gap-2">
           <Checkbox
             checked={geojsonEnabled}
-            onCheckedChange={(checked) => setGeojsonEnabled(checked === true)}
+            onCheckedChange={checked => setGeojsonEnabled(checked === true)}
           />
           geojson
         </label>
@@ -127,8 +125,7 @@ export default function DevMapPage() {
               } catch {
                 alert("Invalid JSON");
               }
-            }}
-          >
+            }}>
             Set custom GeoJSON
           </Button>
         )}
@@ -138,7 +135,7 @@ export default function DevMapPage() {
             className="w-64 font-mono"
             placeholder='e.g. "thunderforest" or {"type":"raster",...}'
             value={baseStyleInput}
-            onChange={(e) => {
+            onChange={e => {
               const raw = e.target.value;
               setBaseStyleInput(raw);
               if (!raw.trim()) {
@@ -166,14 +163,13 @@ export default function DevMapPage() {
             <span className="text-destructive">{baseStyleError}</span>
           )}
         </label>
-        <Button onClick={() => setResetKey((k) => k + 1)}>Reset</Button>
+        <Button onClick={() => setResetKey(k => k + 1)}>Reset</Button>
       </div>
       <div
         className="grid flex-1 gap-2 p-2"
         style={{
           gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(count))}, 1fr)`,
-        }}
-      >
+        }}>
         {Array.from({ length: count }, (_, i) => (
           <MapView
             key={`${i}:${resetKey}`}

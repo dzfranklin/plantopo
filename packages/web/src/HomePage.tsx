@@ -57,8 +57,7 @@ function HomePage() {
                 <svg
                   className="button-icon"
                   role="presentation"
-                  aria-hidden="true"
-                >
+                  aria-hidden="true">
                   <use href="/icons.svg#github-icon"></use>
                 </svg>
                 GitHub
@@ -69,8 +68,7 @@ function HomePage() {
                 <svg
                   className="button-icon"
                   role="presentation"
-                  aria-hidden="true"
-                >
+                  aria-hidden="true">
                   <use href="/icons.svg#discord-icon"></use>
                 </svg>
                 Discord
@@ -81,8 +79,7 @@ function HomePage() {
                 <svg
                   className="button-icon"
                   role="presentation"
-                  aria-hidden="true"
-                >
+                  aria-hidden="true">
                   <use href="/icons.svg#x-icon"></use>
                 </svg>
                 X.com
@@ -93,8 +90,7 @@ function HomePage() {
                 <svg
                   className="button-icon"
                   role="presentation"
-                  aria-hidden="true"
-                >
+                  aria-hidden="true">
                   <use href="/icons.svg#bluesky-icon"></use>
                 </svg>
                 Bluesky

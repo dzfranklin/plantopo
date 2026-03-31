@@ -9,7 +9,7 @@ import { AppRoutes } from "./routes.tsx";
 import { TRPCProvider } from "./trpc.ts";
 
 const ReactQueryDevtools = lazy(() =>
-  import("@tanstack/react-query-devtools").then((m) => ({
+  import("@tanstack/react-query-devtools").then(m => ({
     default: m.ReactQueryDevtools,
   })),
 );
@@ -56,8 +56,7 @@ export function Root() {
       <TRPCProvider
         trpcClient={trpcClient}
         queryClient={queryClient}
-        keyPrefix="trpc"
-      >
+        keyPrefix="trpc">
         <BrowserRouter>
           <AppRoutes />
         </BrowserRouter>

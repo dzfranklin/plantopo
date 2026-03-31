@@ -27,7 +27,7 @@ export async function setup() {
     }),
   );
 
-  await new Promise<void>((resolve) => {
+  await new Promise<void>(resolve => {
     server = app.listen(0, () => resolve());
   });
 
@@ -38,7 +38,7 @@ export async function setup() {
 
 export async function teardown() {
   await new Promise<void>((resolve, reject) =>
-    server.close((err) => {
+    server.close(err => {
       if (err) reject(err);
       else resolve();
     }),

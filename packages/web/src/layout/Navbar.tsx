@@ -1,3 +1,10 @@
+import { type ReactNode, useState } from "react";
+import { Link, useMatch } from "react-router-dom";
+
+import { signOut, useSession } from "../auth/auth-client";
+import { DebugDialog } from "./DebugDialog";
+import { MobileMenuSheet } from "./MobileMenuSheet";
+import { useNavTabs } from "./tabs";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -6,21 +13,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { type ReactNode, useState } from "react";
-import { Link, useMatch } from "react-router-dom";
-
-import { signOut, useSession } from "../auth/auth-client";
-import { DebugDialog } from "./DebugDialog";
-import { MobileMenuSheet } from "./MobileMenuSheet";
-import { useNavTabs } from "./tabs";
 
 function DesktopNavTab({ to, label }: { to: string; label: string }) {
   const active = useMatch(to);
   return (
     <Link
       to={to}
-      className={`rounded px-3 py-1 text-sm ${active ? "font-medium text-gray-900" : "text-gray-500 hover:text-gray-900"}`}
-    >
+      className={`rounded px-3 py-1 text-sm ${active ? "font-medium text-gray-900" : "text-gray-500 hover:text-gray-900"}`}>
       {label}
     </Link>
   );
@@ -39,8 +38,7 @@ function MobileNavTab({
   return (
     <Link
       to={to}
-      className={`flex flex-1 flex-col items-center justify-center gap-1 py-2 text-xs ${active ? "text-blue-600" : "text-gray-600 hover:text-gray-900"}`}
-    >
+      className={`flex flex-1 flex-col items-center justify-center gap-1 py-2 text-xs ${active ? "text-blue-600" : "text-gray-600 hover:text-gray-900"}`}>
       {icon}
       {label}
     </Link>
@@ -93,8 +91,7 @@ export function Navbar() {
   return (
     <nav
       style={{ gridArea: "header" }}
-      className="flex items-center gap-3 border-b border-gray-200 px-4 py-2 text-sm"
-    >
+      className="flex items-center gap-3 border-b border-gray-200 px-4 py-2 text-sm">
       <div className="sm:hidden">
         <MobileMenuSheet setDebugOpen={setDebugOpen} />
       </div>
@@ -104,7 +101,7 @@ export function Navbar() {
       </Link>
 
       <div className="hidden items-center gap-1 sm:flex">
-        {navTabs.map((tab) => (
+        {navTabs.map(tab => (
           <DesktopNavTab key={tab.to} to={tab.to} label={tab.label} />
         ))}
       </div>
@@ -131,9 +128,8 @@ export function NavbarMobileFooter() {
   return (
     <nav
       style={{ gridArea: "footer" }}
-      className="sticky bottom-0 flex border-t border-gray-200 bg-white sm:hidden"
-    >
-      {navTabs.map((tab) => (
+      className="sticky bottom-0 flex border-t border-gray-200 bg-white sm:hidden">
+      {navTabs.map(tab => (
         <MobileNavTab
           key={tab.to}
           to={tab.to}

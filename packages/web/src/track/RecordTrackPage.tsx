@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { RecordedTrack, RecordedTrackPoint } from "@pt/shared";
@@ -6,6 +5,7 @@ import type { RecordedTrack, RecordedTrackPoint } from "@pt/shared";
 import { NativeRequiredError } from "../AppError.js";
 import { MapManager, MapView } from "../components/map/index.js";
 import { type RecordTrackState, RecordTrackStateSchema } from "./types.js";
+import { Button } from "@/components/ui/button";
 
 function trackToGeoJSON(recording: RecordedTrack): GeoJSON.Feature {
   return {
@@ -13,7 +13,7 @@ function trackToGeoJSON(recording: RecordedTrack): GeoJSON.Feature {
     properties: { stroke: "#2a82b2", "stroke-width": 3 },
     geometry: {
       type: "LineString",
-      coordinates: recording.points.map((p) => [p.longitude, p.latitude]),
+      coordinates: recording.points.map(p => [p.longitude, p.latitude]),
     },
   };
 }
@@ -38,7 +38,7 @@ export default function RecordTrackPage() {
 
   useEffect(() => {
     let centeredForRecordingId: string | undefined;
-    window.onRecordTrackState = (raw) => {
+    window.onRecordTrackState = raw => {
       if (import.meta.env.DEV) RecordTrackStateSchema.parse(raw);
       const state = raw as RecordTrackState;
 
@@ -86,8 +86,7 @@ export default function RecordTrackPage() {
         ) : (
           <Button
             className="w-full"
-            onClick={() => window.Native!.startRecordingTrack()}
-          >
+            onClick={() => window.Native!.startRecordingTrack()}>
             Start Recording
           </Button>
         )}

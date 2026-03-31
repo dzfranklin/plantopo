@@ -17,8 +17,7 @@ function SocialButton({
   return (
     <button
       onClick={onClick}
-      className="flex h-10 w-62.5 items-center justify-center gap-4 rounded-sm border border-gray-200 bg-white px-4 shadow-sm transition-colors hover:bg-gray-50"
-    >
+      className="flex h-10 w-62.5 items-center justify-center gap-4 rounded-sm border border-gray-200 bg-white px-4 shadow-sm transition-colors hover:bg-gray-50">
       {icon}
       <span className="text-sm font-medium">{label}</span>
     </button>

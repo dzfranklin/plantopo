@@ -1,7 +1,7 @@
-import { env } from "@/env";
 import ml from "maplibre-gl";
 
 import type { MapProps } from "./types";
+import { env } from "@/env";
 
 export function buildStyle(props: MapProps): ml.StyleSpecification {
   return {

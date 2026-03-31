@@ -127,7 +127,7 @@ export class BottomInfoControl implements ml.IControl {
     }
 
     // remove any entries that are whitespace
-    partsUnsanitized = partsUnsanitized.filter((e) => String(e).trim());
+    partsUnsanitized = partsUnsanitized.filter(e => String(e).trim());
 
     // remove any entries that are substrings of another entry.
     // first sort by length so that substrings come first
@@ -147,7 +147,7 @@ export class BottomInfoControl implements ml.IControl {
     const htmlUnsanitized = partsUnsanitized.join(" | ");
     const htmlSanitized = this.sanitizeAttributionHTML(htmlUnsanitized);
 
-    const hasOSData = partsUnsanitized.some((p) =>
+    const hasOSData = partsUnsanitized.some(p =>
       p.includes("Contains OS data"),
     );
     if (this._osLogo) {

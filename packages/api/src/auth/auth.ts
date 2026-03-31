@@ -62,7 +62,7 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        after: async (user) => {
+        after: async user => {
           authLogger.info(
             { userId: user.id, email: user.email },
             "user signed up",
@@ -70,7 +70,7 @@ export const auth = betterAuth({
         },
       },
       delete: {
-        after: async (user) => {
+        after: async user => {
           authLogger.info(
             { userId: user.id, email: user.email },
             "user deleted",
@@ -80,7 +80,7 @@ export const auth = betterAuth({
     },
     account: {
       create: {
-        after: async (account) => {
+        after: async account => {
           authLogger.info(
             {
               id: account.id,
@@ -92,7 +92,7 @@ export const auth = betterAuth({
         },
       },
       delete: {
-        after: async (account) => {
+        after: async account => {
           authLogger.info(
             {
               id: account.id,
@@ -106,7 +106,7 @@ export const auth = betterAuth({
     },
     session: {
       create: {
-        after: async (session) => {
+        after: async session => {
           authLogger.info(
             {
               userId: session.userId,
@@ -119,7 +119,7 @@ export const auth = betterAuth({
         },
       },
       delete: {
-        after: async (session) => {
+        after: async session => {
           authLogger.info(
             {
               userId: session.userId,
@@ -134,7 +134,7 @@ export const auth = betterAuth({
     },
   },
   hooks: {
-    after: createAuthMiddleware(async (ctx) => {
+    after: createAuthMiddleware(async ctx => {
       if (!ctx.path.startsWith("/callback/")) return;
       const newSession = ctx.context.newSession;
       if (!newSession) return;

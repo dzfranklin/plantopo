@@ -2,6 +2,10 @@ import type ml from "maplibre-gl";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { MapManager } from "./MapManager";
+import type { MapProps } from "./types";
 import {
   Dialog,
   DialogContent,
@@ -9,10 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useCallback, useEffect, useRef, useState } from "react";
-
-import { MapManager } from "./MapManager";
-import type { MapProps } from "./types";
 
 interface ContextMenu {
   x: number;
@@ -35,11 +35,11 @@ export function MapView(props: MapProps) {
     if (container) {
       const manager = new MapManager(container, {
         ...initialPropsRef.current,
-        onShowAttributions: (html) => setAttributionModalHTML(html),
+        onShowAttributions: html => setAttributionModalHTML(html),
       });
       managerRef.current = manager;
       initialPropsRef.current.onManager?.(manager);
-      manager.map?.on("contextmenu", (e) => {
+      manager.map?.on("contextmenu", e => {
         setContextMenu({ x: e.point.x, y: e.point.y, lngLat: e.lngLat });
       });
     } else {
@@ -63,10 +63,9 @@ export function MapView(props: MapProps) {
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
       <Dialog
         open={attributionModalHTML !== null}
-        onOpenChange={(open) => {
+        onOpenChange={open => {
           if (!open) setAttributionModalHTML(null);
-        }}
-      >
+        }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Attribution</DialogTitle>
@@ -84,8 +83,7 @@ export function MapView(props: MapProps) {
             top: contextMenu.y,
           }}
           className="bg-popover text-popover-foreground z-50 min-w-32 overflow-hidden rounded-md border p-1 shadow-md"
-          onPointerDown={(e) => e.stopPropagation()}
-        >
+          onPointerDown={e => e.stopPropagation()}>
           {import.meta.env.DEV && (
             <button
               className="hover:bg-accent hover:text-accent-foreground relative flex w-full cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none"
@@ -93,12 +91,11 @@ export function MapView(props: MapProps) {
                 const w = window as unknown as Record<string, unknown>;
                 const varName = !w._map
                   ? "_map"
-                  : `_map${Object.keys(w).filter((k) => /^_map\d*$/.test(k)).length}`;
+                  : `_map${Object.keys(w).filter(k => /^_map\d*$/.test(k)).length}`;
                 w[varName] = managerRef.current;
                 console.log(`Stored map as window.${varName}`);
                 setContextMenu(null);
-              }}
-            >
+              }}>
               Store as global variable
             </button>
           )}

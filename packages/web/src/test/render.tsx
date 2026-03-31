@@ -35,8 +35,7 @@ export function renderWithProviders(
       <TRPCProvider
         trpcClient={trpcClient}
         queryClient={queryClient}
-        keyPrefix="trpc"
-      >
+        keyPrefix="trpc">
         <MemoryRouter initialEntries={[initialPath]}>
           <Suspense fallback={<div>Loading...</div>}>{ui}</Suspense>
         </MemoryRouter>
