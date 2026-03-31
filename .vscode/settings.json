@@ -5,6 +5,7 @@
   "tailwindCSS.classFunctions": ["cn"],
   "cSpell.words": [
     "createdb",
+    "noformat",
     "plantopo",
     "psql",
     "shadcn",

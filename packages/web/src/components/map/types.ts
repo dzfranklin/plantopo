@@ -6,6 +6,8 @@ export interface MapProps {
   interactive?: boolean;
   hash?: boolean | string;
   baseStyle?: z.infer<typeof BaseStyleSchema>;
+  /** GeoJSON data to display on the map.
+   * Supports [simplestyle](https://github.com/mapbox/simplestyle-spec/tree/master/1.1.0). */
   geojson?: GeoJSON.FeatureCollection | GeoJSON.Feature | null;
   onManager?: (manager: MapManager) => void;
   onShowAttributions?: (html: string) => void;

@@ -1,152 +1,59 @@
 import ml from "maplibre-gl";
 
+import {
+  OS_SOURCE,
+  RASTER_BASE_LAYER,
+  SATELLITE_SOURCE,
+  SIMPLE_STYLE_LAYER_SPECS,
+  THUNDERFOREST_SOURCE,
+} from "./style";
 import type { MapProps } from "./types";
-import { env } from "@/env";
 
 export function buildStyle(props: MapProps): ml.StyleSpecification {
   return {
     version: 8,
     sources: {
       base: baseStyleSource(props.baseStyle),
-      geojson: {
-        type: "geojson",
-        data: props.geojson ?? { type: "FeatureCollection", features: [] },
-      },
+      geojson: buildGeojsonSource(props.geojson),
     },
-    layers: [
-      {
-        id: "base",
-        type: "raster",
-        source: "base",
-      },
-      // Polygons — fill
-      {
-        id: "geojson-fill",
-        type: "fill",
-        source: "geojson",
-        filter: ["==", ["geometry-type"], "Polygon"],
-        paint: {
-          "fill-color": ["coalesce", ["get", "fill"], "#555555"],
-          "fill-opacity": [
-            "case",
-            ["has", "fill-opacity"],
-            ["to-number", ["get", "fill-opacity"]],
-            0.6,
-          ],
-        },
-      },
-      // Polygons — stroke
-      {
-        id: "geojson-fill-outline",
-        type: "line",
-        source: "geojson",
-        filter: ["==", ["geometry-type"], "Polygon"],
-        paint: {
-          "line-color": ["coalesce", ["get", "stroke"], "#555555"],
-          "line-opacity": [
-            "case",
-            ["has", "stroke-opacity"],
-            ["to-number", ["get", "stroke-opacity"]],
-            1,
-          ],
-          "line-width": [
-            "case",
-            ["has", "stroke-width"],
-            ["to-number", ["get", "stroke-width"]],
-            2,
-          ],
-        },
-      },
-      // Lines
-      {
-        id: "geojson-line",
-        type: "line",
-        source: "geojson",
-        filter: ["==", ["geometry-type"], "LineString"],
-        paint: {
-          "line-color": ["coalesce", ["get", "stroke"], "#555555"],
-          "line-opacity": [
-            "case",
-            ["has", "stroke-opacity"],
-            ["to-number", ["get", "stroke-opacity"]],
-            1,
-          ],
-          "line-width": [
-            "case",
-            ["has", "stroke-width"],
-            ["to-number", ["get", "stroke-width"]],
-            2,
-          ],
-        },
-      },
-      // Points — circle (marker-color, no symbol support)
-      {
-        id: "geojson-point",
-        type: "circle",
-        source: "geojson",
-        filter: ["==", ["geometry-type"], "Point"],
-        paint: {
-          "circle-color": ["coalesce", ["get", "marker-color"], "#7e7e7e"],
-          "circle-radius": [
-            "match",
-            ["get", "marker-size"],
-            "small",
-            4,
-            "large",
-            10,
-            7, // medium (default)
-          ],
-          "circle-stroke-color": "#ffffff",
-          "circle-stroke-width": 1.5,
-        },
-      },
-    ],
+    layers: [RASTER_BASE_LAYER, ...SIMPLE_STYLE_LAYER_SPECS],
   };
+}
+
+function buildGeojsonSource(
+  geojson: MapProps["geojson"],
+): ml.GeoJSONSourceSpecification {
+  if (!geojson) {
+    return {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    };
+  } else if (geojson.type === "FeatureCollection") {
+    return {
+      type: "geojson",
+      data: geojson,
+    };
+  } else {
+    return {
+      type: "geojson",
+      data: {
+        type: "FeatureCollection",
+        features: [geojson],
+      },
+    };
+  }
 }
 
 function baseStyleSource(
   optionalBaseStyle: MapProps["baseStyle"],
 ): ml.RasterSourceSpecification {
   const baseStyle = optionalBaseStyle ?? "thunderforest";
-  const year = new Date().getFullYear().toString();
   if (typeof baseStyle === "string") {
+    // prettier-ignore
     switch (baseStyle) {
-      case "thunderforest": {
-        return {
-          type: "raster",
-          tiles: [
-            `https://api.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${env.VITE_THUNDERFOREST_TILE_KEY}`,
-          ],
-          tileSize: 256,
-          minzoom: 0,
-          maxzoom: 22,
-          attribution:
-            '<a href="https://www.thunderforest.com/" target="_blank">&copy; Thunderforest</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>',
-        };
-      }
-      case "os": {
-        return {
-          type: "raster",
-          url: "https://tiles.plantopo.com/tilejson/os_leisure.json",
-          attribution:
-            `<a href="https://www.ordnancesurvey.co.uk/governance/crown-copyright" target="_blank">Contains OS data &copy; Crown copyright and database rights ${year}</a>` +
-            ' | <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap</a>',
-        };
-      }
-      case "satellite": {
-        return {
-          type: "raster",
-          tiles: [
-            "https://mt2.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-            "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-            "https://mt3.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-          ],
-          tileSize: 256,
-          minzoom: 0,
-          maxzoom: 21,
-          attribution: "Map data &copy; Google " + year,
-        };
-      }
+      case "thunderforest": return THUNDERFOREST_SOURCE;
+      case "os": return OS_SOURCE;
+      case "satellite": return SATELLITE_SOURCE;
     }
   } else {
     return baseStyle;
