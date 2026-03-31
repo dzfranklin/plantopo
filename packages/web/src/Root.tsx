@@ -14,6 +14,29 @@ const ReactQueryDevtools = lazy(() =>
   })),
 );
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      throwOnError: true,
+      retry: (failureCount, error) => {
+        if (
+          error instanceof TRPCClientError &&
+          error.data?.code === "UNAUTHORIZED"
+        ) {
+          return false;
+        }
+
+        return failureCount < 3;
+      },
+    },
+    mutations: { throwOnError: true },
+  },
+});
+
+const trpcClient = createTRPCClient<AppRouter>({
+  links: [httpBatchLink({ url: "/api/v1/trpc" })],
+});
+
 export function Root() {
   const [devtoolsEnabled, setDevtoolsEnabled] = useState(false);
 
@@ -24,32 +47,6 @@ export function Root() {
       delete window.enableDevtools;
     };
   }, []);
-
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            throwOnError: true,
-            retry: (failureCount, error) => {
-              if (
-                error instanceof TRPCClientError &&
-                error.data?.code === "UNAUTHORIZED"
-              ) {
-                return false;
-              }
-              return failureCount < 3;
-            },
-          },
-          mutations: { throwOnError: true },
-        },
-      }),
-  );
-  const [trpcClient] = useState(() =>
-    createTRPCClient<AppRouter>({
-      links: [httpBatchLink({ url: "/api/v1/trpc" })],
-    }),
-  );
 
   return (
     <QueryClientProvider client={queryClient}>
