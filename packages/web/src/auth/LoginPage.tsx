@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { GitHubIcon } from "./GitHubIcon.tsx";
 import { GoogleIcon } from "./GoogleIcon.tsx";
 import { authClient } from "./auth-client.ts";
+import { usePageTitle } from "@/usePageTitle.ts";
 
 function SocialButton({
   icon,
@@ -26,6 +27,8 @@ function SocialButton({
 
 export default function LoginPage() {
   if (window.Native) throw new Error("Login page loaded in native");
+
+  usePageTitle("Login");
 
   const [searchParams] = useSearchParams();
   const callbackURL = searchParams.get("returnTo") ?? "/";

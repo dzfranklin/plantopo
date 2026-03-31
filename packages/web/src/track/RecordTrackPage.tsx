@@ -6,6 +6,7 @@ import { NativeRequiredError } from "../AppError.js";
 import { MapManager, MapView } from "../components/map/index.js";
 import { type RecordTrackState, RecordTrackStateSchema } from "./types.js";
 import { Button } from "@/components/ui/button";
+import { usePageTitle } from "@/usePageTitle.js";
 
 function trackToGeoJSON(recording: RecordedTrack): GeoJSON.Feature {
   return {
@@ -24,6 +25,8 @@ function jumpToPoint(manager: MapManager, point: RecordedTrackPoint) {
 
 export default function RecordTrackPage() {
   if (!window.Native) throw new NativeRequiredError();
+
+  usePageTitle("Record Track");
 
   const managerRef = useRef<MapManager | null>(null);
   const pendingJumpRef = useRef<RecordedTrackPoint | null>(null);

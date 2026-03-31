@@ -7,8 +7,10 @@ import { useState } from "react";
 
 import { useTRPC } from "../trpc.ts";
 import { Button } from "@/components/ui/button.tsx";
+import { usePageTitle } from "@/usePageTitle.ts";
 
 export default function CounterPage() {
+  usePageTitle("Counter");
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [optimistic, setOptimistic] = useState(true);
