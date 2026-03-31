@@ -1,8 +1,4 @@
-import {
-  RiGridLine,
-  RiRecordCircleLine,
-  RiSettings3Line,
-} from "@remixicon/react";
+import { RiRecordCircleLine, RiSettings3Line } from "@remixicon/react";
 import type { ReactNode } from "react";
 
 import { useSession } from "@/auth/auth-client";
@@ -16,12 +12,6 @@ export interface NavTab {
 }
 
 const BASE: NavTab[] = [
-  {
-    to: "/counter",
-    label: "Counter",
-    icon: <RiGridLine size={24} aria-hidden="true" />,
-    requireAuth: true,
-  },
   {
     to: "/record-track",
     label: "Track",

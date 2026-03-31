@@ -1,8 +1,9 @@
 import { beforeEach } from "vitest";
 
-import { counterTable } from "../counter/counter.schema.js";
 import { db } from "../db.js";
+import { stravaConnection, stravaOauthState } from "../strava/strava.schema.js";
 
 beforeEach(async () => {
-  await db.delete(counterTable);
+  await db.delete(stravaOauthState);
+  await db.delete(stravaConnection);
 });
