@@ -5,6 +5,7 @@ import { signOut, useSession } from "../auth/auth-client";
 import { DebugDialog } from "./DebugDialog";
 import { MobileMenuSheet } from "./MobileMenuSheet";
 import { useNavTabs } from "./tabs";
+import { UserAvatar } from "@/auth/UserAvatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -56,22 +57,15 @@ function UserMenuDesktop({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900">
-        {session.user.image ? (
-          <img
-            src={session.user.image}
-            alt={session.user.name ?? ""}
-            className="h-6 w-6 rounded-full object-cover"
-          />
-        ) : (
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gray-300 text-xs font-medium text-gray-600">
-            {session.user.name?.[0]?.toUpperCase()}
-          </div>
-        )}
+        <UserAvatar user={session.user} />
         <span>{session.user.name}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-56">
         <DropdownMenuItem disabled>
           <span className="truncate">{session.user.email}</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/settings">Settings</Link>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={signOut}>Sign out</DropdownMenuItem>
         <DropdownMenuSeparator />

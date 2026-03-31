@@ -13,6 +13,13 @@ const TripEditorPage = lazy(() => import("./trip/TripEditorPage.tsx"));
 const LoginPage = lazy(() => import("./auth/LoginPage.tsx"));
 const RecordTrackPage = lazy(() => import("./track/RecordTrackPage.tsx"));
 const NotFoundPage = lazy(() => import("./NotFoundPage.tsx"));
+const SettingsPage = lazy(() => import("./settings/SettingsPage.tsx"));
+const SettingsAccountPage = lazy(
+  () => import("./settings/SettingsAccountPage.tsx"),
+);
+const SettingsInterfacePage = lazy(
+  () => import("./settings/SettingsInterfacePage.tsx"),
+);
 const DevMapPage = lazy(() => import("./dev/DevMapPage.tsx"));
 const DevErrorPage = lazy(() => import("./dev/DevErrorsPage.tsx"));
 
@@ -46,10 +53,19 @@ export function AppRoutes() {
               <Route path="/trips" element={<TripListPage />} />
               <Route path="/trips/:tripId" element={<TripEditorPage />} />
               <Route path="/record-track" element={<RecordTrackPage />} />
+              <Route path="/settings" element={<SettingsPage />}>
+                <Route
+                  index
+                  element={<Navigate to="/settings/account" replace />}
+                />
+                <Route path="account" element={<SettingsAccountPage />} />
+                <Route path="interface" element={<SettingsInterfacePage />} />
+              </Route>
             </Route>
 
             <Route path="/unauth-counter" element={<CounterPage />} />
             <Route path="/error-test" element={<ErrorTest />} />
+
             <Route path="/dev/map" element={<DevMapPage />} />
             <Route path="/dev/errors" element={<DevErrorPage />} />
 

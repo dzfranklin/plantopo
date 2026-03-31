@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { GitHubIcon } from "./GitHubIcon.tsx";
 import { GoogleIcon } from "./GoogleIcon.tsx";
 import { authClient } from "./auth-client.ts";
+import { providersInfo } from "./providers.tsx";
 import { usePageTitle } from "@/usePageTitle.ts";
 
 function SocialButton({
@@ -39,14 +40,14 @@ export default function LoginPage() {
       <div className="flex w-87.5 flex-col items-center gap-3">
         <SocialButton
           icon={<GoogleIcon />}
-          label="Sign in with Google"
+          label={`Sign in with ${providersInfo.google.label}`}
           onClick={() =>
             authClient.signIn.social({ provider: "google", callbackURL })
           }
         />
         <SocialButton
           icon={<GitHubIcon />}
-          label="Sign in with GitHub"
+          label={`Sign in with ${providersInfo.github.label}`}
           onClick={() =>
             authClient.signIn.social({
               provider: "github",
