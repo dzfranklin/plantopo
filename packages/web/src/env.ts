@@ -7,7 +7,7 @@ const schema = z.object({
 const parsed = schema.safeParse(import.meta.env);
 if (!parsed.success) {
   throw new Error(
-    "Invalid environment variables: " +
+    "[web] Invalid environment variables: " +
       JSON.stringify(z.treeifyError(parsed.error)),
   );
 }

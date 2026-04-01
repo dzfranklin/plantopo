@@ -1,3 +1,5 @@
+import "../loadEnv.js";
+
 import { beforeEach } from "vitest";
 
 import { db } from "../db.js";

@@ -16,11 +16,10 @@ const schema = z.object({
 
 const parsed = schema.safeParse(process.env);
 if (!parsed.success) {
-  console.error(
-    "Invalid environment variables:" +
+  throw new Error(
+    "[api] Invalid environment variables:" +
       JSON.stringify(z.treeifyError(parsed.error)),
   );
-  process.exit(1);
 }
 
 export const env = parsed.data;
