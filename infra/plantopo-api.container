@@ -5,8 +5,10 @@ Wants=network-online.target
 
 [Container]
 Image=ghcr.io/dzfranklin/plantopo-api:latest
+ContainerName=plantopo-api
 PublishPort=3030:4000
 EnvironmentFile=/etc/plantopo/api.env
+Network=plantopo.network
 
 [Service]
 Restart=on-failure
