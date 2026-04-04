@@ -3,8 +3,6 @@
 One-time setup for the PlanTopo server. (Assumes Ubuntu server with podman,
 tailscale, and postgres).
 
-**Secrets**: See "Infra" item in plantopo 1Password vault.
-
 ## OAuth
 
 **Google Cloud Console**
@@ -27,90 +25,47 @@ tailscale, and postgres).
 
 ## Steps
 
-### 1. Create the plantopo user
+### Create the app user
 
 ```sh
-useradd --system --create-home plantopo
-loginctl enable-linger plantopo
+root@box> useradd --system --create-home app
+root@box> loginctl enable-linger app
 ```
 
-### 2. Install the quadlet container file
+### Copy infra files
 
 ```sh
-mkdir -p /home/plantopo/.config/containers/systemd
-cp infra/plantopo-api.container /home/plantopo/.config/containers/systemd/plantopo-api.container
-chown -R plantopo:plantopo /home/plantopo/.config
+dev> rsync infra/plantopo.container app@box:.config/containers/systemd/
+dev> rsync infra/plantopo-deploy daniel@box:/tmp/ && ssh daniel@box "sudo mv /tmp/plantopo-deploy /usr/local/bin"
 ```
 
-### 3. Create the postgres user and database
+### Create the postgres user and database
 
 ```sh
-DB_PASSWORD=$(openssl rand -base64 32)
-echo "postgres://plantopo:$DB_PASSWORD@10.0.2.2:5432/plantopo"
-sudo -u postgres psql <<SQL
+postgres@box> DB_PASSWORD=$(openssl rand -base64 32)
+postgres@box> echo "postgres://plantopo:$DB_PASSWORD@10.0.2.2:5432/plantopo"
+postgres@box> psql <<SQL
 CREATE USER plantopo WITH PASSWORD '$DB_PASSWORD';
 CREATE DATABASE plantopo OWNER plantopo;
 SQL
 ```
 
-### 4. Create the environment file
+### Create the environment file
 
 ```sh
-mkdir -p /etc/plantopo
-install -m 600 -o plantopo /dev/null /etc/plantopo/api.env
+root@box> mkdir -p /etc/plantopo
+root@box> install -m u=rw,go= -o app /dev/null /etc/plantopo/env
 ```
 
-Copy from 1Password field to `/etc/plantopo/api.env`
+Populate the environment file (or restore a backup)
 
-### 5. Create the deploy script
+### Enable and start the service
 
 ```sh
-mkdir -p /opt/plantopo
-install -m 755 /dev/null /opt/plantopo/deploy.sh
+app@box> systemctl --user daemon-reload && systemctl --user start plantopo
 ```
 
-Contents of `/opt/plantopo/deploy.sh`:
-
-```sh
-#!/bin/sh
-set -e
-[ "$(id -un)" = "plantopo" ] || { echo "Must be run as plantopo"; exit 1; }
-[ -n "$1" ] || { echo "Usage: $0 <image>"; exit 1; }
-IMAGE=$1
-
-export XDG_RUNTIME_DIR=/run/user/$(id -u)
-
-podman pull "$IMAGE"
-
-sed -i "s|^Image=.*|Image=$IMAGE|" /home/plantopo/.config/containers/systemd/plantopo-api.container
-
-systemctl --user daemon-reload
-systemctl --user restart plantopo-api.service
-
-systemctl --user is-active plantopo-api.service
-
-i=0
-while [ $i -lt 30 ]; do
-  if curl -sf --max-time 1 http://localhost:3030/_status > /dev/null 2>&1; then
-    echo "Service is up"
-    break
-  fi
-  i=$((i + 1))
-  sleep 1
-done
-[ $i -lt 30 ] || { echo "Timeout waiting for /_status"; exit 1; }
-
-SYSTEMD_COLORS=0 systemctl --user status --no-pager plantopo-api.service
-```
-
-### 6. Enable and start the service
-
-```sh
-sudo -u plantopo XDG_RUNTIME_DIR=/run/user/$(id -u plantopo) systemctl --user daemon-reload
-sudo -u plantopo XDG_RUNTIME_DIR=/run/user/$(id -u plantopo) systemctl --user start plantopo-api.service
-```
-
-### 7. Configure Tailscale for CI deploys
+### Configure Tailscale for CI deploys
 
 Add an SSH key for the `tag:ci` Tailscale tag so GitHub Actions can connect:
 
@@ -131,22 +86,30 @@ Add as repo secrets:
 - `TS_OAUTH_CLIENT_ID`
 - `TS_OAUTH_SECRET`
 
-### 8. Add remaining GitHub Actions secrets
+### Add remaining GitHub Actions secrets
 
 - `DEPLOY_HOST` — box.reindeer-neon.ts.net
-- `DEPLOY_USER` — `plantopo`
+- `DEPLOY_USER` — `app`
 - `DEPLOY_SSH_KEY` — generate and install a dedicated key for CI:
   ```sh
-  ssh-keygen -t ed25519 -C "github-actions" -N "" -f /tmp/plantopo-ci
-  sudo -u plantopo mkdir -p /home/plantopo/.ssh
-  cat /tmp/plantopo-ci.pub | sudo -u plantopo tee -a /home/plantopo/.ssh/authorized_keys
-  sudo -u plantopo chmod 700 /home/plantopo/.ssh
-  sudo -u plantopo chmod 600 /home/plantopo/.ssh/authorized_keys
-  cat /tmp/plantopo-ci  # copy this as the secret value
-  rm /tmp/plantopo-ci /tmp/plantopo-ci.pub
+  app@box> mkdir -p ~/.ssh
+  app@box> ssh-keygen -t ed25519 -C "github-actions" -N "" -f ~/.ssh/plantopo-ci
+  app@box> cat ~/.ssh/plantopo-ci.pub >> ~/.ssh/authorized_keys
+  app@box> chmod 700 ~/.ssh
+  app@box> chmod 600 ~/.ssh/authorized_keys ~/.ssh/plantopo-ci.pub
+  app@box> cat ~/.ssh/plantopo-ci  # copy this as the secret value
+  app@box> rm ~/.ssh/plantopo-ci
   ```
 - `WEB_BUILD_ENV` — newline-separated `KEY=value` pairs for vars baked into the
   frontend bundle (all `VITE_*` vars)
+
+### Copy the infra files
+
+```sh
+dev> rsync -r infra box:/tmp/
+root@box> chown root:root /tmp/infra/plantopo-deploy && mv /tmp/infra/plantopo-deploy /usr/local/bin/
+root@box> chown app:app /tmp/infra/plantopo.container && mv /tmp/infra/plantopo.container /home/app/.config/containers/systemd
+```
 
 ## Rollback
 
@@ -154,8 +117,8 @@ To roll back to a previous version, run the deploy script manually with an older
 image tag:
 
 ```sh
-/opt/plantopo/deploy.sh ghcr.io/dzfranklin/plantopo-api:<previous-sha>
+plantopo-deploy ghcr.io/dzfranklin/plantopo:<previous-sha>
 ```
 
 Previous image tags are available in the GitHub Container Registry:
-`https://github.com/dzfranklin/plantopo/pkgs/container/plantopo-api`
+`https://github.com/dzfranklin/plantopo/pkgs/container/plantopo`

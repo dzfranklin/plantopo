@@ -1,0 +1,17 @@
+[Unit]
+Description=PlanTopo
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/dzfranklin/plantopo:latest
+ContainerName=plantopo
+EnvironmentFile=%h/.config/containers/env/plantopo.env
+Network=internal.network
+
+[Service]
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

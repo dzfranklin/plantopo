@@ -36,8 +36,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}-api:${{ github.event.workflow_run.head_sha || github.sha }}
-            ghcr.io/${{ github.repository }}-api:latest
+            ghcr.io/${{ github.repository }}:${{ github.event.workflow_run.head_sha || github.sha }}
+            ghcr.io/${{ github.repository }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -58,9 +58,10 @@ jobs:
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
+          set -euox pipefail
           install -m 600 /dev/null /tmp/deploy_key
           echo "$DEPLOY_SSH_KEY" > /tmp/deploy_key
           tailscale status --peers
           ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no \
-            plantopo@box.reindeer-neon.ts.net \
-            /opt/plantopo/deploy.sh ghcr.io/${{ github.repository }}-api:${{ needs.build-and-push.outputs.image_tag }}
+            app@box.reindeer-neon.ts.net \
+            /usr/local/bin/plantopo-deploy ghcr.io/${{ github.repository }}:${{ needs.build-and-push.outputs.image_tag }}

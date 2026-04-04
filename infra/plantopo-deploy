@@ -1,0 +1,66 @@
+#!/bin/sh
+set -e
+[ "$(id -un)" = "app" ] || { echo "Must be run as app"; exit 1; }
+[ -n "$1" ] || { echo "Usage: $0 <image>"; exit 1; }
+IMAGE=$1
+
+# NOTE: This script is manually copied to the server and then run by github
+# actions via SSH, so it does not have access to the source code.
+
+# shellcheck disable=SC2155,SC2046
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+
+CONTAINER_FILE=/home/app/.config/containers/systemd/plantopo.container
+SERVICE=plantopo.service
+CONTAINER=plantopo
+
+wait_for_status() {
+  echo "Waiting for service to be up..."
+  i=0
+  while [ $i -lt 30 ]; do
+    if podman exec $CONTAINER curl -sf --max-time 1 http://localhost:4000/_status > /dev/null 2>&1; then
+      echo "Service is up"
+      return 0
+    fi
+    i=$((i + 1))
+    sleep 1
+  done
+  echo "Timeout waiting for /_status"
+  return 1
+}
+
+rollback() {
+  echo "Rolling back to $OLD_IMAGE..."
+  sed -i "s|^Image=.*|Image=$OLD_IMAGE|" $CONTAINER_FILE
+  systemctl --user daemon-reload
+  systemctl --user restart $SERVICE
+  wait_for_status || echo "Rollback health check failed"
+}
+
+OLD_IMAGE=$(grep '^Image=' $CONTAINER_FILE | cut -d= -f2-)
+
+podman pull "$IMAGE"
+
+sed -i "s|^Image=.*|Image=$IMAGE|" $CONTAINER_FILE
+
+systemctl --user daemon-reload
+
+echo "Restarting service..."
+systemctl --user restart $SERVICE
+
+echo "Checking if service is active..."
+if ! systemctl --user is-active $SERVICE; then
+  echo "Service is not active after restart"
+  systemctl --user status --no-pager $SERVICE
+  exit 1
+fi
+
+trap rollback EXIT
+
+wait_for_status
+
+trap - EXIT
+
+systemctl --user status --no-pager --lines 0 $SERVICE
+podman logs $CONTAINER | (if command -v hl > /dev/null 2>&1; then hl --paging=never; else cat; fi)
+echo "All done"

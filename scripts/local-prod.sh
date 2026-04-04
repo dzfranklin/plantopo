@@ -14,5 +14,5 @@ web_build_env=$(cat \
 
 createdb plantopo_prod 2>/dev/null || true
 
-docker build -t plantopo-api --build-arg "WEB_BUILD_ENV=$web_build_env" .
-docker run --rm -p 3030:4000 --env-file "$api_env_file" plantopo-api
+docker build -t plantopo --build-arg "WEB_BUILD_ENV=$web_build_env" .
+docker run --rm -p 3030:4000 --env-file "$api_env_file" plantopo
