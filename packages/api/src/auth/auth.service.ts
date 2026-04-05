@@ -25,3 +25,16 @@ export async function exchangeNativeSessionInitToken(
   if (!row || row.expiresAt < new Date()) return null;
   return row.sessionToken;
 }
+
+export async function authorizeTileRequest(
+  resource: string,
+  key: string,
+): Promise<boolean> {
+  if (resource.startsWith("personal.")) {
+    return key === "personal"; // TODO: fixme
+  } else if (resource.startsWith("edu.")) {
+    return key === "edu"; // TODO: fixme
+  } else {
+    return true;
+  }
+}

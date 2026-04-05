@@ -2,7 +2,6 @@ import "./loadEnv.js";
 
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
-import { serializeSignedCookie } from "better-call";
 import express from "express";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -10,7 +9,7 @@ import { createServer } from "node:http";
 import path from "node:path";
 
 import { auth } from "./auth/auth.js";
-import { exchangeNativeSessionInitToken } from "./auth/auth.service.js";
+import { registerAuthRoutes } from "./auth/auth.routes.js";
 import { env } from "./env.js";
 import { bindLog, logStore, logger } from "./logger.js";
 import { appRouter } from "./router.js";
@@ -32,61 +31,9 @@ app.get("/_status", (_req, res) => {
   res.status(200).send("OK");
 });
 
-// Flow: The native app opens /login in a custom tab, the user logs in via
-// OAuth, then we redirect to a custom URL scheme with a short-lived one-time
-// initiation token in the query (see auth.ts). The native app calls this
-// endpoint to exchange that token for a session cookie and API token, then sets
-// that cookie in its webview's cookie jar.
-//
-// Request: POST /api/v1/native-session Authorization: Bearer <initToken>
-// Response: 200 OK Set-Cookie: sessionToken=... {"token": "api-token"}
-app.post("/api/v1/native-session", async (req, res) => {
-  const authHeader = req.headers.authorization;
-  const initToken = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : null;
-  if (!initToken) {
-    res.status(400).send("Error: Missing token");
-    return;
-  }
-
-  const token = await exchangeNativeSessionInitToken(initToken);
-  if (!token) {
-    res.status(401).send("Error: Invalid or expired token");
-    return;
-  }
-
-  const session = await auth.api
-    .getSession({ headers: new Headers({ authorization: `Bearer ${token}` }) })
-    .catch(() => null);
-  if (!session) {
-    res.status(401).send("Error: Invalid session");
-    return;
-  }
-
-  const ctx = await auth.$context;
-  const cookieName = ctx.authCookies.sessionToken.name;
-  const cookieAttrs = ctx.authCookies.sessionToken.attributes;
-  const maxAge = ctx.sessionConfig.expiresIn;
-  const signedCookie = await serializeSignedCookie(
-    cookieName,
-    token,
-    ctx.secret,
-    {
-      ...cookieAttrs,
-      maxAge,
-    },
-  );
-
-  res
-    .setHeader("set-cookie", signedCookie)
-    .setHeader("content-type", "application/json")
-    .status(200)
-    .send(JSON.stringify({ token }));
-});
-
 app.all("/api/v1/auth/*path", toNodeHandler(auth));
 
+registerAuthRoutes(app);
 registerStravaRoutes(app);
 
 app.use(
