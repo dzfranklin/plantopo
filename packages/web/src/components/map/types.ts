@@ -12,6 +12,7 @@ export interface MapProps {
   /** GeoJSON data to display on the map.
    * Supports [simplestyle](https://github.com/mapbox/simplestyle-spec/tree/master/1.1.0). */
   geojson?: GeoJSON.FeatureCollection | GeoJSON.Feature | null;
+  tileKey?: string;
   onManager?: (manager: MapManager) => void;
   onShowAttributions?: (html: string) => void;
   triggerGeolocationControl?: boolean;

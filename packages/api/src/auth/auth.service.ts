@@ -2,7 +2,13 @@ import { eq } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 
 import { db } from "../db.js";
-import { nativeSessionInitToken } from "./auth.schema.js";
+import { env } from "../env.js";
+import { logger } from "../logger.js";
+import { nativeSessionInitToken, user } from "./auth.schema.js";
+
+if (!env.OWNER_EMAIL) {
+  logger.info("No OWNER_EMAIL set, personal tile access will be disabled");
+}
 
 export async function createNativeSessionInitToken(
   sessionToken: string,
@@ -30,11 +36,22 @@ export async function authorizeTileRequest(
   resource: string,
   key: string,
 ): Promise<boolean> {
-  if (resource.startsWith("personal.")) {
-    return key === "personal"; // TODO: fixme
-  } else if (resource.startsWith("edu.")) {
-    return key === "edu"; // TODO: fixme
-  } else {
-    return true;
-  }
+  const resources = resource.split(",").map(r => r.trim());
+  const needsPersonal = resources.some(r => r.startsWith("personal."));
+  const needsEdu = resources.some(r => r.startsWith("edu."));
+
+  if (!needsPersonal && !needsEdu) return true;
+  if (!key) return false;
+
+  const [row] = await db
+    .select({ email: user.email, eduAccess: user.eduAccess })
+    .from(user)
+    .where(eq(user.tileKey, key))
+    .limit(1);
+
+  if (!row) return false;
+
+  if (needsPersonal && row.email !== env.OWNER_EMAIL) return false;
+  if (needsEdu && !row.eduAccess) return false;
+  return true;
 }

@@ -3,6 +3,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
 
 import { user } from "../auth/auth.schema.js";
+import { db } from "../db.js";
 
 export const TEST_USER = {
   id: "test",
@@ -10,9 +11,11 @@ export const TEST_USER = {
   email: "test@example.com",
   emailVerified: true as const,
   image: null,
+  tileKey: "test-tile-key",
+  eduAccess: false,
   createdAt: new Date(0),
   updatedAt: new Date(0),
-};
+} as const;
 
 export const TEST_SESSION = {
   session: {
@@ -26,7 +29,14 @@ export const TEST_SESSION = {
     userAgent: null,
   },
   user: TEST_USER,
-};
+} as const;
+
+export async function ensureTestUser() {
+  await db
+    .insert(user)
+    .values(TEST_USER)
+    .onConflictDoUpdate({ target: user.id, set: TEST_USER });
+}
 
 export async function setupDb() {
   const dbUrl = process.env.DATABASE_URL!;
@@ -46,11 +56,9 @@ export async function setupDb() {
   }
   await adminClient.end();
 
-  const db = drizzle(dbUrl);
-  await migrate(db, { migrationsFolder: "drizzle" });
-  await db
-    .insert(user)
-    .values(TEST_USER)
-    .onConflictDoNothing({ target: user.id });
-  await db.$client.end();
+  const migrateDb = drizzle(dbUrl);
+  await migrate(migrateDb, { migrationsFolder: "drizzle" });
+  await migrateDb.$client.end();
+
+  await ensureTestUser();
 }

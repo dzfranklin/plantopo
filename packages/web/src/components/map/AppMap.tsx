@@ -3,7 +3,7 @@ import { useState } from "react";
 import { MapView } from "./MapView";
 import type { MapProps } from "./types";
 import { BUILTIN_STYLE_META, BuiltinBaseStyleSchema } from "./types";
-import { useUserPrefs } from "@/auth/auth-client";
+import { useSession, useUserPrefs } from "@/auth/auth-client";
 import { cn } from "@/cn";
 import {
   Popover,
@@ -100,6 +100,7 @@ type AppMapProps = Omit<MapProps, "baseStyle" | "distanceUnit">;
 
 export function AppMap(props: AppMapProps) {
   const prefs = useUserPrefs();
+  const session = useSession();
   const [selected, setSelected] = useState<Layer>(BUILTIN_LAYERS[0]!);
 
   const allLayers: Layer[] = [
@@ -117,6 +118,7 @@ export function AppMap(props: AppMapProps) {
         {...props}
         baseStyle={selected.style}
         distanceUnit={prefs.distanceUnit}
+        tileKey={session.data?.user.tileKey}
       />
       <div className="absolute right-2 bottom-8 z-10">
         <LayerPicker

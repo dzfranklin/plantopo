@@ -46,6 +46,17 @@ export const auth = betterAuth({
         required: true,
         defaultValue: {},
       },
+      tileKey: {
+        type: "string",
+        required: true,
+        input: false,
+      },
+      eduAccess: {
+        type: "boolean",
+        required: true,
+        defaultValue: false,
+        input: false,
+      },
     },
   },
   session: {

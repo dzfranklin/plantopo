@@ -109,7 +109,7 @@ export const THUNDERFOREST_SOURCE: RasterSourceSpecification = {
 
 export const OS_SOURCE: RasterSourceSpecification = {
   type: "raster",
-  url: "https://tiles.plantopo.com/tilejson/os_leisure.json",
+  url: "https://tile.plantopo.com/os-leisure",
   attribution:
     `<a href="https://www.ordnancesurvey.co.uk/governance/crown-copyright">Contains OS data &copy; Crown copyright and database rights ${YEAR}</a>` +
     ' | ' + OSM_ATTRIB,

@@ -14,6 +14,14 @@ export class MapManager {
   private _controls: ml.IControl[] = [];
   private _bottomInfoControl: BottomInfoControl | null = null;
   private _cameraBeforeStyleLoad: ml.CameraOptions | null = null;
+  private _tileKey: string | undefined;
+
+  private _transformRequest: ml.RequestTransformFunction = url => {
+    const u = new URL(url);
+    if (u.hostname !== "tile.plantopo.com") return;
+    if (this._tileKey) u.searchParams.set("key", this._tileKey);
+    return { url: u.toString() };
+  };
 
   private _onError = (e: ml.ErrorEvent) =>
     console.error("[MapManager]", e.error);
@@ -46,6 +54,8 @@ export class MapManager {
     inner.style.height = "100%";
     container.appendChild(inner);
 
+    this._tileKey = initialProps.tileKey;
+
     this._m = new ml.Map({
       container: inner,
       style: buildStyle(initialProps),
@@ -57,6 +67,7 @@ export class MapManager {
       maxPitch: 0, // disable pitch to simplify custom overlays
       boxZoom: false, // Wouldn't work well with our snapping
       attributionControl: false, // in our BottomInfoControl
+      transformRequest: this._transformRequest,
     });
 
     this._bottomInfoControl = new BottomInfoControl(
@@ -106,6 +117,7 @@ export class MapManager {
   setProps(props: MapProps) {
     if (!this._m) return;
 
+    this._tileKey = props.tileKey;
     const didChangeStyle = this._applyStyle(props);
     this._applyInteractive(props);
     this._applyGeojson(props, didChangeStyle);

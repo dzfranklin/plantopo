@@ -57,6 +57,13 @@
       "when": 1774992074325,
       "tag": "0007_remove_counter_demo",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775466475715,
+      "tag": "0008_grey_ghost_rider",
+      "breakpoints": true
     }
   ]
 }
