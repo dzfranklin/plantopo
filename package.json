@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "dev": "NODE_ENV=development tsx packages/api/src/server.ts",
+    "scratch": "NODE_ENV=development tsx watch packages/api/src/.scratch.local.ts",
     "dev:android-devtools": "adb reverse tcp:8097 tcp:8097 && react-devtools",
     "db:generate": "NODE_ENV=development tsx scripts/with-api-env.tsx drizzle-kit generate",
     "db:migrate": "NODE_ENV=development tsx packages/api/src/migrate.ts",
