@@ -1,10 +1,11 @@
 import { keepPreviousData, skipToken, useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import z from "zod";
 
 import type { AppStyle } from "@pt/shared";
 
 import { LayerPicker } from "./LayerPicker";
+import { MapManager } from "./MapManager";
 import { MapView } from "./MapView";
 import {
   DEFAULT_SELECTED_LAYERS,
@@ -21,9 +22,27 @@ export function AppMap(props: AppMapProps) {
   const trpc = useTRPC();
   const prefs = useUserPrefs();
 
+  const unsubscribeIdleRef = useRef<(() => void) | null>(null);
+  const { onManager: onManagerProp, ...forwardedProps } = props;
+  const onManager = useCallback(
+    (m: MapManager) => {
+      unsubscribeIdleRef.current?.();
+      const { unsubscribe } = m.on("idle", () => {
+        if (!m.hasMoved) return;
+        saveLocalDefaults(p => ({
+          ...p,
+          camera: m.serializeCamera(),
+        }));
+      });
+      unsubscribeIdleRef.current = unsubscribe;
+      onManagerProp?.(m);
+    },
+    [onManagerProp],
+  );
+
   const localDefaults = useMemo(() => getLocalDefaults(), []);
   const [selectedLayers, setSelectedLayers] = useState(
-    localDefaults.selectedLayers,
+    localDefaults.selectedLayers ?? DEFAULT_SELECTED_LAYERS,
   );
 
   const onSelectLayers = useCallback((selectedLayers: SelectedLayers) => {
@@ -57,7 +76,13 @@ export function AppMap(props: AppMapProps) {
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <MapView {...props} style={style} distanceUnit={prefs.distanceUnit} />
+      <MapView
+        {...forwardedProps}
+        style={style}
+        distanceUnit={prefs.distanceUnit}
+        initialCamera={localDefaults.camera}
+        onManager={onManager}
+      />
       <div className="absolute right-2 bottom-8 z-10">
         <LayerPicker selected={selectedLayers} onSelect={onSelectLayers} />
       </div>
@@ -66,7 +91,8 @@ export function AppMap(props: AppMapProps) {
 }
 
 const LocalDefaultsSchema = z.object({
-  selectedLayers: SelectedLayersSchema.default(DEFAULT_SELECTED_LAYERS),
+  selectedLayers: SelectedLayersSchema.optional(),
+  camera: z.string().optional(),
 });
 
 type LocalDefaults = z.infer<typeof LocalDefaultsSchema>;
@@ -82,7 +108,7 @@ function getLocalDefaults(): LocalDefaults {
       raw,
     });
     localStorage.removeItem("mapDefaults");
-    return LocalDefaultsSchema.parse({});
+    return {};
   }
 }
 

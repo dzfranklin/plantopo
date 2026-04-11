@@ -16,11 +16,16 @@ export class MapManager {
   private _controls: ml.IControl[] = [];
   private _bottomInfoControl: BottomInfoControl | null = null;
   private _deferredProps: MapProps | null = null;
+  private _hasMoved = false;
 
   private _lastStyleDeps: unknown[] | undefined;
   private _lastInteractiveDeps: unknown[] | undefined;
   private _lastGeojsonDeps: unknown[] | undefined;
   private _lastOnManagerDeps: unknown[] | undefined;
+
+  get hasMoved() {
+    return this._hasMoved;
+  }
 
   private _onError = (e: ml.ErrorEvent) =>
     console.error("[MapManager]", e.error);
@@ -62,6 +67,13 @@ export class MapManager {
     inner.style.height = "100%";
     container.appendChild(inner);
 
+    let initialCamera: ml.CameraOptions = {};
+    if (typeof initialProps.initialCamera === "string") {
+      initialCamera = MapManager.deserializeCamera(initialProps.initialCamera);
+    } else if (initialProps.initialCamera) {
+      initialCamera = initialProps.initialCamera;
+    }
+
     this._m = new ml.Map({
       container: inner,
       style: buildStyle(initialProps),
@@ -71,6 +83,7 @@ export class MapManager {
       zoomSnap: 1, // Only applies during discrete zoom operations
       boxZoom: false, // Wouldn't work well with our snapping
       attributionControl: false, // in our BottomInfoControl
+      ...initialCamera,
     });
 
     this._bottomInfoControl = new BottomInfoControl(
@@ -82,6 +95,15 @@ export class MapManager {
     this._m.on("error", this._onError);
     this._m.on("style.load", this._onstyleload);
     this._m.on("plantopo:stylechange", this._onstylechange);
+
+    const movedHandler = (ev: ml.MapLibreEvent) => {
+      if (ev.originalEvent) {
+        // not a flyTo or jumpTo
+        this._hasMoved = true;
+        this._m?.off("move", movedHandler);
+      }
+    };
+    this._m.on("move", movedHandler);
 
     this._detachZoomSnap = attachZoomSnap(this._m);
     this._applyInteractive(initialProps);
@@ -128,6 +150,63 @@ export class MapManager {
     } else {
       this._m.once("style.load", () => this._m?.jumpTo(options));
     }
+  }
+
+  on<T extends keyof ml.MapEventType>(
+    type: T,
+    listener: (ev: ml.MapEventType[T] & object) => void,
+  ): ml.Subscription {
+    if (this._m) {
+      return this._m.on(type, listener);
+    } else {
+      console.warn(
+        "Attempted to add map event listener after map was destroyed",
+      );
+      return { unsubscribe: () => {} };
+    }
+  }
+
+  serializeCamera(): string {
+    if (!this._m) return "";
+    // Based on <https://github.com/maplibre/maplibre-gl-js/blob/8584c2e766b8a3d54023450dbef8aeee91b99762/src/ui/hash.ts#L45>
+    const center = this._m.getCenter(),
+      zoom = Math.round(this._m.getZoom() * 100) / 100,
+      // derived from equation: 512px * 2^z / 360 / 10^d < 0.5px
+      precision = Math.ceil(
+        (zoom * Math.LN2 + Math.log(512 / 360 / 0.5)) / Math.LN10,
+      ),
+      m = Math.pow(10, precision),
+      lng = Math.round(center.lng * m) / m,
+      lat = Math.round(center.lat * m) / m,
+      bearing = this._m.getBearing(),
+      pitch = this._m.getPitch();
+    let hash = `${zoom}/${lat}/${lng}`;
+    if (bearing || pitch) hash += `/${Math.round((bearing ?? 0) * 10) / 10}`;
+    if (pitch) hash += `/${Math.round(pitch)}`;
+    return hash;
+  }
+
+  static deserializeCamera(hash: string): ml.CameraOptions {
+    const parts = hash.split("/");
+    if (parts.length < 3) return {};
+    const [zoomStr, latStr, lngStr, bearingStr, pitchStr] = parts;
+    const zoom = parseFloat(zoomStr!);
+    const lat = parseFloat(latStr!);
+    const lng = parseFloat(lngStr!);
+    if (isNaN(zoom) || isNaN(lat) || isNaN(lng)) return {};
+    const options: ml.CameraOptions = {
+      zoom,
+      center: [lng, lat],
+    };
+    if (bearingStr) {
+      const bearing = parseFloat(bearingStr);
+      if (!isNaN(bearing)) options.bearing = bearing;
+    }
+    if (pitchStr) {
+      const pitch = parseFloat(pitchStr);
+      if (!isNaN(pitch)) options.pitch = pitch;
+    }
+    return options;
   }
 
   // Called every React render
