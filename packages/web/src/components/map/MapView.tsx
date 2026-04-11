@@ -41,7 +41,6 @@ export function MapView(props: MapProps) {
         initialPropsRef.current,
       );
       managerRef.current = manager;
-      initialPropsRef.current.onManager?.(manager);
       manager.map?.on("contextmenu", e => {
         setContextMenu({ x: e.point.x, y: e.point.y, lngLat: e.lngLat });
       });

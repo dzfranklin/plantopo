@@ -216,13 +216,15 @@ export class MapManager {
     source.setData(geojson ?? { type: "FeatureCollection", features: [] });
   }
 
-  private _applyOnManager(props: MapProps) {
+  private _applyOnManager({ onManager }: MapProps) {
     const lastDeps = this._lastOnManagerDeps;
-    const deps = [props.onManager];
+    const deps = [onManager];
     this._lastOnManagerDeps = deps;
     if (this._depsEq(lastDeps, deps)) return;
-    this._trace("applying", { onManager: props.onManager });
-    props.onManager?.(this);
+    if (onManager) {
+      this._trace("applying", { onManager });
+      setTimeout(() => onManager?.(this), 0);
+    }
   }
 
   private _depsEq(lastDeps: unknown[] | undefined, deps: unknown[]): boolean {
