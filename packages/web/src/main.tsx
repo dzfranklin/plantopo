@@ -6,8 +6,17 @@ import { Root } from "./Root.tsx";
 import "./auth/auth-client.ts";
 import "./index.css";
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <Root />
-  </StrictMode>,
-);
+const root = createRoot(document.getElementById("root")!);
+
+if (localStorage.getItem("_disableStrictMode")) {
+  console.warn(
+    "StrictMode is disabled. To re-enable, run localStorage.removeItem('_disableStrictMode') in the console.",
+  );
+  root.render(<Root />);
+} else {
+  root.render(
+    <StrictMode>
+      <Root />
+    </StrictMode>,
+  );
+}

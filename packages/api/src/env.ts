@@ -13,6 +13,7 @@ const schema = z.object({
   STRAVA_CLIENT_ID: z.string().optional(),
   STRAVA_CLIENT_SECRET: z.string().optional(),
   OWNER_EMAIL: z.email().optional(),
+  MAPTILER_KEY: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);

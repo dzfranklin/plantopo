@@ -10,6 +10,9 @@ import { getLog, logger } from "../logger.js";
 import * as schema from "./auth.schema.js";
 import { createNativeSessionInitToken } from "./auth.service.js";
 
+export type Session = typeof auth.$Infer.Session;
+export type User = Session["user"];
+
 const socialProviders: Parameters<typeof betterAuth>[0]["socialProviders"] = {};
 
 if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {

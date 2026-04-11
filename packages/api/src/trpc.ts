@@ -1,11 +1,11 @@
 import { TRPCError, initTRPC } from "@trpc/server";
 import type { DefaultErrorShape } from "@trpc/server/unstable-core-do-not-import";
-import type { Session, User } from "better-auth";
 
+import type { Session } from "./auth/auth.js";
 import { getLog } from "./logger.js";
 
 export interface Context {
-  session: { session: Session; user: User } | null;
+  session: Session | null;
 }
 
 const t = initTRPC.context<Context>().create({

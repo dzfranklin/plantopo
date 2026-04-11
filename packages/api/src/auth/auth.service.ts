@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { db } from "../db.js";
 import { env } from "../env.js";
 import { logger } from "../logger.js";
+import type { User } from "./auth.js";
 import { nativeSessionInitToken, user } from "./auth.schema.js";
 
 if (!env.OWNER_EMAIL) {
@@ -32,6 +33,10 @@ export async function exchangeNativeSessionInitToken(
   return row.sessionToken;
 }
 
+function isOwnerEmail(email: string) {
+  return env.OWNER_EMAIL && email === env.OWNER_EMAIL;
+}
+
 export async function authorizeTileRequest(
   resource: string,
   key: string,
@@ -51,7 +56,15 @@ export async function authorizeTileRequest(
 
   if (!row) return false;
 
-  if (needsPersonal && row.email !== env.OWNER_EMAIL) return false;
+  if (needsPersonal && !isOwnerEmail(row.email)) return false;
   if (needsEdu && !row.eduAccess) return false;
   return true;
+}
+
+export function userAccessScopes(user: User | undefined | null): string[] {
+  if (!user) return [];
+  const scopes = ["public"];
+  if (isOwnerEmail(user.email)) scopes.push("personal");
+  if (user.eduAccess) scopes.push("edu");
+  return scopes;
 }

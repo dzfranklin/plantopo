@@ -20,6 +20,7 @@
     "pino": "^10.3.1"
   },
   "devDependencies": {
+    "@trpc/client": "^11.15.0",
     "@pt/web": "*",
     "@types/express": "^5.0.6",
     "@types/pg": "^8.20.0",

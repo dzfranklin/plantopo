@@ -33,10 +33,13 @@ export function MapView(props: MapProps) {
   >(null);
   const containerRef = useCallback((container: HTMLDivElement | null) => {
     if (container) {
-      const manager = new MapManager(container, {
-        ...initialPropsRef.current,
-        onShowAttributions: html => setAttributionModalHTML(html),
-      });
+      const manager = new MapManager(
+        {
+          container,
+          onDisplayFullAttribution: html => setAttributionModalHTML(html),
+        },
+        initialPropsRef.current,
+      );
       managerRef.current = manager;
       initialPropsRef.current.onManager?.(manager);
       manager.map?.on("contextmenu", e => {
@@ -66,7 +69,7 @@ export function MapView(props: MapProps) {
         onOpenChange={open => {
           if (!open) setAttributionModalHTML(null);
         }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Attribution</DialogTitle>
           </DialogHeader>

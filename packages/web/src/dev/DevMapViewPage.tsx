@@ -1,10 +1,21 @@
-import { useState } from "react";
+import { keepPreviousData, skipToken, useQuery } from "@tanstack/react-query";
+import { useCallback, useState } from "react";
+
+import type { AppStyle } from "@pt/shared";
 
 import { MapView } from "../components/map/MapView";
-import { BaseStyleSchema, type MapProps } from "../components/map/types";
 import { Checkbox } from "../components/ui/checkbox";
 import { Input } from "../components/ui/input";
+import { MapManager } from "@/components/map/MapManager";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useTRPC } from "@/trpc";
 
 const SAMPLE_GEOJSON: GeoJSON.FeatureCollection = {
   type: "FeatureCollection",
@@ -67,6 +78,24 @@ const SAMPLE_GEOJSON: GeoJSON.FeatureCollection = {
   ],
 };
 
+MapManager.trace = true;
+
+const hasDisabledStrictMode = localStorage.getItem("_disableStrictMode");
+if (hasDisabledStrictMode) {
+  localStorage.removeItem("_disableStrictMode");
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fireWrapper(this: NonNullable<MapManager["_m"]>, event: any) {
+  console.log(
+    "Map event:",
+    event.type,
+    "isStyleLoaded: " + this.isStyleLoaded(),
+  );
+  // @ts-expect-error does not exist
+  return this.__originalFire?.(event);
+}
+
 export default function DevMapPage() {
   const [interactive, setInteractive] = useState(true);
   const [hash, setHash] = useState(true);
@@ -75,13 +104,68 @@ export default function DevMapPage() {
     useState<GeoJSON.FeatureCollection | null>(null);
   const [count, setCount] = useState(1);
   const [resetKey, setResetKey] = useState(0);
-  const [baseStyleInput, setBaseStyleInput] = useState("");
-  const [baseStyle, setBaseStyle] = useState<MapProps["baseStyle"]>(undefined);
-  const [baseStyleError, setBaseStyleError] = useState<string | null>(null);
+  const [selectedStyle, setSelectedStyle] = useState("undefined");
+  const [logEvents, setLogEvents] = useState(false);
+
+  const trpc = useTRPC();
+  const catalogQuery = useQuery(trpc.map.catalog.queryOptions());
+  const styleOptions = catalogQuery.data
+    ? Object.keys(catalogQuery.data.styles).sort()
+    : null;
+  const styleQuery = useQuery({
+    ...trpc.map.style.queryOptions(
+      selectedStyle === "undefined" ? skipToken : selectedStyle,
+    ),
+    placeholderData:
+      selectedStyle === "undefined" ? undefined : keepPreviousData,
+  });
+  const style = styleQuery.data as AppStyle | undefined;
+
+  const onManager = useCallback(
+    (manager: MapManager) => {
+      if (logEvents) {
+        // @ts-expect-error private method
+        const originalFire = manager._m?.fire;
+        // @ts-expect-error private method
+        if (manager._m!.fire !== fireWrapper) {
+          // @ts-expect-error private
+          manager._m!.__originalFire = originalFire.bind(manager._m!);
+          // @ts-expect-error private
+          manager._m!.fire = fireWrapper;
+        }
+      } else {
+        // @ts-expect-error private
+        if (manager._m?.fire === fireWrapper) {
+          // @ts-expect-error private
+          manager._m!.fire = manager._m!.__originalFire;
+          // @ts-expect-error private
+          delete manager._m!.__originalFire;
+        }
+      }
+    },
+    [logEvents],
+  );
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-2 text-sm">
+        {styleOptions && (
+          <Select
+            value={selectedStyle}
+            onValueChange={value => setSelectedStyle(value)}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="undefined">undefined</SelectItem>
+              {styleOptions.map(style => (
+                <SelectItem key={style} value={style}>
+                  {style}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <label className="flex items-center gap-2">
           <Checkbox
             checked={interactive}
@@ -130,41 +214,25 @@ export default function DevMapPage() {
           </Button>
         )}
         <label className="flex items-center gap-2">
-          baseStyle
-          <Input
-            className="w-64 font-mono"
-            placeholder='e.g. "thunderforest" or {"type":"raster",...}'
-            value={baseStyleInput}
-            onChange={e => {
-              const raw = e.target.value;
-              setBaseStyleInput(raw);
-              if (!raw.trim()) {
-                setBaseStyleError(null);
-                setBaseStyle(undefined);
-                return;
-              }
-              let parsed: unknown;
-              try {
-                parsed = JSON.parse(raw);
-              } catch {
-                parsed = raw;
-              }
-              const result = BaseStyleSchema.safeParse(parsed);
-              if (result.success) {
-                setBaseStyleError(null);
-                setBaseStyle(result.data);
-              } else {
-                setBaseStyleError(result.error.issues[0]?.message ?? "Invalid");
-                // keep the last valid baseStyle rather than reverting to default
-              }
-            }}
+          <Checkbox
+            checked={logEvents}
+            onCheckedChange={checked => setLogEvents(checked === true)}
           />
-          {baseStyleError && (
-            <span className="text-destructive">{baseStyleError}</span>
-          )}
+          log events
         </label>
         <Button onClick={() => setResetKey(k => k + 1)}>Reset</Button>
+        <label className="flex items-center gap-2">
+          <Checkbox
+            checked={!hasDisabledStrictMode}
+            onCheckedChange={checked => {
+              if (!checked) localStorage.setItem("_disableStrictMode", "true");
+              window.location.reload();
+            }}
+          />
+          StrictMode
+        </label>
       </div>
+
       <div
         className="grid flex-1 gap-2 p-2"
         style={{
@@ -173,12 +241,13 @@ export default function DevMapPage() {
         {Array.from({ length: count }, (_, i) => (
           <MapView
             key={`${i}:${resetKey}`}
+            style={style}
             interactive={interactive}
             hash={hash || undefined}
             geojson={
               geojsonEnabled ? customGeojson || SAMPLE_GEOJSON : undefined
             }
-            baseStyle={baseStyle}
+            onManager={onManager}
           />
         ))}
       </div>

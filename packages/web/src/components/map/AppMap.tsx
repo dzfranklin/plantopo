@@ -1,132 +1,99 @@
-import { useState } from "react";
+import { keepPreviousData, skipToken, useQuery } from "@tanstack/react-query";
+import { useCallback, useMemo, useState } from "react";
+import z from "zod";
 
+import type { AppStyle } from "@pt/shared";
+
+import { LayerPicker } from "./LayerPicker";
 import { MapView } from "./MapView";
-import type { MapProps } from "./types";
-import { BUILTIN_STYLE_META, BuiltinBaseStyleSchema } from "./types";
-import { useSession, useUserPrefs } from "@/auth/auth-client";
-import { cn } from "@/cn";
 import {
-  Popover,
-  PopoverClose,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  DEFAULT_SELECTED_LAYERS,
+  type MapProps,
+  type SelectedLayers,
+  SelectedLayersSchema,
+} from "./types";
+import { useUserPrefs } from "@/auth/auth-client";
+import { useTRPC } from "@/trpc";
 
-type Layer = {
-  label: string;
-  thumbnail: React.ReactNode;
-  style: MapProps["baseStyle"];
-};
-
-const BUILTIN_LAYERS: Layer[] = BuiltinBaseStyleSchema.options.map(id => {
-  const { label, thumbnail } = BUILTIN_STYLE_META[id];
-  return {
-    label,
-    thumbnail: (
-      <img
-        src={thumbnail}
-        alt={label}
-        width={75}
-        height={75}
-        className="h-[50px] w-[50px] shrink-0 rounded object-cover"
-      />
-    ),
-    style: id,
-  };
-});
-
-function CustomThumbnail({ name }: { name: string }) {
-  const initials = name
-    .split(/\s+/)
-    .map(w => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  return (
-    <div className="flex h-[50px] w-[50px] shrink-0 items-center justify-center rounded bg-gray-200 text-sm font-semibold text-gray-500">
-      {initials || "?"}
-    </div>
-  );
-}
-
-function LayerPicker({
-  layers,
-  selected,
-  onSelect,
-}: {
-  layers: Layer[];
-  selected: Layer;
-  onSelect: (layer: Layer) => void;
-}) {
-  return (
-    <Popover>
-      <PopoverTrigger
-        className={cn(
-          "overflow-hidden rounded-md border-2 border-white shadow-md outline-1 outline-gray-300",
-          "data-[state=open]:outline-2 data-[state=open]:outline-gray-500",
-        )}
-        aria-label="Select map layer">
-        {selected.thumbnail}
-      </PopoverTrigger>
-      <PopoverContent
-        side="top"
-        align="end"
-        sideOffset={6}
-        className="w-auto gap-0 p-0">
-        {layers.map(layer => (
-          <PopoverClose
-            key={layer.label}
-            onClick={() => onSelect(layer)}
-            className={cn(
-              "flex items-center gap-2 p-3 text-left hover:bg-gray-50",
-              layer.label === selected.label && "bg-gray-50",
-            )}>
-            {layer.thumbnail}
-            <span
-              className={cn(
-                "text-xs whitespace-nowrap",
-                layer.label === selected.label && "font-medium",
-              )}>
-              {layer.label}
-            </span>
-          </PopoverClose>
-        ))}
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-type AppMapProps = Omit<MapProps, "baseStyle" | "distanceUnit">;
+type AppMapProps = Omit<MapProps, "style" | "distanceUnit">;
 
 export function AppMap(props: AppMapProps) {
+  const trpc = useTRPC();
   const prefs = useUserPrefs();
-  const session = useSession();
-  const [selected, setSelected] = useState<Layer>(BUILTIN_LAYERS[0]!);
 
-  const allLayers: Layer[] = [
-    ...BUILTIN_LAYERS,
-    ...Object.entries(prefs.customBaseStylesByName).map(([name, style]) => ({
-      label: name,
-      thumbnail: <CustomThumbnail name={name} />,
-      style,
-    })),
-  ];
+  const localDefaults = useMemo(() => getLocalDefaults(), []);
+  const [selectedLayers, setSelectedLayers] = useState(
+    localDefaults.selectedLayers,
+  );
+
+  const onSelectLayers = useCallback((selectedLayers: SelectedLayers) => {
+    setSelectedLayers(selectedLayers);
+    saveLocalDefaults(d => ({ ...d, selectedLayers }));
+  }, []);
+
+  const styleQuery = useQuery(
+    trpc.map.style.queryOptions(selectedLayers?.style ?? skipToken, {
+      placeholderData: selectedLayers?.style ? keepPreviousData : undefined,
+      throwOnError: false,
+    }),
+  );
+  if (styleQuery.error) {
+    if (
+      styleQuery.error.data?.httpStatus === 404 &&
+      selectedLayers?.style === localDefaults.selectedLayers?.style &&
+      selectedLayers?.style !== "default"
+    ) {
+      console.warn(
+        `Failed to load stored default style, resetting (defaults: ${JSON.stringify({ defaults: localDefaults })})`,
+        styleQuery.error.data,
+      );
+      clearLocalDefaults();
+      setSelectedLayers(DEFAULT_SELECTED_LAYERS);
+    } else {
+      throw styleQuery.error;
+    }
+  }
+  const style = styleQuery.data as AppStyle | undefined;
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <MapView
-        {...props}
-        baseStyle={selected.style}
-        distanceUnit={prefs.distanceUnit}
-        tileKey={session.data?.user.tileKey}
-      />
+      <MapView {...props} style={style} distanceUnit={prefs.distanceUnit} />
       <div className="absolute right-2 bottom-8 z-10">
-        <LayerPicker
-          layers={allLayers}
-          selected={selected}
-          onSelect={setSelected}
-        />
+        <LayerPicker selected={selectedLayers} onSelect={onSelectLayers} />
       </div>
     </div>
   );
+}
+
+const LocalDefaultsSchema = z.object({
+  selectedLayers: SelectedLayersSchema.default(DEFAULT_SELECTED_LAYERS),
+});
+
+type LocalDefaults = z.infer<typeof LocalDefaultsSchema>;
+
+function getLocalDefaults(): LocalDefaults {
+  const raw = localStorage.getItem("mapDefaults");
+  const parsed = LocalDefaultsSchema.safeParse(raw ? JSON.parse(raw) : {});
+  if (parsed.success) {
+    return parsed.data;
+  } else {
+    console.warn("Failed to parse map defaults, using defaults schema", {
+      error: parsed.error,
+      raw,
+    });
+    localStorage.removeItem("mapDefaults");
+    return LocalDefaultsSchema.parse({});
+  }
+}
+
+function saveLocalDefaults(
+  defaults: LocalDefaults | ((d: LocalDefaults) => LocalDefaults),
+) {
+  const newDefaults =
+    typeof defaults === "function" ? defaults(getLocalDefaults()) : defaults;
+  localStorage.setItem("mapDefaults", JSON.stringify(newDefaults));
+}
+
+function clearLocalDefaults() {
+  localStorage.removeItem("mapDefaults");
 }

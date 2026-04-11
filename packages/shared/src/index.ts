@@ -1,3 +1,4 @@
+import type ml from "maplibre-gl";
 import z from "zod";
 
 const RecordingStatusSchema = z.enum([
@@ -33,26 +34,31 @@ export type RecordedTrackStatus = z.infer<typeof RecordingStatusSchema>;
 export type RecordedTrackPoint = z.infer<typeof TrackPointSchema>;
 export type RecordedTrack = z.infer<typeof RecordedTrackSchema>;
 
-const sourceURLSchema = z.string().startsWith("https://");
 const boundsSchema = z.tuple([z.number(), z.number(), z.number(), z.number()]);
-
-export const CustomBaseStyleSchema = z.object({
-  type: z.literal("raster"),
-  url: sourceURLSchema.optional(),
-  tiles: z.array(sourceURLSchema).nonempty().optional(),
-  bounds: boundsSchema.optional(),
-  minzoom: z.number().optional(),
-  maxzoom: z.number().optional(),
-  tileSize: z.number().optional(),
-  scheme: z.enum(["xyz", "tms"]).optional(),
-  attribution: z.string().optional(),
-});
 
 export const UserPrefsSchema = z.object({
   distanceUnit: z.enum(["km", "mi"]).default("km"),
-  customBaseStylesByName: z
-    .record(z.string(), CustomBaseStyleSchema)
-    .default({}),
 });
 
 export type UserPrefs = z.infer<typeof UserPrefsSchema>;
+
+export const StyleMetadataFieldSchema = z
+  .object({
+    "plantopo:accessScopes": z.array(z.string()).optional(),
+    "plantopo:bounds": boundsSchema.optional(),
+    "plantopo:thumbnail": z.string().optional(),
+  })
+  .default({});
+
+export type StyleMetadataField = z.infer<typeof StyleMetadataFieldSchema>;
+
+export interface AppStyle extends ml.StyleSpecification {
+  id: string;
+  metadata: StyleMetadataField;
+}
+
+export interface AppStyleMeta {
+  id: string;
+  name?: string;
+  metadata: StyleMetadataField;
+}

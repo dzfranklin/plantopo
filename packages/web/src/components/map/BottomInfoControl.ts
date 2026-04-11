@@ -5,6 +5,9 @@ import "./BottomInfoControl.css";
 
 // Based on <https://github.com/maplibre/maplibre-gl-js/blob/1fe69fd961d62c9b017debfc7eb49c32c53e5339/src/ui/control/attribution_control.ts>
 
+const DEFAULT_DISTANCE_UNIT = "km";
+type DistanceUnit = "km" | "mi" | undefined;
+
 export class BottomInfoControl implements ml.IControl {
   private _map: ml.Map | undefined;
   private _container: HTMLDivElement | undefined;
@@ -15,17 +18,17 @@ export class BottomInfoControl implements ml.IControl {
   private _scaleBar: HTMLDivElement | undefined;
   private _osLogo: HTMLDivElement | undefined;
   private _onShowAttributions: (html: string) => void;
-  private _distanceUnit: "km" | "mi";
+  private _distanceUnit: DistanceUnit;
 
   constructor(
-    onShowAttributions: (html: string) => void,
-    distanceUnit: "km" | "mi" = "km",
+    distanceUnit: DistanceUnit,
+    onShowAttributions?: (html: string) => void,
   ) {
-    this._onShowAttributions = onShowAttributions;
+    this._onShowAttributions = onShowAttributions ?? alertFullAttribution;
     this._distanceUnit = distanceUnit;
   }
 
-  setDistanceUnit(unit: "km" | "mi") {
+  setDistanceUnit(unit: DistanceUnit) {
     if (this._distanceUnit === unit) return;
     this._distanceUnit = unit;
     this._updateScale();
@@ -192,27 +195,33 @@ export class BottomInfoControl implements ml.IControl {
     let distance: number;
     let unit: string;
     let inputValue: number;
-    if (this._distanceUnit === "mi") {
-      const maxMiles = maxMeters / 1609.344;
-      if (maxMiles >= 1) {
-        distance = getRoundNum(maxMiles);
-        unit = "mi";
-        inputValue = maxMiles;
-      } else {
-        const maxYards = maxMeters / 0.9144;
-        distance = getRoundNum(maxYards);
-        unit = "yd";
-        inputValue = maxYards;
+    const distanceUnit = this._distanceUnit ?? DEFAULT_DISTANCE_UNIT;
+    switch (distanceUnit) {
+      case "mi": {
+        const maxMiles = maxMeters / 1609.344;
+        if (maxMiles >= 1) {
+          distance = getRoundNum(maxMiles);
+          unit = "mi";
+          inputValue = maxMiles;
+        } else {
+          const maxYards = maxMeters / 0.9144;
+          distance = getRoundNum(maxYards);
+          unit = "yd";
+          inputValue = maxYards;
+        }
+        break;
       }
-    } else {
-      if (maxMeters >= 1000) {
-        distance = getRoundNum(maxMeters / 1000);
-        unit = "km";
-        inputValue = maxMeters / 1000;
-      } else {
-        distance = getRoundNum(maxMeters);
-        unit = "m";
-        inputValue = maxMeters;
+      case "km": {
+        if (maxMeters >= 1000) {
+          distance = getRoundNum(maxMeters / 1000);
+          unit = "km";
+          inputValue = maxMeters / 1000;
+        } else {
+          distance = getRoundNum(maxMeters);
+          unit = "m";
+          inputValue = maxMeters;
+        }
+        break;
       }
     }
 
@@ -262,4 +271,15 @@ function getRoundNum(num: number): number {
 function getDecimalRoundNum(d: number): number {
   const multiplier = Math.pow(10, Math.ceil(-Math.log(d) / Math.LN10));
   return Math.round(d * multiplier) / multiplier;
+}
+
+/** A basic default in case we are not configured with handler */
+function alertFullAttribution(html: string) {
+  alert(
+    html
+      .split(/<br\s*\/?>/i)
+      .map(line => line.replace(/<[^>]+>/g, "").trim())
+      .filter(line => line.length > 0)
+      .join("\n"),
+  );
 }
