@@ -265,7 +265,12 @@ export class MapManager {
     }
     this._controls = [];
     if (interactive) {
-      const nav = new ml.NavigationControl();
+      const nav = new ml.NavigationControl({
+        showZoom: true,
+        showCompass: true,
+        visualizePitch: true,
+        visualizeRoll: true,
+      });
       const geoloc = new ml.GeolocateControl({
         trackUserLocation: !!window.Native,
       });
