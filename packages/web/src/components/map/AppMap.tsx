@@ -52,6 +52,8 @@ export function AppMap(props: AppMapProps) {
 
   const styleQuery = useQuery(
     trpc.map.style.queryOptions(selectedLayers?.style ?? skipToken, {
+      staleTime: Infinity,
+      gcTime: Infinity,
       placeholderData: selectedLayers?.style ? keepPreviousData : undefined,
       throwOnError: false,
     }),
