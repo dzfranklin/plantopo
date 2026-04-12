@@ -48,14 +48,21 @@ export function LayerPicker({
   return (
     <Popover.Root>
       <Popover.Anchor className="flex flex-col items-end gap-2 select-none">
-        <Popover.Trigger
-          className={cn(
-            "overflow-hidden rounded-md border-2 border-white shadow-md outline-1 outline-gray-300",
-            "data-[state=open]:outline-2 data-[state=open]:outline-gray-500",
+        <div className="relative">
+          <Popover.Trigger
+            className={cn(
+              "overflow-hidden rounded-md border-2 border-white shadow-md outline-1 outline-gray-300",
+              "data-[state=open]:outline-2 data-[state=open]:outline-gray-500",
+            )}
+            aria-label="Select map layer">
+            <Thumbnail style={selectedStyle} size="md" />
+          </Popover.Trigger>
+          {selectedOverlays.size > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-semibold text-white tabular-nums">
+              {selectedOverlays.size}
+            </span>
           )}
-          aria-label="Select map layer">
-          <Thumbnail style={selectedStyle} size="md" />
-        </Popover.Trigger>
+        </div>
       </Popover.Anchor>
 
       <Popover.Portal>
