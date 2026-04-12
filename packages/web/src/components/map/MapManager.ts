@@ -165,11 +165,22 @@ export class MapManager {
     }
   }
 
-  serializeCamera(): string {
-    if (!this._m) return "";
+  getCamera(): ml.CameraOptions {
+    if (!this._m) throw new Error("MapManager destroyed");
+    return {
+      center: this._m.getCenter(),
+      zoom: this._m.getZoom(),
+      bearing: this._m.getBearing(),
+      pitch: this._m.getPitch(),
+    };
+  }
+
+  serializeCamera(camera?: ml.CameraOptions): string {
+    const c = camera ?? (this._m ? this.getCamera() : null);
+    if (!c) return "";
     // Based on <https://github.com/maplibre/maplibre-gl-js/blob/8584c2e766b8a3d54023450dbef8aeee91b99762/src/ui/hash.ts#L45>
-    const center = this._m.getCenter(),
-      zoom = Math.round(this._m.getZoom() * 100) / 100,
+    const center = ml.LngLat.convert(c.center as ml.LngLatLike),
+      zoom = Math.round((c.zoom ?? 0) * 100) / 100,
       // derived from equation: 512px * 2^z / 360 / 10^d < 0.5px
       precision = Math.ceil(
         (zoom * Math.LN2 + Math.log(512 / 360 / 0.5)) / Math.LN10,
@@ -177,8 +188,8 @@ export class MapManager {
       m = Math.pow(10, precision),
       lng = Math.round(center.lng * m) / m,
       lat = Math.round(center.lat * m) / m,
-      bearing = this._m.getBearing(),
-      pitch = this._m.getPitch();
+      bearing = c.bearing ?? 0,
+      pitch = c.pitch ?? 0;
     let hash = `${zoom}/${lat}/${lng}`;
     if (bearing || pitch) hash += `/${Math.round((bearing ?? 0) * 10) / 10}`;
     if (pitch) hash += `/${Math.round(pitch)}`;

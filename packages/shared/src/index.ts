@@ -2,6 +2,8 @@ import z from "zod";
 
 export * from "./style.js";
 
+export const METERS_TO_FT = 3.28084;
+
 const RecordingStatusSchema = z.enum([
   "RECORDING",
   "STOPPED",
