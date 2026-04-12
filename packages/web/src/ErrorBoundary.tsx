@@ -66,7 +66,9 @@ export class ErrorBoundary extends Component<Props, State> {
             : null;
 
       const errorMessage =
-        !customMessage && err instanceof Error ? err.message : null;
+        !customMessage && err instanceof Error
+          ? `${err.name}: ${err.message}`
+          : null;
 
       return (
         <div className="flex min-h-screen items-center justify-center bg-gray-50">
