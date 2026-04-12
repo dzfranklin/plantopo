@@ -9,6 +9,7 @@ import z from "zod";
 
 import { type AppStyle, mergeOverlay } from "@pt/shared";
 
+import { ClickInfoPopup } from "./ClickInfoPopup";
 import { LayerPicker } from "./LayerPicker";
 import { MapManager } from "./MapManager";
 import { MapView } from "./MapView";
@@ -30,8 +31,11 @@ export function AppMap(props: AppMapProps) {
   const { onManager: onManagerProp, ...forwardedProps } = props;
   const initialOnManagerPropRef = useRef(onManagerProp);
 
+  const [manager, setManager] = useState<MapManager | null>(null);
+
   const onManager = useCallback((m: MapManager) => {
     initialOnManagerPropRef.current?.(m);
+    setManager(m);
 
     m.on("idle", () => {
       if (!m.hasMoved) return;
@@ -103,6 +107,7 @@ export function AppMap(props: AppMapProps) {
         initialCamera={localDefaults.camera}
         onManager={onManager}
       />
+      <ClickInfoPopup manager={manager} />
       <div className="absolute right-2 bottom-8 z-10">
         <LayerPicker selected={selectedLayers} onSelect={onSelectLayers} />
       </div>
