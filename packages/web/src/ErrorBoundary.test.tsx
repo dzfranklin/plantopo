@@ -144,7 +144,7 @@ describe("ErrorBoundary", () => {
           <ThrowOnMount error={new Error("it go boom")} />
         </ErrorBoundary>,
       );
-      expect(screen.getByText("it go boom")).toBeInTheDocument();
+      expect(screen.getByText("Error: it go boom")).toBeInTheDocument();
     });
 
     it("omits reqId section", () => {
