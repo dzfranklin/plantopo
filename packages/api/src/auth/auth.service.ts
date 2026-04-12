@@ -47,6 +47,7 @@ export async function authorizeTileRequest(
 
   if (!needsPersonal && !needsEdu) return true;
   if (!key) return false;
+  if (key === env.SERVER_TILE_KEY) return !needsPersonal;
 
   const [row] = await db
     .select({ email: user.email, eduAccess: user.eduAccess })
