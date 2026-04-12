@@ -30,6 +30,7 @@ wait_for_status() {
 }
 
 rollback() {
+  systemctl --user status --no-pager $SERVICE
   echo "Rolling back to $OLD_IMAGE..."
   sed -i "s|^Image=.*|Image=$OLD_IMAGE|" $CONTAINER_FILE
   systemctl --user daemon-reload
