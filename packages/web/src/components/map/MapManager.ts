@@ -21,7 +21,6 @@ export class MapManager {
   private _lastStyleDeps: unknown[] | undefined;
   private _lastInteractiveDeps: unknown[] | undefined;
   private _lastGeojsonDeps: unknown[] | undefined;
-  private _lastOnManagerDeps: unknown[] | undefined;
 
   get hasMoved() {
     return this._hasMoved;
@@ -224,8 +223,6 @@ export class MapManager {
     this._applyInteractive(props);
     this._applyGeojson(props, didChangeStyle);
     this._bottomInfoControl!.setDistanceUnit(props.distanceUnit);
-
-    this._applyOnManager(props); // after all other updates
   }
 
   private _applyStyle(props: MapProps): boolean {
@@ -298,17 +295,6 @@ export class MapManager {
       | undefined;
     if (!source) return;
     source.setData(geojson ?? { type: "FeatureCollection", features: [] });
-  }
-
-  private _applyOnManager({ onManager }: MapProps) {
-    const lastDeps = this._lastOnManagerDeps;
-    const deps = [onManager];
-    this._lastOnManagerDeps = deps;
-    if (this._depsEq(lastDeps, deps)) return;
-    if (onManager) {
-      this._trace("applying", { onManager });
-      setTimeout(() => onManager?.(this), 0);
-    }
   }
 
   private _depsEq(lastDeps: unknown[] | undefined, deps: unknown[]): boolean {

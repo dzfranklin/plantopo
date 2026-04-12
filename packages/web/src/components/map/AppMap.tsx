@@ -27,23 +27,17 @@ export function AppMap(props: AppMapProps) {
   const trpc = useTRPC();
   const prefs = useUserPrefs();
 
-  const unsubscribeIdleRef = useRef<(() => void) | null>(null);
   const { onManager: onManagerProp, ...forwardedProps } = props;
-  const onManager = useCallback(
-    (m: MapManager) => {
-      unsubscribeIdleRef.current?.();
-      const { unsubscribe } = m.on("idle", () => {
-        if (!m.hasMoved) return;
-        saveLocalDefaults(p => ({
-          ...p,
-          camera: m.serializeCamera(),
-        }));
-      });
-      unsubscribeIdleRef.current = unsubscribe;
-      onManagerProp?.(m);
-    },
-    [onManagerProp],
-  );
+  const initialOnManagerPropRef = useRef(onManagerProp);
+
+  const onManager = useCallback((m: MapManager) => {
+    initialOnManagerPropRef.current?.(m);
+
+    m.on("idle", () => {
+      if (!m.hasMoved) return;
+      saveLocalDefaults(p => ({ ...p, camera: m.serializeCamera() }));
+    });
+  }, []);
 
   const localDefaults = useMemo(() => getLocalDefaults(), []);
   const [selectedLayers, setSelectedLayers] = useState(

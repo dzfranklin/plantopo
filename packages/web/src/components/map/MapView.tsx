@@ -33,6 +33,7 @@ export function MapView(props: MapProps) {
         initialPropsRef.current,
       );
       managerRef.current = manager;
+      initialPropsRef.current.onManager?.(manager);
     } else {
       managerRef.current?.destroy();
       managerRef.current = null;
