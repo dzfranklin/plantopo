@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -23,7 +24,7 @@ export type TileProvider = (
   z: number,
   x: number,
   y: number,
-) => Promise<Buffer>;
+) => Promise<Buffer | null>;
 
 function sourceFromSpec(
   spec: typeof defaultDEMSource | typeof eduDEMSource,
@@ -85,7 +86,7 @@ function sourceCacheKey(urlTemplate: string): string {
   return `${hostname}-${hash}`;
 }
 
-const inFlight = new Map<string, Promise<Buffer>>();
+const inFlight = new Map<string, Promise<Buffer | null>>();
 
 export function getCachingTileProvider(): TileProvider {
   return (urlTemplate, z, x, y) =>
@@ -98,23 +99,19 @@ function cachingFetch(
   x: number,
   y: number,
   tileKey: string | undefined,
-): Promise<Buffer> {
+): Promise<Buffer | null> {
   const sourceKey = sourceCacheKey(urlTemplate);
   const cacheKey = `${sourceKey}/${z}/${x}/${y}`;
 
   const existing = inFlight.get(cacheKey);
   if (existing) return existing;
 
-  const promise = (async (): Promise<Buffer> => {
-    const cachePath = join(
-      env.TILE_CACHE_DIR,
-      sourceKey,
-      String(z),
-      String(x),
-      String(y),
-    );
+  const promise = (async (): Promise<Buffer | null> => {
+    const cacheDir = join(env.TILE_CACHE_DIR, sourceKey, String(z), String(x));
+    const cachePath = join(cacheDir, String(y));
     try {
-      return await readFile(cachePath);
+      const cached = await readFile(cachePath);
+      return cached.length === 0 ? null : cached;
     } catch {
       // Cache miss — fetch
     }
@@ -129,18 +126,28 @@ function cachingFetch(
     }
 
     logger.debug({ url }, "Fetching elevation tile");
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      throw new Error(
-        `Failed to fetch tile ${url}: ${resp.status} ${await resp.text()}`,
-      );
+    let buf: Buffer<ArrayBuffer>;
+    try {
+      const resp = await fetch(url);
+      if (resp.status === 404) {
+        await mkdir(cacheDir, { recursive: true });
+        await writeFile(cachePath, "");
+        return null;
+      }
+      if (!resp.ok) {
+        throw new Error(`Failed to fetch elevation tile ${resp.status}`);
+      }
+
+      buf = Buffer.from(await resp.arrayBuffer());
+    } catch (err) {
+      logger.error({ url, error: err }, "Error fetching elevation tile");
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Error fetching elevation tile`,
+      });
     }
 
-    const buf = Buffer.from(await resp.arrayBuffer());
-
-    await mkdir(join(env.TILE_CACHE_DIR, sourceKey, String(z), String(x)), {
-      recursive: true,
-    });
+    await mkdir(cacheDir, { recursive: true });
     await writeFile(cachePath, buf);
 
     return buf;
@@ -226,6 +233,7 @@ export async function getElevations(
     Array.from(uniqueTiles.values()).map(async ({ x, y }) => {
       const key = tileKey(x, y);
       const buf = await tileProvider(source.urlTemplate, source.maxzoom, x, y);
+      if (buf === null) return;
       const { data } = await sharp(buf)
         .ensureAlpha()
         .raw()
@@ -295,6 +303,7 @@ export async function getElevations(
 
   const data = coords.map(c => {
     if (!c) return null;
+    if (!decodedTiles.has(tileKey(c.x, c.y))) return null;
     const elev = sampleBilinear(c);
     return Math.round(elev * 10) / 10;
   });

@@ -79,6 +79,12 @@ describe("getElevations — terrarium encoding (mapterhorn)", () => {
     expect(fetched.has("12-1992-1259")).toBe(true);
   });
 
+  it("returns null for a point whose tile returns 404", async () => {
+    const notFoundProvider: TileProvider = async () => null;
+    const { data } = await getElevations([BEN_NEVIS], [], notFoundProvider);
+    expect(data[0]).toBeNull();
+  });
+
   it("returns correct meta for the default source", async () => {
     const { meta } = await getElevations([BEN_NEVIS], [], mapterhornProvider());
     expect(meta.sources[0]!.tiles).toBe(defaultDEMSource.tiles![0]);
