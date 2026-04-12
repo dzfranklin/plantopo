@@ -1,5 +1,5 @@
+import * as Popover from "@radix-ui/react-popover";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
 
 import type { AppStyleMeta } from "@pt/shared";
 
@@ -16,22 +16,6 @@ export function LayerPicker({
   onSelect: (v: SelectedLayers) => void;
 }) {
   const trpc = useTRPC();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    function handle(e: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handle);
-    return () => document.removeEventListener("mousedown", handle);
-  }, [open]);
 
   const catalogQuery = useQuery(
     trpc.map.catalog.queryOptions(undefined, {
@@ -62,90 +46,94 @@ export function LayerPicker({
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="flex flex-col items-end gap-2 select-none">
-      <div
-        className={cn(
-          "rounded-lg border border-gray-200 bg-white p-4 shadow-lg",
-          "flex flex-col gap-4",
-          "origin-bottom-right transition-all duration-200",
-          open
-            ? "visible scale-100 opacity-100"
-            : "invisible scale-95 opacity-0",
-        )}>
-        <section>
-          <h2 className="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
-            Map
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {styles.map(style => (
-              <button
-                key={style.id}
-                onClick={() =>
-                  onSelect({
-                    ...(selected ?? { style: "default", overlays: [] }),
-                    style: style.id,
-                  })
-                }
-                className="flex flex-col items-center gap-1 rounded-md p-1 text-left hover:bg-gray-50">
-                <Thumbnail
-                  style={style}
-                  size="md"
-                  active={style.id === selected?.style}
-                />
-                <span
-                  className={cn(
-                    "text-xs whitespace-nowrap",
-                    style.id === selected?.style && "font-medium",
-                  )}>
-                  {style.name || style.id}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
+    <Popover.Root>
+      <Popover.Anchor className="flex flex-col items-end gap-2 select-none">
+        <Popover.Trigger
+          className={cn(
+            "overflow-hidden rounded-md border-2 border-white shadow-md outline-1 outline-gray-300",
+            "data-[state=open]:outline-2 data-[state=open]:outline-gray-500",
+          )}
+          aria-label="Select map layer">
+          <Thumbnail style={selectedStyle} size="md" />
+        </Popover.Trigger>
+      </Popover.Anchor>
 
-        {overlays.length > 0 && (
+      <Popover.Portal>
+        <Popover.Content
+          side="top"
+          align="end"
+          sideOffset={8}
+          className={cn(
+            "rounded-lg border border-gray-200 bg-white p-4 shadow-lg",
+            "flex flex-col gap-4",
+            "origin-bottom-right",
+            "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+            "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+            "duration-200",
+          )}>
           <section>
             <h2 className="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
-              Overlays
+              Map
             </h2>
             <div className="flex flex-wrap gap-2">
-              {overlays.map(overlay => (
+              {styles.map(style => (
                 <button
-                  key={overlay.id}
-                  onClick={() => toggleOverlay(overlay.id)}
+                  key={style.id}
+                  onClick={() =>
+                    onSelect({
+                      ...(selected ?? { style: "default", overlays: [] }),
+                      style: style.id,
+                    })
+                  }
                   className="flex flex-col items-center gap-1 rounded-md p-1 text-left hover:bg-gray-50">
                   <Thumbnail
-                    style={overlay}
-                    size="sm"
-                    active={selectedOverlays.has(overlay.id)}
+                    style={style}
+                    size="md"
+                    active={style.id === selected?.style}
                   />
                   <span
                     className={cn(
                       "text-xs whitespace-nowrap",
-                      selectedOverlays.has(overlay.id) && "font-medium",
+                      style.id === selected?.style && "font-medium",
                     )}>
-                    {overlay.name || overlay.id}
+                    {style.name || style.id}
                   </span>
                 </button>
               ))}
             </div>
           </section>
-        )}
-      </div>
 
-      <button
-        onClick={() => setOpen(!open)}
-        className={cn(
-          "overflow-hidden rounded-md border-2 border-white shadow-md outline-1 outline-gray-300",
-          open && "outline-2 outline-gray-500",
-        )}
-        aria-label="Select map layer">
-        <Thumbnail style={selectedStyle} size="md" />
-      </button>
-    </div>
+          {overlays.length > 0 && (
+            <section>
+              <h2 className="mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                Overlays
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {overlays.map(overlay => (
+                  <button
+                    key={overlay.id}
+                    onClick={() => toggleOverlay(overlay.id)}
+                    className="flex flex-col items-center gap-1 rounded-md p-1 text-left hover:bg-gray-50">
+                    <Thumbnail
+                      style={overlay}
+                      size="sm"
+                      active={selectedOverlays.has(overlay.id)}
+                    />
+                    <span
+                      className={cn(
+                        "text-xs whitespace-nowrap",
+                        selectedOverlays.has(overlay.id) && "font-medium",
+                      )}>
+                      {overlay.name || overlay.id}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
