@@ -6,8 +6,8 @@ Wants=network-online.target
 [Container]
 Image=ghcr.io/dzfranklin/plantopo:latest
 ContainerName=plantopo
+PublishPort=4000:4000
 EnvironmentFile=%h/.config/containers/env/plantopo.env
-Network=internal.network
 Volume=plantopo-cache.volume:/cache:Z
 Environment=TILE_CACHE_DIR=/cache/tiles
 
