@@ -36,6 +36,27 @@ function ExternalMapLink({
   );
 }
 
+function CopyableValue({
+  text,
+  successMsg,
+}: {
+  text: string;
+  successMsg: string;
+}) {
+  return (
+    <button
+      onClick={() =>
+        navigator.clipboard
+          .writeText(text)
+          .then(() => toast.success(successMsg))
+      }
+      className="text-left font-medium tracking-wider text-gray-700 hover:text-blue-800"
+      title="Click to copy">
+      {text}
+    </button>
+  );
+}
+
 interface Props {
   manager: MapManager | null;
 }
@@ -43,6 +64,19 @@ interface Props {
 export function ClickInfoPopup({ manager }: Props) {
   const trpc = useTRPC();
   const { distanceUnit } = useUserPrefs();
+  const [altHeld, setAltHeld] = useState(false);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      setAltHeld(e.altKey);
+    }
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keyup", onKey);
+    };
+  }, []);
 
   const [position, setPosition] = useState<{
     lng: number;
@@ -143,15 +177,23 @@ export function ClickInfoPopup({ manager }: Props) {
         {position.osGrid && (
           <>
             <span className="text-gray-500">Grid Ref:</span>
-            <span className="font-medium tracking-wider text-gray-700">
-              {position.osGrid.toString(10)}
-            </span>
+            <CopyableValue
+              text={position.osGrid.toString(10)}
+              successMsg="Grid ref copied"
+            />
           </>
         )}
-        <span className="text-gray-500">Lat, long:</span>
-        <span className="font-medium tracking-wider text-gray-700">
-          {position.lat.toFixed(5)}, {position.lng.toFixed(5)}
+        <span className="text-gray-500">
+          {altHeld ? "Lng, lat:" : "Lat, long:"}
         </span>
+        <CopyableValue
+          text={
+            altHeld
+              ? `${position.lng.toFixed(5)}, ${position.lat.toFixed(5)}`
+              : `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`
+          }
+          successMsg="Coordinates copied"
+        />
         <span className="text-gray-500">Elevation:</span>
         <span className="font-medium tracking-wider text-gray-700">
           {elevationDisplay}
