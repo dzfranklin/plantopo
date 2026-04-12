@@ -75,22 +75,24 @@ export function AppMap(props: AppMapProps) {
   }
   const baseStyle = styleQuery.data as AppStyle | undefined;
 
-  const overlayQueries = useQueries({
+  const loadedOverlays = useQueries({
     queries: (selectedLayers?.overlays ?? []).map(id =>
       trpc.map.overlay.queryOptions(id, {
         staleTime: Infinity,
         gcTime: Infinity,
       }),
     ),
+    combine: results =>
+      results
+        .map(q => q.data as AppStyle | undefined)
+        .filter((o): o is AppStyle => o !== undefined),
   });
 
-  const style = useMemo(() => {
-    if (!baseStyle) return undefined;
-    const loadedOverlays = overlayQueries
-      .map(q => q.data as AppStyle | undefined)
-      .filter((o): o is AppStyle => o !== undefined);
-    return loadedOverlays.reduce(mergeOverlay, baseStyle);
-  }, [baseStyle, overlayQueries]);
+  const style = useMemo(
+    () =>
+      baseStyle ? loadedOverlays.reduce(mergeOverlay, baseStyle) : undefined,
+    [baseStyle, loadedOverlays],
+  );
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
