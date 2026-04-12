@@ -214,7 +214,7 @@ export class MapManager {
     this._trace({ props });
     if (!this._m) return;
 
-    if (this._m.isStyleLoaded()) {
+    if (this._loaded()) {
       this._deferredProps = null;
     } else {
       this._deferredProps = props;
@@ -237,7 +237,7 @@ export class MapManager {
     this._trace("applying");
 
     const style = buildStyle(props);
-    this._m.setStyle(style, { diff: !!this._m.isStyleLoaded() });
+    this._m.setStyle(style, { diff: this._loaded() });
 
     return true;
   }
@@ -318,6 +318,10 @@ export class MapManager {
       if (lastDeps[i] != deps[i]) return false;
     }
     return true;
+  }
+
+  private _loaded() {
+    return this._m?._loaded ?? false;
   }
 
   private _trace(arg1?: string | object, arg2?: object) {

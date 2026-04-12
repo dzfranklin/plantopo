@@ -4,17 +4,15 @@ import {
   type AppStyle,
   type AppStyleMeta,
   StyleMetadataFieldSchema,
+  insertLayers,
 } from "@pt/shared";
 
 import { env } from "../env.js";
 
-export type FullCatalog = Record<string, AppStyle>;
-
-// Based on <https://docs.mapbox.com/mapbox-gl-js/example/geojson-layer-in-slot/>
-type Slot =
-  | "bottom" // Above polygons (land, landuse, water, etc.)
-  | "middle" // Above lines (roads, etc.) and behind 3D buildings
-  | "top"; // Above POI labels and behind Place and Transit labels. Designed to be used with the symbol layers
+export type FullCatalog = {
+  styles: Record<string, AppStyle>;
+  overlays: Record<string, AppStyle>;
+};
 
 // prettier-ignore
 const defaultDEMSource: ml.RasterDEMSourceSpecification | undefined =
@@ -64,13 +62,20 @@ const SIMPLE_STYLE_LAYERS: ml.LayerSpecification[] = [
 ];
 
 export function buildFullStyleCatalog(
-  styles: Record<string, ml.StyleSpecification>,
+  bases: Record<string, ml.StyleSpecification>,
+  overlayBases: Record<string, ml.StyleSpecification>,
 ): FullCatalog {
-  const catalog = Object.fromEntries(
-    Object.entries(styles).map(([id, base]) => [id, prepareStyle(id, base)]),
-  );
-
-  return catalog;
+  return {
+    styles: Object.fromEntries(
+      Object.entries(bases).map(([id, base]) => [id, prepareStyle(id, base)]),
+    ),
+    overlays: Object.fromEntries(
+      Object.entries(overlayBases).map(([id, base]) => [
+        id,
+        prepareOverlay(id, base),
+      ]),
+    ),
+  };
 }
 
 export function customizeStyleCatalog(
@@ -78,11 +83,16 @@ export function customizeStyleCatalog(
   accessScopes: string[],
   tileKey: string | undefined,
 ): FullCatalog {
-  return Object.fromEntries(
-    Object.entries(fullCatalog)
-      .filter(([_, base]) => styleHasAccess(base, accessScopes))
-      .map(([id, base]) => [id, customizeStyle(base, accessScopes, tileKey)]),
-  );
+  const customize = (record: Record<string, AppStyle>) =>
+    Object.fromEntries(
+      Object.entries(record)
+        .filter(([_, base]) => styleHasAccess(base, accessScopes))
+        .map(([id, base]) => [id, customizeStyle(base, accessScopes, tileKey)]),
+    );
+  return {
+    styles: customize(fullCatalog.styles),
+    overlays: customize(fullCatalog.overlays),
+  };
 }
 
 export function stylesToMeta(
@@ -98,6 +108,36 @@ function styleToMeta(style: AppStyle): AppStyleMeta {
   return meta;
 }
 
+function prepareOverlay(id: string, base: ml.StyleSpecification): AppStyle {
+  return {
+    ...base,
+    id,
+    metadata: StyleMetadataFieldSchema.parse(base.metadata),
+    sources: {
+      ...base.sources,
+      ...demSources(),
+    },
+    layers: base.layers,
+  };
+}
+
+const SLOT_LAYER: (slot: string) => ml.LayerSpecification = slot => ({
+  id: `plantopo:slot-${slot}`,
+  type: "background",
+  layout: { visibility: "none" },
+});
+
+function ensureSlots(layers: ml.LayerSpecification[]): ml.LayerSpecification[] {
+  const ids = new Set(layers.map(l => l.id));
+  const result = [...layers];
+  for (const slot of ["bottom", "middle", "top"] as const) {
+    if (!ids.has(`plantopo:slot-${slot}`)) {
+      result.push(SLOT_LAYER(slot));
+    }
+  }
+  return result;
+}
+
 function prepareStyle(id: string, base: ml.StyleSpecification): AppStyle {
   return {
     ...base,
@@ -111,7 +151,11 @@ function prepareStyle(id: string, base: ml.StyleSpecification): AppStyle {
         data: { type: "FeatureCollection", features: [] },
       },
     },
-    layers: insertLayers(base.layers, "middle", SIMPLE_STYLE_LAYERS),
+    layers: insertLayers(
+      ensureSlots(base.layers),
+      "middle",
+      SIMPLE_STYLE_LAYERS,
+    ),
   };
 }
 
@@ -200,22 +244,4 @@ function demSources(
     "plantopo:hillshade-dem": spec,
     "plantopo:terrain-dem": spec,
   };
-}
-
-function insertLayers(
-  layers: ml.LayerSpecification[],
-  slot: Slot,
-  newLayers: ml.LayerSpecification[],
-): ml.LayerSpecification[] {
-  let slotIndex = layers.findIndex(
-    layer => layer.id === `plantopo:slot-${slot}`,
-  );
-  if (slotIndex === -1) {
-    slotIndex = layers.length;
-  }
-  return [
-    ...layers.slice(0, slotIndex),
-    ...newLayers,
-    ...layers.slice(slotIndex),
-  ];
 }

@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import type ml from "maplibre-gl";
 
-import type { AppStyle, AppStyleMeta } from "@pt/shared";
+import type { AppStyle, StyleCatalog } from "@pt/shared/style.js";
 
 import { env } from "../env.js";
 import { logger } from "../logger.js";
@@ -11,10 +11,6 @@ import {
   customizeStyleCatalog,
   stylesToMeta,
 } from "./style.js";
-
-export interface StyleCatalog {
-  styles: Record<string, AppStyleMeta>;
-}
 
 const MARTIN_ENDPOINT = "https://tile.plantopo.com";
 const CACHED_CATALOG_EXPIRY = 5 * 60 * 1000; // 5 minutes
@@ -31,7 +27,10 @@ export async function getCatalog(
   accessScopes: string[],
 ): Promise<StyleCatalog> {
   const fullCatalog = await loadCustomizedCatalog(accessScopes, undefined);
-  return { styles: stylesToMeta(fullCatalog) };
+  return {
+    styles: stylesToMeta(fullCatalog.styles),
+    overlays: stylesToMeta(fullCatalog.overlays),
+  };
 }
 
 export async function getStyle(
@@ -40,7 +39,7 @@ export async function getStyle(
   tileKey: string | undefined,
 ): Promise<AppStyle> {
   const fullCatalog = await loadCustomizedCatalog(accessScopes, tileKey);
-  const style = fullCatalog[name];
+  const style = fullCatalog.styles[name];
   if (!style) {
     throw new TRPCError({
       code: "NOT_FOUND",
@@ -48,6 +47,22 @@ export async function getStyle(
     });
   }
   return style;
+}
+
+export async function getOverlay(
+  name: string,
+  accessScopes: string[],
+  tileKey: string | undefined,
+): Promise<AppStyle> {
+  const fullCatalog = await loadCustomizedCatalog(accessScopes, tileKey);
+  const overlay = fullCatalog.overlays[name];
+  if (!overlay) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: `Overlay ${name} not found or access denied`,
+    });
+  }
+  return overlay;
 }
 
 async function loadFullCatalog(): Promise<FullCatalog> {
@@ -61,8 +76,8 @@ async function loadFullCatalog(): Promise<FullCatalog> {
   const newCatalog = (async (): Promise<[number, FullCatalog]> => {
     logger.info("Fetching style catalog from tile server...");
     const timestamp = Date.now();
-    const baseStyles = await fetchAllStyleBases();
-    const catalog = buildFullStyleCatalog(baseStyles);
+    const { styles, overlays } = await fetchAllStyleBases();
+    const catalog = buildFullStyleCatalog(styles, overlays);
     return [timestamp, catalog];
   })();
   cachedFullCatalog = newCatalog;
@@ -148,13 +163,25 @@ async function fetchSource(
   return remote;
 }
 
-async function fetchAllStyleBases(): Promise<
-  Record<string, ml.StyleSpecification>
-> {
+async function fetchAllStyleBases(): Promise<{
+  styles: Record<string, ml.StyleSpecification>;
+  overlays: Record<string, ml.StyleSpecification>;
+}> {
   const names = await fetchStyleNameList();
   const sourceCache = new Map<string, ml.SourceSpecification>();
   const entries = await Promise.all(
-    names.map(async name => [name, await fetchStyleBase(name, sourceCache)]),
+    names.map(
+      async name => [name, await fetchStyleBase(name, sourceCache)] as const,
+    ),
   );
-  return Object.fromEntries(entries);
+  const styles: Record<string, ml.StyleSpecification> = {};
+  const overlays: Record<string, ml.StyleSpecification> = {};
+  for (const [name, base] of entries) {
+    if (name.endsWith(".overlay")) {
+      overlays[name] = base;
+    } else {
+      styles[name] = base;
+    }
+  }
+  return { styles, overlays };
 }

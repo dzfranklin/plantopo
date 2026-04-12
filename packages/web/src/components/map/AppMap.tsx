@@ -1,8 +1,13 @@
-import { keepPreviousData, skipToken, useQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  skipToken,
+  useQueries,
+  useQuery,
+} from "@tanstack/react-query";
 import { useCallback, useMemo, useRef, useState } from "react";
 import z from "zod";
 
-import type { AppStyle } from "@pt/shared";
+import { type AppStyle, mergeOverlay } from "@pt/shared";
 
 import { LayerPicker } from "./LayerPicker";
 import { MapManager } from "./MapManager";
@@ -74,7 +79,24 @@ export function AppMap(props: AppMapProps) {
       throw styleQuery.error;
     }
   }
-  const style = styleQuery.data as AppStyle | undefined;
+  const baseStyle = styleQuery.data as AppStyle | undefined;
+
+  const overlayQueries = useQueries({
+    queries: (selectedLayers?.overlays ?? []).map(id =>
+      trpc.map.overlay.queryOptions(id, {
+        staleTime: Infinity,
+        gcTime: Infinity,
+      }),
+    ),
+  });
+
+  const style = useMemo(() => {
+    if (!baseStyle) return undefined;
+    const loadedOverlays = overlayQueries
+      .map(q => q.data as AppStyle | undefined)
+      .filter((o): o is AppStyle => o !== undefined);
+    return loadedOverlays.reduce(mergeOverlay, baseStyle);
+  }, [baseStyle, overlayQueries]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>

@@ -18,6 +18,7 @@ export interface MapProps {
 
 export const SelectedLayersSchema = z.object({
   style: z.string().default("default"),
+  overlays: z.array(z.string()).default([]),
 });
 
 export type SelectedLayers = z.infer<typeof SelectedLayersSchema>;

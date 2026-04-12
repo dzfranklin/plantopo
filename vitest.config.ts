@@ -14,6 +14,13 @@ export default defineConfig({
         },
       },
       {
+        test: {
+          name: "shared",
+          include: ["packages/shared/src/**/*.test.ts"],
+          environment: "node",
+        },
+      },
+      {
         extends: "./packages/web/vite.config.js",
         test: {
           name: "web",

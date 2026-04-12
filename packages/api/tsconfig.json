@@ -2,7 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
-    "paths": { "@pt/shared": ["../shared/src/index.ts"] }
+    "paths": {
+      "@pt/shared": ["../shared/src/index.ts"]
+    }
   },
   "include": ["src"]
 }

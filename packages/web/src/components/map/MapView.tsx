@@ -95,6 +95,7 @@ export function MapView(props: MapProps) {
                   ? "_map"
                   : `_map${Object.keys(w).filter(k => /^_map\d*$/.test(k)).length}`;
                 w[varName] = managerRef.current;
+                w["MapManager"] = MapManager;
                 console.log(`Stored map as window.${varName}`);
                 setContextMenu(null);
               }}>

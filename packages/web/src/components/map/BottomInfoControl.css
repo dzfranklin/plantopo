@@ -17,6 +17,8 @@
   background-color: #f2f2f2;
   padding: 2px 4px;
   border-radius: 2px;
+
+  user-select: none;
 }
 
 .bottom-info-control-attrib {
