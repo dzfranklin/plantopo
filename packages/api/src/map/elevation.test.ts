@@ -66,6 +66,19 @@ describe("getElevations — terrarium encoding (mapterhorn)", () => {
     expect(fetchCount).toBe(1);
   });
 
+  it("fetches neighbour tile when bilinear window crosses a tile edge", async () => {
+    // pxf ≈ 511.9 in tile 1991/1259 — px1 spills into tile 1992/1259
+    const ON_RIGHT_EDGE: [number, number] = [-4.921892166137695, 56.7969];
+    const fetched = new Set<string>();
+    const trackingProvider: TileProvider = async (_url, z, x, y) => {
+      fetched.add(`${z}-${x}-${y}`);
+      return readFile(join(FIXTURES, `mapterhorn-${z}-${x}-${y}.webp`));
+    };
+    await getElevations([ON_RIGHT_EDGE], [], trackingProvider);
+    expect(fetched.has("12-1991-1259")).toBe(true);
+    expect(fetched.has("12-1992-1259")).toBe(true);
+  });
+
   it("returns correct meta for the default source", async () => {
     const { meta } = await getElevations([BEN_NEVIS], [], mapterhornProvider());
     expect(meta.sources[0]!.tiles).toBe(defaultDEMSource.tiles![0]);

@@ -32,7 +32,7 @@ function sourceFromSpec(
     urlTemplate: spec.tiles![0]!,
     encoding: spec.encoding as "terrarium" | "mapbox",
     maxzoom: spec.maxzoom!,
-    tileSize: spec.tileSize ?? 256,
+    tileSize: spec.tileSize ?? 512,
     bounds: spec.bounds as [number, number, number, number],
   };
 }
@@ -56,7 +56,7 @@ function lngLatToTileCoords(
   lat: number,
   zoom: number,
   tileSize: number,
-): { x: number; y: number; px: number; py: number } {
+): { x: number; y: number; pxf: number; pyf: number } {
   const n = Math.pow(2, zoom);
   const xf = ((lng + 180) / 360) * n;
   const latRad = (lat * Math.PI) / 180;
@@ -65,10 +65,11 @@ function lngLatToTileCoords(
 
   const x = Math.floor(xf);
   const y = Math.floor(yf);
-  const px = Math.floor((xf - x) * tileSize);
-  const py = Math.floor((yf - y) * tileSize);
+  // Fractional pixel position within the tile (0..tileSize)
+  const pxf = (xf - x) * tileSize;
+  const pyf = (yf - y) * tileSize;
 
-  return { x, y, px, py };
+  return { x, y, pxf, pyf };
 }
 
 // Disk-cached tile provider with in-flight deduplication
@@ -169,7 +170,7 @@ function decodeElevation(
   }
 }
 
-type TilePixel = { x: number; y: number; px: number; py: number } | null;
+type TilePixel = { x: number; y: number; pxf: number; pyf: number } | null;
 
 export type ElevationResult = {
   data: (number | null)[];
@@ -197,17 +198,28 @@ export async function getElevations(
   const source = selectSource(points, accessScopes);
   const [west, south, east, north] = source.bounds;
 
+  // TODO: null here doesn't really make sense. We aren't checking that neighbors exist. Why not make all coords whatever they would be, then check at read time?
   // Compute tile coords for each point (null if out of bounds)
   const coords: TilePixel[] = points.map(([lng, lat]) => {
     if (lng < west || lng > east || lat < south || lat > north) return null;
     return lngLatToTileCoords(lng, lat, source.maxzoom, source.tileSize);
   });
 
-  // Fetch and decode each unique tile once
+  // Collect all unique tiles needed — bilinear can spill into an adjacent tile at edges
   const tileKey = (x: number, y: number) => `${x}/${y}`;
+  const tileMax = Math.pow(2, source.maxzoom) - 1;
   const uniqueTiles = new Map<string, { x: number; y: number }>();
   for (const c of coords) {
-    if (c) uniqueTiles.set(tileKey(c.x, c.y), { x: c.x, y: c.y });
+    if (!c) continue;
+    uniqueTiles.set(tileKey(c.x, c.y), { x: c.x, y: c.y });
+    // If the bilinear 2×2 window spills into a neighbour tile, include it.
+    // px1 = floor(pxf - 0.5) + 1 >= tileSize when pxf >= tileSize - 0.5
+    const spillX = c.pxf >= source.tileSize - 0.5 && c.x < tileMax;
+    const spillY = c.pyf >= source.tileSize - 0.5 && c.y < tileMax;
+    if (spillX) uniqueTiles.set(tileKey(c.x + 1, c.y), { x: c.x + 1, y: c.y });
+    if (spillY) uniqueTiles.set(tileKey(c.x, c.y + 1), { x: c.x, y: c.y + 1 });
+    if (spillX && spillY)
+      uniqueTiles.set(tileKey(c.x + 1, c.y + 1), { x: c.x + 1, y: c.y + 1 });
   }
 
   const decodedTiles = new Map<string, Buffer>();
@@ -223,11 +235,52 @@ export async function getElevations(
     }),
   );
 
+  // Bilinear interpolation, handling pixels that spill into a neighbour tile
+  function sampleBilinear(c: NonNullable<TilePixel>): number {
+    const { tileSize } = source;
+
+    // Top-left pixel of the 2×2 sample, centred on pixel centres
+    const px0 = Math.max(Math.floor(c.pxf - 0.5), 0);
+    const py0 = Math.max(Math.floor(c.pyf - 0.5), 0);
+    const px1 = px0 + 1;
+    const py1 = py0 + 1;
+    const fx = c.pxf - 0.5 - px0;
+    const fy = c.pyf - 0.5 - py0;
+
+    // Resolve pixel coords that overflow into a neighbour tile
+    function sample(px: number, py: number): number {
+      let tx = c.x,
+        ty = c.y,
+        lpx = px,
+        lpy = py;
+      if (lpx >= tileSize) {
+        tx++;
+        lpx = 0;
+      }
+      if (lpy >= tileSize) {
+        ty++;
+        lpy = 0;
+      }
+      const rgba = decodedTiles.get(tileKey(tx, ty))!;
+      return decodeElevation(rgba, (lpy * tileSize + lpx) * 4, source.encoding);
+    }
+
+    const v00 = sample(px0, py0);
+    const v10 = sample(px1, py0);
+    const v01 = sample(px0, py1);
+    const v11 = sample(px1, py1);
+
+    return (
+      v00 * (1 - fx) * (1 - fy) +
+      v10 * fx * (1 - fy) +
+      v01 * (1 - fx) * fy +
+      v11 * fx * fy
+    );
+  }
+
   const data = coords.map(c => {
     if (!c) return null;
-    const rgba = decodedTiles.get(tileKey(c.x, c.y))!;
-    const offset = (c.py * source.tileSize + c.px) * 4;
-    const elev = decodeElevation(rgba, offset, source.encoding);
+    const elev = sampleBilinear(c);
     return Math.round(elev * 10) / 10;
   });
 
