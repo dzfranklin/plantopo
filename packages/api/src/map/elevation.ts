@@ -198,7 +198,6 @@ export async function getElevations(
   const source = selectSource(points, accessScopes);
   const [west, south, east, north] = source.bounds;
 
-  // TODO: null here doesn't really make sense. We aren't checking that neighbors exist. Why not make all coords whatever they would be, then check at read time?
   // Compute tile coords for each point (null if out of bounds)
   const coords: TilePixel[] = points.map(([lng, lat]) => {
     if (lng < west || lng > east || lat < south || lat > north) return null;
@@ -247,7 +246,8 @@ export async function getElevations(
     const fx = c.pxf - 0.5 - px0;
     const fy = c.pyf - 0.5 - py0;
 
-    // Resolve pixel coords that overflow into a neighbour tile
+    // Resolve pixel coords that overflow into a neighbour tile.
+    // If the neighbour wasn't fetched (outside source bounds), clamp to the edge pixel.
     function sample(px: number, py: number): number {
       let tx = c.x,
         ty = c.y,
@@ -261,8 +261,23 @@ export async function getElevations(
         ty++;
         lpy = 0;
       }
-      const rgba = decodedTiles.get(tileKey(tx, ty))!;
-      return decodeElevation(rgba, (lpy * tileSize + lpx) * 4, source.encoding);
+      const rgba = decodedTiles.get(tileKey(tx, ty));
+      if (rgba) {
+        return decodeElevation(
+          rgba,
+          (lpy * tileSize + lpx) * 4,
+          source.encoding,
+        );
+      }
+      // Neighbour outside source bounds — clamp to the primary tile's edge pixel
+      const clampedPx = Math.min(px, tileSize - 1);
+      const clampedPy = Math.min(py, tileSize - 1);
+      const primaryRgba = decodedTiles.get(tileKey(c.x, c.y))!;
+      return decodeElevation(
+        primaryRgba,
+        (clampedPy * tileSize + clampedPx) * 4,
+        source.encoding,
+      );
     }
 
     const v00 = sample(px0, py0);
