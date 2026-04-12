@@ -1,11 +1,10 @@
-import type ml from "maplibre-gl";
-
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { MapManager } from "./MapManager";
 import type { MapProps } from "./types";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -14,12 +13,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface ContextMenu {
-  x: number;
-  y: number;
-  lngLat: ml.LngLat;
-}
-
 export function MapView(props: MapProps) {
   const managerRef = useRef<MapManager | null>(null);
 
@@ -27,7 +20,6 @@ export function MapView(props: MapProps) {
   // eslint-disable-next-line react-hooks/refs
   initialPropsRef.current = props;
 
-  const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [attributionModalHTML, setAttributionModalHTML] = useState<
     string | null
   >(null);
@@ -41,9 +33,6 @@ export function MapView(props: MapProps) {
         initialPropsRef.current,
       );
       managerRef.current = manager;
-      manager.map?.on("contextmenu", e => {
-        setContextMenu({ x: e.point.x, y: e.point.y, lngLat: e.lngLat });
-      });
     } else {
       managerRef.current?.destroy();
       managerRef.current = null;
@@ -52,13 +41,6 @@ export function MapView(props: MapProps) {
 
   // eslint-disable-next-line react-hooks/refs
   managerRef.current?.setProps(props);
-
-  useEffect(() => {
-    if (!contextMenu) return;
-    const onPointerDown = () => setContextMenu(null);
-    window.addEventListener("pointerdown", onPointerDown);
-    return () => window.removeEventListener("pointerdown", onPointerDown);
-  }, [contextMenu]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
@@ -75,35 +57,38 @@ export function MapView(props: MapProps) {
           <DialogDescription
             dangerouslySetInnerHTML={{ __html: attributionModalHTML ?? "" }}
           />
+          {import.meta.env.DEV && <DebugPanel managerRef={managerRef} />}
         </DialogContent>
       </Dialog>
-      {contextMenu && (
-        <div
-          style={{
-            position: "absolute",
-            left: contextMenu.x,
-            top: contextMenu.y,
-          }}
-          className="bg-popover text-popover-foreground z-50 min-w-32 overflow-hidden rounded-md border p-1 shadow-md"
-          onPointerDown={e => e.stopPropagation()}>
-          {import.meta.env.DEV && (
-            <button
-              className="hover:bg-accent hover:text-accent-foreground relative flex w-full cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none"
-              onClick={() => {
-                const w = window as unknown as Record<string, unknown>;
-                const varName = !w._map
-                  ? "_map"
-                  : `_map${Object.keys(w).filter(k => /^_map\d*$/.test(k)).length}`;
-                w[varName] = managerRef.current;
-                w["MapManager"] = MapManager;
-                console.log(`Stored map as window.${varName}`);
-                setContextMenu(null);
-              }}>
-              Store as global variable
-            </button>
-          )}
-        </div>
-      )}
+    </div>
+  );
+}
+
+function DebugPanel({
+  managerRef,
+}: {
+  managerRef: React.RefObject<MapManager | null>;
+}) {
+  return (
+    <div className="border-t pt-4">
+      <p className="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
+        Debug
+      </p>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          const w = window as unknown as Record<string, unknown>;
+          const varName = !w._map
+            ? "_map"
+            : `_map${Object.keys(w).filter(k => /^_map\d*$/.test(k)).length}`;
+          w[varName] = managerRef.current;
+          w["MapManager"] = MapManager;
+          console.log(varName);
+          console.log(w[varName]);
+        }}>
+        Store map as global variable
+      </Button>
     </div>
   );
 }
