@@ -13,6 +13,7 @@ const schema = z.object({
   STRAVA_CLIENT_ID: z.string().optional(),
   STRAVA_CLIENT_SECRET: z.string().optional(),
   OWNER_EMAIL: z.email().optional(),
+  TILE_CACHE_DIR: z.string(),
   SERVER_TILE_KEY: z.string().optional(),
 });
 

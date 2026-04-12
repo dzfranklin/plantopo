@@ -8,6 +8,8 @@ dist/
 .npm/
 .node_repl_history
 
+.cache/
+
 *.log
 npm-debug.log*
 pids

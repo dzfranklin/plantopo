@@ -4,6 +4,7 @@ import type { AppStyle, StyleCatalog } from "@pt/shared";
 
 import { userAccessScopes } from "../auth/auth.service.js";
 import { publicProcedure, router } from "../trpc.js";
+import { getElevations } from "./elevation.js";
 import { getCatalog, getOverlay, getStyle } from "./map.service.js";
 
 export const mapRouter = router({
@@ -28,5 +29,12 @@ export const mapRouter = router({
       const scopes = userAccessScopes(ctx.session?.user);
       const tileKey = ctx.session?.user.tileKey;
       return await getOverlay(input, scopes, tileKey);
+    }),
+  // .mutation because large point arrays exceed GET URL length limits
+  elevation: publicProcedure
+    .input(z.array(z.tuple([z.number(), z.number()])))
+    .mutation(async ({ ctx, input }) => {
+      const scopes = userAccessScopes(ctx.session?.user);
+      return await getElevations(input, scopes);
     }),
 });

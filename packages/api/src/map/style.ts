@@ -13,12 +13,12 @@ export type FullCatalog = {
 };
 
 // prettier-ignore
-const defaultDEMSource: ml.RasterDEMSourceSpecification =
-  { type: "raster-dem", tiles: ["https://tiles.mapterhorn.com/{z}/{x}/{y}.webp"], attribution: "<a href='https://mapterhorn.com/attribution'>© Mapterhorn</a>", maxzoom: 12, bounds: [-180, -85.0511287, 180, 85.0511287], encoding: "terrarium", tileSize: 512};
+export const defaultDEMSource: ml.RasterDEMSourceSpecification =
+  { type: "raster-dem", tiles: ["https://tiles.mapterhorn.com/{z}/{x}/{y}.webp"], attribution: "<a href='https://mapterhorn.com/attribution'>© Mapterhorn</a>", maxzoom: 12, bounds: [-180, -85.0511287, 180, 85.0511287], encoding: "terrarium", tileSize: 512} as const;
 
 // prettier-ignore
-const eduDEMSource: ml.RasterDEMSourceSpecification =
-  { type: "raster-dem", tiles: ["https://tile.plantopo.com/edu.os-terrain-5-rgb/{z}/{x}/{y}"], bounds: [-9.24941, 49.85961, 2.781412, 60.907668], maxzoom: 14, minzoom: 6, encoding: "mapbox", attribution: '© Crown copyright and database rights 2026 Ordnance Survey (AC0000851941) <a href="https://digimap.edina.ac.uk/help/copyright-and-licensing/ngd_eula/" target="_blank">For educational use only</a>', };
+export const eduDEMSource: ml.RasterDEMSourceSpecification =
+  { type: "raster-dem", tiles: ["https://tile.plantopo.com/edu.os-terrain-5-rgb/{z}/{x}/{y}"], bounds: [-9.24941, 49.85961, 2.781412, 60.907668], maxzoom: 14, minzoom: 6, encoding: "mapbox", attribution: '© Crown copyright and database rights 2026 Ordnance Survey (AC0000851941) <a href="https://digimap.edina.ac.uk/help/copyright-and-licensing/ngd_eula/" target="_blank">For educational use only</a>'} as const;
 
 // prettier-ignore
 const SIMPLE_STYLE_LAYERS: ml.LayerSpecification[] = [
