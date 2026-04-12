@@ -8,6 +8,8 @@ Image=ghcr.io/dzfranklin/plantopo:latest
 ContainerName=plantopo
 EnvironmentFile=%h/.config/containers/env/plantopo.env
 Network=internal.network
+Volume=plantopo-cache.volume:/cache:Z
+Environment=TILE_CACHE_DIR=/cache/tiles
 
 [Service]
 Restart=on-failure
