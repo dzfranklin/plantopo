@@ -7,19 +7,14 @@ import {
   insertLayers,
 } from "@pt/shared";
 
-import { env } from "../env.js";
-
 export type FullCatalog = {
   styles: Record<string, AppStyle>;
   overlays: Record<string, AppStyle>;
 };
 
 // prettier-ignore
-const defaultDEMSource: ml.RasterDEMSourceSpecification | undefined =
-  env.MAPTILER_KEY
-    ?
-      { type: "raster-dem", maxzoom: 14, minzoom: 0, tiles: ["https://api.maptiler.com/tiles/terrain-rgb-v2/{z}/{x}/{y}.webp?key=" + env.MAPTILER_KEY], bounds: [-179.9999999999996, -85.05112877980656, 179.9999999999996, 85.05112877980656], encoding: "mapbox", attribution: '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'}
-    : undefined;
+const defaultDEMSource: ml.RasterDEMSourceSpecification =
+  { type: "raster-dem", tiles: ["https://tiles.mapterhorn.com/{z}/{x}/{y}.webp"], attribution: "<a href='https://mapterhorn.com/attribution'>© Mapterhorn</a>", maxzoom: 12, bounds: [-180, -85.0511287, 180, 85.0511287], encoding: "terrarium", tileSize: 512};
 
 // prettier-ignore
 const eduDEMSource: ml.RasterDEMSourceSpecification =
@@ -233,13 +228,7 @@ function styleHasAccess(base: AppStyle, accessScopes: string[]): boolean {
 function demSources(
   spec?: ml.RasterDEMSourceSpecification,
 ): Record<string, ml.RasterDEMSourceSpecification> {
-  if (!spec) {
-    if (defaultDEMSource) {
-      spec = defaultDEMSource;
-    } else {
-      return {};
-    }
-  }
+  if (!spec) spec = defaultDEMSource;
   return {
     "plantopo:hillshade-dem": spec,
     "plantopo:terrain-dem": spec,

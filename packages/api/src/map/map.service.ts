@@ -3,7 +3,6 @@ import type ml from "maplibre-gl";
 
 import type { AppStyle, StyleCatalog } from "@pt/shared/style.js";
 
-import { env } from "../env.js";
 import { logger } from "../logger.js";
 import {
   type FullCatalog,
@@ -16,12 +15,6 @@ const MARTIN_ENDPOINT = "https://tile.plantopo.com";
 const CACHED_CATALOG_EXPIRY = 5 * 60 * 1000; // 5 minutes
 
 let cachedFullCatalog: Promise<[number, FullCatalog]> | undefined;
-
-if (!env.MAPTILER_KEY) {
-  logger.warn(
-    "No MAPTILER_KEY set, default terrain source will be unavailable and styles using it may not work correctly",
-  );
-}
 
 export async function getCatalog(
   accessScopes: string[],
