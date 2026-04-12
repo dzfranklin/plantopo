@@ -36,6 +36,6 @@ jobs:
           npx prettier --check .
 
       - name: Test
-        run: npm test
+        run: npm test -- --run
         env:
           DATABASE_URL: postgres://postgres@localhost/plantopo_test
