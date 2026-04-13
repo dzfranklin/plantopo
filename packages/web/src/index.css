@@ -130,16 +130,6 @@
   }
 }
 
-/* On small screens, pin the layer picker to the bottom of the viewport.
-   !important is required to override Radix UI's inline positioning styles. */
-@media (max-width: 639px) {
-  [data-radix-popper-content-wrapper]:has([data-layer-picker]) {
-    position: fixed !important;
-    inset: auto 0 0 0 !important;
-    transform: none !important;
-    width: 100% !important;
-  }
-}
 
 .link,
 .link-container a {
