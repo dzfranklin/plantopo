@@ -21,6 +21,14 @@ export const eduDEMSource: ml.RasterDEMSourceSpecification =
   { type: "raster-dem", tiles: ["https://tile.plantopo.com/edu.os-terrain-5-rgb/{z}/{x}/{y}"], bounds: [-9.24941, 49.85961, 2.781412, 60.907668], maxzoom: 14, minzoom: 6, encoding: "mapbox", attribution: '© Crown copyright and database rights 2026 Ordnance Survey (AC0000851941) <a href="https://digimap.edina.ac.uk/help/copyright-and-licensing/ngd_eula/" target="_blank">For educational use only</a>'} as const;
 
 // prettier-ignore
+const defaultSlopeSource: ml.RasterDEMSourceSpecification =
+  { "type": "raster-dem", "tiles": ["https://tile.plantopo.com/slope/{z}/{x}/{y}"], "tileSize": 512, "encoding": "mapbox", "minzoom": 9, "maxzoom": 22, "bounds": [-180.0, -85.0511287, 180.0, 85.0511287], "attribution": "<a href='https://mapterhorn.com/attribution'>© Mapterhorn</a>" };
+
+// prettier-ignore
+const eduSlopeSource: ml.RasterDEMSourceSpecification =
+  { "type": "raster-dem", "tiles": ["https://tile.plantopo.com/edu.slope/{z}/{x}/{y}"], "tileSize": 512, "encoding": "mapbox", "minzoom": 9, "maxzoom": 14, "bounds": [-9.24941, 49.85961, 2.781412, 60.907668], "attribution": "© Crown copyright and database rights 2026 Ordnance Survey (AC0000851941) <a href=\"https://digimap.edina.ac.uk/help/copyright-and-licensing/ngd_eula/\" target=\"_blank\">For educational use only</a>" };
+
+// prettier-ignore
 const SIMPLE_STYLE_LAYERS: ml.LayerSpecification[] = [
   {
     id: "plantopo:geojson-fill", type: "fill", source: "plantopo:geojson", filter: ["==", ["geometry-type"], "Polygon"],
@@ -165,7 +173,7 @@ function customizeStyle(
   const sources = Object.fromEntries(
     Object.entries({
       ...base.sources,
-      ...(mayEdu ? demSources(eduDEMSource) : {}),
+      ...demSources({ mayEdu }),
     }).map(([id, spec]) => [id, customizeSource(spec, tileKey)]),
   );
 
@@ -226,12 +234,14 @@ function styleHasAccess(base: AppStyle, accessScopes: string[]): boolean {
   return scopes.every(s => accessScopes.includes(s));
 }
 
-function demSources(
-  spec?: ml.RasterDEMSourceSpecification,
-): Record<string, ml.RasterDEMSourceSpecification> {
-  if (!spec) spec = defaultDEMSource;
+function demSources({
+  mayEdu = true,
+}: {
+  mayEdu?: boolean;
+} = {}): Record<string, ml.RasterDEMSourceSpecification> {
   return {
-    "plantopo:hillshade-dem": spec,
-    "plantopo:terrain-dem": spec,
+    "plantopo:hillshade-dem": mayEdu ? eduDEMSource : defaultDEMSource,
+    "plantopo:terrain-dem": mayEdu ? eduDEMSource : defaultDEMSource,
+    "plantopo:slope-angle-dem": mayEdu ? eduSlopeSource : defaultSlopeSource,
   };
 }

@@ -87,25 +87,37 @@ export function ClickInfoPopup({ manager }: Props) {
 
   useEffect(() => {
     if (!manager) return;
+    let clickTimer: ReturnType<typeof setTimeout> | null = null;
     const sub = manager.on("click", e => {
-      const lng = e.lngLat.lng;
-      const lat = e.lngLat.lat;
-
-      let osGrid: OSGridRef | null = null;
-      try {
-        osGrid = new osgridref.LatLon(lat, lng).toOsGrid();
-      } catch (_err) {
-        // ignore
+      if (clickTimer) {
+        clearTimeout(clickTimer);
+        clickTimer = null;
+        return;
       }
+      clickTimer = setTimeout(() => {
+        clickTimer = null;
+        const lng = e.lngLat.lng;
+        const lat = e.lngLat.lat;
 
-      setPosition({
-        lng,
-        lat,
-        osGrid,
-        camera: manager.getCamera(),
-      });
+        let osGrid: OSGridRef | null = null;
+        try {
+          osGrid = new osgridref.LatLon(lat, lng).toOsGrid();
+        } catch (_err) {
+          // ignore
+        }
+
+        setPosition({
+          lng,
+          lat,
+          osGrid,
+          camera: manager.getCamera(),
+        });
+      }, 300);
     });
-    return () => sub.unsubscribe();
+    return () => {
+      if (clickTimer) clearTimeout(clickTimer);
+      sub.unsubscribe();
+    };
   }, [manager]);
 
   const { mutate: mutateElevation, ...elevationMutation } = useMutation(
