@@ -35,7 +35,7 @@ root@box> loginctl enable-linger app
 ### Copy infra files
 
 ```sh
-dev> rsync infra/plantopo.container app@box:.config/containers/systemd/
+dev> rsync infra/*.{container,volume} app@box:.config/containers/systemd/
 dev> rsync infra/plantopo-deploy daniel@box:/tmp/ && ssh daniel@box "sudo mv /tmp/plantopo-deploy /usr/local/bin"
 ```
 
