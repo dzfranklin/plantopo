@@ -1,3 +1,5 @@
+import "./LayerPicker.css";
+
 import * as Popover from "@radix-ui/react-popover";
 import { useQuery } from "@tanstack/react-query";
 
@@ -70,9 +72,12 @@ export function LayerPicker({
           side="top"
           align="end"
           sideOffset={8}
+          data-layer-picker
           className={cn(
             "rounded-lg border border-gray-200 bg-white p-4 shadow-lg",
             "flex flex-col gap-4",
+            "max-w-[calc(100vw-1rem)] overflow-y-auto",
+            "max-sm:max-h-[80svh] max-sm:w-screen max-sm:max-w-none max-sm:rounded-b-none",
             "origin-bottom-right",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
