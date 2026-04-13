@@ -9,10 +9,10 @@ import z from "zod";
 
 import { type AppStyle, mergeOverlay } from "@pt/shared";
 
-import { ClickInfoPopup } from "./ClickInfoPopup";
 import { LayerPicker } from "./LayerPicker";
 import { MapManager } from "./MapManager";
 import { MapView } from "./MapView";
+import { PointInfoPopup } from "./PointInfoPopup";
 import {
   DEFAULT_SELECTED_LAYERS,
   type MapProps,
@@ -107,7 +107,7 @@ export function AppMap(props: AppMapProps) {
         initialCamera={localDefaults.camera}
         onManager={onManager}
       />
-      <ClickInfoPopup manager={manager} />
+      <PointInfoPopup manager={manager} />
       <div className="absolute right-2 bottom-8 z-10">
         <LayerPicker selected={selectedLayers} onSelect={onSelectLayers} />
       </div>

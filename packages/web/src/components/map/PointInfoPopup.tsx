@@ -6,7 +6,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 
-import "./ClickInfoPopup.css";
+import "./PointInfoPopup.css";
 
 import { METERS_TO_FT } from "@pt/shared";
 
@@ -61,7 +61,7 @@ interface Props {
   manager: MapManager | null;
 }
 
-export function ClickInfoPopup({ manager }: Props) {
+export function PointInfoPopup({ manager }: Props) {
   const trpc = useTRPC();
   const { distanceUnit } = useUserPrefs();
   const [altHeld, setAltHeld] = useState(false);
