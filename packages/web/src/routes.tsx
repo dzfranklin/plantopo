@@ -4,7 +4,6 @@ import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { useSession } from "./auth/auth-client.ts";
 import { NavbarLayout } from "./layout/NavbarLayout.tsx";
-import ErrorTest from "./test/ErrorTest.tsx";
 
 const HomePage = lazy(() => import("./HomePage.tsx"));
 const MapPage = lazy(() => import("./map/MapPage.tsx"));
@@ -66,10 +65,11 @@ export function AppRoutes() {
               </Route>
             </Route>
 
-            <Route path="/dev/error-test" element={<ErrorTest />} />
-            <Route path="/dev/mapview" element={<DevMapViewPage />} />
-            <Route path="/dev/map" element={<DevMapPage />} />
-            <Route path="/dev/errors" element={<DevErrorPage />} />
+            <Route path="/dev">
+              <Route path="mapview" element={<DevMapViewPage />} />
+              <Route path="map" element={<DevMapPage />} />
+              <Route path="errors" element={<DevErrorPage />} />
+            </Route>
 
             <Route path="*" element={<NotFoundPage />} />
           </Route>
