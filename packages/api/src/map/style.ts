@@ -137,6 +137,7 @@ function prepareStyle(id: string, base: ml.StyleSpecification): AppStyle {
   return {
     ...base,
     id,
+    glyphs: "https://tile.plantopo.com/font/{fontstack}/{range}",
     metadata: StyleMetadataFieldSchema.parse(base.metadata),
     sources: {
       ...base.sources,
