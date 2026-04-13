@@ -58,7 +58,9 @@ export function MapView(props: MapProps) {
           <DialogDescription
             dangerouslySetInnerHTML={{ __html: attributionModalHTML ?? "" }}
           />
-          {import.meta.env.DEV && <DebugPanel managerRef={managerRef} />}
+          {(import.meta.env.DEV || props.debug) && (
+            <DebugPanel managerRef={managerRef} />
+          )}
         </DialogContent>
       </Dialog>
     </div>

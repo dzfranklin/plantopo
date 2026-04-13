@@ -28,7 +28,12 @@ export default function DevMapPage() {
           hash
         </label>
       </div>
-      <AppMap key={`hash:${hash}`} hash={hash} onManager={onManager} />
+      <AppMap
+        key={`hash:${hash}`}
+        hash={hash}
+        onManager={onManager}
+        debug={true}
+      />
     </div>
   );
 }

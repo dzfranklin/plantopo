@@ -248,6 +248,7 @@ export default function DevMapPage() {
               geojsonEnabled ? customGeojson || SAMPLE_GEOJSON : undefined
             }
             onManager={onManager}
+            debug={true}
           />
         ))}
       </div>

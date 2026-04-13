@@ -14,6 +14,7 @@ export interface MapProps {
   geojson?: GeoJSON.FeatureCollection | GeoJSON.Feature | null;
   onManager?: (manager: MapManager) => void;
   triggerGeolocationControl?: boolean;
+  debug?: boolean;
 }
 
 export const SelectedLayersSchema = z.object({
