@@ -2,7 +2,7 @@ import { RiCloseLine, RiLink } from "@remixicon/react";
 import { useMutation } from "@tanstack/react-query";
 import OSGridRef, * as osgridref from "geodesy/osgridref.js";
 import ml from "maplibre-gl";
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 
@@ -18,11 +18,13 @@ import { useTRPC } from "@/trpc";
 function ExternalMapLink({
   href,
   title,
-  children,
+  src,
+  className,
 }: {
   href: string;
   title: string;
-  children: ReactNode;
+  src: string;
+  className?: string;
 }) {
   return (
     <a
@@ -31,7 +33,11 @@ function ExternalMapLink({
       rel="noopener noreferrer"
       title={title}
       className="rounded p-0.5 hover:bg-gray-100">
-      {children}
+      <img
+        src={src}
+        alt=""
+        className={cn("h-6 w-6 sm:h-4 sm:w-4", className)}
+      />
     </a>
   );
 }
@@ -89,6 +95,7 @@ export function PointInfoPopup({ manager }: Props) {
     if (!manager) return;
     let clickTimer: ReturnType<typeof setTimeout> | null = null;
     const sub = manager.on("click", e => {
+      setPosition(null);
       if (clickTimer) {
         clearTimeout(clickTimer);
         clickTimer = null;
@@ -185,7 +192,7 @@ export function PointInfoPopup({ manager }: Props) {
 
   return createPortal(
     <div className="relative py-2 text-sm">
-      <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 pr-7 pl-2 text-xs">
+      <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 pr-7 pl-2 text-base sm:text-xs">
         {position.osGrid && (
           <>
             <span className="text-gray-500">Grid Ref:</span>
@@ -211,7 +218,7 @@ export function PointInfoPopup({ manager }: Props) {
           {elevationDisplay}
         </span>
       </div>
-      <div className="mt-2 flex items-center gap-1 border-t px-1.5 pt-2">
+      <div className="mt-2 flex items-center gap-1.5 border-t px-2 pt-2">
         <button
           onClick={copyLink}
           className={cn(
@@ -219,37 +226,27 @@ export function PointInfoPopup({ manager }: Props) {
             copied ? "text-green-600" : "text-gray-600",
           )}
           title="Copy link to position">
-          <RiLink size={16} />
+          <RiLink size={24} className="h-6 w-6 sm:h-4 sm:w-4" />
         </button>
         <ExternalMapLink
           href={`https://www.google.com/maps/search/?api=1&query=${position.lat}%2C${position.lng}`}
-          title="Open in Google Maps">
-          <img
-            src="/google-maps-icon.webp"
-            alt="Google Maps"
-            className="h-4 w-4"
-          />
-        </ExternalMapLink>
+          src="/google-maps-icon.webp"
+          title="Open in Google Maps"></ExternalMapLink>
         <ExternalMapLink
           href={`https://explore.osmaps.com/?lat=${position.lat}&lon=${position.lng}&zoom=${position.camera.zoom}&style=Standard&type=2d&droppedPin=${position.lat}%2C${position.lng}`}
-          title="Open in OS Maps">
-          <img src="/osmaps-icon.svg" alt="OS Maps" className="h-4 w-4" />
-        </ExternalMapLink>
+          title="Open in OS Maps"
+          src="/osmaps-icon.svg"
+          className="-ml-0.5"></ExternalMapLink>
         <ExternalMapLink
           href={`https://www.outdooractive.com/r/?page=map&wt=(${position.lat}%2C${position.lng})#zc=${position.camera.zoom! + 1},${position.lng},${position.lat}`}
-          title="Open in Outdooractive">
-          <img
-            src="/outdooractive-icon.webp"
-            alt="Outdooractive"
-            className="h-4 w-4"
-          />
-        </ExternalMapLink>
+          src="/outdooractive-icon.webp"
+          title="Open in Outdooractive"></ExternalMapLink>
       </div>
       <button
         onClick={() => setPosition(null)}
         className="absolute top-0.5 right-0.5 rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
         aria-label="Close">
-        <RiCloseLine size={16} />
+        <RiCloseLine size={25} className="sm:h-[16px] sm:w-[16px]" />
       </button>
     </div>,
     container,
