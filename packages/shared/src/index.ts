@@ -4,6 +4,8 @@ export * from "./style.js";
 
 export const METERS_TO_FT = 3.28084;
 
+export const PointSchema = z.tuple([z.number(), z.number()]);
+
 const RecordingStatusSchema = z.enum([
   "RECORDING",
   "STOPPED",
@@ -42,3 +44,40 @@ export const UserPrefsSchema = z.object({
 });
 
 export type UserPrefs = z.infer<typeof UserPrefsSchema>;
+
+/** by is a sort helper. Usage: array.sort(by('key1', 'key2')) */
+export function by(...keys: string[]) {
+  return (a: Record<string, unknown>, b: Record<string, unknown>) => {
+    let va;
+    let vb;
+    for (const key of keys) {
+      va = a[key];
+      if (va === undefined) continue;
+      break;
+    }
+    for (const key of keys) {
+      vb = b[key];
+      if (vb === undefined) continue;
+      break;
+    }
+    if ((va === undefined || va === null) && (vb === undefined || vb === null))
+      return 0;
+    if (va === undefined || va === null) return 1;
+    if (vb === undefined || vb === null) return -1;
+    if (va < vb) return -1;
+    if (va > vb) return 1;
+    return 0;
+  };
+}
+
+export function round(n: number, precision: number): number {
+  const factor = Math.pow(10, precision);
+  return Math.round(n * factor) / factor;
+}
+
+export function round2(
+  v: [number, number],
+  precision: number,
+): [number, number] {
+  return [round(v[0], precision), round(v[1], precision)];
+}

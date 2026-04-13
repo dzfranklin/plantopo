@@ -3,12 +3,11 @@ import "./LayerPicker.css";
 import * as Popover from "@radix-ui/react-popover";
 import { useQuery } from "@tanstack/react-query";
 
-import type { AppStyleMeta } from "@pt/shared";
+import { type AppStyleMeta, by } from "@pt/shared";
 
 import type { SelectedLayers } from "./types";
 import { cn } from "@/cn";
 import { useTRPC } from "@/trpc";
-import { by } from "@/util";
 
 export function LayerPicker({
   selected,

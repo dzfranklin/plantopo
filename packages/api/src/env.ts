@@ -15,6 +15,7 @@ const schema = z.object({
   OWNER_EMAIL: z.email().optional(),
   TILE_CACHE_DIR: z.string(),
   SERVER_TILE_KEY: z.string().optional(),
+  VALHALLA: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
