@@ -186,6 +186,7 @@ async function fetchAllStyleBases(): Promise<{
 export async function completeRouteBetween(
   a: [number, number],
   b: [number, number],
+  { signal }: { signal?: AbortSignal } = {},
 ): Promise<[number, number][]> {
   if (!env.VALHALLA) throw new Error("Valhalla not configured");
 
@@ -243,6 +244,7 @@ export async function completeRouteBetween(
   const resp = await fetch(env.VALHALLA + "/route", {
     method: "POST",
     body: JSON.stringify(payload),
+    signal,
   });
   const body = await resp.json();
   const result = ResponseSchema.parse(body);

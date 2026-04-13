@@ -44,5 +44,7 @@ export const mapRouter = router({
     }),
   completeRouteBetween: publicProcedure
     .input(z.object({ a: PointSchema, b: PointSchema }))
-    .query(({ input }) => completeRouteBetween(input.a, input.b)),
+    .query(({ input, signal }) =>
+      completeRouteBetween(input.a, input.b, { signal }),
+    ),
 });
