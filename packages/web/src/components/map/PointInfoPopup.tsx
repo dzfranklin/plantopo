@@ -96,6 +96,7 @@ export function PointInfoPopup({ manager }: Props) {
     let clickTimer: ReturnType<typeof setTimeout> | null = null;
     const sub = manager.on("click", e => {
       setPosition(null);
+      if (manager.editMode) return;
       if (clickTimer) {
         clearTimeout(clickTimer);
         clickTimer = null;

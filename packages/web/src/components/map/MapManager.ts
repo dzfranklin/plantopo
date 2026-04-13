@@ -10,6 +10,7 @@ export class MapManager {
   static _nextTraceID = 1;
 
   traceID = MapManager._nextTraceID++;
+  editMode = false;
 
   private _m: ml.Map | null;
   private _detachZoomSnap: (() => void) | null = null;

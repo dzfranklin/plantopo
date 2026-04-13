@@ -23,6 +23,9 @@ const SettingsInterfacePage = lazy(
 const DevMapViewPage = lazy(() => import("./dev/DevMapViewPage.tsx"));
 const DevMapPage = lazy(() => import("./dev/DevMapPage.tsx"));
 const DevErrorPage = lazy(() => import("./dev/DevErrorsPage.tsx"));
+const DevCompleteRoutePage = lazy(
+  () => import("./dev/DevCompleteRoutePage.tsx"),
+);
 
 function RequireAuth() {
   const { data: session } = useSession();
@@ -69,6 +72,7 @@ export function AppRoutes() {
               <Route path="mapview" element={<DevMapViewPage />} />
               <Route path="map" element={<DevMapPage />} />
               <Route path="errors" element={<DevErrorPage />} />
+              <Route path="complete-route" element={<DevCompleteRoutePage />} />
             </Route>
 
             <Route path="*" element={<NotFoundPage />} />
