@@ -2,8 +2,18 @@ import { build } from "esbuild";
 
 const nodeVersion = "24";
 
+// Build @pt/shared so it's available as a real package at runtime
+await build({
+  bundle: true,
+  platform: "node",
+  target: `node${nodeVersion}`,
+  format: "esm",
+  entryPoints: ["packages/shared/src/index.ts"],
+  outfile: "packages/shared/dist/index.js",
+  tsconfig: "packages/shared/tsconfig.json",
+});
+
 // --packages=external leaves all node_modules as runtime require() calls.
-// @pt/shared is resolved via tsconfig paths to source, so esbuild bundles it inline.
 const shared = {
   bundle: true,
   platform: "node",

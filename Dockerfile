@@ -25,6 +25,7 @@ COPY packages/api/package.json    ./packages/api/
 COPY packages/web/package.json    ./packages/web/
 RUN npm ci --omit=dev
 
+COPY --from=builder /app/packages/shared/dist/index.js ./packages/shared/dist/index.js
 COPY --from=builder /app/server.js      ./server.js
 COPY --from=builder /app/server.js.map  ./server.js.map
 COPY --from=builder /app/migrate.js     ./migrate.js

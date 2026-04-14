@@ -25,7 +25,7 @@ export default function DevCompleteRoutePage() {
         controlPointsRef.current = [...controlPointsRef.current, newPoint];
         setControlPoints(controlPointsRef.current);
         if (prev) {
-          const segment = await trpc.map.completeRouteBetween.query({
+          const segment = await trpc.plan.suggestRoute.query({
             a: prev,
             b: newPoint,
           });

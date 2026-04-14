@@ -13,9 +13,8 @@
     "erasableSyntaxOnly": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@pt/shared": ["../shared/src/index.ts"]
+      "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "../shared/src/index.ts"]
+  "include": ["src"]
 }

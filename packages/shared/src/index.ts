@@ -1,6 +1,7 @@
 import z from "zod";
 
 export * from "./style.js";
+export * from "./polyline.js";
 
 export const METERS_TO_FT = 3.28084;
 

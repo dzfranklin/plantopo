@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 
 import { mapRouter } from "./map/map.router.js";
+import { planRouter } from "./plan/plan.router.js";
 import { stravaRouter } from "./strava/strava.router.js";
 import { trackRouter } from "./track/track.router.js";
 import { publicProcedure, router } from "./trpc.js";
@@ -19,6 +20,7 @@ export const appRouter = router({
   track: trackRouter,
   strava: stravaRouter,
   map: mapRouter,
+  plan: planRouter,
   ...(process.env.NODE_ENV === "test" ? { test: testRouter } : {}),
 });
 
