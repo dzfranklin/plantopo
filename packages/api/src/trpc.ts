@@ -26,24 +26,32 @@ export const router = t.router;
 
 const trpcLog = !!process.env.TRPC_LOG;
 
-const loggingMiddleware = t.middleware(async ({ path, type, input, next }) => {
-  const log = getLog().child({ path, type });
-  const inputLog = { input, inputIsUndefined: input === undefined };
+const loggingMiddleware = t.middleware(
+  async ({ path, type, getRawInput, next }) => {
+    const log = getLog().child({ path, type });
 
-  if (trpcLog) log.info(inputLog, "trpc request");
-  const result = await next();
-  if (result.ok) {
-    if (trpcLog) log.info({ ...inputLog, result }, "trpc ok");
-  } else {
-    const err = result.error;
-    if (err.code === "INTERNAL_SERVER_ERROR") {
-      log.error({ ...inputLog, err: err.cause }, "error handling trpc request");
-    } else {
-      log.info({ ...inputLog, err }, "trpc error response");
+    if (trpcLog) {
+      const input = await getRawInput();
+      log.info({ input }, "trpc request");
     }
-  }
-  return result;
-});
+    const result = await next();
+    if (result.ok) {
+      if (trpcLog) {
+        const input = await getRawInput();
+        log.info({ input, result }, "trpc ok");
+      }
+    } else {
+      const err = result.error;
+      const input = await getRawInput();
+      if (err.code === "INTERNAL_SERVER_ERROR") {
+        log.error({ input, err: err.cause }, "error handling trpc request");
+      } else {
+        log.info({ input, err }, "trpc error response");
+      }
+    }
+    return result;
+  },
+);
 
 export const publicProcedure = t.procedure.use(loggingMiddleware);
 
