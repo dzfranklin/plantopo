@@ -2,7 +2,7 @@ import z from "zod";
 
 import { PointSchema } from "@pt/shared";
 
-import { userAccessScopes } from "../auth/auth.service.js";
+import { userAccessScopes } from "../auth/auth.js";
 import { publicProcedure, router } from "../trpc.js";
 import { suggestRoute } from "./plan.service.js";
 

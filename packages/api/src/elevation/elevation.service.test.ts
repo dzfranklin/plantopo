@@ -2,8 +2,8 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
-import { type TileProvider, getElevations } from "./elevation.js";
-import { defaultDEMSource, eduDEMSource } from "./style.js";
+import { defaultDEMSource, eduDEMSource } from "../map/style.js";
+import { type TileProvider, getElevations } from "./elevation.service.js";
 
 const FIXTURES = join(import.meta.dirname, "test-fixtures");
 

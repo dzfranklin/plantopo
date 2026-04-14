@@ -2,8 +2,8 @@ import z from "zod";
 
 import { type Point, type Point3, decodePolyline, round2 } from "@pt/shared";
 
+import { getElevations } from "../elevation/elevation.service.js";
 import { env } from "../env.js";
-import { getElevations } from "../map/elevation.js";
 
 export async function suggestRoute(
   a: Point,

@@ -8,7 +8,7 @@ import { db } from "../db.js";
 import { env } from "../env.js";
 import { getLog, logger } from "../logger.js";
 import * as schema from "./auth.schema.js";
-import { createNativeSessionInitToken } from "./auth.service.js";
+import { createNativeSessionInitToken, isOwnerEmail } from "./auth.service.js";
 
 export type Session = typeof auth.$Infer.Session;
 export type User = Session["user"];
@@ -188,3 +188,10 @@ export const auth = betterAuth({
     }),
   },
 });
+export function userAccessScopes(user: User | undefined | null): string[] {
+  if (!user) return [];
+  const scopes = ["public"];
+  if (isOwnerEmail(user.email)) scopes.push("personal");
+  if (user.eduAccess) scopes.push("edu");
+  return scopes;
+}

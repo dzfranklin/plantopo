@@ -1,5 +1,5 @@
 import { RiCloseLine, RiLink } from "@remixicon/react";
-import { useMutation } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 import OSGridRef, * as osgridref from "geodesy/osgridref.js";
 import ml from "maplibre-gl";
 import { useEffect, useState } from "react";
@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 import "./PointInfoPopup.css";
 
-import { METERS_TO_FT } from "@pt/shared";
+import { METERS_TO_FT, type Point } from "@pt/shared";
 
 import type { MapManager } from "./MapManager";
 import { useUserPrefs } from "@/auth/auth-client";
@@ -42,19 +42,11 @@ function ExternalMapLink({
   );
 }
 
-function CopyableValue({
-  text,
-  successMsg,
-}: {
-  text: string;
-  successMsg: string;
-}) {
+function CopyableValue({ text }: { text: string }) {
   return (
     <button
       onClick={() =>
-        navigator.clipboard
-          .writeText(text)
-          .then(() => toast.success(successMsg))
+        navigator.clipboard.writeText(text).then(() => toast.success("Copied!"))
       }
       className="text-left font-medium tracking-wider text-gray-700 hover:text-blue-800"
       title="Click to copy">
@@ -85,8 +77,7 @@ export function PointInfoPopup({ manager }: Props) {
   }, []);
 
   const [position, setPosition] = useState<{
-    lng: number;
-    lat: number;
+    point: Point;
     osGrid: OSGridRef | null;
     camera: ml.CameraOptions;
   } | null>(null);
@@ -115,8 +106,7 @@ export function PointInfoPopup({ manager }: Props) {
         }
 
         setPosition({
-          lng,
-          lat,
+          point: [lng, lat],
           osGrid,
           camera: manager.getCamera(),
         });
@@ -128,15 +118,18 @@ export function PointInfoPopup({ manager }: Props) {
     };
   }, [manager]);
 
-  const { mutate: mutateElevation, ...elevationMutation } = useMutation(
-    trpc.map.elevation.mutationOptions(),
+  const elevationQuery = useQuery(
+    trpc.elevation.point.queryOptions(position ? position.point : skipToken, {
+      staleTime: Infinity,
+    }),
   );
 
-  useEffect(() => {
-    if (position) {
-      mutateElevation([[position.lng, position.lat]]);
-    }
-  }, [position, mutateElevation]);
+  const reverseGeocodeQuery = useQuery(
+    trpc.geocoder.reverseGeocode.queryOptions(
+      position ? { point: position.point, limit: 1 } : skipToken,
+      { staleTime: Infinity },
+    ),
+  );
 
   const [container] = useState(() => document.createElement("div"));
   const [popup] = useState(
@@ -152,7 +145,7 @@ export function PointInfoPopup({ manager }: Props) {
     const map = manager?.map;
     if (!map || !position) return;
 
-    popup.setLngLat([position.lng, position.lat]);
+    popup.setLngLat(position.point);
     popup.setDOMContent(container);
     popup.addTo(map);
 
@@ -167,7 +160,7 @@ export function PointInfoPopup({ manager }: Props) {
     if (!manager || !position) return;
     const hash = manager.serializeCamera({
       ...position.camera,
-      center: position,
+      center: position.point,
     });
     const url = `${window.location.origin}/map#${hash}`;
     navigator.clipboard.writeText(url).then(() => {
@@ -179,9 +172,9 @@ export function PointInfoPopup({ manager }: Props) {
 
   if (!position) return null;
 
-  const elevationM = elevationMutation.data?.data[0];
+  const elevationM = elevationQuery.data?.data;
   let elevationDisplay: string;
-  if (elevationMutation.isPending) {
+  if (elevationQuery.isPending) {
     elevationDisplay = "Loading\u2026";
   } else if (elevationM == null) {
     elevationDisplay = "\u2014";
@@ -191,16 +184,15 @@ export function PointInfoPopup({ manager }: Props) {
     elevationDisplay = `${elevationM.toFixed(0)} m`;
   }
 
+  const reverseGeocode = reverseGeocodeQuery.data?.[0];
+
   return createPortal(
-    <div className="relative py-2 text-sm">
+    <div className="relative min-w-[260px] py-2 text-sm">
       <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 pr-7 pl-2 text-base sm:text-xs">
         {position.osGrid && (
           <>
             <span className="text-gray-500">Grid Ref:</span>
-            <CopyableValue
-              text={position.osGrid.toString(10)}
-              successMsg="Grid ref copied"
-            />
+            <CopyableValue text={position.osGrid.toString(10)} />
           </>
         )}
         <span className="text-gray-500">
@@ -209,15 +201,26 @@ export function PointInfoPopup({ manager }: Props) {
         <CopyableValue
           text={
             altHeld
-              ? `${position.lng.toFixed(5)}, ${position.lat.toFixed(5)}`
-              : `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}`
+              ? `${position.point[0].toFixed(5)}, ${position.point[1].toFixed(5)}`
+              : `${position.point[1].toFixed(5)}, ${position.point[0].toFixed(5)}`
           }
-          successMsg="Coordinates copied"
         />
         <span className="text-gray-500">Elevation:</span>
         <span className="font-medium tracking-wider text-gray-700">
           {elevationDisplay}
         </span>
+        <span className="text-gray-500">Location:</span>
+        {reverseGeocodeQuery.isPending ? (
+          <span className="font-medium tracking-wider text-gray-700">
+            Loading&hellip;
+          </span>
+        ) : reverseGeocode?.properties.label ? (
+          <CopyableValue text={reverseGeocode.properties.label} />
+        ) : (
+          <span className="font-medium tracking-wider text-gray-700">
+            &mdash;
+          </span>
+        )}
       </div>
       <div className="mt-2 flex items-center gap-1.5 border-t px-2 pt-2">
         <button
@@ -230,16 +233,16 @@ export function PointInfoPopup({ manager }: Props) {
           <RiLink size={24} className="h-6 w-6 sm:h-4 sm:w-4" />
         </button>
         <ExternalMapLink
-          href={`https://www.google.com/maps/search/?api=1&query=${position.lat}%2C${position.lng}`}
+          href={`https://www.google.com/maps/search/?api=1&query=${position.point[1]}%2C${position.point[0]}`}
           src="/google-maps-icon.webp"
           title="Open in Google Maps"></ExternalMapLink>
         <ExternalMapLink
-          href={`https://explore.osmaps.com/?lat=${position.lat}&lon=${position.lng}&zoom=${position.camera.zoom}&style=Standard&type=2d&droppedPin=${position.lat}%2C${position.lng}`}
+          href={`https://explore.osmaps.com/?lat=${position.point[1]}&lon=${position.point[0]}&zoom=${position.camera.zoom}&style=Standard&type=2d&droppedPin=${position.point[1]}%2C${position.point[0]}`}
           title="Open in OS Maps"
           src="/osmaps-icon.svg"
           className="-ml-0.5"></ExternalMapLink>
         <ExternalMapLink
-          href={`https://www.outdooractive.com/r/?page=map&wt=(${position.lat}%2C${position.lng})#zc=${position.camera.zoom! + 1},${position.lng},${position.lat}`}
+          href={`https://www.outdooractive.com/r/?page=map&wt=(${position.point[1]}%2C${position.point[0]})#zc=${position.camera.zoom! + 1},${position.point[0]},${position.point[1]}`}
           src="/outdooractive-icon.webp"
           title="Open in Outdooractive"></ExternalMapLink>
       </div>

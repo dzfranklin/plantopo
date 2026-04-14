@@ -5,6 +5,7 @@
   "tailwindCSS.classFunctions": ["cn"],
   "tailwindCSS.lint.suggestCanonicalClasses": "ignore",
   "cSpell.words": [
+    "bbox",
     "createdb",
     "doesn",
     "dzfranklin",

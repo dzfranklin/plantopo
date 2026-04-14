@@ -5,3 +5,5 @@ Key scripts:
 - npm run db:migrate
 - npm run check
 - npm run test
+
+Logging: Provide errors to pino under the err key

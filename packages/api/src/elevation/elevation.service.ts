@@ -6,7 +6,7 @@ import sharp from "sharp";
 
 import { env } from "../env.js";
 import { logger } from "../logger.js";
-import { defaultDEMSource, eduDEMSource } from "./style.js";
+import { defaultDEMSource, eduDEMSource } from "../map/style.js";
 
 // [lng, lat] GeoJSON order
 type Point = [number, number];
@@ -195,9 +195,7 @@ export async function getElevations(
     return {
       data: [],
       meta: {
-        sources: [
-          { tiles: DEFAULT_SOURCE.urlTemplate, zoom: DEFAULT_SOURCE.maxzoom },
-        ],
+        sources: [],
       },
     };
   }
