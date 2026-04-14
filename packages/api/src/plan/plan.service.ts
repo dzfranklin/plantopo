@@ -1,14 +1,27 @@
 import z from "zod";
 
-import { decodePolyline, round2 } from "@pt/shared";
+import { type Point, type Point3, decodePolyline, round2 } from "@pt/shared";
 
 import { env } from "../env.js";
+import { getElevations } from "../map/elevation.js";
 
-export async function completeRouteBetween(
-  a: [number, number],
-  b: [number, number],
+export async function suggestRoute(
+  a: Point,
+  b: Point,
+  accessScopes: string[],
   { signal }: { signal?: AbortSignal } = {},
-): Promise<[number, number][]> {
+): Promise<Point3[] | null> {
+  const points = await queryValhalla(a, b, signal);
+  if (!points) return null;
+  const elevations = await getElevations(points, accessScopes);
+  return points.map((p, i) => [p[0], p[1], elevations.data[i]!]);
+}
+
+async function queryValhalla(
+  a: Point,
+  b: Point,
+  signal?: AbortSignal,
+): Promise<Point[] | null> {
   if (!env.VALHALLA) throw new Error("Valhalla not configured");
 
   a = round2(a, 6);
@@ -72,13 +85,13 @@ export async function completeRouteBetween(
   if (result.error_code) {
     const code = result.error_code;
     if ((code >= 150 && code <= 158) || code === 442) {
-      return [];
+      return null;
     } else {
       throw new Error(`Valhalla ${result.error_code}: ${result.error}`);
     }
   }
   const trip = result.trip!;
 
-  if (trip.legs.length === 0) return [];
+  if (trip.legs.length === 0) return null;
   return decodePolyline(trip.legs[0]!.shape);
 }

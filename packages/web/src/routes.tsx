@@ -18,6 +18,7 @@ const SettingsAccountPage = lazy(
 const SettingsInterfacePage = lazy(
   () => import("./settings/SettingsInterfacePage.tsx"),
 );
+const PlanPage = lazy(() => import("./plan/PlanPage.tsx"));
 const DevMapViewPage = lazy(() => import("./dev/DevMapViewPage.tsx"));
 const DevMapPage = lazy(() => import("./dev/DevMapPage.tsx"));
 const DevErrorPage = lazy(() => import("./dev/DevErrorsPage.tsx"));
@@ -51,6 +52,7 @@ export function AppRoutes() {
           <Route element={<NavbarLayout />}>
             <Route index element={<HomePage />} />
             <Route path="/map" element={<MapPage />} />
+            <Route path="/plan" element={<PlanPage />} />
 
             <Route element={<RequireAuth />}>
               <Route path="/record-track" element={<RecordTrackPage />} />
