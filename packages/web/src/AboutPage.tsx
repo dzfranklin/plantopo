@@ -1,11 +1,11 @@
 import { usePageTitle } from "./usePageTitle";
 
-export default function CreditsPage() {
-  usePageTitle("Credits");
+export default function AboutPage() {
+  usePageTitle("About");
 
   return (
     <div className="mx-auto max-w-3xl p-8">
-      <h1 className="mb-4 text-2xl font-bold">Credits</h1>
+      <h1 className="mb-4 text-2xl font-bold">About</h1>
       <p className="mb-2">
         PlanTopo is a side project by{" "}
         <a href="https://dfranklin.dev" className="link">
