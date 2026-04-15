@@ -2,29 +2,22 @@ import { Suspense, lazy } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
+import HomePage from "./HomePage.tsx";
+import NotFoundPage from "./NotFoundPage.tsx";
+import LoginPage from "./auth/LoginPage.tsx";
+import SignUpPage from "./auth/SignUpPage.tsx";
 import { useSession } from "./auth/auth-client.ts";
 import { NavbarLayout } from "./layout/NavbarLayout.tsx";
+import PlanPage from "./plan/PlanPage.tsx";
+import SettingsInterfacePage from "./settings/SettingsInterfacePage.tsx";
+import SettingsPage from "./settings/SettingsPage.tsx";
+import RecordTrackPage from "./track/RecordTrackPage.tsx";
 
-const HomePage = lazy(() => import("./HomePage.tsx"));
 const MapPage = lazy(() => import("./map/MapPage.tsx"));
-const LoginPage = lazy(() => import("./auth/LoginPage.tsx"));
-const SignUpPage = lazy(() => import("./auth/SignUpPage.tsx"));
-const RecordTrackPage = lazy(() => import("./track/RecordTrackPage.tsx"));
-const NotFoundPage = lazy(() => import("./NotFoundPage.tsx"));
-const SettingsPage = lazy(() => import("./settings/SettingsPage.tsx"));
 const SettingsAccountPage = lazy(
   () => import("./settings/SettingsAccountPage.tsx"),
 );
-const SettingsInterfacePage = lazy(
-  () => import("./settings/SettingsInterfacePage.tsx"),
-);
-const PlanPage = lazy(() => import("./plan/PlanPage.tsx"));
-const DevMapViewPage = lazy(() => import("./dev/DevMapViewPage.tsx"));
-const DevMapPage = lazy(() => import("./dev/DevMapPage.tsx"));
-const DevErrorPage = lazy(() => import("./dev/DevErrorsPage.tsx"));
-const DevCompleteRoutePage = lazy(
-  () => import("./dev/DevCompleteRoutePage.tsx"),
-);
+const DevRoutes = lazy(() => import("./dev/DevRoutes.tsx"));
 
 function RequireAuth() {
   const { data: session } = useSession();
@@ -66,12 +59,7 @@ export function AppRoutes() {
               </Route>
             </Route>
 
-            <Route path="/dev">
-              <Route path="mapview" element={<DevMapViewPage />} />
-              <Route path="map" element={<DevMapPage />} />
-              <Route path="errors" element={<DevErrorPage />} />
-              <Route path="complete-route" element={<DevCompleteRoutePage />} />
-            </Route>
+            <Route path="/dev/*" element={<DevRoutes />} />
 
             <Route path="*" element={<NotFoundPage />} />
           </Route>
