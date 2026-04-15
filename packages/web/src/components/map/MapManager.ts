@@ -78,7 +78,7 @@ export class MapManager {
       container: inner,
       style: buildStyle(initialProps),
       interactive: initialProps.interactive ?? false,
-      hash: initialProps.hash,
+      hash: initialProps.hash ? "c" : false,
       minZoom: 1, // Otherwise minZoom is fractional, which interacts poorly with our snapping
       zoomSnap: 1, // Only applies during discrete zoom operations
       boxZoom: false, // Wouldn't work well with our snapping

@@ -4,7 +4,7 @@ import {
   useQueries,
   useQuery,
 } from "@tanstack/react-query";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import z from "zod";
 
 import { type AppStyle, mergeOverlay } from "@pt/shared";
@@ -28,7 +28,7 @@ export function AppMap(props: AppMapProps) {
   const trpc = useTRPC();
   const prefs = useUserPrefs();
 
-  const { onManager: onManagerProp, ...forwardedProps } = props;
+  const { onManager: onManagerProp, hash, ...forwardedProps } = props;
   const initialOnManagerPropRef = useRef(onManagerProp);
 
   const [manager, setManager] = useState<MapManager | null>(null);
@@ -44,13 +44,39 @@ export function AppMap(props: AppMapProps) {
   }, []);
 
   const localDefaults = useMemo(() => getLocalDefaults(), []);
-  const [selectedLayers, setSelectedLayers] = useState(
-    localDefaults.selectedLayers ?? DEFAULT_SELECTED_LAYERS,
+  const [selectedLayers, setSelectedLayers] = useState(() => {
+    if (hash) {
+      const fromHash = getHashLayers();
+      if (fromHash) return fromHash;
+    }
+    return localDefaults.selectedLayers ?? DEFAULT_SELECTED_LAYERS;
+  });
+
+  const onSelectLayers = useCallback(
+    (selectedLayers: SelectedLayers) => {
+      setSelectedLayers(selectedLayers);
+      saveLocalDefaults(d => ({ ...d, selectedLayers }));
+      if (hash) setHashLayers(selectedLayers);
+    },
+    [hash],
   );
 
-  const onSelectLayers = useCallback((selectedLayers: SelectedLayers) => {
-    setSelectedLayers(selectedLayers);
-    saveLocalDefaults(d => ({ ...d, selectedLayers }));
+  // Keep selectedLayers in sync if the hash is changed externally
+  useEffect(() => {
+    if (!hash) return;
+    const handler = () => {
+      const fromHash = getHashLayers();
+      if (fromHash) setSelectedLayers(fromHash);
+    };
+    window.addEventListener("hashchange", handler);
+    return () => window.removeEventListener("hashchange", handler);
+  }, [hash]);
+
+  // Write initial selectedLayers into the hash on mount
+  useEffect(() => {
+    if (!hash) return;
+    if (!getHashLayers()) setHashLayers(selectedLayers);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const styleQuery = useQuery(
@@ -102,6 +128,7 @@ export function AppMap(props: AppMapProps) {
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <MapView
         {...forwardedProps}
+        hash={hash}
         style={style}
         distanceUnit={prefs.distanceUnit}
         initialCamera={localDefaults.camera}
@@ -147,4 +174,57 @@ function saveLocalDefaults(
 
 function clearLocalDefaults() {
   localStorage.removeItem("mapDefaults");
+}
+
+function encodeId(id: string): string {
+  // decodeId isn't needed, as decodeURIComponent will decode all percent-encoded sequences
+  return id.replaceAll("~", "%7E").replaceAll("+", "%2B");
+}
+
+// Serialize: "style~overlay1+overlay2" or just "style" if no overlays.
+function serializeSelectedLayers(layers: SelectedLayers): string {
+  const style = encodeId(layers.style);
+  if (layers.overlays.length === 0) return style;
+  const overlays = layers.overlays.map(encodeId).join("+");
+  return `${style}~${overlays}`;
+}
+
+function deserializeSelectedLayers(s: string): SelectedLayers | null {
+  const tildeIdx = s.indexOf("~");
+  const style = decodeURIComponent(tildeIdx === -1 ? s : s.slice(0, tildeIdx));
+  const overlaysStr = tildeIdx === -1 ? "" : s.slice(tildeIdx + 1);
+  const overlays = overlaysStr
+    ? overlaysStr.split("+").map(decodeURIComponent)
+    : [];
+  const result = SelectedLayersSchema.safeParse({ style, overlays });
+  return result.success ? result.data : null;
+}
+
+function getHashLayers(): SelectedLayers | null {
+  const hash = location.hash.slice(1); // remove leading #
+  for (const part of hash.split("&")) {
+    if (part.startsWith("l=")) {
+      return deserializeSelectedLayers(part.slice(2));
+    }
+  }
+  return null;
+}
+
+function setHashLayers(layers: SelectedLayers) {
+  const serialized = serializeSelectedLayers(layers);
+  const hash = location.hash.slice(1);
+  const parts = hash ? hash.split("&") : [];
+  const idx = parts.findIndex(p => p.startsWith("l="));
+  const entry = `l=${serialized}`;
+  if (idx === -1) {
+    parts.push(entry);
+  } else {
+    parts[idx] = entry;
+  }
+  const newHash = parts.join("&");
+  history.replaceState(
+    null,
+    "",
+    `${location.pathname}${location.search}#${newHash}`,
+  );
 }

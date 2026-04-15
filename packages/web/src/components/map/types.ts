@@ -5,7 +5,7 @@ import type { MapManager } from "./MapManager";
 
 export interface MapProps {
   interactive?: boolean;
-  hash?: boolean | string;
+  hash?: boolean;
   style?: ml.StyleSpecification;
   initialCamera?: ml.CameraOptions | string;
   distanceUnit?: "km" | "mi";

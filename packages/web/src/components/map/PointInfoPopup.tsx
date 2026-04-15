@@ -158,10 +158,13 @@ export function PointInfoPopup({ manager }: Props) {
 
   function copyLink() {
     if (!manager || !position) return;
-    const hash = manager.serializeCamera({
+    const camera = manager.serializeCamera({
       ...position.camera,
       center: position.point,
     });
+    const currentHash = location.hash.slice(1);
+    const lParam = currentHash.split("&").find(p => p.startsWith("l="));
+    const hash = lParam ? `c=${camera}&${lParam}` : camera;
     const url = `${window.location.origin}/map#${hash}`;
     navigator.clipboard.writeText(url).then(() => {
       toast.success("Link copied");
