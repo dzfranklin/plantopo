@@ -12,7 +12,7 @@ export default defineConfig(() => ({
     license({
       thirdParty: {
         output: {
-          file: "public/web-third-party-licenses.html",
+          file: "dist/web-third-party-licenses.html",
           template(dependencies) {
             const sorted = [...dependencies].sort((a, b) =>
               (a.name ?? "").localeCompare(b.name ?? ""),
