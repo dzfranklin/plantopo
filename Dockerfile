@@ -11,8 +11,8 @@ COPY tsconfig.base.json ./
 COPY packages/ ./packages/
 COPY esbuild.config.mjs ./
 
-ARG WEB_BUILD_ENV
-RUN echo "$WEB_BUILD_ENV" > packages/web/.env
+ARG COMMIT_HASH=unknown
+RUN echo "VITE_COMMIT_HASH=$COMMIT_HASH" > packages/web/.env
 RUN npm -w packages/web run build
 RUN node esbuild.config.mjs
 

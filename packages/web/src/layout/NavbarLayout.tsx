@@ -1,10 +1,9 @@
-import { Link, Outlet } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 
 import { cn } from "../cn.ts";
-import { Navbar, NavbarMobileFooter } from "./Navbar.tsx";
-import { FOOTER_LINKS } from "./nav.tsx";
+import { DesktopFooter, MobileFooter, Navbar } from "./Navbar.tsx";
 
-export function NavbarLayout() {
+export function NavbarLayout({ fullBleed = false }: { fullBleed?: boolean }) {
   return (
     <div
       className={cn(
@@ -16,18 +15,8 @@ export function NavbarLayout() {
       <div style={{ gridArea: "content" }} className="h-full min-h-0">
         <Outlet />
       </div>
-      <NavbarMobileFooter />
-      <footer
-        style={{ gridArea: "footer" }}
-        className="hidden border-t border-gray-100 px-4 py-2 sm:flex">
-        <div className="flex gap-3 text-xs text-gray-400">
-          {FOOTER_LINKS.map(link => (
-            <Link key={link.to} to={link.to} className="hover:text-gray-600">
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      </footer>
+      <MobileFooter />
+      {!fullBleed && <DesktopFooter />}
     </div>
   );
 }

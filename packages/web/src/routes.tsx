@@ -1,7 +1,7 @@
 import { Suspense, lazy } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
-import CreditsPage from "./CreditsPage.tsx";
+import AboutPage from "./AboutPage.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import HomePage from "./HomePage.tsx";
 import NotFoundPage from "./NotFoundPage.tsx";
@@ -9,12 +9,12 @@ import LoginPage from "./auth/LoginPage.tsx";
 import SignUpPage from "./auth/SignUpPage.tsx";
 import { useSession } from "./auth/auth-client.ts";
 import { NavbarLayout } from "./layout/NavbarLayout.tsx";
-import PlanPage from "./plan/PlanPage.tsx";
 import SettingsInterfacePage from "./settings/SettingsInterfacePage.tsx";
 import SettingsPage from "./settings/SettingsPage.tsx";
-import RecordTrackPage from "./track/RecordTrackPage.tsx";
 
 const MapPage = lazy(() => import("./map/MapPage.tsx"));
+const PlanPage = lazy(() => import("./plan/PlanPage.tsx"));
+const RecordTrackPage = lazy(() => import("./track/RecordTrackPage.tsx"));
 const SettingsAccountPage = lazy(
   () => import("./settings/SettingsAccountPage.tsx"),
 );
@@ -43,14 +43,20 @@ export function AppRoutes() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignUpPage />} />
 
-          <Route element={<NavbarLayout />}>
-            <Route index element={<HomePage />} />
+          <Route element={<NavbarLayout fullBleed />}>
             <Route path="/map" element={<MapPage />} />
             <Route path="/plan" element={<PlanPage />} />
-            <Route path="/credits" element={<CreditsPage />} />
 
             <Route element={<RequireAuth />}>
               <Route path="/record-track" element={<RecordTrackPage />} />
+            </Route>
+          </Route>
+
+          <Route element={<NavbarLayout />}>
+            <Route index element={<HomePage />} />
+            <Route path="/about" element={<AboutPage />} />
+
+            <Route element={<RequireAuth />}>
               <Route path="/settings" element={<SettingsPage />}>
                 <Route
                   index

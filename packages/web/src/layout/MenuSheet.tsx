@@ -28,7 +28,7 @@ function MobileMenuSheetTab({
   );
 }
 
-export function MobileMenuSheet({
+export function MenuSheet({
   setDebugOpen,
 }: {
   setDebugOpen: (open: boolean) => void;
@@ -109,12 +109,12 @@ export function MobileMenuSheet({
             )}
           </div>
 
-          <div className="flex flex-wrap gap-x-3 px-4 py-2">
+          <div className="flex flex-wrap gap-x-3 px-4 py-2 text-xs">
             {FOOTER_LINKS.map(link => (
               <Link
                 key={link.to}
                 to={link.to}
-                className="text-xs text-gray-400 hover:text-gray-600">
+                className="text-gray-400 hover:text-gray-600">
                 {link.label}
               </Link>
             ))}

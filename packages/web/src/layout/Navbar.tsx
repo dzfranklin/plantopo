@@ -3,8 +3,8 @@ import { Link, useMatch } from "react-router-dom";
 
 import { signOut, useSession } from "../auth/auth-client";
 import { DebugDialog } from "./DebugDialog";
-import { MobileMenuSheet } from "./MobileMenuSheet";
-import { useNavTabs } from "./nav";
+import { MenuSheet } from "./MenuSheet";
+import { FOOTER_LINKS, useNavTabs } from "./nav";
 import { UserAvatar } from "@/auth/UserAvatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -91,7 +91,7 @@ export function Navbar() {
       style={{ gridArea: "header" }}
       className="sticky top-0 z-10 flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-2 text-sm">
       <div className="sm:hidden">
-        <MobileMenuSheet setDebugOpen={setDebugOpen} />
+        <MenuSheet setDebugOpen={setDebugOpen} />
       </div>
 
       <Link className="hidden font-semibold sm:block" to="/">
@@ -124,7 +124,23 @@ export function Navbar() {
   );
 }
 
-export function NavbarMobileFooter() {
+export function DesktopFooter() {
+  return (
+    <footer
+      style={{ gridArea: "footer" }}
+      className="hidden bg-gray-100 px-4 py-2 text-xs text-gray-800 sm:flex">
+      <div className="ml-auto flex gap-3">
+        {FOOTER_LINKS.map(link => (
+          <Link key={link.to} to={link.to} className="hover-only-link">
+            {link.label}
+          </Link>
+        ))}
+      </div>
+    </footer>
+  );
+}
+
+export function MobileFooter() {
   const navTabs = useNavTabs();
   return (
     <nav

@@ -42,8 +42,19 @@ const SETTINGS_TAB: NavTab = {
   requireAuth: true,
 };
 
+const COMMIT_HASH = import.meta.env.DEV
+  ? "dev"
+  : import.meta.env.VITE_COMMIT_HASH;
+
 export const FOOTER_LINKS: FooterLink[] = [
-  { to: "/credits", label: "Credits" },
+  { to: "/about", label: "About" },
+  {
+    to:
+      COMMIT_HASH === "dev"
+        ? "#"
+        : `https://github.com/dzfranklin/plantopo/commit/${COMMIT_HASH}`,
+    label: COMMIT_HASH,
+  },
 ];
 
 const NAV_TABS = BASE.filter(t => !t.nativeOnly || window.Native);

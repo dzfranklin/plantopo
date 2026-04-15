@@ -41,7 +41,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            WEB_BUILD_ENV=${{ secrets.WEB_BUILD_ENV }}
+            COMMIT_HASH=${{ github.event.workflow_run.head_sha || github.sha }}
 
   deploy:
     name: Deploy
