@@ -2,6 +2,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
 import { useCallback, useRef, useState } from "react";
 
+import { MapControls } from "./MapControls";
 import { MapManager } from "./MapManager";
 import type { MapProps } from "./types";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,10 @@ import {
 
 export function MapView(props: MapProps) {
   const managerRef = useRef<MapManager | null>(null);
+  const [manager, setManager] = useState<MapManager | null>(null);
+  const [uncontrolledTerrain, setUncontrolledTerrain] = useState(false);
+
+  const terrain = props.terrain ?? uncontrolledTerrain;
 
   const initialPropsRef = useRef(props);
   // eslint-disable-next-line react-hooks/refs
@@ -25,27 +30,40 @@ export function MapView(props: MapProps) {
   >(null);
   const containerRef = useCallback((container: HTMLDivElement | null) => {
     if (container) {
-      const manager = new MapManager(
+      const m = new MapManager(
         {
           container,
           onDisplayFullAttribution: html => setAttributionModalHTML(html),
         },
         initialPropsRef.current,
       );
-      managerRef.current = manager;
-      initialPropsRef.current.onManager?.(manager);
+      managerRef.current = m;
+      setManager(m);
+      initialPropsRef.current.onManager?.(m);
     } else {
       managerRef.current?.destroy();
       managerRef.current = null;
+      setManager(null);
     }
   }, []);
 
   // eslint-disable-next-line react-hooks/refs
-  managerRef.current?.setProps(props);
+  managerRef.current?.setProps({ ...props, terrain });
+
+  const interactive = props.interactive ?? true;
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+      {interactive && manager && (
+        <MapControls
+          manager={manager}
+          terrain={terrain}
+          onTerrainChange={
+            props.terrain === undefined ? setUncontrolledTerrain : undefined
+          }
+        />
+      )}
       <Dialog
         open={attributionModalHTML !== null}
         onOpenChange={open => {

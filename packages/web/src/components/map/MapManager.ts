@@ -1,9 +1,14 @@
 import ml from "maplibre-gl";
 
 import { BottomInfoControl } from "./BottomInfoControl";
-import { TerrainControl } from "./TerrainControl";
 import type { MapProps } from "./types";
 import { attachZoomSnap } from "./zoomSnap";
+
+const TERRAIN_SOURCE = "plantopo:terrain-dem";
+const TERRAIN_OPTIONS: ml.TerrainSpecification = {
+  source: TERRAIN_SOURCE,
+  exaggeration: 1,
+};
 
 export class MapManager {
   static trace = false;
@@ -14,7 +19,6 @@ export class MapManager {
 
   private _m: ml.Map | null;
   private _detachZoomSnap: (() => void) | null = null;
-  private _controls: ml.IControl[] = [];
   private _bottomInfoControl: BottomInfoControl | null = null;
   private _deferredProps: MapProps | null = null;
   private _hasMoved = false;
@@ -240,13 +244,12 @@ export class MapManager {
   private _applyStyle(props: MapProps): boolean {
     if (!this._m) return false;
     const lastDeps = this._lastStyleDeps;
-    const deps = [props.style];
+    const deps = [props.style, props.terrain];
     this._lastStyleDeps = deps;
     if (this._depsEq(lastDeps, deps)) return false;
     this._trace("applying");
 
-    const style = buildStyle(props);
-    this._m.setStyle(style, { diff: this._loaded() });
+    this._m.setStyle(buildStyle(props), { diff: this._loaded() });
 
     return true;
   }
@@ -269,29 +272,7 @@ export class MapManager {
     this._m.doubleClickZoom[method]();
     this._m.touchZoomRotate[method]();
 
-    for (const control of this._controls) {
-      this._m.removeControl(control);
-    }
-    this._controls = [];
-    if (interactive) {
-      const nav = new ml.NavigationControl({
-        showZoom: true,
-        showCompass: true,
-        visualizePitch: true,
-        visualizeRoll: true,
-      });
-      const geoloc = new ml.GeolocateControl({
-        trackUserLocation: !!window.Native,
-      });
-      const terrain = new TerrainControl({
-        source: "plantopo:terrain-dem",
-        exaggeration: 1,
-      });
-      this._m.addControl(nav, "top-right");
-      this._m.addControl(geoloc, "top-right");
-      this._m.addControl(terrain, "top-right");
-      this._controls = [nav, geoloc, terrain];
-    }
+    // Controls are rendered as React components in MapControls
   }
 
   private _applyGeojson({ geojson }: MapProps, didChangeStyle: boolean) {
@@ -354,11 +335,13 @@ export class MapManager {
 }
 
 function buildStyle(props: MapProps): ml.StyleSpecification {
-  return props.style
-    ? props.style
-    : {
-        version: 8,
-        sources: {},
-        layers: [],
-      };
+  const base: ml.StyleSpecification = props.style ?? {
+    version: 8,
+    sources: {},
+    layers: [],
+  };
+  const hasTerrainSource = TERRAIN_SOURCE in (base.sources ?? {});
+  const terrain =
+    props.terrain && hasTerrainSource ? TERRAIN_OPTIONS : undefined;
+  return { ...base, terrain };
 }

@@ -105,6 +105,9 @@ export default function DevMapPage() {
   const [count, setCount] = useState(1);
   const [resetKey, setResetKey] = useState(0);
   const [selectedStyle, setSelectedStyle] = useState("undefined");
+  const [terrainProp, setTerrainProp] = useState<
+    "uncontrolled" | "true" | "false"
+  >("uncontrolled");
   const [logEvents, setLogEvents] = useState(false);
 
   const trpc = useTRPC();
@@ -166,6 +169,18 @@ export default function DevMapPage() {
             </SelectContent>
           </Select>
         )}
+        <Select
+          value={terrainProp}
+          onValueChange={value => setTerrainProp(value as typeof terrainProp)}>
+          <SelectTrigger className="w-34">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="uncontrolled">terrain: uncontrolled</SelectItem>
+            <SelectItem value="true">terrain: true</SelectItem>
+            <SelectItem value="false">terrain: false</SelectItem>
+          </SelectContent>
+        </Select>
         <label className="flex items-center gap-2">
           <Checkbox
             checked={interactive}
@@ -244,6 +259,11 @@ export default function DevMapPage() {
             style={style}
             interactive={interactive}
             hash={hash || undefined}
+            terrain={
+              terrainProp === "uncontrolled"
+                ? undefined
+                : terrainProp === "true"
+            }
             geojson={
               geojsonEnabled ? customGeojson || SAMPLE_GEOJSON : undefined
             }

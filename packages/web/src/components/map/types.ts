@@ -15,6 +15,8 @@ export interface MapProps {
   onManager?: (manager: MapManager) => void;
   triggerGeolocationControl?: boolean;
   debug?: boolean;
+  /** If provided, terrain is forced on/off and no terrain toggle button is shown. */
+  terrain?: boolean;
 }
 
 export const SelectedLayersSchema = z.object({

@@ -13,6 +13,7 @@ import { LayerPicker } from "./LayerPicker";
 import { MapManager } from "./MapManager";
 import { MapView } from "./MapView";
 import { PointInfoPopup } from "./PointInfoPopup";
+import { setHashParam } from "./hashParams";
 import {
   DEFAULT_SELECTED_LAYERS,
   type MapProps,
@@ -211,20 +212,5 @@ function getHashLayers(): SelectedLayers | null {
 }
 
 function setHashLayers(layers: SelectedLayers) {
-  const serialized = serializeSelectedLayers(layers);
-  const hash = location.hash.slice(1);
-  const parts = hash ? hash.split("&") : [];
-  const idx = parts.findIndex(p => p.startsWith("l="));
-  const entry = `l=${serialized}`;
-  if (idx === -1) {
-    parts.push(entry);
-  } else {
-    parts[idx] = entry;
-  }
-  const newHash = parts.join("&");
-  history.replaceState(
-    null,
-    "",
-    `${location.pathname}${location.search}#${newHash}`,
-  );
+  setHashParam("l", serializeSelectedLayers(layers));
 }
