@@ -3,7 +3,7 @@ set -e
 
 api_env_file=$(mktemp)
 trap 'rm -f "$api_env_file"' EXIT
-NODE_ENV=production npx tsx scripts/with-api-env.tsx > "$api_env_file"
+NODE_ENV=production npx tsx scripts/with-api-env.ts > "$api_env_file"
 
 web_build_env=$(cat \
   packages/web/.env \
