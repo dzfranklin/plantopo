@@ -4,7 +4,6 @@ import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-csp-worker.js?url";
 import { BottomInfoControl } from "./BottomInfoControl";
 import { InteractionManager } from "./interaction/InteractionManager";
 import type { MapProps } from "./types";
-import { attachZoomSnap } from "./zoomSnap";
 
 setWorkerUrl(maplibreWorkerUrl);
 
@@ -21,7 +20,6 @@ export class MapManager {
   traceID = MapManager._nextTraceID++;
 
   private _m: ml.Map | null;
-  private _detachZoomSnap: (() => void) | null = null;
   private _bottomInfoControl: BottomInfoControl | null = null;
   private _im: InteractionManager | null = null;
   private _deferredProps: MapProps | null = null;
@@ -87,10 +85,10 @@ export class MapManager {
       style: buildStyle(initialProps),
       interactive: initialProps.interactive ?? false,
       hash: initialProps.hash ? "c" : false,
-      minZoom: 1, // Otherwise minZoom is fractional, which interacts poorly with our snapping
-      zoomSnap: 1, // Only applies during discrete zoom operations
-      boxZoom: false, // Wouldn't work well with our snapping
+      minZoom: 1,
+      boxZoom: false,
       attributionControl: false, // in our BottomInfoControl
+      zoomSnap: 1, // controls discrete ops (map.zoomIn/Out, keyboard) — gesture snap is handled by InteractionManager
       ...initialCamera,
     });
 
@@ -122,7 +120,6 @@ export class MapManager {
     this._m.touchZoomRotate.disable();
     this._m.touchPitch?.disable();
 
-    this._detachZoomSnap = attachZoomSnap(this._m);
     this._applyInteractive(initialProps);
 
     this._deferredProps = initialProps;
@@ -142,8 +139,6 @@ export class MapManager {
     const m = this._m;
     this._m = null;
 
-    this._detachZoomSnap?.();
-    this._detachZoomSnap = null;
     this._im?.destroy();
     this._im = null;
     this._bottomInfoControl = null;

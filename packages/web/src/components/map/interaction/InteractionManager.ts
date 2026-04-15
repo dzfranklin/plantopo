@@ -60,6 +60,9 @@ export class InteractionManager {
   private _frameId: number | undefined;
   private _updatingCamera = false;
   private _bearingSnap: number;
+  // Zoom snap tracking
+  private _zoomGestureStart: number | null = null;
+  private _zoomAround: Point | null = null;
 
   private _listeners: Array<
     [
@@ -424,6 +427,9 @@ export class InteractionManager {
     if (result.pitchDelta) newPitch += result.pitchDelta;
 
     if (result.zoomDelta) {
+      if (this._zoomGestureStart === null)
+        this._zoomGestureStart = map.getZoom();
+      this._zoomAround = around;
       newZoom += result.zoomDelta;
       const scale = Math.pow(2, result.zoomDelta);
       newCenter = around.add(newCenter.sub(around).div(scale));
@@ -513,6 +519,27 @@ export class InteractionManager {
 
     for (const name in endEvents) {
       this._fireEvent(name, endEvents[name]);
+    }
+
+    // Zoom snap: when a zoom gesture ends, ease to the nearest snap multiple
+    if ("zoomend" in endEvents) {
+      const snapInterval = this._map.getZoomSnap();
+      const current = this._map.getZoom();
+      const start = this._zoomGestureStart;
+      const around = this._zoomAround
+        ? this._map.unproject(this._zoomAround)
+        : undefined;
+      this._zoomGestureStart = null;
+      this._zoomAround = null;
+      if (snapInterval > 0) {
+        const zoomingOut = start !== null && current < start;
+        const snapped = zoomingOut
+          ? Math.floor(current / snapInterval) * snapInterval
+          : Math.ceil(current / snapInterval) * snapInterval;
+        if (Math.abs(current - snapped) > 1e-9) {
+          this._map.easeTo({ zoom: snapped, duration: 130, around });
+        }
+      }
     }
 
     const stillMoving = isMoving(this._eventsInProgress);
