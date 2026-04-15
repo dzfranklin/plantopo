@@ -10,7 +10,7 @@ import z from "zod";
 import { type AppStyle, mergeOverlay } from "@pt/shared";
 
 import { LayerPicker } from "./LayerPicker";
-import { useMapManager } from "./MapManagerContext";
+import { type MapManager } from "./MapManager";
 import { MapView } from "./MapView";
 import { PointInfoPopup } from "./PointInfoPopup";
 import { setHashParam } from "./hashParams";
@@ -112,14 +112,22 @@ export function AppMap(props: AppMapProps) {
     [baseStyle, loadedOverlays],
   );
 
+  const onManager = useCallback((manager: MapManager) => {
+    manager.onCameraChangeIdle = () => {
+      saveLocalDefaults(p => ({ ...p, camera: manager.serializeCamera() }));
+    };
+    forwardedProps.onManager?.(manager);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <MapView
       {...forwardedProps}
+      onManager={onManager}
       hash={hash}
       style={style}
       distanceUnit={prefs.distanceUnit}
       initialCamera={localDefaults.camera}>
-      <CameraDefaultsSaver />
       <PointInfoPopup />
       <div className="absolute right-2 bottom-8 z-10">
         <LayerPicker selected={selectedLayers} onSelect={onSelectLayers} />
@@ -127,19 +135,6 @@ export function AppMap(props: AppMapProps) {
       {children}
     </MapView>
   );
-}
-
-function CameraDefaultsSaver() {
-  const manager = useMapManager();
-  useEffect(() => {
-    if (!manager) return;
-    const sub = manager.on("idle", () => {
-      if (!manager.hasMoved) return;
-      saveLocalDefaults(p => ({ ...p, camera: manager.serializeCamera() }));
-    });
-    return () => sub.unsubscribe();
-  }, [manager]);
-  return null;
 }
 
 const LocalDefaultsSchema = z.object({

@@ -23,15 +23,12 @@ export class MapManager {
   private _bottomInfoControl: BottomInfoControl | null = null;
   private _im: InteractionManager | null = null;
   private _deferredProps: MapProps | null = null;
-  private _hasMoved = false;
+  onCameraChangeIdle: (() => void) | undefined;
+  private _cameraChanged = false;
 
   private _lastStyleDeps: unknown[] | undefined;
   private _lastInteractiveDeps: unknown[] | undefined;
   private _lastGeojsonDeps: unknown[] | undefined;
-
-  get hasMoved() {
-    return this._hasMoved;
-  }
 
   private _onError = (e: ml.ErrorEvent) =>
     console.error("[MapManager]", e.error);
@@ -102,14 +99,15 @@ export class MapManager {
     this._m.on("style.load", this._onstyleload);
     this._m.on("plantopo:stylechange", this._onstylechange);
 
-    const movedHandler = (ev: ml.MapLibreEvent) => {
-      if (ev.originalEvent) {
-        // not a flyTo or jumpTo
-        this._hasMoved = true;
-        this._m?.off("move", movedHandler);
+    this._m.on("move", () => {
+      this._cameraChanged = true;
+    });
+    this._m.on("idle", () => {
+      if (this._cameraChanged) {
+        this._cameraChanged = false;
+        this.onCameraChangeIdle?.();
       }
-    };
-    this._m.on("move", movedHandler);
+    });
 
     // Disable MapLibre's built-in interaction handlers — InteractionManager owns all gestures
     this._m.scrollZoom.disable();
