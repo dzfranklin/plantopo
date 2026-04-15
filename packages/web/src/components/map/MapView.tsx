@@ -81,7 +81,6 @@ export function MapView(props: MapProps & { children?: React.ReactNode }) {
         <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
         {interactive && manager && (
           <MapControls
-            manager={manager}
             terrain={terrain}
             onTerrainChange={
               props.terrain === undefined
