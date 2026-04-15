@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { RecordedTrack, RecordedTrackPoint } from "@pt/shared";
+import type { LocalRecordedTrack, LocalRecordedTrackPoint } from "@pt/shared";
 
 import { NativeRequiredError } from "../AppError.js";
 import { AppMap, MapManager } from "../components/map/index.js";
@@ -8,7 +8,7 @@ import { type RecordTrackState, RecordTrackStateSchema } from "./types.js";
 import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/usePageTitle.js";
 
-function trackToGeoJSON(recording: RecordedTrack): GeoJSON.Feature {
+function trackToGeoJSON(recording: LocalRecordedTrack): GeoJSON.Feature {
   return {
     type: "Feature",
     properties: { stroke: "#2a82b2", "stroke-width": 3 },
@@ -19,7 +19,7 @@ function trackToGeoJSON(recording: RecordedTrack): GeoJSON.Feature {
   };
 }
 
-function jumpToPoint(manager: MapManager, point: RecordedTrackPoint) {
+function jumpToPoint(manager: MapManager, point: LocalRecordedTrackPoint) {
   manager.jumpTo({ center: [point.longitude, point.latitude], zoom: 13 });
 }
 
@@ -29,7 +29,7 @@ export default function RecordTrackPage() {
   usePageTitle("Record Track");
 
   const managerRef = useRef<MapManager | null>(null);
-  const pendingJumpRef = useRef<RecordedTrackPoint | null>(null);
+  const pendingJumpRef = useRef<LocalRecordedTrackPoint | null>(null);
   const onManager = useCallback((m: MapManager) => {
     managerRef.current = m;
     if (pendingJumpRef.current) {

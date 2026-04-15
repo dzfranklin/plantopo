@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { RecordedTrackSchema } from "@pt/shared";
+import { LocalRecordedTrackSchema } from "@pt/shared";
 
 export const RecordTrackStateSchema = z.object({
-  recording: RecordedTrackSchema.nullable(),
+  recording: LocalRecordedTrackSchema.nullable(),
 });
 
 export type RecordTrackState = z.infer<typeof RecordTrackStateSchema>;

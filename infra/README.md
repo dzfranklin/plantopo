@@ -41,6 +41,9 @@ dev> rsync infra/plantopo-deploy daniel@box:/tmp/ && ssh daniel@box "sudo mv /tm
 
 ### Create the postgres user and database
 
+PostGIS must be installed (`apt install postgresql-postgis`); the migration
+enables the extension automatically.
+
 ```sh
 postgres@box> DB_PASSWORD=$(openssl rand -base64 32)
 postgres@box> echo "postgres://plantopo:$DB_PASSWORD@10.0.2.2:5432/plantopo"

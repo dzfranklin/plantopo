@@ -1,14 +1,10 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { TRPCClientError } from "@trpc/client";
-import { Suspense } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppRouter } from "@pt/api";
 
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
-import { renderWithProviders } from "./test/render.tsx";
-import { useTRPC } from "./trpc.ts";
 
 afterEach(cleanup);
 
@@ -154,29 +150,6 @@ describe("ErrorBoundary", () => {
         </ErrorBoundary>,
       );
       expect(screen.queryByText(/ref:/)).not.toBeInTheDocument();
-    });
-  });
-
-  describe("reqId integration via testError endpoint", () => {
-    it("shows a reqId returned from the server", async () => {
-      function TestErrorThrower() {
-        const trpc = useTRPC();
-        useSuspenseQuery(trpc.test!.testError.queryOptions());
-        return null;
-      }
-
-      // ErrorBoundary must be inside Suspense so errors from useSuspenseQuery reach it
-      renderWithProviders(
-        <Suspense>
-          <ErrorBoundary>
-            <TestErrorThrower />
-          </ErrorBoundary>
-        </Suspense>,
-      );
-
-      await waitFor(() => {
-        expect(screen.getByText(/^ref: 1/)).toBeInTheDocument();
-      });
     });
   });
 });

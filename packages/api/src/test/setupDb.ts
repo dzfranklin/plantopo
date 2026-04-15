@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
@@ -31,6 +32,17 @@ export const TEST_SESSION = {
   user: TEST_USER,
 } as const;
 
+export async function resetDb() {
+  const { rows } = await db.execute<{ tablename: string }>(
+    sql`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != 'spatial_ref_sys'`,
+  );
+  if (rows.length > 0) {
+    const tables = rows.map(r => `"${r.tablename}"`).join(", ");
+    await db.execute(sql.raw(`TRUNCATE TABLE ${tables} CASCADE`));
+  }
+  await ensureTestUser();
+}
+
 export async function ensureTestUser() {
   await db
     .insert(user)
@@ -47,13 +59,8 @@ export async function setupDb() {
 
   const adminClient = new pg.Client(adminUrl.toString());
   await adminClient.connect();
-  const { rows } = await adminClient.query(
-    "SELECT 1 FROM pg_database WHERE datname = $1",
-    [dbName],
-  );
-  if (rows.length === 0) {
-    await adminClient.query(`CREATE DATABASE "${dbName}"`);
-  }
+  await adminClient.query(`DROP DATABASE IF EXISTS "${dbName}" WITH (FORCE)`);
+  await adminClient.query(`CREATE DATABASE "${dbName}"`);
   await adminClient.end();
 
   const migrateDb = drizzle(dbUrl);

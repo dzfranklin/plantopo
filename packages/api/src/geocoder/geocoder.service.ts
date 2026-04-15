@@ -3,9 +3,16 @@ import z from "zod";
 
 import { PointSchema } from "@pt/shared";
 
+import { env } from "../env.js";
 import { getLog } from "../logger.js";
 
-const photonEndpoint = "https://photon.komoot.io";
+let photonEndpoint: string;
+if (env.PHOTON) {
+  photonEndpoint = env.PHOTON;
+} else {
+  getLog().warn("PHOTON environment variable not set, using public server");
+  photonEndpoint = "https://photon.komoot.io";
+}
 
 // Circuit breaker state for Photon 503 responses
 const circuitBreaker = {

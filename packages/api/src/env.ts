@@ -16,6 +16,7 @@ const schema = z.object({
   TILE_CACHE_DIR: z.string(),
   SERVER_TILE_KEY: z.string().optional(),
   VALHALLA: z.string().optional(),
+  PHOTON: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);

@@ -10,14 +10,14 @@ export const PointSchema = z.tuple([z.number(), z.number()]);
 export type Point = [number, number];
 export type Point3 = [number, number, number | null];
 
-const RecordingStatusSchema = z.enum([
+const LocalRecordingStatusSchema = z.enum([
   "RECORDING",
   "STOPPED",
   "SYNCED",
   "SYNC_FAILED",
 ]);
 
-const TrackPointSchema = z.object({
+const LocalTrackPointSchema = z.object({
   timestamp: z.number(),
   latitude: z.number(),
   longitude: z.number(),
@@ -30,18 +30,20 @@ const TrackPointSchema = z.object({
   bearingAccuracy: z.number().nullable(),
 });
 
-export const RecordedTrackSchema = z.object({
+export const LocalRecordedTrackSchema = z.object({
   id: z.uuidv4(),
   name: z.string().nullable(),
   startTime: z.number(),
   endTime: z.number().nullable(),
-  status: RecordingStatusSchema,
-  points: z.array(TrackPointSchema),
+  status: LocalRecordingStatusSchema,
+  points: z.array(LocalTrackPointSchema),
 });
 
-export type RecordedTrackStatus = z.infer<typeof RecordingStatusSchema>;
-export type RecordedTrackPoint = z.infer<typeof TrackPointSchema>;
-export type RecordedTrack = z.infer<typeof RecordedTrackSchema>;
+export type LocalRecordedTrackStatus = z.infer<
+  typeof LocalRecordingStatusSchema
+>;
+export type LocalRecordedTrackPoint = z.infer<typeof LocalTrackPointSchema>;
+export type LocalRecordedTrack = z.infer<typeof LocalRecordedTrackSchema>;
 
 export const UserPrefsSchema = z.object({
   distanceUnit: z.enum(["km", "mi"]).default("km"),

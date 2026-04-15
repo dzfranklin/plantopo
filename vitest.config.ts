@@ -8,7 +8,6 @@ export default defineConfig({
         test: {
           name: "api",
           include: ["packages/api/src/**/*.test.ts"],
-          globalSetup: ["packages/api/src/test/globalSetup.ts"],
           setupFiles: ["packages/api/src/test/setup.ts"],
           environment: "node",
         },
@@ -25,9 +24,29 @@ export default defineConfig({
         test: {
           name: "web",
           include: ["packages/web/src/**/*.test.{ts,tsx}"],
-          globalSetup: ["packages/web/src/test/globalSetup.ts"],
           setupFiles: ["packages/web/src/test/setup.ts"],
           environment: "jsdom",
+        },
+      },
+      {
+        test: {
+          name: "api-integration",
+          include: ["packages/api/src/**/*.itest.ts"],
+          globalSetup: ["packages/api/src/test/globalSetup.ts"],
+          setupFiles: ["packages/api/src/test/setup.integration.ts"],
+          environment: "node",
+          fileParallelism: false,
+        },
+      },
+      {
+        extends: "./packages/web/vite.config.js",
+        test: {
+          name: "web-integration",
+          include: ["packages/web/src/**/*.itest.{ts,tsx}"],
+          globalSetup: ["packages/web/src/test/globalSetup.ts"],
+          setupFiles: ["packages/web/src/test/setup.integration.ts"],
+          environment: "jsdom",
+          fileParallelism: false,
         },
       },
     ],
