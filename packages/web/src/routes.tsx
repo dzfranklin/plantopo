@@ -9,15 +9,13 @@ import LoginPage from "./auth/LoginPage.tsx";
 import SignUpPage from "./auth/SignUpPage.tsx";
 import { useSession } from "./auth/auth-client.ts";
 import { NavbarLayout } from "./layout/NavbarLayout.tsx";
+import MapPage from "./map/MapPage.tsx";
+import PlanPage from "./plan/PlanPage.tsx";
+import SettingsAccountPage from "./settings/SettingsAccountPage.tsx";
 import SettingsInterfacePage from "./settings/SettingsInterfacePage.tsx";
 import SettingsPage from "./settings/SettingsPage.tsx";
+import RecordTrackPage from "./track/RecordTrackPage.tsx";
 
-const MapPage = lazy(() => import("./map/MapPage.tsx"));
-const PlanPage = lazy(() => import("./plan/PlanPage.tsx"));
-const RecordTrackPage = lazy(() => import("./track/RecordTrackPage.tsx"));
-const SettingsAccountPage = lazy(
-  () => import("./settings/SettingsAccountPage.tsx"),
-);
 const DevRoutes = lazy(() => import("./dev/DevRoutes.tsx"));
 
 function RequireAuth() {

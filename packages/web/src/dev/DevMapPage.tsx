@@ -1,6 +1,7 @@
 import { useState } from "react";
 
-import { AppMap, MapManager } from "@/components/map";
+import { AppMap } from "@/components/map";
+import { MapManager } from "@/components/map/MapManager";
 
 MapManager.trace = true;
 

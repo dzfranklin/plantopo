@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LocalRecordedTrack, LocalRecordedTrackPoint } from "@pt/shared";
 
 import { NativeRequiredError } from "../AppError.js";
-import { AppMap, MapManager } from "../components/map/index.js";
+import { AppMap, type MapManager } from "../components/map/index.js";
 import { type RecordTrackState, RecordTrackStateSchema } from "./types.js";
 import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/usePageTitle.js";

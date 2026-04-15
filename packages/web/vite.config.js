@@ -2,6 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import license from "rollup-plugin-license";
+import { visualizer } from "rollup-plugin-visualizer";
 import { defineConfig } from "vite";
 
 // https://vite.dev/config/
@@ -105,6 +106,9 @@ export default defineConfig(() => ({
   ],
   build: {
     sourcemap: true,
+    rollupOptions: {
+      plugins: [visualizer({ open: true, filename: "dist/stats.html" })],
+    },
   },
   resolve: {
     alias: {
