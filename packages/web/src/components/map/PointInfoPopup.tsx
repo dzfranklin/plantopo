@@ -118,13 +118,14 @@ export function PointInfoPopup() {
   const elevationQuery = useQuery(
     trpc.elevation.point.queryOptions(position ? position.point : skipToken, {
       staleTime: Infinity,
+      throwOnError: false,
     }),
   );
 
   const reverseGeocodeQuery = useQuery(
     trpc.geocoder.reverseGeocode.queryOptions(
       position ? { point: position.point, limit: 1 } : skipToken,
-      { staleTime: Infinity },
+      { staleTime: Infinity, throwOnError: false },
     ),
   );
 
