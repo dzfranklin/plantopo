@@ -7,9 +7,6 @@ import thirdPartyGenerator from "./vite-third-party-generator";
 
 // https://vite.dev/config/
 export default defineConfig(() => ({
-  optimizeDeps: {
-    exclude: ["maplibre-gl"],
-  },
   plugins: [
     tailwindcss(),
     react(),
