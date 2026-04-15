@@ -44,7 +44,7 @@ const SETTINGS_TAB: NavTab = {
 
 const COMMIT_HASH = import.meta.env.DEV
   ? "dev"
-  : import.meta.env.VITE_COMMIT_HASH;
+  : import.meta.env.VITE_COMMIT_HASH?.slice(0, 7);
 
 export const FOOTER_LINKS: FooterLink[] = [
   { to: "/about", label: "About" },
