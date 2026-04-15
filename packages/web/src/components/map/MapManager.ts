@@ -1,8 +1,11 @@
-import ml from "maplibre-gl";
+import ml, { setWorkerUrl } from "maplibre-gl";
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-csp-worker.js?url";
 
 import { BottomInfoControl } from "./BottomInfoControl";
 import type { MapProps } from "./types";
 import { attachZoomSnap } from "./zoomSnap";
+
+setWorkerUrl(maplibreWorkerUrl);
 
 const TERRAIN_SOURCE = "plantopo:terrain-dem";
 const TERRAIN_OPTIONS: ml.TerrainSpecification = {
