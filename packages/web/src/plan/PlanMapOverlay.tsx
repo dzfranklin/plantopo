@@ -1,21 +1,62 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
+import { PlanInteractionHandler } from "./PlanInteractionHandler";
+import { PlanRenderer } from "./PlanRenderer";
+import { type PlanState } from "./types";
 import { useMapManager } from "@/components/map/MapManagerContext";
 
 export function PlanMapOverlay() {
+  const rendererRef = useRef<PlanRenderer | null>(null);
+  const stateRef = useRef<PlanState>({ points: [] });
+
   const mm = useMapManager();
+
   useEffect(() => {
     const m = mm?.map;
-    if (!m) return;
+    const im = mm?.interactionManager;
+    if (!m || !im) return;
 
-    const canvas = document.createElement("canvas");
-    canvas.style.cssText =
-      "position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;";
-    m.getCanvasContainer().append(canvas);
+    const renderer = new PlanRenderer(m.getCanvasContainer(), m);
+    rendererRef.current = renderer;
+
+    const repaintNow = () => renderer.render(stateRef.current);
+    let pendingRepaint: number | null = null;
+    const requestRepaint = () => {
+      if (pendingRepaint === null) {
+        pendingRepaint = requestAnimationFrame(() => {
+          pendingRepaint = null;
+          repaintNow();
+        });
+      }
+    };
+
+    requestRepaint();
+    m.on("render", repaintNow);
+
+    const handler = new PlanInteractionHandler(
+      m,
+      () => rendererRef.current,
+      () => stateRef.current,
+      updater => {
+        const next = updater(stateRef.current);
+        stateRef.current = next;
+        requestRepaint();
+        return next;
+      },
+    );
+    handler.enable();
+    const removeHandler = im.addFirst("planEdit", handler, [
+      "mouseRotate",
+      "mousePitch",
+    ]);
 
     return () => {
-      canvas.remove();
+      removeHandler();
+      m.off("render", repaintNow);
+      renderer.destroy();
+      rendererRef.current = null;
     };
   }, [mm]);
+
   return null;
 }
