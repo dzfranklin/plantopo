@@ -6,7 +6,9 @@ import { defineConfig } from "vite";
 import thirdPartyGenerator from "./vite-third-party-generator";
 
 // https://vite.dev/config/
-export default defineConfig(() => ({
+export default defineConfig(({ command }) => ({
+  server:
+    command === "serve" ? { host: "0.0.0.0", allowedHosts: true } : undefined,
   plugins: [
     tailwindcss(),
     react(),
