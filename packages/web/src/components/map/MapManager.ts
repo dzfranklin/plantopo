@@ -2,6 +2,7 @@ import ml, { setWorkerUrl } from "maplibre-gl";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-csp-worker.js?url";
 
 import { BottomInfoControl } from "./BottomInfoControl";
+import { InteractionManager } from "./interaction/InteractionManager";
 import type { MapProps } from "./types";
 import { attachZoomSnap } from "./zoomSnap";
 
@@ -18,11 +19,11 @@ export class MapManager {
   static _nextTraceID = 1;
 
   traceID = MapManager._nextTraceID++;
-  editMode = false;
 
   private _m: ml.Map | null;
   private _detachZoomSnap: (() => void) | null = null;
   private _bottomInfoControl: BottomInfoControl | null = null;
+  private _im: InteractionManager | null = null;
   private _deferredProps: MapProps | null = null;
   private _hasMoved = false;
 
@@ -112,6 +113,15 @@ export class MapManager {
     };
     this._m.on("move", movedHandler);
 
+    // Disable MapLibre's built-in interaction handlers — InteractionManager owns all gestures
+    this._m.scrollZoom.disable();
+    this._m.dragRotate.disable();
+    this._m.dragPan.disable();
+    this._m.keyboard.disable();
+    this._m.doubleClickZoom.disable();
+    this._m.touchZoomRotate.disable();
+    this._m.touchPitch?.disable();
+
     this._detachZoomSnap = attachZoomSnap(this._m);
     this._applyInteractive(initialProps);
 
@@ -122,6 +132,10 @@ export class MapManager {
     return this._m;
   }
 
+  get interactionManager(): InteractionManager | null {
+    return this._im;
+  }
+
   destroy() {
     if (!this._m) return;
 
@@ -130,6 +144,8 @@ export class MapManager {
 
     this._detachZoomSnap?.();
     this._detachZoomSnap = null;
+    this._im?.destroy();
+    this._im = null;
     this._bottomInfoControl = null;
 
     m.getContainer().remove();
@@ -267,13 +283,12 @@ export class MapManager {
 
     const interactive = props.interactive ?? true;
 
-    const method = interactive ? "enable" : "disable";
-    this._m.scrollZoom[method]();
-    this._m.dragRotate[method]();
-    this._m.dragPan[method]();
-    this._m.keyboard[method]();
-    this._m.doubleClickZoom[method]();
-    this._m.touchZoomRotate[method]();
+    if (interactive && !this._im) {
+      this._im = new InteractionManager(this._m);
+    } else if (!interactive && this._im) {
+      this._im.destroy();
+      this._im = null;
+    }
 
     // Controls are rendered as React components in MapControls
   }

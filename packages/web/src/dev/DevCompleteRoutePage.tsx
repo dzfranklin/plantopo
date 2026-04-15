@@ -17,7 +17,6 @@ export default function DevCompleteRoutePage() {
 
   const onManager = useCallback(
     (manager: MapManager) => {
-      manager.editMode = true;
       manager.on("click", async ev => {
         const newPoint = round2([ev.lngLat.lng, ev.lngLat.lat], 6);
         const prev =

@@ -1,0 +1,2 @@
+Based on maplibre-gl-js interaction handling
+https://github.com/maplibre/maplibre-gl-js/blob/50d9756cbbe9df104ae8e8692b1719b7b04099ec/LICENSE.txt
