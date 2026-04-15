@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 
 import { MapControls } from "./MapControls";
 import { MapManager } from "./MapManager";
+import { MapManagerContext } from "./MapManagerContext";
 import type { MapProps } from "./types";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export function MapView(props: MapProps) {
+export function MapView(props: MapProps & { children?: React.ReactNode }) {
   const managerRef = useRef<MapManager | null>(null);
   const [manager, setManager] = useState<MapManager | null>(null);
   const [uncontrolledTerrain, setUncontrolledTerrain] = useState(false);
@@ -53,35 +54,38 @@ export function MapView(props: MapProps) {
   const interactive = props.interactive ?? true;
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-      {interactive && manager && (
-        <MapControls
-          manager={manager}
-          terrain={terrain}
-          onTerrainChange={
-            props.terrain === undefined ? setUncontrolledTerrain : undefined
-          }
-        />
-      )}
-      <Dialog
-        open={attributionModalHTML !== null}
-        onOpenChange={open => {
-          if (!open) setAttributionModalHTML(null);
-        }}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Attribution</DialogTitle>
-          </DialogHeader>
-          <DialogDescription
-            dangerouslySetInnerHTML={{ __html: attributionModalHTML ?? "" }}
+    <MapManagerContext.Provider value={manager}>
+      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+        <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+        {interactive && manager && (
+          <MapControls
+            manager={manager}
+            terrain={terrain}
+            onTerrainChange={
+              props.terrain === undefined ? setUncontrolledTerrain : undefined
+            }
           />
-          {(import.meta.env.DEV || props.debug) && (
-            <DebugPanel managerRef={managerRef} />
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+        )}
+        {props.children}
+        <Dialog
+          open={attributionModalHTML !== null}
+          onOpenChange={open => {
+            if (!open) setAttributionModalHTML(null);
+          }}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Attribution</DialogTitle>
+            </DialogHeader>
+            <DialogDescription
+              dangerouslySetInnerHTML={{ __html: attributionModalHTML ?? "" }}
+            />
+            {(import.meta.env.DEV || props.debug) && (
+              <DebugPanel managerRef={managerRef} />
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    </MapManagerContext.Provider>
   );
 }
 

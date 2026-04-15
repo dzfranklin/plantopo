@@ -4,13 +4,13 @@ import {
   useQueries,
   useQuery,
 } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import z from "zod";
 
 import { type AppStyle, mergeOverlay } from "@pt/shared";
 
 import { LayerPicker } from "./LayerPicker";
-import { MapManager } from "./MapManager";
+import { useMapManager } from "./MapManagerContext";
 import { MapView } from "./MapView";
 import { PointInfoPopup } from "./PointInfoPopup";
 import { setHashParam } from "./hashParams";
@@ -29,20 +29,7 @@ export function AppMap(props: AppMapProps) {
   const trpc = useTRPC();
   const prefs = useUserPrefs();
 
-  const { onManager: onManagerProp, hash, ...forwardedProps } = props;
-  const initialOnManagerPropRef = useRef(onManagerProp);
-
-  const [manager, setManager] = useState<MapManager | null>(null);
-
-  const onManager = useCallback((m: MapManager) => {
-    initialOnManagerPropRef.current?.(m);
-    setManager(m);
-
-    m.on("idle", () => {
-      if (!m.hasMoved) return;
-      saveLocalDefaults(p => ({ ...p, camera: m.serializeCamera() }));
-    });
-  }, []);
+  const { hash, ...forwardedProps } = props;
 
   const localDefaults = useMemo(() => getLocalDefaults(), []);
   const [selectedLayers, setSelectedLayers] = useState(() => {
@@ -126,21 +113,32 @@ export function AppMap(props: AppMapProps) {
   );
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100%" }}>
-      <MapView
-        {...forwardedProps}
-        hash={hash}
-        style={style}
-        distanceUnit={prefs.distanceUnit}
-        initialCamera={localDefaults.camera}
-        onManager={onManager}
-      />
-      <PointInfoPopup manager={manager} />
+    <MapView
+      {...forwardedProps}
+      hash={hash}
+      style={style}
+      distanceUnit={prefs.distanceUnit}
+      initialCamera={localDefaults.camera}>
+      <CameraDefaultsSaver />
+      <PointInfoPopup />
       <div className="absolute right-2 bottom-8 z-10">
         <LayerPicker selected={selectedLayers} onSelect={onSelectLayers} />
       </div>
-    </div>
+    </MapView>
   );
+}
+
+function CameraDefaultsSaver() {
+  const manager = useMapManager();
+  useEffect(() => {
+    if (!manager) return;
+    const sub = manager.on("idle", () => {
+      if (!manager.hasMoved) return;
+      saveLocalDefaults(p => ({ ...p, camera: manager.serializeCamera() }));
+    });
+    return () => sub.unsubscribe();
+  }, [manager]);
+  return null;
 }
 
 const LocalDefaultsSchema = z.object({

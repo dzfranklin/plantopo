@@ -10,7 +10,7 @@ import "./PointInfoPopup.css";
 
 import { METERS_TO_FT, type Point } from "@pt/shared";
 
-import type { MapManager } from "./MapManager";
+import { useMapManager } from "./MapManagerContext";
 import { useUserPrefs } from "@/auth/auth-client";
 import { cn } from "@/cn";
 import { useTRPC } from "@/trpc";
@@ -55,11 +55,8 @@ function CopyableValue({ text }: { text: string }) {
   );
 }
 
-interface Props {
-  manager: MapManager | null;
-}
-
-export function PointInfoPopup({ manager }: Props) {
+export function PointInfoPopup() {
+  const manager = useMapManager();
   const trpc = useTRPC();
   const { distanceUnit } = useUserPrefs();
   const [altHeld, setAltHeld] = useState(false);
