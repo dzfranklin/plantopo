@@ -1,5 +1,5 @@
 interface Window {
-  enableDevtools?: () => void;
+  enableQueryDevtools?: () => void;
 
   Native?: {
     logout: () => void;

@@ -39,16 +39,6 @@ const trpcClient = createTRPCClient<AppRouter>({
 });
 
 export function Root() {
-  const [devtoolsEnabled, setDevtoolsEnabled] = useState(false);
-
-  useEffect(() => {
-    console.log("Run enableDevtools() in the console to show query devtools");
-    window.enableDevtools = () => setDevtoolsEnabled(true);
-    return () => {
-      delete window.enableDevtools;
-    };
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <TRPCProvider
@@ -60,11 +50,29 @@ export function Root() {
         </BrowserRouter>
       </TRPCProvider>
       <Toaster />
-      {devtoolsEnabled && (
-        <Suspense>
-          <ReactQueryDevtools />
-        </Suspense>
-      )}
+      {import.meta.env.DEV && <DevtoolsToggle />}
     </QueryClientProvider>
   );
+}
+
+function DevtoolsToggle() {
+  const [devtoolsEnabled, setDevtoolsEnabled] = useState(false);
+
+  useEffect(() => {
+    console.log(
+      "Run enableQueryDevtools() in the console to show query devtools",
+    );
+    window.enableQueryDevtools = () => setDevtoolsEnabled(true);
+    return () => {
+      delete window.enableQueryDevtools;
+    };
+  }, []);
+
+  if (devtoolsEnabled) {
+    return (
+      <Suspense>
+        <ReactQueryDevtools />
+      </Suspense>
+    );
+  }
 }
