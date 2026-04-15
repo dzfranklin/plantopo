@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-export function MapView(props: MapProps & { children?: React.ReactNode }) {
+export function MapView(props: MapProps) {
   const managerRef = useRef<MapManager | null>(null);
   const [manager, setManager] = useState<MapManager | null>(null);
   const hashTerrain = props.hash && props.terrain === undefined;

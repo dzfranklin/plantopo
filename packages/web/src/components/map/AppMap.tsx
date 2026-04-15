@@ -29,7 +29,7 @@ export function AppMap(props: AppMapProps) {
   const trpc = useTRPC();
   const prefs = useUserPrefs();
 
-  const { hash, ...forwardedProps } = props;
+  const { hash, children, ...forwardedProps } = props;
 
   const localDefaults = useMemo(() => getLocalDefaults(), []);
   const [selectedLayers, setSelectedLayers] = useState(() => {
@@ -124,6 +124,7 @@ export function AppMap(props: AppMapProps) {
       <div className="absolute right-2 bottom-8 z-10">
         <LayerPicker selected={selectedLayers} onSelect={onSelectLayers} />
       </div>
+      {children}
     </MapView>
   );
 }

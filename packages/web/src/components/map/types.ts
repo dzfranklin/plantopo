@@ -17,6 +17,7 @@ export interface MapProps {
   debug?: boolean;
   /** If provided, terrain is forced on/off and no terrain toggle button is shown. */
   terrain?: boolean;
+  children?: React.ReactNode;
 }
 
 export const SelectedLayersSchema = z.object({
