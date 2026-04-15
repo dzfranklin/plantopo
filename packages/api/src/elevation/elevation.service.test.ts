@@ -3,7 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { defaultDEMSource, eduDEMSource } from "../map/style.js";
-import { type TileProvider, getElevations } from "./elevation.service.js";
+import type { TileFetcher } from "../tile-cache.js";
+import { getElevations } from "./elevation.service.js";
 
 const FIXTURES = join(import.meta.dirname, "test-fixtures");
 
@@ -13,14 +14,14 @@ const BEN_NEVIS: [number, number] = [-5.0035, 56.7969];
 const FORT_WILLIAM: [number, number] = [-5.1066, 56.8198];
 
 // Mapterhorn uses terrarium encoding, maxzoom 12, 512px
-function mapterhornProvider(): TileProvider {
+function mapterhornProvider(): TileFetcher {
   return async (_urlTemplate, z, x, y) =>
     readFile(join(FIXTURES, `mapterhorn-${z}-${x}-${y}.webp`));
 }
 
 // Maptiler terrain-rgb-v2 uses mapbox encoding, maxzoom 14, 512px —
 // same encoding as the edu source, exercising the mapbox decode path.
-function maptilerProvider(): TileProvider {
+function maptilerProvider(): TileFetcher {
   return async (_urlTemplate, z, x, y) =>
     readFile(join(FIXTURES, `maptiler-${z}-${x}-${y}.webp`));
 }
@@ -57,7 +58,7 @@ describe("getElevations — terrarium encoding (mapterhorn)", () => {
 
   it("fetches each tile only once for multiple points in the same tile", async () => {
     let fetchCount = 0;
-    const countingProvider: TileProvider = async (_url, z, x, y) => {
+    const countingProvider: TileFetcher = async (_url, z, x, y) => {
       fetchCount++;
       return readFile(join(FIXTURES, `mapterhorn-${z}-${x}-${y}.webp`));
     };
@@ -70,7 +71,7 @@ describe("getElevations — terrarium encoding (mapterhorn)", () => {
     // pxf ≈ 511.9 in tile 1991/1259 — px1 spills into tile 1992/1259
     const ON_RIGHT_EDGE: [number, number] = [-4.921892166137695, 56.7969];
     const fetched = new Set<string>();
-    const trackingProvider: TileProvider = async (_url, z, x, y) => {
+    const trackingProvider: TileFetcher = async (_url, z, x, y) => {
       fetched.add(`${z}-${x}-${y}`);
       return readFile(join(FIXTURES, `mapterhorn-${z}-${x}-${y}.webp`));
     };
@@ -80,7 +81,7 @@ describe("getElevations — terrarium encoding (mapterhorn)", () => {
   });
 
   it("returns null for a point whose tile returns 404", async () => {
-    const notFoundProvider: TileProvider = async () => null;
+    const notFoundProvider: TileFetcher = async () => null;
     const { data } = await getElevations([BEN_NEVIS], [], notFoundProvider);
     expect(data[0]).toBeNull();
   });
@@ -93,7 +94,7 @@ describe("getElevations — terrarium encoding (mapterhorn)", () => {
 });
 
 describe("source selection", () => {
-  const nullProvider: TileProvider = vi.fn().mockResolvedValue(Buffer.alloc(0));
+  const nullProvider: TileFetcher = vi.fn().mockResolvedValue(Buffer.alloc(0));
 
   it("uses the default source when no edu scope", async () => {
     await getElevations([BEN_NEVIS], [], nullProvider).catch(() => {});
