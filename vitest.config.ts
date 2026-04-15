@@ -24,7 +24,7 @@ export default defineConfig({
         extends: "./packages/web/vite.config.js",
         test: {
           name: "web",
-          include: ["packages/web/src/**/*.test.tsx"],
+          include: ["packages/web/src/**/*.test.{ts,tsx}"],
           globalSetup: ["packages/web/src/test/globalSetup.ts"],
           setupFiles: ["packages/web/src/test/setup.ts"],
           environment: "jsdom",
