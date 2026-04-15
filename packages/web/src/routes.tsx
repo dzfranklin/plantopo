@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
+import CreditsPage from "./CreditsPage.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import HomePage from "./HomePage.tsx";
 import NotFoundPage from "./NotFoundPage.tsx";
@@ -46,6 +47,7 @@ export function AppRoutes() {
             <Route index element={<HomePage />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/plan" element={<PlanPage />} />
+            <Route path="/credits" element={<CreditsPage />} />
 
             <Route element={<RequireAuth />}>
               <Route path="/record-track" element={<RecordTrackPage />} />
