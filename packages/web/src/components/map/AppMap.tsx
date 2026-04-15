@@ -4,7 +4,7 @@ import {
   useQueries,
   useQuery,
 } from "@tanstack/react-query";
-import { lazy, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import z from "zod";
 
 import { type AppStyle, mergeOverlay } from "@pt/shared";
@@ -12,6 +12,7 @@ import { type AppStyle, mergeOverlay } from "@pt/shared";
 import { LayerPicker } from "./LayerPicker";
 import { useMapManager } from "./MapManagerContext";
 import { MapView } from "./MapView";
+import { PointInfoPopup } from "./PointInfoPopup";
 import { setHashParam } from "./hashParams";
 import {
   DEFAULT_SELECTED_LAYERS,
@@ -21,10 +22,6 @@ import {
 } from "./types";
 import { useUserPrefs } from "@/auth/auth-client";
 import { useTRPC } from "@/trpc";
-
-const PointInfoPopup = lazy(() =>
-  import("./PointInfoPopup").then(m => ({ default: m.PointInfoPopup })),
-);
 
 type AppMapProps = Omit<MapProps, "style" | "distanceUnit">;
 

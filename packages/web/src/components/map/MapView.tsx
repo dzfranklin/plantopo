@@ -3,7 +3,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { MapControls } from "./MapControls";
-import type { MapManager } from "./MapManager";
+import { MapManager } from "./MapManager";
 import { MapManagerContext } from "./MapManagerContext";
 import { getHashParam, setHashParam } from "./hashParams";
 import type { MapProps } from "./types";
@@ -54,19 +54,16 @@ export function MapView(props: MapProps & { children?: React.ReactNode }) {
   >(null);
   const containerRef = useCallback((container: HTMLDivElement | null) => {
     if (container) {
-      void import("./MapManager").then(({ MapManager }) => {
-        const m = new MapManager(
-          {
-            container,
-            onDisplayFullAttribution: (html: string) =>
-              setAttributionModalHTML(html),
-          },
-          initialPropsRef.current,
-        );
-        managerRef.current = m;
-        setManager(m);
-        initialPropsRef.current.onManager?.(m);
-      });
+      const m = new MapManager(
+        {
+          container,
+          onDisplayFullAttribution: html => setAttributionModalHTML(html),
+        },
+        initialPropsRef.current,
+      );
+      managerRef.current = m;
+      setManager(m);
+      initialPropsRef.current.onManager?.(m);
     } else {
       managerRef.current?.destroy();
       managerRef.current = null;
@@ -137,9 +134,7 @@ function DebugPanel({
             ? "_map"
             : `_map${Object.keys(w).filter(k => /^_map\d*$/.test(k)).length}`;
           w[varName] = managerRef.current;
-          void import("./MapManager").then(m => {
-            w["MapManager"] = m.MapManager;
-          });
+          w["MapManager"] = MapManager;
           console.log(varName);
           console.log(w[varName]);
         }}>
