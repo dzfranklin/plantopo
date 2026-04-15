@@ -1,10 +1,11 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { MapControls } from "./MapControls";
 import { MapManager } from "./MapManager";
 import { MapManagerContext } from "./MapManagerContext";
+import { getHashParam, setHashParam } from "./hashParams";
 import type { MapProps } from "./types";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,12 +19,34 @@ import {
 export function MapView(props: MapProps & { children?: React.ReactNode }) {
   const managerRef = useRef<MapManager | null>(null);
   const [manager, setManager] = useState<MapManager | null>(null);
-  const [uncontrolledTerrain, setUncontrolledTerrain] = useState(false);
+  const hashTerrain = props.hash && props.terrain === undefined;
+  const [uncontrolledTerrain, setUncontrolledTerrain] = useState(() =>
+    hashTerrain ? getHashParam("t") === "1" : false,
+  );
 
   const terrain = props.terrain ?? uncontrolledTerrain;
 
+  // Write initial terrain into the hash on mount
+  useEffect(() => {
+    if (!hashTerrain) return;
+    if (getHashParam("t") === null && uncontrolledTerrain) {
+      setHashParam("t", "1");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep uncontrolledTerrain in sync if the hash is changed externally
+  useEffect(() => {
+    if (!hashTerrain) return;
+    const handler = () => {
+      setUncontrolledTerrain(getHashParam("t") === "1");
+    };
+    window.addEventListener("hashchange", handler);
+    return () => window.removeEventListener("hashchange", handler);
+  }, [hashTerrain]);
+
   const initialPropsRef = useRef(props);
-  // eslint-disable-next-line react-hooks/refs
+
   initialPropsRef.current = props;
 
   const [attributionModalHTML, setAttributionModalHTML] = useState<
@@ -48,7 +71,6 @@ export function MapView(props: MapProps & { children?: React.ReactNode }) {
     }
   }, []);
 
-  // eslint-disable-next-line react-hooks/refs
   managerRef.current?.setProps({ ...props, terrain });
 
   const interactive = props.interactive ?? true;
@@ -62,7 +84,12 @@ export function MapView(props: MapProps & { children?: React.ReactNode }) {
             manager={manager}
             terrain={terrain}
             onTerrainChange={
-              props.terrain === undefined ? setUncontrolledTerrain : undefined
+              props.terrain === undefined
+                ? v => {
+                    setUncontrolledTerrain(v);
+                    if (hashTerrain) setHashParam("t", v ? "1" : null);
+                  }
+                : undefined
             }
           />
         )}
