@@ -7,7 +7,7 @@ COPY packages/api/package.json    ./packages/api/
 COPY packages/web/package.json    ./packages/web/
 RUN npm ci
 
-COPY tsconfig.base.json tsconfig.json ./
+COPY tsconfig.base.json ./
 COPY packages/ ./packages/
 COPY esbuild.config.mjs ./
 
