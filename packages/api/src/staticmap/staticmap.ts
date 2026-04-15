@@ -47,7 +47,14 @@ export type StaticMapOptions = {
 };
 
 export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
-  const source = opts.source ?? OSM_SOURCE;
+  let source: RasterSource;
+  if (opts.source) {
+    source = opts.source;
+  } else if (process.env.STATICMAP_TILES_URL) {
+    source = { tiles: [process.env.STATICMAP_TILES_URL], tileSize: 256 };
+  } else {
+    source = OSM_SOURCE;
+  }
   const tileSize = source.tileSize ?? 512;
   const urlTemplate = source.tiles[0];
   const provider = opts.tileProvider ?? fetchTile;
