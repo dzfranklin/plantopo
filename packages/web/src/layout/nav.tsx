@@ -15,6 +15,11 @@ export interface NavTab {
   nativeOnly?: boolean;
 }
 
+export interface FooterLink {
+  to: string;
+  label: string;
+}
+
 const BASE: NavTab[] = [
   {
     to: "/map",
@@ -36,6 +41,10 @@ const SETTINGS_TAB: NavTab = {
   icon: <RiSettings3Line size={24} aria-hidden="true" />,
   requireAuth: true,
 };
+
+export const FOOTER_LINKS: FooterLink[] = [
+  { to: "/credits", label: "Credits" },
+];
 
 const NAV_TABS = BASE.filter(t => !t.nativeOnly || window.Native);
 const UNAUTH_NAV_TABS = NAV_TABS.filter(t => !t.requireAuth);

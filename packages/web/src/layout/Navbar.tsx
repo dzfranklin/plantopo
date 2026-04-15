@@ -4,7 +4,7 @@ import { Link, useMatch } from "react-router-dom";
 import { signOut, useSession } from "../auth/auth-client";
 import { DebugDialog } from "./DebugDialog";
 import { MobileMenuSheet } from "./MobileMenuSheet";
-import { useNavTabs } from "./tabs";
+import { useNavTabs } from "./nav";
 import { UserAvatar } from "@/auth/UserAvatar";
 import { Button } from "@/components/ui/button";
 import {

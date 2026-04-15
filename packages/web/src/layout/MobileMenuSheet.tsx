@@ -5,7 +5,7 @@ import { Link, useLocation, useMatch } from "react-router-dom";
 import { Drawer } from "vaul";
 
 import { signOut, useSession } from "../auth/auth-client";
-import { useNavTabs } from "./tabs";
+import { FOOTER_LINKS, useNavTabs } from "./nav";
 import { Button } from "@/components/ui/button";
 
 function MobileMenuSheetTab({
@@ -107,6 +107,17 @@ export function MobileMenuSheet({
                 </div>
               )
             )}
+          </div>
+
+          <div className="flex flex-wrap gap-x-3 px-4 py-2">
+            {FOOTER_LINKS.map(link => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className="text-xs text-gray-400 hover:text-gray-600">
+                {link.label}
+              </Link>
+            ))}
           </div>
 
           {window.Native && (
