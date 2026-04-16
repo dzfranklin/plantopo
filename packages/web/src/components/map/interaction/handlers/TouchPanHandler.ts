@@ -13,6 +13,11 @@ function indexTouches(
   return obj;
 }
 
+// When two fingers are active (pinch/zoom), small asymmetries cause centroid
+// drift that reads as noisy pan. Require more cumulative movement before
+// emitting panDelta in that case.
+const TWO_FINGER_PAN_THRESHOLD = 40;
+
 export class TouchPanHandler implements Handler {
   _enabled: boolean = false;
   _active: boolean = false;
@@ -89,7 +94,9 @@ export class TouchPanHandler implements Handler {
 
     const panDelta = touchDeltaSum.div(touchDeltaCount);
     this._sum._add(panDelta);
-    if (this._sum.mag() < this._clickTolerance) return;
+    const threshold =
+      touchDeltaCount >= 2 ? TWO_FINGER_PAN_THRESHOLD : this._clickTolerance;
+    if (this._sum.mag() < threshold) return;
 
     const around = touchPointSum.div(touchDeltaCount);
     return { around, panDelta };
