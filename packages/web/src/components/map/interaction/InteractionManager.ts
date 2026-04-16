@@ -521,25 +521,27 @@ export class InteractionManager {
       this._fireEvent(name, endEvents[name]);
     }
 
-    // Zoom snap: when a zoom gesture ends, ease to the nearest snap multiple
-    if ("zoomend" in endEvents) {
+    // Capture zoom snap state before clearing it. zoomingOut is determined from
+    // the gesture direction (start vs current at release), not the inertia
+    // target, so that direction is preserved even if inertia would overshoot.
+    const zoomSnapping = (() => {
+      if (!("zoomend" in endEvents)) return null;
       const snapInterval = this._map.getZoomSnap();
+      if (snapInterval <= 0) return null;
       const current = this._map.getZoom();
-      const start = this._zoomGestureStart;
-      const around = this._zoomAround
-        ? this._map.unproject(this._zoomAround)
-        : undefined;
+      const zoomingOut =
+        this._zoomGestureStart !== null && current < this._zoomGestureStart;
+      return {
+        snapInterval,
+        zoomingOut,
+        around: this._zoomAround
+          ? this._map.unproject(this._zoomAround)
+          : undefined,
+      };
+    })();
+    if ("zoomend" in endEvents) {
       this._zoomGestureStart = null;
       this._zoomAround = null;
-      if (snapInterval > 0) {
-        const zoomingOut = start !== null && current < start;
-        const snapped = zoomingOut
-          ? Math.floor(current / snapInterval) * snapInterval
-          : Math.ceil(current / snapInterval) * snapInterval;
-        if (Math.abs(current - snapped) > 1e-9) {
-          this._map.easeTo({ zoom: snapped, duration: 130, around });
-        }
-      }
     }
 
     const stillMoving = isMoving(this._eventsInProgress);
@@ -563,8 +565,38 @@ export class InteractionManager {
         ) {
           inertialEase.bearing = 0;
         }
+        // Apply zoom snap to the inertia destination so it isn't overridden.
+        // Direction uses the gesture's zoomingOut (start vs release), not the
+        // inertia target, so it's preserved even if inertia overshoots.
+        if (zoomSnapping) {
+          const targetZoom =
+            (inertialEase.zoom as number | undefined) ?? this._map.getZoom();
+          const snapped = zoomSnapping.zoomingOut
+            ? Math.floor(targetZoom / zoomSnapping.snapInterval) *
+              zoomSnapping.snapInterval
+            : Math.ceil(targetZoom / zoomSnapping.snapInterval) *
+              zoomSnapping.snapInterval;
+          inertialEase.zoom = snapped;
+          if (!inertialEase.around) inertialEase.around = zoomSnapping.around;
+        }
         this._map.easeTo(inertialEase, { originalEvent: originalEndEvent });
       } else {
+        // Zoom snap: when a zoom gesture ends with no inertia, ease to the nearest snap multiple
+        if (zoomSnapping) {
+          const current = this._map.getZoom();
+          const snapped = zoomSnapping.zoomingOut
+            ? Math.floor(current / zoomSnapping.snapInterval) *
+              zoomSnapping.snapInterval
+            : Math.ceil(current / zoomSnapping.snapInterval) *
+              zoomSnapping.snapInterval;
+          if (Math.abs(current - snapped) > 1e-9) {
+            this._map.easeTo({
+              zoom: snapped,
+              duration: 130,
+              around: zoomSnapping.around,
+            });
+          }
+        }
         this._map.fire("moveend", { originalEvent: originalEndEvent });
         if (shouldSnapToNorth(this._map.getBearing())) {
           this._map.resetNorth();
@@ -572,6 +604,21 @@ export class InteractionManager {
       }
 
       this._updatingCamera = false;
+    } else if (zoomSnapping) {
+      // Zoom snap when gesture ends but movement was already stopped (no inertia path)
+      const current = this._map.getZoom();
+      const snapped = zoomSnapping.zoomingOut
+        ? Math.floor(current / zoomSnapping.snapInterval) *
+          zoomSnapping.snapInterval
+        : Math.ceil(current / zoomSnapping.snapInterval) *
+          zoomSnapping.snapInterval;
+      if (Math.abs(current - snapped) > 1e-9) {
+        this._map.easeTo({
+          zoom: snapped,
+          duration: 130,
+          around: zoomSnapping.around,
+        });
+      }
     }
   }
 
