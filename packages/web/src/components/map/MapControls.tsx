@@ -123,8 +123,12 @@ function BearingControlGroup() {
   return (
     <div
       className="relative flex items-center"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}>
+      onPointerEnter={e => {
+        if (e.pointerType === "mouse") setHovered(true);
+      }}
+      onPointerLeave={e => {
+        if (e.pointerType === "mouse") setHovered(false);
+      }}>
       {/* Slide-out rotation buttons */}
       <div
         className={cn(
