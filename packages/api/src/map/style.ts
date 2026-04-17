@@ -107,8 +107,36 @@ export function stylesToMeta(
 }
 
 function styleToMeta(style: AppStyle): AppStyleMeta {
-  const { layers: _layers, sources: _sources, ...meta } = style;
-  return meta;
+  const { layers, sources, ...meta } = style;
+
+  const usedSourceIds = new Set(
+    layers.flatMap(layer => {
+      if ("source" in layer && typeof layer.source === "string") {
+        return [layer.source];
+      }
+      return [];
+    }),
+  );
+
+  const usedSources = Object.fromEntries(
+    Object.entries(sources).filter(([id, _]) => usedSourceIds.has(id)),
+  );
+
+  const attribution = [
+    ...new Set(
+      Object.values(usedSources).flatMap(s =>
+        "attribution" in s && s.attribution ? [s.attribution] : [],
+      ),
+    ),
+  ];
+
+  return {
+    ...meta,
+    metadata: {
+      ...meta.metadata,
+      "plantopo:attribution": attribution.length > 0 ? attribution : undefined,
+    },
+  };
 }
 
 function prepareOverlay(id: string, base: ml.StyleSpecification): AppStyle {

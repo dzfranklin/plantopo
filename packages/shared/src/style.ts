@@ -10,6 +10,7 @@ export const StyleMetadataFieldSchema = z
     "plantopo:accessScopes": z.array(z.string()).optional(),
     "plantopo:bounds": boundsSchema.optional(),
     "plantopo:thumbnail": z.string().optional(),
+    "plantopo:attribution": z.array(z.string()).optional(),
   })
   .default({});
 
