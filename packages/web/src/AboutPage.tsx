@@ -159,6 +159,9 @@ function LayersAttributionCard() {
                       ) : null}
                     </div>
                   </div>
+                  <p className="text-muted-foreground mb-1 text-sm font-medium">
+                    Data source attribution:
+                  </p>
                   <ul className="text-muted-foreground space-y-1 text-sm">
                     {attributions.map((attr, i) => (
                       <li
