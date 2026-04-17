@@ -95,7 +95,7 @@ function LayersAttributionCard() {
           className="flex">
           <TabsList
             variant="line"
-            className="max-h-48 w-44 shrink-0 items-stretch justify-start overflow-y-auto border-r p-2">
+            className="max-h-[181px] w-44 shrink-0 items-stretch justify-start overflow-y-auto border-r p-2">
             <p className="text-muted-foreground px-1.5 py-1 text-[10px] font-semibold tracking-wider uppercase">
               Map
             </p>
