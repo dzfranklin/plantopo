@@ -64,6 +64,7 @@ export function registerAuthRoutes(app: Router) {
       .send(JSON.stringify({ token }));
   });
 
+  // Used by nginx tile proxy. Responses are cached by resource and key.
   app.get("/api/v1/authorize-tile-request", async (req, res) => {
     const resource = req.query.resource;
     const key = req.query.key;
