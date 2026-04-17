@@ -1,6 +1,6 @@
 # plantopo
 
-The source code for [plantopo.com](https://plantopo.com).
+See [plantopo.com](https://plantopo.com/about).
 
 ## My related repositories
 
