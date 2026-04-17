@@ -12,7 +12,9 @@ export function NavbarLayout({ fullBleed = false }: { fullBleed?: boolean }) {
         "sm:grid-rows-[auto_1fr_auto] sm:[grid-template-areas:'header_header''content_content''footer_footer']",
       )}>
       <Navbar />
-      <div style={{ gridArea: "content" }} className="h-full min-h-0">
+      <div
+        style={{ gridArea: "content" }}
+        className="h-full min-h-0 overflow-y-auto">
         <Outlet />
       </div>
       <MobileFooter />
