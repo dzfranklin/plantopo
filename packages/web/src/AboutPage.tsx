@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { useSession } from "./auth/auth-client";
+import { LayerThumbnail } from "./components/map/LayerPicker";
 import { usePageTitle } from "./usePageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,6 +24,16 @@ export default function AboutPage() {
           GitHub
         </a>
         .
+      </p>
+
+      <p>
+        Everything is a work-in-progress,{" "}
+        <span className="font-semibold">
+          please do not rely it to be reliable or accurate or not randomly
+          delete all your data
+        </span>
+        . Only Britain is currently supported, but many features will still work
+        elsewhere.
       </p>
 
       <p>
@@ -69,7 +80,7 @@ function LayersAttributionCard() {
   return (
     <Card>
       <CardHeader className="border-b">
-        <CardTitle className="text-base">
+        <CardTitle>
           Map layers
           <p className="text-muted-foreground mt-1 text-xs">
             <AccountEduStatusLine />
@@ -129,9 +140,25 @@ function LayersAttributionCard() {
               const attributions = style.metadata["plantopo:attribution"] ?? [];
               return (
                 <TabsContent key={style.id} value={style.id} className="p-4">
-                  <p className="mb-1 text-sm font-medium">
-                    {style.name ?? style.id}
-                  </p>
+                  <div className="mb-4 flex gap-3">
+                    <div>
+                      <LayerThumbnail style={style} size="md" />
+                    </div>
+                    <div>
+                      <p className="mb-1 text-sm font-medium">
+                        {style.name ?? style.id}
+                      </p>
+                      {style.metadata["plantopo:accessScopes"] ? (
+                        <p className="text-muted-foreground mb-1 text-xs">
+                          (Required access scopes:{" "}
+                          <span className="underline">
+                            {style.metadata["plantopo:accessScopes"].join(", ")}
+                          </span>
+                          )
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
                   <ul className="text-muted-foreground space-y-1 text-sm">
                     {attributions.map((attr, i) => (
                       <li

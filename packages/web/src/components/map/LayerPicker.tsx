@@ -56,7 +56,7 @@ export function LayerPicker({
               "data-[state=open]:outline-2 data-[state=open]:outline-gray-500",
             )}
             aria-label="Select map layer">
-            <Thumbnail style={selectedStyle} size="md" />
+            <LayerThumbnail style={selectedStyle} size="md" />
           </Popover.Trigger>
           {selectedOverlays.size > 0 && (
             <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-semibold text-white tabular-nums">
@@ -97,7 +97,7 @@ export function LayerPicker({
                     })
                   }
                   className="flex flex-col items-center gap-1 rounded-md p-1 text-left hover:bg-gray-50">
-                  <Thumbnail
+                  <LayerThumbnail
                     style={style}
                     size="md"
                     active={style.id === selected?.style}
@@ -125,7 +125,7 @@ export function LayerPicker({
                     key={overlay.id}
                     onClick={() => toggleOverlay(overlay.id)}
                     className="flex flex-col items-center gap-1 rounded-md p-1 text-left hover:bg-gray-50">
-                    <Thumbnail
+                    <LayerThumbnail
                       style={overlay}
                       size="sm"
                       active={selectedOverlays.has(overlay.id)}
@@ -148,7 +148,7 @@ export function LayerPicker({
   );
 }
 
-function Thumbnail({
+export function LayerThumbnail({
   style,
   size,
   active,
