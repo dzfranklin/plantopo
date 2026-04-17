@@ -19,7 +19,14 @@ export function DebugDialog({
         <DialogHeader>
           <DialogTitle>Debug</DialogTitle>
         </DialogHeader>
-        <Button onClick={() => window.location.reload()}>Reload</Button>
+        <div className="flex flex-col items-start gap-2">
+          <Button onClick={() => window.location.reload()}>Reload</Button>
+          {window.Native && (
+            <Button onClick={() => window.Native!.reportUnauthorized()}>
+              Native.reportUnauthorized()
+            </Button>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
