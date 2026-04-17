@@ -1,6 +1,6 @@
 # plantopo
 
-See [plantopo.com](https://plantopo.com/about).
+See [plantopo.com/about](https://plantopo.com/about).
 
 ## My related repositories
 
