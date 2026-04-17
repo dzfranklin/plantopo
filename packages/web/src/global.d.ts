@@ -3,6 +3,7 @@ interface Window {
 
   Native?: {
     logout: () => void;
+    reportUnauthorized: () => void;
     recordTrackReady: () => void;
     startRecordingTrack: () => void;
     stopRecordingTrack: () => void;

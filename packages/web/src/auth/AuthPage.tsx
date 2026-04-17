@@ -43,7 +43,10 @@ function AuthButton({
 }
 
 export function AuthPage({ mode }: { mode: "signin" | "signup" }) {
-  if (window.Native) throw new Error("Auth page loaded in native");
+  if (window.Native) {
+    window.Native.reportUnauthorized();
+    throw new Error("Auth page loaded in native");
+  }
 
   usePageTitle(mode === "signin" ? "Sign in" : "Sign up");
 

@@ -1,4 +1,5 @@
 import { serializeSignedCookie } from "better-call";
+import type { Response } from "express";
 import type { Router } from "express";
 
 import { getLog } from "../logger.js";
@@ -43,25 +44,44 @@ export function registerAuthRoutes(app: Router) {
       return;
     }
 
-    const ctx = await auth.$context;
-    const cookieName = ctx.authCookies.sessionToken.name;
-    const cookieAttrs = ctx.authCookies.sessionToken.attributes;
-    const maxAge = ctx.sessionConfig.expiresIn;
-    const signedCookie = await serializeSignedCookie(
-      cookieName,
-      token,
-      ctx.secret,
-      {
-        ...cookieAttrs,
-        maxAge,
-      },
-    );
-
+    await setSessionCookie(res, token);
     res
-      .setHeader("set-cookie", signedCookie)
       .setHeader("content-type", "application/json")
       .status(200)
       .send(JSON.stringify({ token }));
+  });
+
+  // Flow: The native app calls this endpoint with its long-lived API token to
+  // refresh the WebView session cookie when the session has expired.
+  //
+  // Request: POST /api/v1/refresh-native-session Authorization: Bearer <apiToken>
+  // Response: 200 OK Set-Cookie: sessionToken=...
+  app.post("/api/v1/refresh-native-session", async (req, res) => {
+    const log = getLog().child({ endpoint: "refresh-native-session" });
+
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : null;
+    if (!token) {
+      res.status(401).json({ error: "Token expired or invalid" });
+      return;
+    }
+
+    const session = await auth.api
+      .getSession({
+        headers: new Headers({ authorization: `Bearer ${token}` }),
+      })
+      .catch(() => null);
+    if (!session) {
+      res.status(401).json({ error: "Token expired or invalid" });
+      return;
+    }
+
+    log.info({ userId: session.user.id }, "native session refreshed");
+
+    await setSessionCookie(res, token);
+    res.setHeader("content-type", "application/json").status(200).send("{}");
   });
 
   // Used by nginx tile proxy. Responses are cached by resource and key.
@@ -83,4 +103,18 @@ export function registerAuthRoutes(app: Router) {
       res.status(403).send("Forbidden");
     }
   });
+}
+
+async function setSessionCookie(res: Response, token: string): Promise<void> {
+  const ctx = await auth.$context;
+  const cookieName = ctx.authCookies.sessionToken.name;
+  const cookieAttrs = ctx.authCookies.sessionToken.attributes;
+  const maxAge = ctx.sessionConfig.expiresIn;
+  const signedCookie = await serializeSignedCookie(
+    cookieName,
+    token,
+    ctx.secret,
+    { ...cookieAttrs, maxAge },
+  );
+  res.setHeader("set-cookie", signedCookie);
 }

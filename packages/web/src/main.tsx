@@ -6,6 +6,11 @@ import { Root } from "./Root.tsx";
 import "./auth/auth-client.ts";
 import "./index.css";
 
+if (window.Native && !window.__INITIAL_SESSION__) {
+  window.Native.reportUnauthorized();
+  throw new Error("No initial session in native");
+}
+
 const root = createRoot(document.getElementById("root")!);
 
 if (localStorage.getItem("_disableStrictMode")) {

@@ -40,16 +40,23 @@ export class ErrorBoundary extends Component<Props, State> {
       { error, componentStack: info.componentStack },
       "React error boundary caught",
     );
+    if (isUnauthorizedError(error)) {
+      if (window.Native) {
+        logger.error({ err: error }, "Unauthorized error in native");
+        window.Native.reportUnauthorized();
+      } else {
+        const returnTo = encodeURIComponent(
+          window.location.pathname + window.location.search,
+        );
+        window.location.href = `/login?returnTo=${returnTo}`;
+      }
+    }
   }
 
   render() {
     const err = this.state.error;
     if (err) {
       if (isUnauthorizedError(err)) {
-        const returnTo = encodeURIComponent(
-          window.location.pathname + window.location.search,
-        );
-        window.location.href = `/login?returnTo=${returnTo}`;
         return null;
       }
 
