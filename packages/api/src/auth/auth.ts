@@ -35,9 +35,34 @@ if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
 
 const authLogger = logger.child({ module: "auth" });
 
+const trustedOrigins = [env.APP_URL, "plantopo://oauth-callback"];
+
+if (process.env.NODE_ENV !== "production") {
+  trustedOrigins.push(
+    "http://localhost:3030",
+    "http://localhost:4000",
+    "http://10.0.2.2:4000",
+    "http://prin:4000",
+    "plantopo-debug://oauth-callback",
+  );
+}
+
+let configuredPasskey = passkey({
+  rpName: "PlanTopo",
+  rpID: "plantopo.com",
+  origin: env.APP_URL,
+});
+if (process.env.NODE_ENV !== "production") {
+  configuredPasskey = passkey({
+    rpName: "PlanTopo (dev)",
+    rpID: "localhost",
+    origin: trustedOrigins,
+  });
+}
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
-  plugins: [bearer(), passkey()],
+  plugins: [bearer(), configuredPasskey],
   secret: env.BETTER_AUTH_SECRET,
   baseURL: `${env.APP_URL}/api/v1/auth`,
   socialProviders,
@@ -70,14 +95,7 @@ export const auth = betterAuth({
     //   maxAge: 15 * 60, // 15 minutes
     // },
   },
-  trustedOrigins: [
-    "http://localhost:3030",
-    "http://localhost:4000",
-    "http://10.0.2.2:4000",
-    "plantopo://oauth-callback",
-    "plantopo-debug://oauth-callback",
-    "https://plantopo.com",
-  ],
+  trustedOrigins,
   logger: {
     disableColors: true,
     level: "info",
