@@ -1,5 +1,6 @@
 import * as Popover from "@radix-ui/react-popover";
 import { useQuery } from "@tanstack/react-query";
+import { VisuallyHidden } from "radix-ui";
 import { Drawer } from "vaul";
 
 import { type AppStyleMeta, by } from "@pt/shared";
@@ -111,8 +112,13 @@ export function LayerPicker({
       <Drawer.Trigger asChild>{trigger}</Drawer.Trigger>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-40 bg-black/40" />
-        <Drawer.Content className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-lg border border-gray-200 bg-white outline-none">
+        <Drawer.Content
+          aria-describedby={undefined}
+          className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-lg border border-gray-200 bg-white outline-none">
           <div className="mx-auto mt-2 mb-1 h-1 w-10 rounded-full bg-gray-300" />
+          <VisuallyHidden.Root>
+            <Drawer.Title>Select layers</Drawer.Title>
+          </VisuallyHidden.Root>
           <div className="flex max-h-[80svh] flex-col gap-4 overflow-y-auto p-4">
             {content}
           </div>
