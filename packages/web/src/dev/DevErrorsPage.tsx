@@ -44,6 +44,14 @@ export default function DevErrorPage() {
           {listSessionsQuery.error &&
             "GOT ERROR: " + JSON.stringify(listSessionsQuery.error)}
         </li>
+        <li>
+          <Button
+            onClick={() => {
+              throw new Error("This is a test error!");
+            }}>
+            Throw error in event handler
+          </Button>
+        </li>
       </ul>
     </div>
   );

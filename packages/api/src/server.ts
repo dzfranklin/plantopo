@@ -10,6 +10,7 @@ import path from "node:path";
 
 import { auth } from "./auth/auth.js";
 import { registerAuthRoutes } from "./auth/auth.routes.js";
+import { registerClientLogsRoutes } from "./client-logs.routes.js";
 import { env } from "./env.js";
 import { bindLog, logStore, logger } from "./logger.js";
 import { appRouter } from "./router.js";
@@ -35,6 +36,7 @@ app.all("/api/v1/auth/*path", toNodeHandler(auth));
 
 registerAuthRoutes(app);
 registerStravaRoutes(app);
+registerClientLogsRoutes(app);
 
 app.use(
   "/api/v1/trpc",
