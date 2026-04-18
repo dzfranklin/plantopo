@@ -21,12 +21,12 @@ import { useMapManager } from "./MapManagerContext";
 import { NorthArrowIcon } from "./NorthArrowIcon";
 import { cn } from "@/cn";
 
-interface MapControlsProps {
+interface NavControlsProps {
   terrain: boolean;
   onTerrainChange?: (enabled: boolean) => void;
 }
 
-export function MapControls({ terrain, onTerrainChange }: MapControlsProps) {
+export function NavControls({ terrain, onTerrainChange }: NavControlsProps) {
   const map = useMapManager()?.map;
 
   const [geolocate, setGeolocate] = useState<GeolocateState>({
@@ -270,7 +270,7 @@ function ControlButton({
       onMouseDown={onMouseDown}
       style={style}
       className={cn(
-        "flex size-[29px] items-center justify-center",
+        "flex size-[40px] items-center justify-center sm:size-[29px]",
         "bg-transparent hover:bg-black/5 disabled:cursor-not-allowed",
         "disabled:[&_.icon]:opacity-25 [&:not(:disabled)_.icon]:opacity-100",
         horizontal
@@ -278,7 +278,7 @@ function ControlButton({
           : "border-t border-[#ddd] first:border-t-0",
         active && "text-blue-600",
       )}>
-      <span className="icon">{children}</span>
+      <span className="icon [&_svg]:size-5 sm:[&_svg]:size-4">{children}</span>
     </button>
   );
 }

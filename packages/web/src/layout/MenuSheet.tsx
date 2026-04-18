@@ -45,8 +45,9 @@ export function MenuSheet({
 
   return (
     <Drawer.Root direction="left" autoFocus open={open} onOpenChange={setOpen}>
-      <Drawer.Trigger className="flex items-center text-gray-600 hover:text-gray-900">
-        <RiMenuLine size={20} aria-hidden="true" />
+      <Drawer.Trigger className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200">
+        <RiMenuLine size={22} aria-hidden="true" />
+        <span className="sr-only">Open menu</span>
       </Drawer.Trigger>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/80" />

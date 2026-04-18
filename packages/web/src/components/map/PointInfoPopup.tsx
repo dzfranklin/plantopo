@@ -6,8 +6,6 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 
-import "./PointInfoPopup.css";
-
 import { METERS_TO_FT, type Point } from "@pt/shared";
 
 import { useMapManager } from "./MapManagerContext";
@@ -134,7 +132,7 @@ export function PointInfoPopup() {
       new ml.Popup({
         closeButton: false,
         maxWidth: "none",
-        className: "click-info-popup",
+        className: "[&_.maplibregl-popup-content]:!p-0",
       }),
   );
 

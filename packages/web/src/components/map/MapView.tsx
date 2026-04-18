@@ -2,9 +2,9 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { MapControls } from "./MapControls";
 import { MapManager } from "./MapManager";
 import { MapManagerContext } from "./MapManagerContext";
+import { NavControls } from "./NavControls";
 import { getHashParam, setHashParam } from "./hashParams";
 import type { MapProps } from "./types";
 import { Button } from "@/components/ui/button";
@@ -80,7 +80,7 @@ export function MapView(props: MapProps) {
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
         <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
         {interactive && manager && (
-          <MapControls
+          <NavControls
             terrain={terrain}
             onTerrainChange={
               props.terrain === undefined
