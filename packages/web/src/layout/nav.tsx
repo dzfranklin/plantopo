@@ -1,6 +1,7 @@
 import {
   RiEarthLine,
   RiRecordCircleLine,
+  RiRouteLine,
   RiSettings3Line,
 } from "@remixicon/react";
 import type { ReactNode } from "react";
@@ -25,6 +26,12 @@ const BASE: NavTab[] = [
     to: "/map",
     label: "Map",
     icon: <RiEarthLine size={24} aria-hidden="true" />,
+  },
+  {
+    to: "/plan",
+    label: "Plan",
+    icon: <RiRouteLine size={24} aria-hidden="true" />,
+    requireAuth: true,
   },
   {
     to: "/record-track",
