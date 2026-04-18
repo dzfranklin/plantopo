@@ -6,6 +6,7 @@ import { Drawer } from "vaul";
 
 import { signOut, useSession } from "../auth/auth-client";
 import { FOOTER_LINKS, type NavTab, useNavTabs } from "./nav";
+import { cn } from "@/cn";
 import { Button } from "@/components/ui/button";
 
 function MobileMenuSheetTab({
@@ -30,8 +31,10 @@ function MobileMenuSheetTab({
 
 export function MenuSheet({
   setDebugOpen,
+  fab = false,
 }: {
   setDebugOpen: (open: boolean) => void;
+  fab?: boolean;
 }) {
   const { data: session } = useSession();
   const navTabs = useNavTabs({ includeSettings: true });
@@ -45,7 +48,13 @@ export function MenuSheet({
 
   return (
     <Drawer.Root direction="left" autoFocus open={open} onOpenChange={setOpen}>
-      <Drawer.Trigger className="flex h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200">
+      <Drawer.Trigger
+        className={cn(
+          "flex items-center justify-center text-gray-500 transition-colors",
+          fab
+            ? "h-11 w-11 rounded-full bg-white shadow-md active:bg-gray-100"
+            : "h-8 w-8 rounded-md hover:bg-gray-100 hover:text-gray-900 active:bg-gray-200",
+        )}>
         <RiMenuLine size={22} aria-hidden="true" />
         <span className="sr-only">Open menu</span>
       </Drawer.Trigger>

@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { Link, useMatch } from "react-router-dom";
 
 import { signOut, useSession } from "../auth/auth-client";
-import { DebugDialog } from "./DebugDialog";
 import { MenuSheet } from "./MenuSheet";
 import { FOOTER_LINKS, type NavTab, useNavTabs } from "./nav";
 import { UserAvatar } from "@/auth/UserAvatar";
@@ -81,10 +79,13 @@ function UserMenuDesktop({
   );
 }
 
-export function Navbar() {
+export function Navbar({
+  setDebugOpen,
+}: {
+  setDebugOpen: (open: boolean) => void;
+}) {
   const { data: session } = useSession();
   const navTabs = useNavTabs();
-  const [debugOpen, setDebugOpen] = useState(false);
 
   return (
     <nav
@@ -118,8 +119,6 @@ export function Navbar() {
           </Button>
         </div>
       )}
-
-      <DebugDialog isOpen={debugOpen} onOpenChange={setDebugOpen} />
     </nav>
   );
 }
