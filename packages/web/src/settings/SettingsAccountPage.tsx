@@ -123,6 +123,7 @@ export default function SettingsAccountPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: authKeys.passkeys() });
     },
+    throwOnError: false,
   });
 
   const deletePasskey = useMutation({
@@ -350,9 +351,8 @@ export default function SettingsAccountPage() {
           Add passkey
         </Button>
         {addPasskey.isError && (
-          <p className="text-destructive mt-2 text-xs">
-            {addPasskey.error?.message ?? "Failed to add passkey"}
-          </p>
+          // Note: The error.message contains no information for security
+          <p className="text-destructive mt-2 text-xs">Failed to add passkey</p>
         )}
       </Section>
 
