@@ -10,24 +10,30 @@
   margin: 0;
 
   display: flex;
-  align-items: center;
-  gap: 15px;
+  align-items: baseline;
+  gap: 8px;
   max-width: 100%;
+  padding: 2px 6px;
 
+  font:
+    12px "Source Sans Pro",
+    Arial,
+    sans-serif;
+
+  @media (width >= 40rem) {
+    padding: 2px 4px;
+    font-size: 10px;
+    gap: 15px;
+  }
+
+  color: #1f1f1f;
   background-color: #f2f2f2;
-  padding: 2px 4px;
   border-radius: 2px;
 
   user-select: none;
 }
 
 .bottom-info-control-attrib {
-  font:
-    10px "Source Sans Pro",
-    Arial,
-    sans-serif;
-
-  color: #1f1f1f;
   max-width: 450px;
   min-width: 0;
   white-space: nowrap;
@@ -44,16 +50,10 @@
 
 .bottom-info-control-expand-attrib {
   display: block;
-  color: #1f1f1f;
   flex-shrink: 0;
 }
 
 .bottom-info-control-scale {
-  font:
-    10px "Source Sans Pro",
-    Arial,
-    sans-serif;
-  color: #1f1f1f;
   display: flex;
   align-items: center;
   gap: 4px;
