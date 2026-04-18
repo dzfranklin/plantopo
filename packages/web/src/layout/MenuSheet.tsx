@@ -1,28 +1,28 @@
 import { RiMenuLine } from "@remixicon/react";
 import { VisuallyHidden } from "radix-ui";
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useMatch } from "react-router-dom";
 import { Drawer } from "vaul";
 
 import { signOut, useSession } from "../auth/auth-client";
-import { FOOTER_LINKS, useNavTabs } from "./nav";
+import { FOOTER_LINKS, type NavTab, useNavTabs } from "./nav";
 import { Button } from "@/components/ui/button";
 
 function MobileMenuSheetTab({
   to,
   label,
-  icon,
+  Icon,
 }: {
   to: string;
   label: string;
-  icon: ReactNode;
+  Icon: NavTab["Icon"];
 }) {
   const active = useMatch(to);
   return (
     <Link
       to={to}
       className={`flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-100 ${active ? "font-medium text-gray-900" : "text-gray-700"}`}>
-      {icon}
+      <Icon size={20} aria-hidden />
       {label}
     </Link>
   );
@@ -66,7 +66,7 @@ export function MenuSheet({
                 key={tab.to}
                 to={tab.to}
                 label={tab.label}
-                icon={tab.icon}
+                Icon={tab.Icon}
               />
             ))}
           </div>

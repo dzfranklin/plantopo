@@ -1,10 +1,10 @@
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { Link, useMatch } from "react-router-dom";
 
 import { signOut, useSession } from "../auth/auth-client";
 import { DebugDialog } from "./DebugDialog";
 import { MenuSheet } from "./MenuSheet";
-import { FOOTER_LINKS, useNavTabs } from "./nav";
+import { FOOTER_LINKS, type NavTab, useNavTabs } from "./nav";
 import { UserAvatar } from "@/auth/UserAvatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,18 +29,18 @@ function DesktopNavTab({ to, label }: { to: string; label: string }) {
 function MobileNavTab({
   to,
   label,
-  icon,
+  Icon,
 }: {
   to: string;
   label: string;
-  icon: ReactNode;
+  Icon: NavTab["Icon"];
 }) {
   const active = useMatch(to);
   return (
     <Link
       to={to}
       className={`flex flex-1 flex-col items-center justify-center gap-1 py-2 text-xs ${active ? "text-blue-600" : "text-gray-600 hover:text-gray-900"}`}>
-      {icon}
+      <Icon size={24} aria-hidden />
       {label}
     </Link>
   );
@@ -151,7 +151,7 @@ export function MobileFooter() {
           key={tab.to}
           to={tab.to}
           label={tab.label}
-          icon={tab.icon}
+          Icon={tab.Icon}
         />
       ))}
     </nav>

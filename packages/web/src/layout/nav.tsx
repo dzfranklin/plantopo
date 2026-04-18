@@ -1,17 +1,17 @@
 import {
+  type RemixiconComponentType,
   RiEarthLine,
   RiRecordCircleLine,
   RiRouteLine,
   RiSettings3Line,
 } from "@remixicon/react";
-import type { ReactNode } from "react";
 
 import { useSession } from "@/auth/auth-client";
 
 export interface NavTab {
   to: string;
   label: string;
-  icon: ReactNode;
+  Icon: RemixiconComponentType;
   requireAuth?: boolean;
   nativeOnly?: boolean;
 }
@@ -22,21 +22,12 @@ export interface FooterLink {
 }
 
 const BASE: NavTab[] = [
-  {
-    to: "/map",
-    label: "Map",
-    icon: <RiEarthLine size={24} aria-hidden="true" />,
-  },
-  {
-    to: "/plan",
-    label: "Plan",
-    icon: <RiRouteLine size={24} aria-hidden="true" />,
-    requireAuth: true,
-  },
+  { to: "/map", label: "Map", Icon: RiEarthLine },
+  { to: "/plan", label: "Plan", Icon: RiRouteLine, requireAuth: true },
   {
     to: "/record-track",
     label: "Track",
-    icon: <RiRecordCircleLine size={24} aria-hidden="true" />,
+    Icon: RiRecordCircleLine,
     requireAuth: true,
     nativeOnly: true,
   },
@@ -45,7 +36,7 @@ const BASE: NavTab[] = [
 const SETTINGS_TAB: NavTab = {
   to: "/settings",
   label: "Settings",
-  icon: <RiSettings3Line size={24} aria-hidden="true" />,
+  Icon: RiSettings3Line,
   requireAuth: true,
 };
 
