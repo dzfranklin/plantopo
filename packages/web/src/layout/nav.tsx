@@ -5,6 +5,7 @@ import {
   RiRouteLine,
   RiSettings3Line,
 } from "@remixicon/react";
+import { useMemo } from "react";
 import { toast } from "sonner";
 
 import { useSession } from "@/auth/auth-client";
@@ -27,7 +28,7 @@ export type FooterLink = {
   | { onClick: () => void }
 );
 
-const BASE: NavTab[] = [
+const NAV_TABS: NavTab[] = [
   { to: "/map", label: "Map", Icon: RiEarthLine },
   { to: "/plan", label: "Plan", Icon: RiRouteLine, requireAuth: true },
   {
@@ -62,11 +63,13 @@ export const FOOTER_LINKS: FooterLink[] = [
   },
 ];
 
-const NAV_TABS = BASE.filter(t => !t.nativeOnly || window.Native);
-const UNAUTH_NAV_TABS = NAV_TABS.filter(t => !t.requireAuth);
-
 export function useNavTabs({ includeSettings = false } = {}) {
   const session = useSession().data;
-  const base = session ? NAV_TABS : UNAUTH_NAV_TABS;
-  return includeSettings ? [...base, SETTINGS_TAB] : base;
+  return useMemo(() => {
+    const nativeFilter = (t: NavTab) => !t.nativeOnly || window.Native;
+    const authFilter = (t: NavTab) => !t.requireAuth || session;
+    return (includeSettings ? [...NAV_TABS, SETTINGS_TAB] : NAV_TABS)
+      .filter(nativeFilter)
+      .filter(authFilter);
+  }, [session, includeSettings]);
 }
