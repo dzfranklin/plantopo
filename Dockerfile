@@ -12,7 +12,7 @@ COPY packages/ ./packages/
 COPY esbuild.config.mjs ./
 
 ARG COMMIT_HASH=unknown
-RUN echo "VITE_COMMIT_HASH=$COMMIT_HASH" > packages/web/.env
+ENV VITE_COMMIT_HASH=$COMMIT_HASH
 RUN npm -w packages/web run build
 RUN node esbuild.config.mjs
 

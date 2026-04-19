@@ -1,5 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { writeFile } from "node:fs/promises";
 import path from "path";
 import { defineConfig } from "vite";
 
@@ -13,6 +14,15 @@ export default defineConfig(({ command }) => ({
     tailwindcss(),
     react(),
     thirdPartyGenerator,
+    {
+      name: "write-version",
+      apply: "build",
+      closeBundle: () =>
+        writeFile(
+          "dist/VERSION",
+          `${process.env.VITE_COMMIT_HASH ?? "unknown"}\n`,
+        ),
+    },
     // command === "serve" && {
     //   name: "react-devtools",
     //   transformIndexHtml: () => [
