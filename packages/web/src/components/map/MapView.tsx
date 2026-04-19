@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 
 export function MapView(props: MapProps) {
+  const { children, ...forwardedProps } = props;
   const managerRef = useRef<MapManager | null>(null);
   const [manager, setManager] = useState<MapManager | null>(null);
   const hashTerrain = props.hash && props.terrain === undefined;
@@ -45,10 +46,6 @@ export function MapView(props: MapProps) {
     return () => window.removeEventListener("hashchange", handler);
   }, [hashTerrain]);
 
-  const initialPropsRef = useRef(props);
-
-  initialPropsRef.current = props;
-
   const [attributionModalHTML, setAttributionModalHTML] = useState<
     string | null
   >(null);
@@ -59,19 +56,20 @@ export function MapView(props: MapProps) {
           container,
           onDisplayFullAttribution: html => setAttributionModalHTML(html),
         },
-        initialPropsRef.current,
+        forwardedProps,
       );
       managerRef.current = m;
       setManager(m);
-      initialPropsRef.current.onManager?.(m);
+      forwardedProps.onManager?.(m);
     } else {
       managerRef.current?.destroy();
       managerRef.current = null;
       setManager(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  managerRef.current?.setProps({ ...props, terrain });
+  managerRef.current?.setProps({ ...forwardedProps, terrain });
 
   const interactive = props.interactive ?? true;
 
@@ -92,7 +90,7 @@ export function MapView(props: MapProps) {
             }
           />
         )}
-        {props.children}
+        {children}
         <Dialog
           open={attributionModalHTML !== null}
           onOpenChange={open => {
