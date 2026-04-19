@@ -21,7 +21,7 @@ const isDev = process.env.NODE_ENV !== "production";
 
 if (isDev) {
   // Simulate latency in dev so network behaviour is visible
-  app.use((_req, _res, next) => setTimeout(next, Math.random() * 500));
+  app.use((_req, _res, next) => setTimeout(next, Math.random() * 200));
 }
 
 app.use((_req, _res, next) => {
