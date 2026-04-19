@@ -78,13 +78,6 @@ const SAMPLE_GEOJSON: GeoJSON.FeatureCollection = {
   ],
 };
 
-MapManager.trace = true;
-
-const hasDisabledStrictMode = localStorage.getItem("_disableStrictMode");
-if (hasDisabledStrictMode) {
-  localStorage.removeItem("_disableStrictMode");
-}
-
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function fireWrapper(this: NonNullable<MapManager["_m"]>, event: any) {
   console.log(
@@ -236,16 +229,6 @@ export default function DevMapPage() {
           log events
         </label>
         <Button onClick={() => setResetKey(k => k + 1)}>Reset</Button>
-        <label className="flex items-center gap-2">
-          <Checkbox
-            checked={!hasDisabledStrictMode}
-            onCheckedChange={checked => {
-              if (!checked) localStorage.setItem("_disableStrictMode", "true");
-              window.location.reload();
-            }}
-          />
-          StrictMode
-        </label>
       </div>
 
       <div
@@ -268,7 +251,6 @@ export default function DevMapPage() {
               geojsonEnabled ? customGeojson || SAMPLE_GEOJSON : undefined
             }
             onManager={onManager}
-            debug={true}
           />
         ))}
       </div>

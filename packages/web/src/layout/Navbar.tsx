@@ -2,7 +2,7 @@ import { Link, useMatch } from "react-router-dom";
 
 import { signOut, useSession } from "../auth/auth-client";
 import { MenuSheet } from "./MenuSheet";
-import { FOOTER_LINKS, type NavTab, useNavTabs } from "./nav";
+import { FOOTER_LINKS, type FooterLink, type NavTab, useNavTabs } from "./nav";
 import { UserAvatar } from "@/auth/UserAvatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { setDebugFlag, useDebugFlag } from "@/hooks/debug-flags";
 
 function DesktopNavTab({ to, label }: { to: string; label: string }) {
   const active = useMatch(to);
@@ -44,11 +45,8 @@ function MobileNavTab({
   );
 }
 
-function UserMenuDesktop({
-  setDebugOpen,
-}: {
-  setDebugOpen: (open: boolean) => void;
-}) {
+function UserMenuDesktop() {
+  const mayShowDebug = useDebugFlag("showDebugOptions");
   const { data: session } = useSession();
   if (!session) return null;
 
@@ -65,11 +63,13 @@ function UserMenuDesktop({
         <DropdownMenuItem className="text-sm/relaxed" asChild>
           <Link to="/settings">Settings</Link>
         </DropdownMenuItem>
-        <DropdownMenuItem
-          className="text-sm/relaxed"
-          onClick={() => setDebugOpen(true)}>
-          Debug
-        </DropdownMenuItem>
+        {mayShowDebug && (
+          <DropdownMenuItem
+            className="text-sm/relaxed"
+            onClick={() => setDebugFlag("showDebugOptions", true)}>
+            Debug
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem className="text-sm/relaxed" onClick={signOut}>
           Sign out
@@ -79,11 +79,7 @@ function UserMenuDesktop({
   );
 }
 
-export function Navbar({
-  setDebugOpen,
-}: {
-  setDebugOpen: (open: boolean) => void;
-}) {
+export function Navbar() {
   const { data: session } = useSession();
   const navTabs = useNavTabs();
 
@@ -92,7 +88,7 @@ export function Navbar({
       style={{ gridArea: "header" }}
       className="sticky top-0 z-10 flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-2 text-sm">
       <div className="sm:hidden">
-        <MenuSheet setDebugOpen={setDebugOpen} />
+        <MenuSheet />
       </div>
 
       <Link className="hidden font-semibold sm:block" to="/">
@@ -106,7 +102,7 @@ export function Navbar({
       </div>
 
       <div className="ml-auto hidden sm:block">
-        <UserMenuDesktop setDebugOpen={setDebugOpen} />
+        <UserMenuDesktop />
       </div>
 
       {!session && !window.Native && (
@@ -124,18 +120,42 @@ export function Navbar({
 }
 
 export function DesktopFooter() {
+  const mayShowDebug = useDebugFlag("showDebugOptions");
   return (
     <footer
       style={{ gridArea: "footer" }}
       className="hidden bg-gray-100 px-4 py-2 text-xs text-gray-800 sm:flex">
       <div className="ml-auto flex gap-3">
-        {FOOTER_LINKS.map(link => (
-          <Link key={link.to} to={link.to} className="hover-only-link">
-            {link.label}
-          </Link>
+        {FOOTER_LINKS.map((link, i) => (
+          <FooterLinkComponent key={i} link={link} />
         ))}
+
+        {mayShowDebug && (
+          <span className="text-gray-500">
+            <span>|</span>
+            <FooterLinkComponent
+              link={{
+                onClick: () => setDebugFlag("openDebugDialog", true),
+                label: "Debug",
+              }}
+            />
+            <span>|</span>
+          </span>
+        )}
       </div>
     </footer>
+  );
+}
+
+export function FooterLinkComponent({ link }: { link: FooterLink }) {
+  return "to" in link ? (
+    <Link to={link.to} className="hover-only-link">
+      {link.label}
+    </Link>
+  ) : (
+    <button onClick={link.onClick} className="hover-only-link">
+      {link.label}
+    </button>
   );
 }
 

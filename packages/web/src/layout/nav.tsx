@@ -5,8 +5,10 @@ import {
   RiRouteLine,
   RiSettings3Line,
 } from "@remixicon/react";
+import { toast } from "sonner";
 
 import { useSession } from "@/auth/auth-client";
+import { getDebugFlag, setDebugFlag } from "@/hooks/debug-flags";
 
 export interface NavTab {
   to: string;
@@ -16,10 +18,14 @@ export interface NavTab {
   nativeOnly?: boolean;
 }
 
-export interface FooterLink {
-  to: string;
+export type FooterLink = {
   label: string;
-}
+} & (
+  | {
+      to: string;
+    }
+  | { onClick: () => void }
+);
 
 const BASE: NavTab[] = [
   { to: "/map", label: "Map", Icon: RiEarthLine },
@@ -47,11 +53,12 @@ const COMMIT_HASH = import.meta.env.DEV
 export const FOOTER_LINKS: FooterLink[] = [
   { to: "/about", label: "About" },
   {
-    to:
-      COMMIT_HASH === "dev"
-        ? "#"
-        : `https://github.com/dzfranklin/plantopo/commit/${COMMIT_HASH}`,
     label: COMMIT_HASH,
+    onClick: () => {
+      const current = getDebugFlag("showDebugOptions");
+      setDebugFlag("showDebugOptions", !current);
+      toast.success(`Debug options ${!current ? "enabled" : "disabled"}`);
+    },
   },
 ];
 

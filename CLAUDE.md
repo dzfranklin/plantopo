@@ -20,3 +20,5 @@ Use `@remixicon/react` for icons
 
 Use `cn` from `@/cn` for merging Tailwind class names and to organize long
 Tailwind class names and split them into multiple lines.
+
+Utility classes: .link, .hover-only-link

@@ -1,6 +1,7 @@
 import { type VariantProps, cva } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import * as React from "react";
+import { Link, type LinkProps } from "react-router";
 
 import { cn } from "@/cn";
 
@@ -39,26 +40,52 @@ const buttonVariants = cva(
   },
 );
 
+type ButtonVariantProps = VariantProps<typeof buttonVariants> & {
+  className?: string;
+};
+
+type ButtonAsLinkProps = ButtonVariantProps &
+  Omit<LinkProps, "className"> & {
+    to: string;
+    asChild?: never;
+  };
+
+type ButtonAsButtonProps = ButtonVariantProps &
+  React.ComponentProps<"button"> & {
+    to?: never;
+    asChild?: boolean;
+  };
+
+function Button(props: ButtonAsLinkProps): React.ReactElement;
+function Button(props: ButtonAsButtonProps): React.ReactElement;
 function Button({
   className,
   variant = "default",
   size = "default",
+  to,
   asChild = false,
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-  }) {
-  const Comp = asChild ? Slot.Root : "button";
+}: ButtonAsLinkProps | ButtonAsButtonProps) {
+  const sharedProps = {
+    "data-slot": "button",
+    "data-variant": variant,
+    "data-size": size,
+    className: cn(buttonVariants({ variant, size, className })),
+  };
 
+  if (to) {
+    return (
+      <Link
+        to={to}
+        {...sharedProps}
+        {...(props as Omit<LinkProps, "to" | "className">)}
+      />
+    );
+  }
+
+  const Comp = asChild ? Slot.Root : "button";
   return (
-    <Comp
-      data-slot="button"
-      data-variant={variant}
-      data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
+    <Comp {...sharedProps} {...(props as React.ComponentProps<"button">)} />
   );
 }
 

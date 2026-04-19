@@ -51,29 +51,73 @@ export const UserPrefsSchema = z.object({
 
 export type UserPrefs = z.infer<typeof UserPrefsSchema>;
 
-/** by is a sort helper. Usage: array.sort(by('key1', 'key2')) */
-export function by(...keys: string[]) {
+interface ByOptions {
+  locale?: boolean;
+  numeric?: boolean;
+}
+
+/**
+ * by is a sort helper. Usage: array.sort(by('key1', 'key2')) or array.sort(by(['key1', 'key2'], { numeric: true }))
+ * If the primary keys compare equal, remaining keys from both objects are compared in alphabetical order for a stable sort.
+ */
+export function by(keys: string | string[], options: ByOptions = {}) {
+  const keyList = Array.isArray(keys) ? keys : [keys];
+  const keySet = new Set(keyList);
   return (a: Record<string, unknown>, b: Record<string, unknown>) => {
     let va;
     let vb;
-    for (const key of keys) {
+    for (const key of keyList) {
       va = a[key];
       if (va === undefined) continue;
       break;
     }
-    for (const key of keys) {
+    for (const key of keyList) {
       vb = b[key];
       if (vb === undefined) continue;
       break;
     }
-    if ((va === undefined || va === null) && (vb === undefined || vb === null))
-      return 0;
-    if (va === undefined || va === null) return 1;
-    if (vb === undefined || vb === null) return -1;
-    if (va < vb) return -1;
-    if (va > vb) return 1;
+    const primary = compareValues(va, vb, options);
+    if (primary !== 0) return primary;
+    const fallbackKeys = [...new Set([...Object.keys(a), ...Object.keys(b)])]
+      .filter(k => !keySet.has(k))
+      .sort();
+    for (const key of fallbackKeys) {
+      const result = compareValues(a[key], b[key], options);
+      if (result !== 0) return result;
+    }
     return 0;
   };
+}
+
+export function by0(options: ByOptions = {}) {
+  return byN(0, options);
+}
+
+export function by1(options: ByOptions = {}) {
+  return byN(1, options);
+}
+
+function byN(n: number, options: ByOptions = {}) {
+  return (a: unknown[], b: unknown[]) => compareValues(a[n], b[n], options);
+}
+
+function compareValues(va: unknown, vb: unknown, options: ByOptions): number {
+  if ((va === undefined || va === null) && (vb === undefined || vb === null))
+    return 0;
+  if (va === undefined || va === null) return 1;
+  if (vb === undefined || vb === null) return -1;
+  if (
+    typeof va === "string" &&
+    typeof vb === "string" &&
+    (options.locale || options.numeric !== undefined)
+  ) {
+    return va.localeCompare(vb, undefined, {
+      numeric: options.numeric,
+    });
+  }
+  if (va < vb) return -1;
+  if (va > vb) return 1;
+  return 0;
 }
 
 export function round(n: number, precision: number): number {

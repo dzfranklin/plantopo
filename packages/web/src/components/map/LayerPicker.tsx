@@ -7,7 +7,7 @@ import { type AppStyleMeta, by } from "@pt/shared";
 
 import type { SelectedLayers } from "./types";
 import { cn } from "@/cn";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useIsDesktop } from "@/hooks/useMediaQuery";
 import { useTRPC } from "@/trpc";
 
 export function LayerPicker({
@@ -18,7 +18,7 @@ export function LayerPicker({
   onSelect: (v: SelectedLayers) => void;
 }) {
   const trpc = useTRPC();
-  const isDesktop = useMediaQuery("(min-width: 640px)");
+  const isDesktop = useIsDesktop();
 
   const catalogQuery = useQuery(
     trpc.map.catalog.queryOptions(undefined, {
@@ -30,10 +30,8 @@ export function LayerPicker({
     return null;
   }
 
-  const styles = Object.values(catalogQuery.data.styles).sort(by("name", "id"));
-  const overlays = Object.values(catalogQuery.data.overlays).sort(
-    by("name", "id"),
-  );
+  const styles = Object.values(catalogQuery.data.styles).sort(by("name"));
+  const overlays = Object.values(catalogQuery.data.overlays).sort(by("name"));
   const selectedStyle = selected
     ? styles.find(s => s.id === selected.style)
     : undefined;

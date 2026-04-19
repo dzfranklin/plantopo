@@ -4,6 +4,7 @@ import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-csp-worker.js?url";
 import { BottomInfoControl } from "./BottomInfoControl";
 import { InteractionManager } from "./interaction/InteractionManager";
 import type { MapProps } from "./types";
+import { getDebugFlag } from "@/hooks/debug-flags";
 
 setWorkerUrl(maplibreWorkerUrl);
 
@@ -14,7 +15,6 @@ const TERRAIN_OPTIONS: ml.TerrainSpecification = {
 };
 
 export class MapManager {
-  static trace = false;
   static _nextTraceID = 1;
 
   traceID = MapManager._nextTraceID++;
@@ -315,33 +315,31 @@ export class MapManager {
   }
 
   private _trace(arg1?: string | object, arg2?: object) {
-    if (MapManager.trace) {
-      const dummyError = new Error();
-      let position = "";
-      if (dummyError.stack) {
-        const stack = dummyError.stack
-          .split("\n")
-          .map(l => l.trim())
-          .map(l => l.replace("MapManager.", "."))
-          .map(l => l.match(/at (.+) \(/)?.[1] ?? l)
-          .slice(2);
-        position = stack.slice(0, 3).reverse().join(" > ");
-      }
+    if (!getDebugFlag("traceMapManager")) return;
 
-      const msg = typeof arg1 === "string" ? arg1 : null;
-      const data = typeof arg1 === "string" ? arg2 : arg1;
-
-      console.groupCollapsed(
-        `[MapManager ${this.traceID} ${position}]${msg ? " " + msg : ""}${data ? " (" + Object.keys(data).join(", ") + "...)" : ""}`,
-      );
-      if (data) {
-        for (const [key, value] of Object.entries(data)) {
-          console.log(`${key}\n`, value);
-        }
-      }
-      console.trace();
-      console.groupEnd();
+    const dummyError = new Error();
+    let position = "";
+    if (dummyError.stack) {
+      const stack = dummyError.stack
+        .split("\n")
+        .map(l => l.trim())
+        .map(l => l.replace("MapManager.", "."))
+        .map(l => l.match(/at (.+) \(/)?.[1] ?? l)
+        .slice(2);
+      position = stack.slice(0, 3).reverse().join(" > ");
     }
+
+    const msg = typeof arg1 === "string" ? arg1 : null;
+    const data = typeof arg1 === "string" ? arg2 : arg1;
+
+    const summary = `[MapManager ${this.traceID} ${position}]${msg ? " " + msg : ""}`;
+
+    console.groupCollapsed(summary);
+    console.trace(
+      summary,
+      ...(data ? Object.entries(data).map(([k, v]) => ({ [k]: v })) : []),
+    );
+    console.groupEnd();
   }
 }
 

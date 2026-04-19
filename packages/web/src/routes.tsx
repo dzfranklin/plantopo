@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
 import AboutPage from "./AboutPage.tsx";
+import DebugFlagsPage from "./DebugFlagsPage.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import HomePage from "./HomePage.tsx";
 import NotFoundPage from "./NotFoundPage.tsx";
@@ -53,6 +54,7 @@ export function AppRoutes() {
           <Route element={<NavbarLayout />}>
             <Route index element={<HomePage />} />
             <Route path="/about" element={<AboutPage />} />
+            <Route path="/debug-flags" element={<DebugFlagsPage />} />
 
             <Route element={<RequireAuth />}>
               <Route path="/settings" element={<SettingsPage />}>

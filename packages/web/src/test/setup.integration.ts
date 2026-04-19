@@ -4,4 +4,6 @@ import { beforeEach } from "vitest";
 
 import { resetDb } from "@pt/api/webTestSupport";
 
+import "./registerPolyfills";
+
 beforeEach(resetDb);

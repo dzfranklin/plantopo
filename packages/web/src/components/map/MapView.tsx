@@ -15,9 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useDebugFlag } from "@/hooks/debug-flags";
 
 export function MapView(props: MapProps) {
   const { children, ...forwardedProps } = props;
+  const mayShowDebug = useDebugFlag("showDebugOptions");
   const managerRef = useRef<MapManager | null>(null);
   const [manager, setManager] = useState<MapManager | null>(null);
   const hashTerrain = props.hash && props.terrain === undefined;
@@ -103,9 +105,7 @@ export function MapView(props: MapProps) {
             <DialogDescription
               dangerouslySetInnerHTML={{ __html: attributionModalHTML ?? "" }}
             />
-            {(import.meta.env.DEV || props.debug) && (
-              <DebugPanel managerRef={managerRef} />
-            )}
+            {mayShowDebug && <DebugPanel managerRef={managerRef} />}
           </DialogContent>
         </Dialog>
       </div>

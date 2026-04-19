@@ -14,7 +14,6 @@ export interface MapProps {
   geojson?: GeoJSON.FeatureCollection | GeoJSON.Feature | null;
   onManager?: (manager: MapManager) => void;
   triggerGeolocationControl?: boolean;
-  debug?: boolean;
   /** If provided, terrain is forced on/off and no terrain toggle button is shown. */
   terrain?: boolean;
   children?: React.ReactNode;

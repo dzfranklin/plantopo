@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Outlet } from "react-router-dom";
 
 import { cn } from "../cn.ts";
@@ -7,8 +6,6 @@ import { MenuSheet } from "./MenuSheet.tsx";
 import { DesktopFooter, MobileFooter, Navbar } from "./Navbar.tsx";
 
 export function NavbarLayout({ fullBleed = false }: { fullBleed?: boolean }) {
-  const [debugOpen, setDebugOpen] = useState(false);
-
   return (
     <div
       className={cn(
@@ -18,24 +15,24 @@ export function NavbarLayout({ fullBleed = false }: { fullBleed?: boolean }) {
       )}>
       {fullBleed ? (
         <div className="max-sm:hidden sm:contents">
-          <Navbar setDebugOpen={setDebugOpen} />
+          <Navbar />
         </div>
       ) : (
-        <Navbar setDebugOpen={setDebugOpen} />
+        <Navbar />
       )}
-      <DebugDialog isOpen={debugOpen} onOpenChange={setDebugOpen} />
       <div
         style={{ gridArea: "content" }}
         className="relative h-full min-h-0 overflow-y-auto">
         {fullBleed && (
           <div className="absolute top-3 left-3 z-10 sm:hidden">
-            <MenuSheet setDebugOpen={setDebugOpen} fab />
+            <MenuSheet fab />
           </div>
         )}
         <Outlet />
       </div>
       <MobileFooter />
       {!fullBleed && <DesktopFooter />}
+      <DebugDialog />
     </div>
   );
 }

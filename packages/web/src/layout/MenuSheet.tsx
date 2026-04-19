@@ -5,9 +5,11 @@ import { Link, useLocation, useMatch } from "react-router-dom";
 import { Drawer } from "vaul";
 
 import { signOut, useSession } from "../auth/auth-client";
+import { FooterLinkComponent } from "./Navbar";
 import { FOOTER_LINKS, type NavTab, useNavTabs } from "./nav";
 import { cn } from "@/cn";
 import { Button } from "@/components/ui/button";
+import { setDebugFlag, useDebugFlag } from "@/hooks/debug-flags";
 
 function MobileMenuSheetTab({
   to,
@@ -29,13 +31,8 @@ function MobileMenuSheetTab({
   );
 }
 
-export function MenuSheet({
-  setDebugOpen,
-  fab = false,
-}: {
-  setDebugOpen: (open: boolean) => void;
-  fab?: boolean;
-}) {
+export function MenuSheet({ fab = false }: { fab?: boolean }) {
+  const mayShowDebug = useDebugFlag("showDebugOptions");
   const { data: session } = useSession();
   const navTabs = useNavTabs({ includeSettings: true });
   const [open, setOpen] = useState(false);
@@ -119,25 +116,24 @@ export function MenuSheet({
             )}
           </div>
 
-          <div className="flex flex-wrap gap-x-3 px-4 py-2 text-xs">
-            {FOOTER_LINKS.map(link => (
-              <Link
-                key={link.to}
-                to={link.to}
-                className="text-gray-400 hover:text-gray-600">
-                {link.label}
-              </Link>
+          <div className="flex flex-wrap items-baseline gap-x-3 px-4 py-2 text-xs text-gray-500">
+            {FOOTER_LINKS.map((link, i) => (
+              <FooterLinkComponent key={i} link={link} />
             ))}
-          </div>
 
-          {window.Native && (
-            <div className="flex flex-col px-2 pb-2">
-              <hr className="my-2" />
-              <Button variant="secondary" onClick={() => setDebugOpen(true)}>
-                Debug
-              </Button>
-            </div>
-          )}
+            {mayShowDebug && (
+              <span className="ml-auto text-gray-500">
+                <span>|</span>
+                <FooterLinkComponent
+                  link={{
+                    onClick: () => setDebugFlag("openDebugDialog", true),
+                    label: "Debug",
+                  }}
+                />
+                <span>|</span>
+              </span>
+            )}
+          </div>
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>

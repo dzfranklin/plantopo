@@ -3,8 +3,6 @@ import { useState } from "react";
 import { AppMap } from "@/components/map";
 import { MapManager } from "@/components/map/MapManager";
 
-MapManager.trace = true;
-
 function onManager(manager: MapManager) {
   console.log("MapManager ready", manager);
 }
@@ -29,12 +27,7 @@ export default function DevMapPage() {
           hash
         </label>
       </div>
-      <AppMap
-        key={`hash:${hash}`}
-        hash={hash}
-        onManager={onManager}
-        debug={true}
-      />
+      <AppMap key={`hash:${hash}`} hash={hash} onManager={onManager} />
     </div>
   );
 }

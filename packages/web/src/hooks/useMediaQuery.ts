@@ -11,3 +11,11 @@ export function useMediaQuery(query: string): boolean {
     () => false,
   );
 }
+
+export function useIsDesktop() {
+  return useMediaQuery("(min-width: 640px) and (min-height: 500px)");
+}
+
+export function useIsMobile() {
+  return !useIsDesktop();
+}
