@@ -61,12 +61,13 @@ export function MenuSheet({ fab = false }: { fab?: boolean }) {
           <Drawer.Title>Menu</Drawer.Title>
           <Drawer.Description>Navigation menu</Drawer.Description>
         </VisuallyHidden.Root>
-        <Drawer.Content className="fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col gap-0 bg-white">
+        <Drawer.Content className="fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col justify-between gap-0 bg-white">
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-            <Link className="px-4 pt-3 pb-0.5 font-semibold" to="/">
-              PlanTopo
-            </Link>
-            <hr className="my-2" />
+            <div className="mb-2 border-b border-slate-200 bg-slate-50 px-4 pt-3 pb-2">
+              <Link className="font-semibold" to="/">
+                PlanTopo
+              </Link>
+            </div>
             {navTabs.map(tab => (
               <MobileMenuSheetTab
                 key={tab.to}
@@ -77,8 +78,7 @@ export function MenuSheet({ fab = false }: { fab?: boolean }) {
             ))}
           </div>
 
-          <div className="mt-auto flex flex-col">
-            <hr className="my-2" />
+          <div className="mt-2 flex flex-col border-t border-slate-200 pt-2">
             {session ? (
               <div className="flex flex-col gap-2 p-2">
                 <div className="flex items-center gap-3">
