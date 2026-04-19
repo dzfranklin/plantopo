@@ -35,7 +35,11 @@ if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
 
 const authLogger = logger.child({ module: "auth" });
 
-const trustedOrigins = [env.APP_URL, "plantopo://oauth-callback"];
+const trustedOrigins = [
+  env.APP_URL,
+  "plantopo://oauth-callback",
+  "plantopo-debug://oauth-callback", // Allow signing in to debug builds with prod credentials
+];
 
 if (process.env.NODE_ENV !== "production") {
   trustedOrigins.push(
