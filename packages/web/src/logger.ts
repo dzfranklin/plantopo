@@ -130,6 +130,13 @@ function pinoSend(level: pino.Level, logEvent: pino.LogEvent) {
     messages.length > 1
       ? Object.assign(bindingObj, ...messages.slice(0, -1))
       : bindingObj;
+  if ("err" in extra && extra.err instanceof Error) {
+    extra.err = {
+      message: extra.err.message,
+      name: extra.err.name,
+      stack: extra.err.stack,
+    };
+  }
   enqueue({ level, msg, time: ts, ...extra } as LogEntry);
 }
 
