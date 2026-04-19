@@ -32,7 +32,6 @@ export function DebugDialog() {
         <div className="flex-1 space-y-4 overflow-x-hidden overflow-y-auto">
           <div className="flex flex-wrap gap-2">
             <ActionButton to="/dev">{"/dev"}</ActionButton>
-            <ActionButton to="/debug-flags">{"/debug-flags"}</ActionButton>
             <ActionButton onClick={() => window.location.reload()}>
               Reload
             </ActionButton>
