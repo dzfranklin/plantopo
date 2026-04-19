@@ -11,6 +11,7 @@ import path from "node:path";
 import { auth } from "./auth/auth.js";
 import { registerAuthRoutes } from "./auth/auth.routes.js";
 import { registerClientLogsRoutes } from "./client-logs.routes.js";
+import { registerDevNativeAssetsRoutes } from "./dev-native-assets.routes.js";
 import { env } from "./env.js";
 import { bindLog, logStore, logger } from "./logger.js";
 import { appRouter } from "./router.js";
@@ -67,7 +68,7 @@ async function renderWithSession(
   if (session?.headers) {
     session.headers.forEach((value, key) => res.setHeader(key, value));
   }
-  const script = `<script>window.__INITIAL_SESSION__ = JSON.parse(${JSON.stringify(JSON.stringify(session?.response))});</script>`;
+  const script = `<script>window.__INITIAL_USER__ = JSON.parse(${JSON.stringify(JSON.stringify(session?.response?.user ?? null))});</script>`;
   res
     .setHeader("Content-Type", "text/html")
     .end(html.replace("</head>", `${script}\n</head>`));
@@ -78,6 +79,8 @@ const httpServer = createServer(app);
 if (isDev) {
   const { createDevMiddleware } = await import("@pt/web/dev");
   const { middleware, getIndexHtml } = await createDevMiddleware(httpServer);
+
+  registerDevNativeAssetsRoutes(app);
 
   app.use(middleware);
 

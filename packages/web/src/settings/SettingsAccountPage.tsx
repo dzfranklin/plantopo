@@ -5,7 +5,12 @@ import { useSearchParams } from "react-router";
 
 import { Section } from "./Section";
 import { PasskeyIcon } from "@/auth/PasskeyIcon";
-import { authClient, signOut, useRequiredSession } from "@/auth/auth-client";
+import {
+  authClient,
+  signOut,
+  useRequiredUser,
+  useSession,
+} from "@/auth/auth-client";
 import { providersInfo } from "@/auth/providers";
 import { authKeys } from "@/auth/queryKeys";
 import { Button } from "@/components/ui/button";
@@ -16,7 +21,8 @@ import { usePageTitle } from "@/usePageTitle";
 export default function SettingsAccountPage() {
   usePageTitle("Account settings");
 
-  const { session: currentSession, user } = useRequiredSession();
+  const user = useRequiredUser();
+  const currentSession = useSession();
   const queryClient = useQueryClient();
   const trpc = useTRPC();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -88,7 +94,7 @@ export default function SettingsAccountPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: authKeys.session() });
+      queryClient.invalidateQueries({ queryKey: authKeys.user() });
     },
   });
 
@@ -359,7 +365,8 @@ export default function SettingsAccountPage() {
       <Section title="Sessions">
         <ul className="flex flex-col gap-2">
           {sessions?.map(session => {
-            const isCurrent = session.token === currentSession.token;
+            const isCurrent =
+              currentSession && session.token === currentSession.token;
             return (
               <li
                 key={session.id}

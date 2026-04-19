@@ -5,6 +5,8 @@ interface NativeInterface {
   startRecordingTrack: () => void;
   stopRecordingTrack: () => void;
   openNativeDebug: () => void;
+  spaUpdateAvailable: () => boolean;
+  restart: () => void;
 }
 
 interface Window {

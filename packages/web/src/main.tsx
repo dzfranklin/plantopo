@@ -11,9 +11,9 @@ import "./index.css";
 
 import { getDebugFlag } from "./hooks/debug-flags.ts";
 
-if (window.Native && !window.__INITIAL_SESSION__) {
+if (window.Native && !window.__INITIAL_USER__) {
   window.Native.reportUnauthorized();
-  throw new Error("No initial session in native");
+  throw new Error("No initial user in native");
 }
 
 const root = createRoot(document.getElementById("root")!);

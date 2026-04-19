@@ -8,7 +8,7 @@ import HomePage from "./HomePage.tsx";
 import NotFoundPage from "./NotFoundPage.tsx";
 import LoginPage from "./auth/LoginPage.tsx";
 import SignUpPage from "./auth/SignUpPage.tsx";
-import { useSession } from "./auth/auth-client.ts";
+import { useUser } from "./auth/auth-client.ts";
 import { NavbarLayout } from "./layout/NavbarLayout.tsx";
 import MapPage from "./map/MapPage.tsx";
 import PlanPage from "./plan/PlanPage.tsx";
@@ -20,7 +20,7 @@ import RecordTrackPage from "./track/RecordTrackPage.tsx";
 const DevRoutes = lazy(() => import("./dev/DevRoutes.tsx"));
 
 function RequireAuth() {
-  const { data: session } = useSession();
+  const session = useUser();
   const location = useLocation();
   if (!session) {
     const returnTo = location.pathname + location.search;

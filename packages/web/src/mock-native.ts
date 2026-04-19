@@ -7,10 +7,10 @@ if (getDebugFlag("mockNative")) {
 export function mockNative(): NativeInterface {
   return {
     logout: () => {
-      console.warn("Native.logout called");
+      alert("App would log out now");
     },
     reportUnauthorized: () => {
-      console.warn("Native.reportUnauthorized called");
+      alert("Native.reportUnauthorized called");
     },
     recordTrackReady: () => {
       window?.onRecordTrackState?.({ recording: null });
@@ -32,6 +32,10 @@ export function mockNative(): NativeInterface {
     },
     openNativeDebug: () => {
       alert("Native debug options would open");
+    },
+    spaUpdateAvailable: () => true,
+    restart: () => {
+      alert("App would restart now");
     },
   };
 }

@@ -16,7 +16,7 @@ export function renderWithProviders(
     session = TEST_SESSION,
   }: { initialPath?: string; session?: typeof TEST_SESSION | null } = {},
 ) {
-  window.__INITIAL_SESSION__ = session ?? null;
+  window.__INITIAL_USER__ = session ? session.user : null;
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },

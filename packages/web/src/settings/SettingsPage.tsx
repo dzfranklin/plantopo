@@ -2,7 +2,7 @@ import { RiBrushLine, RiUserLine } from "@remixicon/react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import { UserAvatar } from "@/auth/UserAvatar";
-import { useRequiredSession } from "@/auth/auth-client";
+import { useRequiredUser } from "@/auth/auth-client";
 import { cn } from "@/cn";
 
 const navItems = [
@@ -11,7 +11,7 @@ const navItems = [
 ];
 
 export default function SettingsPage() {
-  const { user } = useRequiredSession();
+  const user = useRequiredUser();
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-8">

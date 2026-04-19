@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { useSession } from "./auth/auth-client";
+import { useUser } from "./auth/auth-client";
 import { LayerThumbnail } from "./components/map/LayerPicker";
 import { usePageTitle } from "./usePageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -214,21 +214,19 @@ function ElevationAttributionCard() {
 }
 
 function AccountEduStatusLine() {
-  const session = useSession();
+  const user = useUser();
 
-  if (session.data?.user?.eduAccess) {
+  if (user?.eduAccess) {
     return (
       <span>
-        (Your account{" "}
-        <span className="underline">{session.data.user.email}</span> is
+        (Your account <span className="underline">{user.email}</span> is
         configured to use educational-use-only sources.)
       </span>
     );
-  } else if (session.data?.user) {
+  } else if (user) {
     return (
       <span>
-        (Your account{" "}
-        <span className="underline">{session.data.user.email}</span> does not
+        (Your account <span className="underline">{user.email}</span> does not
         have access to educational-use-only sources. Contact daniel@plantopo.com
         to request access.)
       </span>

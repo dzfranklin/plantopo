@@ -3,7 +3,7 @@ import type { Response } from "express";
 import type { Router } from "express";
 
 import { getLog } from "../logger.js";
-import { auth } from "./auth.js";
+import { type Session, auth } from "./auth.js";
 import {
   authorizeTileRequest,
   exchangeNativeSessionInitToken,
@@ -45,10 +45,7 @@ export function registerAuthRoutes(app: Router) {
     }
 
     await setSessionCookie(res, token);
-    res
-      .setHeader("content-type", "application/json")
-      .status(200)
-      .send(JSON.stringify({ token }));
+    res.json(toNativeSession(session));
   });
 
   // Flow: The native app calls this endpoint with its long-lived API token to
@@ -81,7 +78,7 @@ export function registerAuthRoutes(app: Router) {
     log.info({ userId: session.user.id }, "native session refreshed");
 
     await setSessionCookie(res, token);
-    res.setHeader("content-type", "application/json").status(200).send("{}");
+    res.json(toNativeSession(session));
   });
 
   // Used by nginx tile proxy. Responses are cached by resource and key.
@@ -117,4 +114,11 @@ async function setSessionCookie(res: Response, token: string): Promise<void> {
     { ...cookieAttrs, maxAge },
   );
   res.setHeader("set-cookie", signedCookie);
+}
+
+function toNativeSession(session: Session) {
+  return {
+    token: session.session.token,
+    user: session.user,
+  };
 }

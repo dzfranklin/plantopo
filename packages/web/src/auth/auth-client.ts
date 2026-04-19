@@ -15,37 +15,52 @@ export const authClient = createAuthClient({
 
 declare global {
   interface Window {
-    __INITIAL_SESSION__?: unknown;
+    __INITIAL_USER__?: unknown;
   }
 }
 
 export type Session = typeof authClient.$Infer.Session;
+export type User = Session["user"];
 
-export function useSession() {
+export function useSession(): Session["session"] | null {
+  return (
+    useQuery({
+      queryKey: authKeys.session(),
+      queryFn: async () => {
+        const { data, error } = await authClient.getSession();
+        if (error) throw error;
+        return data?.session ?? null;
+      },
+      staleTime: 60 * 60 * 1000, // 1 hour
+    }).data ?? null
+  );
+}
+
+export function useUser(): User | null {
   return useQuery({
-    queryKey: authKeys.session(),
+    queryKey: authKeys.user(),
     queryFn: async () => {
       const { data, error } = await authClient.getSession();
       if (error) throw error;
-      return data ?? null;
+      return data?.user ?? null;
     },
     initialData: () => {
-      const raw = window.__INITIAL_SESSION__;
-      return raw ? (raw as Session) : null;
+      const raw = window.__INITIAL_USER__;
+      return raw ? (raw as User) : null;
     },
     staleTime: 60 * 60 * 1000, // 1 hour
-  });
+  }).data;
 }
 
-export function useRequiredSession() {
-  const data = useSession().data;
-  if (!data) throw new Error("Expected session");
-  return data;
+export function useRequiredUser(): User {
+  const user = useUser();
+  if (!user) throw new Error("Expected user");
+  return user;
 }
 
 export function useUserPrefs(): UserPrefs {
-  const sess = useSession();
-  const value = sess.data?.user.prefs ?? {};
+  const user = useUser();
+  const value = user?.prefs ?? {};
   return UserPrefsSchema.parse(value);
 }
 
@@ -57,21 +72,19 @@ export function useUserPrefsMutation() {
       if (error) throw error;
     },
     onMutate: async prefs => {
-      await queryClient.cancelQueries({ queryKey: authKeys.session() });
-      const previous = queryClient.getQueryData<Session | null>(
-        authKeys.session(),
-      );
-      queryClient.setQueryData<Session | null>(authKeys.session(), old => {
+      await queryClient.cancelQueries({ queryKey: authKeys.user() });
+      const previous = queryClient.getQueryData<User | null>(authKeys.user());
+      queryClient.setQueryData<User | null>(authKeys.user(), old => {
         if (!old) return old;
-        return { ...old, user: { ...old.user, prefs } };
+        return { ...old, prefs };
       });
       return { previous };
     },
     onError: (_err, _prefs, context) => {
-      queryClient.setQueryData(authKeys.session(), context?.previous);
+      queryClient.setQueryData(authKeys.user(), context?.previous);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: authKeys.session() });
+      queryClient.invalidateQueries({ queryKey: authKeys.user() });
     },
   });
 }

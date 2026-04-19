@@ -8,7 +8,7 @@ import {
 import { useMemo } from "react";
 import { toast } from "sonner";
 
-import { useSession } from "@/auth/auth-client";
+import { useUser } from "@/auth/auth-client";
 import { getDebugFlag, setDebugFlag } from "@/hooks/debug-flags";
 
 export interface NavTab {
@@ -64,7 +64,7 @@ export const FOOTER_LINKS: FooterLink[] = [
 ];
 
 export function useNavTabs({ includeSettings = false } = {}) {
-  const session = useSession().data;
+  const session = useUser();
   return useMemo(() => {
     const nativeFilter = (t: NavTab) => !t.nativeOnly || window.Native;
     const authFilter = (t: NavTab) => !t.requireAuth || session;

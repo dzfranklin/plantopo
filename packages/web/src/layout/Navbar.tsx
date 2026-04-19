@@ -1,6 +1,6 @@
 import { Link, useMatch } from "react-router-dom";
 
-import { signOut, useSession } from "../auth/auth-client";
+import { signOut, useUser } from "../auth/auth-client";
 import { MenuSheet } from "./MenuSheet";
 import { FOOTER_LINKS, type FooterLink, type NavTab, useNavTabs } from "./nav";
 import { UserAvatar } from "@/auth/UserAvatar";
@@ -47,18 +47,18 @@ function MobileNavTab({
 
 function UserMenuDesktop() {
   const mayShowDebug = useDebugFlag("showDebugOptions");
-  const { data: session } = useSession();
-  if (!session) return null;
+  const user = useUser();
+  if (!user) return null;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900">
-        <UserAvatar user={session.user} />
-        <span className="max-w-42 truncate">{session.user.name}</span>
+        <UserAvatar user={user} />
+        <span className="max-w-42 truncate">{user.name}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-56 text-base">
         <DropdownMenuItem disabled>
-          <span className="truncate text-xs">{session.user.email}</span>
+          <span className="truncate text-xs">{user.email}</span>
         </DropdownMenuItem>
         <DropdownMenuItem className="text-sm/relaxed" asChild>
           <Link to="/settings">Settings</Link>
@@ -80,7 +80,7 @@ function UserMenuDesktop() {
 }
 
 export function Navbar() {
-  const { data: session } = useSession();
+  const user = useUser();
   const navTabs = useNavTabs();
 
   return (
@@ -105,7 +105,7 @@ export function Navbar() {
         <UserMenuDesktop />
       </div>
 
-      {!session && !window.Native && (
+      {!user && !window.Native && (
         <div className="ml-auto flex gap-2">
           <Button asChild variant="outline">
             <Link to="/login">Sign in</Link>

@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useMatch } from "react-router-dom";
 import { Drawer } from "vaul";
 
-import { signOut, useSession } from "../auth/auth-client";
+import { signOut, useUser } from "../auth/auth-client";
 import { FooterLinkComponent } from "./Navbar";
 import { FOOTER_LINKS, type NavTab, useNavTabs } from "./nav";
 import { cn } from "@/cn";
 import { Button } from "@/components/ui/button";
 import { setDebugFlag, useDebugFlag } from "@/hooks/debug-flags";
+import { useUpdateAvailable } from "@/hooks/useUpdateAvailable";
 
 function MobileMenuSheetTab({
   to,
@@ -32,8 +33,9 @@ function MobileMenuSheetTab({
 }
 
 export function MenuSheet({ fab = false }: { fab?: boolean }) {
+  const updateAvailable = useUpdateAvailable();
   const mayShowDebug = useDebugFlag("showDebugOptions");
-  const { data: session } = useSession();
+  const user = useUser();
   const navTabs = useNavTabs({ includeSettings: true });
   const [open, setOpen] = useState(false);
   const location = useLocation();
@@ -78,23 +80,30 @@ export function MenuSheet({ fab = false }: { fab?: boolean }) {
             ))}
           </div>
 
+          {window.Native && updateAvailable && (
+            <div className="mx-2 mb-1 flex items-center justify-between rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
+              <span>Update available</span>
+              <Button onClick={() => window.Native!.restart()}>Restart</Button>
+            </div>
+          )}
+
           <div className="mt-2 flex flex-col border-t border-slate-200 pt-2">
-            {session ? (
+            {user ? (
               <div className="flex flex-col gap-2 p-2">
                 <div className="flex items-center gap-3">
-                  {session.user.image && (
+                  {user.image && (
                     <img
-                      src={session.user.image}
-                      alt={session.user.name ?? ""}
+                      src={user.image}
+                      alt={user.name ?? ""}
                       className="h-8 w-8 rounded-full object-cover"
                     />
                   )}
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium">
-                      {session.user.name}
+                      {user.name}
                     </div>
                     <div className="truncate text-xs text-gray-500">
-                      {session.user.email}
+                      {user.email}
                     </div>
                   </div>
                 </div>
