@@ -1,14 +1,30 @@
 import { RiCloseLine } from "@remixicon/react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import * as React from "react";
+import { useLocation } from "react-router";
 
 import { cn } from "@/cn";
 import { Button } from "@/components/ui/button";
 
 function Dialog({
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+  const { pathname } = useLocation();
+  const isControlled = props.open !== undefined;
+
+  React.useEffect(() => {
+    if (isControlled) onOpenChange?.(false);
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <DialogPrimitive.Root
+      data-slot="dialog"
+      key={isControlled ? undefined : pathname}
+      onOpenChange={onOpenChange}
+      {...props}
+    />
+  );
 }
 
 function DialogTrigger({
