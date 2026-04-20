@@ -9,7 +9,7 @@ export const logger = pino({
   level: import.meta.env.DEV ? "debug" : "info",
   browser: {
     asObject: true,
-    ...(import.meta.env.DEV && { transmit: { send: pinoSend } }),
+    transmit: { send: pinoSend },
   },
 });
 
