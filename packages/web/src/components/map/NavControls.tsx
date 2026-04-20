@@ -10,7 +10,7 @@ import {
   RiLandscapeLine,
   RiSubtractLine,
 } from "@remixicon/react";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type {
   GeolocateState,
@@ -104,9 +104,48 @@ function BearingControlGroup() {
   const incrementDuration = 150;
 
   const map = useMapManager()?.map;
+
   const [bearing, setBearing] = useState(0);
   const [pitch, setPitch] = useState(0);
-  const [hovered, setHovered] = useState(false);
+
+  const [expanded, setExpanded] = useState<"false" | "by-hover" | "by-press">(
+    "false",
+  );
+  const expandedRef = useRef(expanded);
+  useLayoutEffect(() => {
+    expandedRef.current = expanded;
+  }, [expanded]);
+
+  const bearingButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    const el = bearingButtonRef.current;
+    if (!el) return;
+
+    const onContextMenu = (e: Event) => {
+      e.preventDefault();
+      if (expandedRef.current === "false") {
+        setExpanded("by-press");
+      } else if (expandedRef.current === "by-press") {
+        setExpanded("false");
+      }
+    };
+
+    const onClick = () => {
+      if (expandedRef.current === "by-press") {
+        setExpanded("false");
+      } else {
+        map?.easeTo({ bearing: 0, pitch: 0 });
+      }
+    };
+
+    el.addEventListener("contextmenu", onContextMenu);
+    el.addEventListener("click", onClick);
+    return () => {
+      el.removeEventListener("contextmenu", onContextMenu);
+      el.removeEventListener("click", onClick);
+    };
+  }, [map]);
 
   useEffect(() => {
     if (!map) return;
@@ -123,19 +162,15 @@ function BearingControlGroup() {
   return (
     <div
       className="relative flex items-center"
-      onPointerEnter={e => {
-        if (e.pointerType === "mouse") setHovered(true);
-      }}
-      onPointerLeave={e => {
-        if (e.pointerType === "mouse") setHovered(false);
-      }}>
+      onPointerEnter={e => e.pointerType === "mouse" && setExpanded("by-hover")}
+      onPointerLeave={e => e.pointerType === "mouse" && setExpanded("false")}>
       {/* Slide-out rotation buttons */}
       <div
         className={cn(
           "absolute right-full flex flex-row items-center gap-0 pr-1.5 transition-all duration-200",
-          hovered
-            ? "translate-x-0 opacity-100"
-            : "pointer-events-none translate-x-2 opacity-0",
+          expanded === "false"
+            ? "pointer-events-none translate-x-2 opacity-0"
+            : "translate-x-0 opacity-100",
         )}>
         <div
           className="flex flex-row items-center gap-1.5"
@@ -206,8 +241,8 @@ function BearingControlGroup() {
       {/* Bearing button — drag up/down to pitch */}
       <ControlGroup>
         <ControlButton
-          title="Reset north"
-          onClick={() => map?.resetNorthPitch()}>
+          ref={bearingButtonRef}
+          title={expanded === "by-press" ? "Close" : "Reset north"}>
           <span style={{ transformStyle: "preserve-3d" }}>
             <NorthArrowIcon
               size={16}
@@ -242,33 +277,20 @@ function HorizontalControlGroup({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ControlButton({
-  title,
-  onClick,
-  onMouseDown,
-  disabled,
-  active,
-  horizontal,
-  style,
-  children,
-}: {
-  title: string;
-  onClick: () => void;
-  onMouseDown?: (e: React.MouseEvent) => void;
-  disabled?: boolean;
-  active?: boolean;
-  horizontal?: boolean;
-  style?: React.CSSProperties;
-  children: React.ReactNode;
-}) {
+const ControlButton = React.forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    active?: boolean;
+    horizontal?: boolean;
+  }
+>(function ControlButton(
+  { active, horizontal, children, ...forwardedProps },
+  ref,
+) {
   return (
     <button
-      title={title}
-      aria-label={title}
-      disabled={disabled}
-      onClick={onClick}
-      onMouseDown={onMouseDown}
-      style={style}
+      {...forwardedProps}
+      ref={ref}
       className={cn(
         "flex size-[40px] items-center justify-center sm:size-[29px]",
         "bg-transparent hover:bg-black/5 disabled:cursor-not-allowed",
@@ -281,7 +303,7 @@ function ControlButton({
       <span className="icon [&_svg]:size-5 sm:[&_svg]:size-4">{children}</span>
     </button>
   );
-}
+});
 
 function geolocateTitle(watchState: GeolocateWatchState): string {
   switch (watchState) {
