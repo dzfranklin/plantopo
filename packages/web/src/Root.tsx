@@ -8,9 +8,15 @@ import { LogViewerPanel } from "./components/LogViewerPanel.tsx";
 import { QueryDevtoolsPanel } from "./components/QueryDevtoolsPanel.tsx";
 import { Toaster } from "./components/ui/sonner.tsx";
 import { isUnauthorizedError } from "./errors.ts";
+import { useApiOfflineEffect } from "./hooks/useIsOnline.ts";
 import { logger } from "./logger.ts";
 import { AppRoutes } from "./routes.tsx";
 import { TRPCProvider } from "./trpc.ts";
+
+function Effects() {
+  useApiOfflineEffect();
+  return null;
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +42,8 @@ const trpcClient = createTRPCClient<AppRouter>({
 export function Root() {
   return (
     <QueryClientProvider client={queryClient}>
+      <Effects />
+      <Toaster />
       <TRPCProvider
         trpcClient={trpcClient}
         queryClient={queryClient}
@@ -44,7 +52,6 @@ export function Root() {
           <AppRoutes />
         </BrowserRouter>
       </TRPCProvider>
-      <Toaster />
       <QueryDevtoolsPanel />
       <LogViewerPanel />
     </QueryClientProvider>

@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 
 import { cn } from "../cn.ts";
+import { OfflineIndicator } from "../components/OfflineIndicator.tsx";
 import { DebugDialog } from "./DebugDialog.tsx";
 import { MenuSheet } from "./MenuSheet.tsx";
 import { DesktopFooter, MobileFooter, Navbar } from "./Navbar.tsx";
@@ -24,8 +25,9 @@ export function NavbarLayout({ fullBleed = false }: { fullBleed?: boolean }) {
         style={{ gridArea: "content" }}
         className="relative h-full min-h-0 overflow-y-auto">
         {fullBleed && (
-          <div className="absolute top-3 left-3 z-10 sm:hidden">
+          <div className="absolute top-3 left-3 z-10 flex items-center sm:hidden">
             <MenuSheet fab />
+            <OfflineIndicator fullbleed className="ml-2" />
           </div>
         )}
         <Outlet />

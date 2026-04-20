@@ -9,6 +9,7 @@ interface DebugFlags {
   enableLogViewer: boolean;
   openLogViewer: boolean;
   mockNative: boolean;
+  apiOffline: boolean;
 }
 
 const DEFAULT_VALUES: DebugFlags = {
@@ -20,6 +21,7 @@ const DEFAULT_VALUES: DebugFlags = {
   enableLogViewer: false,
   openLogViewer: false,
   mockNative: false,
+  apiOffline: false,
 };
 
 const RESTART_REQUIRED_FLAGS: (keyof DebugFlags)[] = [

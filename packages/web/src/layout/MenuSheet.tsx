@@ -8,6 +8,7 @@ import { signOut, useUser } from "../auth/auth-client";
 import { FooterLinkComponent } from "./Navbar";
 import { FOOTER_LINKS, type NavTab, useNavTabs } from "./nav";
 import { cn } from "@/cn";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { Button } from "@/components/ui/button";
 import { setDebugFlag, useDebugFlag } from "@/hooks/debug-flags";
 import { useUpdateAvailable } from "@/hooks/useUpdateAvailable";
@@ -39,7 +40,6 @@ export function MenuSheet({ fab = false }: { fab?: boolean }) {
   const navTabs = useNavTabs({ includeSettings: true });
   const [open, setOpen] = useState(false);
   const location = useLocation();
-
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpen(false);
@@ -65,10 +65,11 @@ export function MenuSheet({ fab = false }: { fab?: boolean }) {
         </VisuallyHidden.Root>
         <Drawer.Content className="fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-col justify-between gap-0 bg-white">
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-            <div className="mb-2 border-b border-slate-200 bg-slate-50 px-4 pt-3 pb-2">
+            <div className="mb-2 flex items-center border-b border-slate-200 bg-slate-50 px-4 pt-3 pb-2">
               <Link className="font-semibold" to="/">
                 PlanTopo
               </Link>
+              <OfflineIndicator className="ml-auto" />
             </div>
             {navTabs.map(tab => (
               <MobileMenuSheetTab

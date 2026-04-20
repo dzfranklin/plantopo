@@ -4,6 +4,7 @@ import { signOut, useUser } from "../auth/auth-client";
 import { MenuSheet } from "./MenuSheet";
 import { FOOTER_LINKS, type FooterLink, type NavTab, useNavTabs } from "./nav";
 import { UserAvatar } from "@/auth/UserAvatar";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -95,18 +96,20 @@ export function Navbar() {
         PlanTopo
       </Link>
 
-      <div className="hidden items-center gap-1 sm:flex">
+      <div className="hidden items-center gap-1 sm:mr-auto sm:flex">
         {navTabs.map(tab => (
           <DesktopNavTab key={tab.to} to={tab.to} label={tab.label} />
         ))}
       </div>
 
-      <div className="ml-auto hidden sm:block">
+      <OfflineIndicator className="mt-0.5" />
+
+      <div className="hidden sm:block">
         <UserMenuDesktop />
       </div>
 
       {!user && !window.Native && (
-        <div className="ml-auto flex gap-2">
+        <div className="flex gap-2">
           <Button asChild variant="outline">
             <Link to="/login">Sign in</Link>
           </Button>
