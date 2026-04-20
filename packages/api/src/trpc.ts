@@ -1,14 +1,10 @@
 import { TRPCError, initTRPC } from "@trpc/server";
 import type { DefaultErrorShape } from "@trpc/server/unstable-core-do-not-import";
 
-import type { Session } from "./auth/auth.js";
 import { getLog } from "./logger.js";
+import type { RequestContext } from "./request-context.js";
 
-export interface Context {
-  session: Session | null;
-}
-
-const t = initTRPC.context<Context>().create({
+const t = initTRPC.context<RequestContext>().create({
   errorFormatter({ shape }): DefaultErrorShape & {
     data: DefaultErrorShape["data"] & { reqId?: string | undefined };
   } {

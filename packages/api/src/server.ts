@@ -1,9 +1,8 @@
 import "./loadEnv.js";
 
 import * as trpcExpress from "@trpc/server/adapters/express";
-import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
+import { toNodeHandler } from "better-auth/node";
 import express from "express";
-import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
@@ -13,7 +12,9 @@ import { registerAuthRoutes } from "./auth/auth.routes.js";
 import { registerClientLogsRoutes } from "./client-logs.routes.js";
 import { registerDevNativeAssetsRoutes } from "./dev-native-assets.routes.js";
 import { env } from "./env.js";
-import { bindLog, logStore, logger } from "./logger.js";
+import { logger } from "./logger.js";
+import { requestContextMiddleware } from "./request-context-middleware.js";
+import { requestContext } from "./request-context.js";
 import { appRouter } from "./router.js";
 import { registerStravaRoutes } from "./strava/strava.routes.js";
 
@@ -25,12 +26,25 @@ if (isDev) {
   app.use((_req, _res, next) => setTimeout(next, Math.random() * 200));
 }
 
-app.use((_req, _res, next) => {
-  logStore.run({ reqId: randomUUID() }, next);
+app.use("/api/v1", (req, res, next) => {
+  if (req.path.startsWith("/auth/")) return next();
+  requestContextMiddleware(req, res, next).catch(next);
 });
 
 app.get("/_status", (_req, res) => {
   res.status(200).send("OK");
+});
+
+app.get("/api/v1/_smoke-test", async (_req, res) => {
+  const ctx = requestContext();
+  res.json({
+    context: {
+      reqID: ctx.reqID,
+      path: ctx.path,
+      sessionUser: ctx.session?.user ?? null,
+      client: ctx.client,
+    },
+  });
 });
 
 app.all("/api/v1/auth/*path", toNodeHandler(auth));
@@ -43,32 +57,22 @@ app.use(
   "/api/v1/trpc",
   trpcExpress.createExpressMiddleware({
     router: appRouter,
-    createContext: async ({ req }) => {
-      const session = await auth.api
-        .getSession({ headers: fromNodeHeaders(req.headers) })
-        .catch(() => null);
-      if (session) {
-        bindLog({ userId: session.user.id });
-      }
-      return { session };
-    },
+    maxBatchSize: 10,
+    createContext: () => requestContext(),
   }),
 );
 
-app.all("/api/*path", (_req, res) => res.status(404).end());
+app.all("/api/*path", (_req, res) =>
+  res.status(404).json({ error: "Not found" }),
+);
 
 async function renderWithSession(
   html: string,
-  req: express.Request,
+  _req: express.Request,
   res: express.Response,
 ) {
-  const session = await auth.api
-    .getSession({ headers: fromNodeHeaders(req.headers), returnHeaders: true })
-    .catch(() => null);
-  if (session?.headers) {
-    session.headers.forEach((value, key) => res.setHeader(key, value));
-  }
-  const script = `<script>window.__INITIAL_USER__ = JSON.parse(${JSON.stringify(JSON.stringify(session?.response?.user ?? null))});</script>`;
+  const ctx = requestContext();
+  const script = `<script>window.__INITIAL_USER__ = JSON.parse(${JSON.stringify(JSON.stringify(ctx.session?.user ?? null))});</script>`;
   res
     .setHeader("Content-Type", "text/html")
     .end(html.replace("</head>", `${script}\n</head>`));
@@ -84,7 +88,7 @@ if (isDev) {
 
   app.use(middleware);
 
-  app.get("*path", async (req, res, next) => {
+  app.get("*path", requestContextMiddleware, async (req, res, next) => {
     try {
       const html = await getIndexHtml(req.originalUrl);
       await renderWithSession(html, req, res);
@@ -98,7 +102,7 @@ if (isDev) {
   const indexPath = path.resolve(env.WEB_DIST, "index.html");
   const indexHTML = await readFile(indexPath, "utf-8");
 
-  app.get("*path", async (req, res, next) => {
+  app.get("*path", requestContextMiddleware, async (req, res, next) => {
     try {
       await renderWithSession(indexHTML, req, res);
     } catch (e) {
@@ -106,6 +110,20 @@ if (isDev) {
     }
   });
 }
+
+app.use(
+  (
+    err: unknown,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    logger.error({ err }, "Unhandled error");
+    const message =
+      err instanceof Error ? err.message : "Internal server error";
+    res.status(500).json({ error: message });
+  },
+);
 
 httpServer.listen(4000, () => {
   logger.info(

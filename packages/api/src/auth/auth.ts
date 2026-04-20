@@ -104,7 +104,12 @@ export const auth = betterAuth({
     disableColors: true,
     level: "info",
     log: (level, message, ...args) => {
-      authLogger[level]({ meta: args }, message);
+      if (level === "error") {
+        const err = new Error(message);
+        authLogger.error({ err, args }, message);
+      } else {
+        authLogger[level]({ args }, message);
+      }
     },
   },
   databaseHooks: {

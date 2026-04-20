@@ -75,11 +75,11 @@ const LEVEL_STYLES: Record<string, string> = {
 
 function LogEntryRow({ entry }: { entry: LogEntry }) {
   const [expanded, setExpanded] = useState(false);
-  const { level, msg, time, ...rest } = entry;
-  const hasExtra = Object.keys(rest).length > 0;
+  const { level, msg, ts, extra } = entry;
+  const hasExtra = !!extra;
   const msgLong = msg.length > 80;
   const clickable = hasExtra || msgLong;
-  const timeStr = new Date(time).toTimeString().slice(0, 8);
+  const timeStr = new Date(ts).toTimeString().slice(0, 8);
 
   return (
     <div
@@ -108,7 +108,7 @@ function LogEntryRow({ entry }: { entry: LogEntry }) {
       </div>
       {expanded && hasExtra && (
         <pre className="mt-1 overflow-x-auto break-all whitespace-pre-wrap text-gray-600">
-          {safeStringify(rest, 2)}
+          {safeStringify(extra, 2)}
         </pre>
       )}
     </div>

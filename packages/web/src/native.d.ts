@@ -1,4 +1,5 @@
 interface NativeInterface {
+  version: () => string;
   logout: () => void;
   reportUnauthorized: () => void;
   recordTrackReady: () => void;

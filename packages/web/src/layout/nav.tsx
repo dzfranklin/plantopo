@@ -51,10 +51,14 @@ const COMMIT_HASH = import.meta.env.DEV
   ? "dev"
   : import.meta.env.VITE_COMMIT_HASH?.slice(0, 7);
 
+const VERSION = window.Native?.version()
+  ? `v${window.Native.version()}/${COMMIT_HASH}`
+  : COMMIT_HASH;
+
 export const FOOTER_LINKS: FooterLink[] = [
   { to: "/about", label: "About" },
   {
-    label: COMMIT_HASH,
+    label: VERSION,
     onClick: () => {
       const current = getDebugFlag("showDebugOptions");
       setDebugFlag("showDebugOptions", !current);

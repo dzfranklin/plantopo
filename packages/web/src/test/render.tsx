@@ -5,9 +5,34 @@ import { type ReactNode, Suspense } from "react";
 import { MemoryRouter } from "react-router-dom";
 
 import type { AppRouter } from "@pt/api";
-import { TEST_SESSION } from "@pt/api/webTestSupport";
 
 import { TRPCProvider } from "../trpc.ts";
+
+export const TEST_USER = {
+  id: "test",
+  name: "Test User",
+  email: "test@example.com",
+  emailVerified: true as const,
+  image: null,
+  tileKey: "test-tile-key",
+  eduAccess: false,
+  createdAt: new Date(0),
+  updatedAt: new Date(0),
+} as const;
+
+export const TEST_SESSION = {
+  session: {
+    id: "test-session",
+    userId: TEST_USER.id,
+    token: "test-token",
+    expiresAt: new Date(Date.now() + 86400_000),
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+    ipAddress: null,
+    userAgent: null,
+  },
+  user: TEST_USER,
+} as const;
 
 export function renderWithProviders(
   ui: ReactNode,

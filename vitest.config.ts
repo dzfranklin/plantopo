@@ -38,17 +38,6 @@ export default defineConfig({
           fileParallelism: false,
         },
       },
-      {
-        extends: "./packages/web/vite.config.js",
-        test: {
-          name: "web-integration",
-          include: ["packages/web/src/**/*.itest.{ts,tsx}"],
-          globalSetup: ["packages/web/src/test/globalSetup.ts"],
-          setupFiles: ["packages/web/src/test/setup.integration.ts"],
-          environment: "jsdom",
-          fileParallelism: false,
-        },
-      },
     ],
   },
 });

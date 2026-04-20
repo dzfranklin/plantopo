@@ -1,7 +1,23 @@
 // pino/browser ensures tests in node use console.* so vitest captures output.
+import type {
+  MapLibreMap,
+  MessageType as MaplibreMessageType,
+} from "maplibre-gl";
 import pino from "pino/browser";
 
-import { getDebugFlag, subscribeDebugFlags } from "@/hooks/debug-flags";
+import type {
+  ClientInfo,
+  ClientLogEntry,
+  ClientLogsPostBody,
+} from "@pt/shared";
+
+import {
+  getDebugFlag,
+  getDebugFlags,
+  subscribeDebugFlags,
+} from "@/hooks/debug-flags";
+
+export type LogEntry = ClientLogEntry;
 
 // --- Logger ---
 
@@ -17,14 +33,7 @@ export default logger;
 
 // --- Log viewer ---
 
-export type LogEntry = {
-  level: string;
-  msg: string;
-  time: number;
-  [key: string]: unknown;
-};
-
-export type LogViewerState = { entries: readonly LogEntry[] };
+export type LogViewerState = { entries: readonly ClientLogEntry[] };
 
 let logViewerState: LogViewerState | null = getDebugFlag("enableLogViewer")
   ? { entries: [] }
@@ -57,14 +66,30 @@ export function subscribeLogViewer(onChange: () => void) {
   return () => window.removeEventListener(LOG_VIEWER_EVENT, onChange);
 }
 
-// --- Log shipping (DEV only) ---
+// --- Log shipping ---
 
 const ENDPOINT = "/api/v1/client-logs";
-const windowId = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
-const shipQueue: LogEntry[] = [];
+export const clientID =
+  crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
+let shipQueue: ClientLogEntry[] = [];
 let shipScheduled = false;
 
 // --- Utilities ---
+
+export function getClientInfo(): ClientInfo {
+  const debugFlags = Object.entries(getDebugFlags())
+    .filter(([, v]) => v)
+    .map(([k]) => k)
+    .join(",");
+
+  return {
+    clientID,
+    clientVersion,
+    clientDebugFlags: debugFlags,
+    nativeVersion: window.Native?.version?.(),
+    href: window.location.href,
+  };
+}
 
 export function safeStringify(value: unknown, indent?: number): string {
   const seen = new WeakSet();
@@ -84,9 +109,83 @@ export function safeStringify(value: unknown, indent?: number): string {
   );
 }
 
+export function connectMaplibreWorkerLogs(map: MapLibreMap) {
+  map.style.dispatcher.broadcast(
+    "_plantopo_log_forwarder_connect" as MaplibreMessageType,
+    { clientID },
+  );
+}
+
 // --- Internal ---
 
-function enqueue(entry: LogEntry) {
+type BaseLogEntry = Pick<ClientLogEntry, "level" | "msg" | "ts" | "extra">;
+
+const clientVersion: string | undefined = import.meta.env.DEV
+  ? "dev"
+  : import.meta.env.VITE_COMMIT_HASH;
+
+const consoleMessageMethods = [
+  "log",
+  "trace",
+  "debug",
+  "info",
+  "warn",
+  "error",
+] as const;
+type ConsoleMessageMethodName = (typeof consoleMessageMethods)[number];
+
+// Patch console.* to forward non-pino logs into enqueue.
+// pino with asObject:true calls console[method] with a single object
+// { level: number, msg: string, ... } — detect and skip to avoid double-send.
+// Skip in test mode: vitest installs its own console proxy, and wrapping it
+// causes infinite recursion since target[method] routes back through ours.
+if (import.meta.env.MODE !== "test") {
+  globalThis.console = new Proxy(console, {
+    get(target, prop: keyof Console) {
+      if (consoleMessageMethods.includes(prop as ConsoleMessageMethodName)) {
+        const method = prop as ConsoleMessageMethodName;
+        return function (...args: unknown[]) {
+          const entry = convertConsoleArgsToLogEntry(method, args);
+          if (entry) enqueue(entry);
+          return target[method](...args);
+        };
+      } else {
+        return target[prop];
+      }
+    },
+  });
+}
+
+// see public/maplibre-gl-worker-log-forwarder.js
+const maplibreChannel = new BroadcastChannel("plantopo-maplibre-worker-logs");
+maplibreChannel.onmessage = e => {
+  const data = e.data as {
+    clientID: string;
+    method: ConsoleMessageMethodName;
+    args: unknown[];
+  };
+  if (data.clientID === clientID) {
+    const entry = convertConsoleArgsToLogEntry(
+      data.method,
+      data.args,
+      "maplibre worker:",
+    );
+    if (entry) enqueue(entry);
+  }
+};
+
+function enqueue(base: BaseLogEntry) {
+  if (import.meta.env.MODE === "test") return;
+
+  const entry: ClientLogEntry = {
+    ...base,
+    ...getClientInfo(),
+  };
+
+  if (entry.extra && Object.keys(entry.extra).length === 0) {
+    delete entry.extra;
+  }
+
   if (logViewerState) {
     const prev = logViewerState.entries;
     const trimmed = prev.length >= 500 ? prev.slice(1) : prev;
@@ -95,31 +194,51 @@ function enqueue(entry: LogEntry) {
     queueMicrotask(() => window.dispatchEvent(new Event(LOG_VIEWER_EVENT)));
   }
 
-  if (import.meta.env.DEV) {
-    shipQueue.push(entry);
-    if (!shipScheduled) {
-      shipScheduled = true;
-      requestIdleCallback(shipScheduledNow, { timeout: 10_000 });
-    }
+  shipQueue.push(entry);
+  if (!shipScheduled) {
+    shipScheduled = true;
+    requestIdleCallback(shipScheduledNow, { timeout: 10_000 });
   }
 }
 
+window.addEventListener("online", () => {
+  if (shipQueue.length) {
+    requestIdleCallback(shipScheduledNow, { timeout: 10_000 });
+  }
+});
+
 function shipScheduledNow() {
   shipScheduled = false;
-  const entries = shipQueue.splice(0);
+  const entries = shipQueue.slice();
   if (!entries.length) return;
-  const body = safeStringify({ windowId, entries });
+
+  const body: ClientLogsPostBody = { entries };
+  const serializedBody = safeStringify(body);
 
   fetch(ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body,
-  }).catch(() => {});
+    body: serializedBody,
+  }).then(
+    () => {
+      const shipped = new Set(entries);
+      shipQueue = shipQueue.filter(e => !shipped.has(e));
+    },
+    () => {},
+  );
 }
 
 // Called by pino transmit for every log, independently of console output.
 function pinoSend(level: pino.Level, logEvent: pino.LogEvent) {
-  if (level === "trace") return;
+  const entry = convertPinoEventToLogEntry(level, logEvent);
+  if (entry) enqueue(entry);
+}
+
+export function convertPinoEventToLogEntry(
+  level: pino.Level,
+  logEvent: pino.LogEvent,
+): BaseLogEntry | null {
+  if (level === "trace") return null;
   const { ts, messages, bindings } = logEvent;
   const bindingObj = Object.assign({}, ...bindings);
   // messages is [dataObj?, msg] when using logger.info({...}, "msg") form,
@@ -137,44 +256,47 @@ function pinoSend(level: pino.Level, logEvent: pino.LogEvent) {
       stack: extra.err.stack,
     };
   }
-  enqueue({ level, msg, time: ts, ...extra } as LogEntry);
+  return { level, msg, ts, extra };
 }
 
-// Patch console.* to forward non-pino logs into enqueue.
-// pino with asObject:true calls console[method] with a single object
-// { level: number, msg: string, ... } — detect and skip to avoid double-send.
-const methods = ["log", "trace", "debug", "info", "warn", "error"] as const;
-for (const method of methods) {
-  const original = console[method].bind(console);
-  console[method] = (...args: unknown[]) => {
-    original(...args);
-    const first = args[0];
-    if (
-      typeof first === "object" &&
-      first !== null &&
-      typeof (first as Record<string, unknown>).level === "number" &&
-      typeof (first as Record<string, unknown>).msg === "string"
-    )
-      return;
-    const extras: Record<string, unknown> = {};
-    const parts: string[] = [];
-    let objIdx = 0;
-    const interpolated = interpolateConsoleArgs(args);
-    for (const a of interpolated) {
-      if (isPlainObject(a) || Array.isArray(a)) {
-        const key = `arg${objIdx++}`;
-        extras[key] = sanitizeForLog(a);
-        parts.push(`[${key}]`);
-      } else {
-        parts.push(String(a));
-      }
+export function convertConsoleArgsToLogEntry(
+  method: ConsoleMessageMethodName,
+  args: unknown[],
+  messagePrefix = "",
+): BaseLogEntry | null {
+  if (method === "trace") return null;
+  const first = args[0];
+  if (
+    typeof first === "object" &&
+    first !== null &&
+    typeof (first as Record<string, unknown>).level === "number" &&
+    typeof (first as Record<string, unknown>).msg === "string"
+  ) {
+    // skip pino logs
+    return null;
+  }
+
+  const extra: Record<string, unknown> = {};
+  const parts: string[] = [];
+  if (messagePrefix) parts.push(messagePrefix);
+
+  let objIdx = 0;
+  const interpolated = interpolateConsoleArgs(args);
+  for (const a of interpolated) {
+    if (isPlainObject(a) || Array.isArray(a)) {
+      const key = `arg${objIdx++}`;
+      extra[key] = sanitizeForLog(a);
+      parts.push(`[${key}]`);
+    } else {
+      parts.push(String(a));
     }
-    enqueue({
-      level: method === "log" ? "info" : method,
-      msg: parts.join(" "),
-      time: Date.now(),
-      ...extras,
-    } as LogEntry);
+  }
+
+  return {
+    level: method === "log" ? "info" : method,
+    msg: parts.join(" "),
+    ts: Date.now(),
+    extra,
   };
 }
 
@@ -194,12 +316,15 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return proto === Object.prototype || proto === null;
 }
 
-function sanitizeForLog(v: unknown): unknown {
+function sanitizeForLog(v: unknown, seen: Set<unknown> = new Set()): unknown {
+  if (typeof v === "function") return "[Function]";
   if (isReactElement(v)) return "[ReactElement]";
-  if (Array.isArray(v)) return v.map(sanitizeForLog);
+  if (Array.isArray(v)) return v.map(x => sanitizeForLog(x, seen));
   if (isPlainObject(v)) {
+    if (seen.has(v)) return "[Circular]";
+    seen.add(v);
     const out: Record<string, unknown> = {};
-    for (const k of Object.keys(v)) out[k] = sanitizeForLog(v[k]);
+    for (const k of Object.keys(v)) out[k] = sanitizeForLog(v[k], seen);
     return out;
   }
   return v;

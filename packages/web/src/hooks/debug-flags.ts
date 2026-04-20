@@ -32,11 +32,23 @@ const RESTART_REQUIRED_FLAGS: (keyof DebugFlags)[] = [
 const DEBUG_FLAGS_EVENT = "debugFlagsChange";
 const DEBUG_FLAGS_KEY = "debugFlags";
 
-let snapshot: DebugFlags = parseFlags(localStorage.getItem(DEBUG_FLAGS_KEY));
+function readStorage(): DebugFlags {
+  try {
+    return parseFlags(localStorage.getItem(DEBUG_FLAGS_KEY));
+  } catch {
+    return DEFAULT_VALUES;
+  }
+}
+
+let snapshot: DebugFlags = readStorage();
 
 export function setDebugFlag(key: keyof DebugFlags, value: boolean) {
   snapshot = { ...snapshot, [key]: value };
-  localStorage.setItem(DEBUG_FLAGS_KEY, serializeFlags(snapshot));
+  try {
+    localStorage.setItem(DEBUG_FLAGS_KEY, serializeFlags(snapshot));
+  } catch {
+    // Ignore write errors
+  }
   window.dispatchEvent(new Event(DEBUG_FLAGS_EVENT));
 
   if (RESTART_REQUIRED_FLAGS.includes(key)) {
@@ -58,7 +70,11 @@ export function getDebugFlag(key: keyof DebugFlags) {
 
 export function resetDebugFlags() {
   snapshot = DEFAULT_VALUES;
-  localStorage.removeItem(DEBUG_FLAGS_KEY);
+  try {
+    localStorage.removeItem(DEBUG_FLAGS_KEY);
+  } catch {
+    // Ignore write errors
+  }
   window.dispatchEvent(new Event(DEBUG_FLAGS_EVENT));
 }
 

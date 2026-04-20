@@ -1,12 +1,14 @@
-import ml, { setWorkerUrl } from "maplibre-gl";
+import ml from "maplibre-gl";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-csp-worker.js?url";
 
 import { BottomInfoControl } from "./BottomInfoControl";
 import { InteractionManager } from "./interaction/InteractionManager";
 import type { MapProps } from "./types";
 import { getDebugFlag } from "@/hooks/debug-flags";
+import { connectMaplibreWorkerLogs } from "@/logger";
 
-setWorkerUrl(maplibreWorkerUrl);
+ml.setWorkerUrl(maplibreWorkerUrl);
+ml.importScriptInWorkers("/maplibre-gl-worker-log-forwarder.js");
 
 const TERRAIN_SOURCE = "plantopo:terrain-dem";
 const TERRAIN_OPTIONS: ml.TerrainSpecification = {
@@ -121,6 +123,8 @@ export class MapManager {
     this._applyInteractive(initialProps);
 
     this._deferredProps = initialProps;
+
+    connectMaplibreWorkerLogs(this._m);
   }
 
   get map(): ml.Map | null {

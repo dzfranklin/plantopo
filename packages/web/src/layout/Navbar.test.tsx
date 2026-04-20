@@ -1,9 +1,7 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { TEST_USER } from "@pt/api/webTestSupport";
-
-import { renderWithProviders } from "../test/render.tsx";
+import { TEST_USER, renderWithProviders } from "../test/render.tsx";
 import { Navbar } from "./Navbar.tsx";
 
 describe("Navbar", () => {

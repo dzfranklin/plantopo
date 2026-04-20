@@ -131,3 +131,30 @@ export function round2(
 ): [number, number] {
   return [round(v[0], precision), round(v[1], precision)];
 }
+
+export const ClientInfoSchema = z.object({
+  userID: z.string().optional(),
+  sessionID: z.string().optional(),
+  clientID: z.string().optional(),
+  clientVersion: z.string().optional(),
+  clientDebugFlags: z.string().optional(),
+  nativeVersion: z.string().optional(),
+  href: z.string().optional(),
+});
+
+export type ClientInfo = z.infer<typeof ClientInfoSchema>;
+
+export const ClientLogEntrySchema = ClientInfoSchema.extend({
+  level: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]),
+  msg: z.string(),
+  ts: z.number(),
+  extra: z.record(z.string(), z.unknown()).optional(),
+});
+
+export type ClientLogEntry = z.infer<typeof ClientLogEntrySchema>;
+
+export const ClientLogsPostBodySchema = z.object({
+  entries: z.array(ClientLogEntrySchema),
+});
+
+export type ClientLogsPostBody = z.infer<typeof ClientLogsPostBodySchema>;

@@ -9,7 +9,7 @@ import { QueryDevtoolsPanel } from "./components/QueryDevtoolsPanel.tsx";
 import { Toaster } from "./components/ui/sonner.tsx";
 import { isUnauthorizedError } from "./errors.ts";
 import { useApiOfflineEffect } from "./hooks/useIsOnline.ts";
-import { logger } from "./logger.ts";
+import { getClientInfo, logger } from "./logger.ts";
 import { AppRoutes } from "./routes.tsx";
 import { TRPCProvider } from "./trpc.ts";
 
@@ -36,7 +36,19 @@ const queryClient = new QueryClient({
 });
 
 const trpcClient = createTRPCClient<AppRouter>({
-  links: [httpBatchLink({ url: "/api/v1/trpc" })],
+  links: [
+    httpBatchLink({
+      url: "/api/v1/trpc",
+      maxURLLength: 2083,
+      maxItems: 10,
+      headers() {
+        const clientInfo = getClientInfo();
+        return {
+          "x-client-info": JSON.stringify(clientInfo),
+        };
+      },
+    }),
+  ],
 });
 
 export function Root() {

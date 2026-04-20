@@ -1,14 +1,12 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 
 import { env } from "./env.js";
-import { logger } from "./logger.js";
-
-const dbLog = logger.child({ module: "db" });
+import { getLog } from "./logger.js";
 
 export const db = drizzle(env.DATABASE_URL, {
   logger: {
     logQuery(query, params) {
-      dbLog.debug({ params }, query);
+      getLog().debug({ query, params }, "Database query");
     },
   },
 });

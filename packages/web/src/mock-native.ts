@@ -6,6 +6,7 @@ if (getDebugFlag("mockNative")) {
 
 export function mockNative(): NativeInterface {
   return {
+    version: () => "0.0.0-mock",
     logout: () => {
       alert("App would log out now");
     },
