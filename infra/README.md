@@ -103,8 +103,6 @@ Add as repo secrets:
   app@box> cat ~/.ssh/plantopo-ci  # copy this as the secret value
   app@box> rm ~/.ssh/plantopo-ci
   ```
-- `WEB_BUILD_ENV` — newline-separated `KEY=value` pairs for vars baked into the
-  frontend bundle (all `VITE_*` vars)
 
 ### Copy the infra files
 
