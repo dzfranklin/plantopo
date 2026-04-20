@@ -66,7 +66,7 @@ function UserMenuDesktop() {
         {mayShowDebug && (
           <DropdownMenuItem
             className="text-sm/relaxed"
-            onClick={() => setDebugFlag("showDebugOptions", true)}>
+            onClick={() => setDebugFlag("openDebugDialog", true)}>
             Debug
           </DropdownMenuItem>
         )}
