@@ -4,7 +4,7 @@ import { cn } from "../cn.ts";
 import { OfflineIndicator } from "../components/OfflineIndicator.tsx";
 import { DebugDialog } from "./DebugDialog.tsx";
 import { MenuSheet } from "./MenuSheet.tsx";
-import { DesktopFooter, MobileFooter, Navbar } from "./Navbar.tsx";
+import { DesktopFooter, MobileBottomNav, Navbar } from "./Navbar.tsx";
 
 export function NavbarLayout({ fullBleed = false }: { fullBleed?: boolean }) {
   return (
@@ -32,7 +32,7 @@ export function NavbarLayout({ fullBleed = false }: { fullBleed?: boolean }) {
         )}
         <Outlet />
       </div>
-      <MobileFooter />
+      <MobileBottomNav />
       {!fullBleed && <DesktopFooter />}
       <DebugDialog />
     </div>

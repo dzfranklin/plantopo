@@ -2,7 +2,13 @@ import { Link, useMatch } from "react-router-dom";
 
 import { signOut, useUser } from "../auth/auth-client";
 import { MenuSheet } from "./MenuSheet";
-import { FOOTER_LINKS, type FooterLink, type NavTab, useNavTabs } from "./nav";
+import {
+  FOOTER_LINKS,
+  type FooterLink,
+  type NavTab,
+  useMobileBottomNavTabs,
+  useNavTabs,
+} from "./nav";
 import { UserAvatar } from "@/auth/UserAvatar";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { Button } from "@/components/ui/button";
@@ -26,7 +32,7 @@ function DesktopNavTab({ to, label }: { to: string; label: string }) {
   );
 }
 
-function MobileNavTab({
+function MobileBottomNavTab({
   to,
   label,
   Icon,
@@ -162,14 +168,14 @@ export function FooterLinkComponent({ link }: { link: FooterLink }) {
   );
 }
 
-export function MobileFooter() {
-  const navTabs = useNavTabs();
+export function MobileBottomNav() {
+  const navTabs = useMobileBottomNavTabs();
   return (
     <nav
       style={{ gridArea: "footer" }}
       className="sticky bottom-0 flex border-t border-gray-200 bg-white sm:hidden">
       {navTabs.map(tab => (
-        <MobileNavTab
+        <MobileBottomNavTab
           key={tab.to}
           to={tab.to}
           label={tab.label}

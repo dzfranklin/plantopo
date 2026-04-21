@@ -15,7 +15,9 @@ import PlanPage from "./plan/PlanPage.tsx";
 import SettingsAccountPage from "./settings/SettingsAccountPage.tsx";
 import SettingsInterfacePage from "./settings/SettingsInterfacePage.tsx";
 import SettingsPage from "./settings/SettingsPage.tsx";
+import MyTracksPage from "./track/MyTracksPage.tsx";
 import RecordTrackPage from "./track/RecordTrackPage.tsx";
+import TrackDetailPage from "./track/TrackDetailPage.tsx";
 
 const DevRoutes = lazy(() => import("./dev/DevRoutes.tsx"));
 
@@ -65,6 +67,8 @@ export function AppRoutes() {
                 <Route path="account" element={<SettingsAccountPage />} />
                 <Route path="interface" element={<SettingsInterfacePage />} />
               </Route>
+              <Route path="/tracks" element={<MyTracksPage />} />
+              <Route path="/track/:trackID" element={<TrackDetailPage />} />
             </Route>
 
             <Route path="/dev/*" element={<DevRoutes />} />

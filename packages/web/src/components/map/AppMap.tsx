@@ -29,7 +29,7 @@ export function AppMap(props: AppMapProps) {
   const trpc = useTRPC();
   const prefs = useUserPrefs();
 
-  const { hash, children, ...forwardedProps } = props;
+  const { hash, children, initialCamera, ...forwardedProps } = props;
 
   const localDefaults = useMemo(() => getLocalDefaults(), []);
   const [selectedLayers, setSelectedLayers] = useState(() => {
@@ -127,7 +127,7 @@ export function AppMap(props: AppMapProps) {
       hash={hash}
       style={style}
       distanceUnit={prefs.distanceUnit}
-      initialCamera={localDefaults.camera}>
+      initialCamera={initialCamera ?? localDefaults.camera}>
       <PointInfoPopup />
       <div className="absolute right-2 bottom-8 z-10">
         <LayerPicker selected={selectedLayers} onSelect={onSelectLayers} />

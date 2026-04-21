@@ -7,6 +7,7 @@ import { MapManagerContext } from "./MapManagerContext";
 import { NavControls } from "./NavControls";
 import { getHashParam, setHashParam } from "./hashParams";
 import type { MapProps } from "./types";
+import { cn } from "@/cn";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,7 +19,7 @@ import {
 import { useDebugFlag } from "@/hooks/debug-flags";
 
 export function MapView(props: MapProps) {
-  const { children, ...forwardedProps } = props;
+  const { children, className, ...forwardedProps } = props;
   const mayShowDebug = useDebugFlag("showDebugOptions");
   const managerRef = useRef<MapManager | null>(null);
   const [manager, setManager] = useState<MapManager | null>(null);
@@ -77,7 +78,7 @@ export function MapView(props: MapProps) {
 
   return (
     <MapManagerContext.Provider value={manager}>
-      <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      <div className={cn("relative h-full w-full", className)}>
         <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
         {interactive && manager && (
           <NavControls

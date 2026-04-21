@@ -7,7 +7,7 @@ export interface MapProps {
   interactive?: boolean;
   hash?: boolean;
   style?: ml.StyleSpecification;
-  initialCamera?: ml.CameraOptions | string;
+  initialCamera?: ml.CameraOptions | string | "fit";
   distanceUnit?: "km" | "mi";
   /** GeoJSON data to display on the map.
    * Supports [simplestyle](https://github.com/mapbox/simplestyle-spec/tree/master/1.1.0). */
@@ -17,6 +17,7 @@ export interface MapProps {
   /** If provided, terrain is forced on/off and no terrain toggle button is shown. */
   terrain?: boolean;
   children?: React.ReactNode;
+  className?: string;
 }
 
 export const SelectedLayersSchema = z.object({

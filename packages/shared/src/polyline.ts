@@ -1,7 +1,7 @@
 // From <https://github.com/valhalla/web-app/blob/9d0f14372c18b60fc1da015be75e6d7d565ce2d6/src/utils/polyline.ts> (MIT)
 export function decodePolyline(
   str: string,
-  precision: number = 6,
+  precision: number = 5,
 ): [number, number][] {
   // Handle invalid inputs
   if (!str || typeof str !== "string") {

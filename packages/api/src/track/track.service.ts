@@ -15,13 +15,13 @@ export const RecordedTrackSummarySchema = z.object({
   createdAt: z.number(), // epoch ms
   distanceM: z.number().nullable(), // null if no path
   durationMs: z.number().nullable(), // null if no endTime
-  summaryPolyline: z.string().nullable(), // simplified ~100m tolerance, for thumbnail display
+  summaryPolyline: z.string(), // simplified ~100m tolerance, for thumbnail display
 });
 
 export type RecordedTrackSummary = z.infer<typeof RecordedTrackSummarySchema>;
 
 export const RecordedTrackSchema = RecordedTrackSummarySchema.extend({
-  polyline: z.string().nullable(), // full resolution, for map/detail view
+  polyline: z.string(), // full resolution, for map/detail view
   pointTimestamps: z.array(z.number()),
   pointSpeed: z.array(z.number().nullable()).nullable(),
   pointSpeedAccuracy: z.array(z.number().nullable()).nullable(),
@@ -144,7 +144,7 @@ export async function getRecordedTrack(
 
   return {
     ...toSummary(row),
-    polyline: row.polyline,
+    polyline: row.polyline!,
     pointTimestamps: row.pointTimestamps,
     pointSpeed: row.pointSpeed,
     pointSpeedAccuracy: row.pointSpeedAccuracy,
@@ -179,7 +179,7 @@ export async function getRecordedTrackWithPointDetail(
 
   return {
     ...toSummary(row),
-    polyline: row.polyline,
+    polyline: row.polyline!,
     pointTimestamps: row.pointTimestamps,
     pointSpeed: row.pointSpeed,
     pointSpeedAccuracy: row.pointSpeedAccuracy,
@@ -209,6 +209,6 @@ function toSummary(row: {
     createdAt: row.createdAt.getTime(),
     distanceM: row.distanceM,
     durationMs: row.durationMs,
-    summaryPolyline: row.summaryPolyline,
+    summaryPolyline: row.summaryPolyline!,
   };
 }

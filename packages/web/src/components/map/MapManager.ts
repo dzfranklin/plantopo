@@ -1,3 +1,4 @@
+import { bbox } from "@turf/bbox";
 import ml from "maplibre-gl";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-csp-worker.js?url";
 
@@ -27,10 +28,12 @@ export class MapManager {
   private _deferredProps: MapProps | null = null;
   onCameraChangeIdle: (() => void) | undefined;
   private _cameraChanged = false;
+  private _initialCameraFit = false;
 
   private _lastStyleDeps: unknown[] | undefined;
   private _lastInteractiveDeps: unknown[] | undefined;
   private _lastGeojsonDeps: unknown[] | undefined;
+  private _lastFitDeps: unknown[] | undefined;
 
   private _onError = (e: ml.ErrorEvent) =>
     console.error("[MapManager]", e.error);
@@ -73,7 +76,9 @@ export class MapManager {
     container.appendChild(inner);
 
     let initialCamera: ml.CameraOptions = {};
-    if (typeof initialProps.initialCamera === "string") {
+    if (initialProps.initialCamera === "fit") {
+      this._initialCameraFit = true;
+    } else if (typeof initialProps.initialCamera === "string") {
       initialCamera = MapManager.deserializeCamera(initialProps.initialCamera);
     } else if (initialProps.initialCamera) {
       initialCamera = initialProps.initialCamera;
@@ -254,6 +259,7 @@ export class MapManager {
     const didChangeStyle = this._applyStyle(props);
     this._applyInteractive(props);
     this._applyGeojson(props, didChangeStyle);
+    this._applyFit(props);
     this._bottomInfoControl!.setDistanceUnit(props.distanceUnit);
   }
 
@@ -292,17 +298,52 @@ export class MapManager {
 
   private _applyGeojson({ geojson }: MapProps, didChangeStyle: boolean) {
     if (!this._m) return;
-    const lastDeps = this._lastGeojsonDeps;
-    const deps = [geojson, didChangeStyle];
-    this._lastGeojsonDeps = deps;
-    if (this._depsEq(lastDeps, deps)) return;
-    this._trace("applying", { geojson, didChangeStyle });
 
     const source = this._m.getSource("plantopo:geojson") as
       | ml.GeoJSONSource
       | undefined;
+
+    const lastDeps = this._lastGeojsonDeps;
+    const deps = [geojson, didChangeStyle, source];
+    this._lastGeojsonDeps = deps;
+    if (this._depsEq(lastDeps, deps)) return;
+    this._trace("applying", { geojson, didChangeStyle });
+
     if (!source) return;
-    source.setData(geojson ?? { type: "FeatureCollection", features: [] });
+    source.setData(buildGeojsonSourceData(geojson));
+  }
+
+  private _applyFit({ geojson }: MapProps) {
+    if (!this._m) return;
+    this._trace({
+      geojson,
+      initialCameraFit: this._initialCameraFit,
+      cameraChanged: this._cameraChanged,
+    });
+    if (!this._initialCameraFit) return;
+    if (this._cameraChanged) return; // don't override user interaction
+
+    const lastDeps = this._lastFitDeps;
+    const deps = [geojson];
+    this._lastFitDeps = deps;
+    if (this._depsEq(lastDeps, deps)) return;
+    this._trace("applying fit", { geojson });
+
+    if (
+      !geojson ||
+      (geojson.type === "FeatureCollection" && geojson.features.length === 0)
+    ) {
+      return;
+    }
+
+    const [minLng, minLat, maxLng, maxLat] = bbox(geojson);
+    this._m.fitBounds(
+      [
+        [minLng, minLat],
+        [maxLng, maxLat],
+      ],
+      { padding: 20, animate: false },
+    );
   }
 
   private _depsEq(lastDeps: unknown[] | undefined, deps: unknown[]): boolean {
@@ -356,5 +397,27 @@ function buildStyle(props: MapProps): ml.StyleSpecification {
   const hasTerrainSource = TERRAIN_SOURCE in (base.sources ?? {});
   const terrain =
     props.terrain && hasTerrainSource ? TERRAIN_OPTIONS : undefined;
-  return { ...base, terrain };
+  return {
+    ...base,
+    terrain,
+    sources: {
+      ...base.sources,
+      "plantopo:geojson": {
+        type: "geojson",
+        data: buildGeojsonSourceData(props.geojson),
+      },
+    },
+  };
+}
+
+function buildGeojsonSourceData(
+  geojson: MapProps["geojson"],
+): GeoJSON.FeatureCollection {
+  if (!geojson) {
+    return { type: "FeatureCollection", features: [] };
+  } else if (geojson.type === "FeatureCollection") {
+    return geojson;
+  } else {
+    return { type: "FeatureCollection", features: [geojson] };
+  }
 }
