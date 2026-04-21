@@ -78,37 +78,32 @@ export function PointInfoPopup() {
   } | null>(null);
 
   useEffect(() => {
-    if (!manager) return;
-    let clickTimer: ReturnType<typeof setTimeout> | null = null;
-    const sub = manager.on("click", e => {
-      setPosition(null);
-      if (clickTimer) {
-        clearTimeout(clickTimer);
-        clickTimer = null;
-        return;
+    if (!manager || !manager.map) return;
+
+    const map = manager.map;
+    const canvas = map.getCanvas();
+
+    const subscription = (e: PointerEvent) => {
+      e.preventDefault();
+      const { lng, lat } = map.unproject([e.offsetX, e.offsetY]);
+
+      let osGrid: OSGridRef | null = null;
+      try {
+        osGrid = new osgridref.LatLon(lat, lng).toOsGrid();
+      } catch (_err) {
+        // ignore
       }
-      clickTimer = setTimeout(() => {
-        clickTimer = null;
-        const lng = e.lngLat.lng;
-        const lat = e.lngLat.lat;
 
-        let osGrid: OSGridRef | null = null;
-        try {
-          osGrid = new osgridref.LatLon(lat, lng).toOsGrid();
-        } catch (_err) {
-          // ignore
-        }
+      setPosition({
+        point: [lng, lat],
+        osGrid,
+        camera: manager.getCamera(),
+      });
+    };
+    canvas.addEventListener("contextmenu", subscription);
 
-        setPosition({
-          point: [lng, lat],
-          osGrid,
-          camera: manager.getCamera(),
-        });
-      }, 300);
-    });
     return () => {
-      if (clickTimer) clearTimeout(clickTimer);
-      sub.unsubscribe();
+      canvas.removeEventListener("contextmenu", subscription);
     };
   }, [manager]);
 
