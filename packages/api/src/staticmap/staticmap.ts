@@ -109,7 +109,15 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
   drawFeatures(ctx, zoom, xCenter, yCenter, width, height, tileSize, features);
   if (attribution) drawAttribution(ctx, width, height, attribution);
 
-  return canvas.toBuffer("image/png", { resolution: retina ? 144 : 72 });
+  const resolution = retina ? 144 : 72;
+
+  return new Promise((resolve, reject) => {
+    canvas.toBuffer(
+      (err, buf) => (err ? reject(err) : resolve(buf)),
+      "image/png",
+      { resolution },
+    );
+  });
 }
 
 async function drawTiles(
