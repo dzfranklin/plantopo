@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
+import { DistanceView, DurationView, InstantView } from "@/components/format";
 import { useTRPC } from "@/trpc";
 
 export default function MyTracksPage() {
@@ -17,10 +18,20 @@ export default function MyTracksPage() {
             <li key={track.id}>
               <Link
                 to={`/track/${track.id}`}
-                className="block rounded border p-2 hover:bg-gray-50">
-                <p className="font-semibold">{track.name}</p>
-                <p className="text-sm text-gray-600">
-                  Recorded at {new Date(track.createdAt).toLocaleString()}
+                className="flex rounded border p-2 text-sm hover:bg-gray-50">
+                <p className="grow truncate">
+                  {track.name ? (
+                    <span className="font-medium text-gray-900">
+                      {track.name}
+                    </span>
+                  ) : (
+                    <span className="text-gray-500 italic">Unnamed Track</span>
+                  )}
+                </p>
+                <p className="text-gray-600">
+                  <InstantView date={track.startTime} /> &bull;{" "}
+                  <DistanceView m={track.distanceM} /> &bull;{" "}
+                  <DurationView ms={track.durationMs} />
                 </p>
               </Link>
             </li>

@@ -11,10 +11,10 @@ export const RecordedTrackSummarySchema = z.object({
   id: z.string(),
   name: z.string().nullable(),
   startTime: z.number(), // epoch ms
-  endTime: z.number().nullable(), // epoch ms
+  endTime: z.number(), // epoch ms
   createdAt: z.number(), // epoch ms
-  distanceM: z.number().nullable(), // null if no path
-  durationMs: z.number().nullable(), // null if no endTime
+  distanceM: z.number(),
+  durationMs: z.number(),
   summaryPolyline: z.string(), // simplified ~100m tolerance, for thumbnail display
 });
 
@@ -92,19 +92,17 @@ const summaryColumns = {
   startTime: recordedTrack.startTime,
   endTime: recordedTrack.endTime,
   createdAt: recordedTrack.createdAt,
-  distanceM: sql<number | null>`ST_Length(${recordedTrack.path}::geography)`.as(
+  distanceM: sql<number>`ST_Length(${recordedTrack.path}::geography)`.as(
     "distance_m",
   ),
-  durationMs: sql<
-    number | null
-  >`(EXTRACT(EPOCH FROM (${recordedTrack.endTime} - ${recordedTrack.startTime})) * 1000)::float8`.as(
-    "duration_ms",
-  ),
-  summaryPolyline: sql<
-    string | null
-  >`ST_AsEncodedPolyline(ST_Simplify(${recordedTrack.path}, 0.001))`.as(
-    "summary_polyline",
-  ),
+  durationMs:
+    sql<number>`(EXTRACT(EPOCH FROM (${recordedTrack.endTime} - ${recordedTrack.startTime})) * 1000)::float8`.as(
+      "duration_ms",
+    ),
+  summaryPolyline:
+    sql<string>`ST_AsEncodedPolyline(ST_Simplify(${recordedTrack.path}, 0.001))`.as(
+      "summary_polyline",
+    ),
 };
 
 export async function listRecordedTracks(
@@ -193,17 +191,17 @@ function toSummary(row: {
   id: string;
   name: string | null;
   startTime: Date;
-  endTime: Date | null;
+  endTime: Date;
   createdAt: Date;
-  distanceM: number | null;
-  durationMs: number | null;
+  distanceM: number;
+  durationMs: number;
   summaryPolyline: string | null;
 }): RecordedTrackSummary {
   return {
     id: row.id,
     name: row.name,
     startTime: row.startTime.getTime(),
-    endTime: row.endTime?.getTime() ?? null,
+    endTime: row.endTime.getTime(),
     createdAt: row.createdAt.getTime(),
     distanceM: row.distanceM,
     durationMs: row.durationMs,

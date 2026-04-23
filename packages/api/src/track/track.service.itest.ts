@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type LocalRecordedTrack } from "@pt/shared";
+import { type LocalRecordedTrack, decodePolyline } from "@pt/shared";
 
 import { TEST_USER } from "../test/setupDb.js";
 import {
@@ -80,6 +80,30 @@ describe("uploadedRecordedTrack", () => {
     await uploadedRecordedTrack(TEST_USER.id, BASE_TRACK);
     const list = await listRecordedTracks(TEST_USER.id);
     expect(list).toHaveLength(1);
+  });
+
+  it("accepts real input", async () => {
+    // From emulator running <https://github.com/dzfranklin/plantopo-android/commit/36f56ecfab70875ecf24d7b733ff1e0effe83140>
+    const input =
+      '{"id":"dd5e15d0-c30c-4846-935b-134328027c74","name":null,"startTime":1776935344352,"endTime":1776935351363,"points":[{"timestamp":1776935348691,"latitude":55.8948183,"longitude":-3.2617283,"elevation":0,"horizontalAccuracy":5,"verticalAccuracy":0.5,"speed":0.98773247,"speedAccuracy":0.5,"bearing":207,"bearingAccuracy":30},{"timestamp":1776935349690,"latitude":55.8948116,"longitude":-3.2617363,"elevation":0,"horizontalAccuracy":5,"verticalAccuracy":0.5,"speed":0.98773277,"speedAccuracy":0.5,"bearing":207.00015,"bearingAccuracy":30},{"timestamp":1776935350690,"latitude":55.8948035,"longitude":-3.2617433,"elevation":0,"horizontalAccuracy":5,"verticalAccuracy":0.5,"speed":0.9877347,"speedAccuracy":0.5,"bearing":206.99995,"bearingAccuracy":30}]}';
+    await uploadedRecordedTrack(TEST_USER.id, JSON.parse(input));
+    const result = await getRecordedTrack(
+      TEST_USER.id,
+      "dd5e15d0-c30c-4846-935b-134328027c74",
+    );
+    expect(result).not.toBeNull();
+    expect(result!.id).toBe("dd5e15d0-c30c-4846-935b-134328027c74");
+    expect(result!.name).toBeNull();
+    expect(result!.startTime).toBe(1776935344352);
+    expect(result!.endTime).toBe(1776935351363);
+    expect(result!.pointTimestamps).toEqual([
+      1776935348691, 1776935349690, 1776935350690,
+    ]);
+    expect(result!.pointSpeed).toEqual([0.98773247, 0.98773277, 0.9877347]);
+    expect(result!.pointSpeedAccuracy).toEqual([0.5, 0.5, 0.5]);
+    expect(result!.summaryPolyline).toBeTruthy();
+    expect(result!.distanceM).toBeGreaterThan(0);
+    expect(decodePolyline(result!.polyline!)).toHaveLength(3);
   });
 });
 
