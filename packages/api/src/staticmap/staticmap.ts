@@ -3,10 +3,9 @@ import { type CanvasRenderingContext2D, createCanvas, loadImage } from "canvas";
 import type GeoJSON from "geojson";
 import z from "zod";
 
-import { env } from "../env.js";
 import { type TileFetcher, fetchTile } from "../tile-cache.js";
 
-const RasterSourceSchema = z.object({
+export const RasterSourceSchema = z.object({
   tiles: z.string(),
   tileSize: z.number().optional(), // default 256
   attribution: z.string().optional(),
@@ -56,8 +55,6 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
   let source: RasterSource;
   if (opts.source) {
     source = opts.source;
-  } else if (env.STATICMAP_SOURCE) {
-    source = RasterSourceSchema.parse(JSON.parse(env.STATICMAP_SOURCE));
   } else {
     source = OSM_SOURCE;
   }
