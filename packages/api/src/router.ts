@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 
 import { elevationRouter } from "./elevation/elevation.router.js";
+import { exportRouter } from "./export/export.router.js";
 import { geocoderRouter } from "./geocoder/geocoder.router.js";
 import { mapRouter } from "./map/map.router.js";
 import { planRouter } from "./plan/plan.router.js";
@@ -25,6 +26,7 @@ export const appRouter = router({
   plan: planRouter,
   elevation: elevationRouter,
   geocoder: geocoderRouter,
+  export: exportRouter,
   ...(process.env.NODE_ENV === "test" ? { test: testRouter } : {}),
 });
 

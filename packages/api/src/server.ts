@@ -12,6 +12,7 @@ import { registerAuthRoutes } from "./auth/auth.routes.js";
 import { registerClientLogsRoutes } from "./client-logs.routes.js";
 import { registerDevNativeAssetsRoutes } from "./dev-native-assets.routes.js";
 import { env } from "./env.js";
+import { registerExportRoutes } from "./export/export.routes.js";
 import { logger } from "./logger.js";
 import { requestContextMiddleware } from "./request-context-middleware.js";
 import { requestContext } from "./request-context.js";
@@ -52,6 +53,7 @@ app.all("/api/v1/auth/*path", toNodeHandler(auth));
 registerAuthRoutes(app);
 registerStravaRoutes(app);
 registerClientLogsRoutes(app);
+registerExportRoutes(app);
 
 app.use(
   "/api/v1/trpc",

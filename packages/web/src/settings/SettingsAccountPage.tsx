@@ -15,6 +15,7 @@ import { providersInfo } from "@/auth/providers";
 import { authKeys } from "@/auth/queryKeys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import download from "@/download";
 import { useTRPC } from "@/trpc";
 import { usePageTitle } from "@/usePageTitle";
 
@@ -425,6 +426,18 @@ export default function SettingsAccountPage() {
         </ul>
       </Section>
 
+      <Section title="Download your data">
+        <p className="text-sm">
+          The export does not yet include all your data. Please email me at{" "}
+          <a href="mailto:daniel@plantopo.com" className="link">
+            daniel@plantopo.com
+          </a>{" "}
+          if you would like me to manually export your data.
+        </p>
+
+        <GenerateExportButton />
+      </Section>
+
       <Section
         title="Danger zone"
         description="Permanently delete your account and all associated data. This cannot be undone.">
@@ -438,5 +451,36 @@ export default function SettingsAccountPage() {
         </p>
       </Section>
     </div>
+  );
+}
+
+function GenerateExportButton() {
+  const trpc = useTRPC();
+  const mutation = useMutation(
+    trpc.export.generate.mutationOptions({
+      onSuccess: async ({ downloadURL, downloadName }) => {
+        download(downloadURL, downloadName);
+      },
+    }),
+  );
+
+  if (mutation.isSuccess) {
+    return (
+      <Button
+        onClick={() =>
+          download(mutation.data.downloadURL, mutation.data.downloadName)
+        }>
+        Download export
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      className="mt-3"
+      onClick={() => mutation.mutate()}
+      disabled={mutation.isPending}>
+      {mutation.isPending ? "Generating export..." : "Generate export"}
+    </Button>
   );
 }
