@@ -1,7 +1,6 @@
 // Based on <https://github.com/komoot/staticmap/>
-import { createCanvas } from "canvas";
+import { type CanvasRenderingContext2D, createCanvas, loadImage } from "canvas";
 import type GeoJSON from "geojson";
-import sharp from "sharp";
 import z from "zod";
 
 import { env } from "../env.js";
@@ -85,7 +84,14 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
     yCenter = latToY((minLat + maxLat) / 2, zoom);
   }
 
-  const tileComposites = await buildTileLayer(
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+
+  await drawTiles(
+    ctx,
     zoom,
     xCenter,
     yCenter,
@@ -95,37 +101,14 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
     urlTemplate,
     provider,
   );
+  drawFeatures(ctx, zoom, xCenter, yCenter, width, height, tileSize, features);
+  if (attribution) drawAttribution(ctx, width, height, attribution);
 
-  const svgBuf = buildOverlaySVG(
-    zoom,
-    xCenter,
-    yCenter,
-    width,
-    height,
-    tileSize,
-    features,
-    attribution,
-  );
-
-  const composites: sharp.OverlayOptions[] = [
-    ...tileComposites,
-    { input: svgBuf, top: 0, left: 0 },
-  ];
-
-  return sharp({
-    create: {
-      width,
-      height,
-      channels: 3,
-      background: { r: 255, g: 255, b: 255 },
-    },
-  })
-    .composite(composites)
-    .png()
-    .toBuffer();
+  return canvas.toBuffer("image/png");
 }
 
-async function buildTileLayer(
+async function drawTiles(
+  ctx: CanvasRenderingContext2D,
   zoom: number,
   xCenter: number,
   yCenter: number,
@@ -134,7 +117,7 @@ async function buildTileLayer(
   tileSize: number,
   urlTemplate: string,
   provider: TileFetcher,
-): Promise<sharp.OverlayOptions[]> {
+): Promise<void> {
   const xMin = Math.floor(xCenter - (0.5 * width) / tileSize);
   const yMin = Math.floor(yCenter - (0.5 * height) / tileSize);
   const xMax = Math.ceil(xCenter + (0.5 * width) / tileSize);
@@ -142,57 +125,34 @@ async function buildTileLayer(
 
   const n = Math.pow(2, zoom);
 
-  const tileMap = new Map<
-    string,
-    { tileX: number; tileY: number; canvasLeft: number; canvasTop: number }
-  >();
+  const tiles: {
+    tileX: number;
+    tileY: number;
+    dstLeft: number;
+    dstTop: number;
+  }[] = [];
   for (let x = xMin; x < xMax; x++) {
     for (let y = yMin; y < yMax; y++) {
       const tileX = ((x % n) + n) % n;
       const tileY = ((y % n) + n) % n;
-      const canvasLeft = Math.round((x - xCenter) * tileSize + width / 2);
-      const canvasTop = Math.round((y - yCenter) * tileSize + height / 2);
-      tileMap.set(`${x}/${y}`, { tileX, tileY, canvasLeft, canvasTop });
+      const dstLeft = Math.round((x - xCenter) * tileSize + width / 2);
+      const dstTop = Math.round((y - yCenter) * tileSize + height / 2);
+      tiles.push({ tileX, tileY, dstLeft, dstTop });
     }
   }
 
-  const entries = await Promise.all(
-    Array.from(tileMap.entries()).map(
-      async ([, { tileX, tileY, canvasLeft, canvasTop }]) => {
-        const buf = await provider(urlTemplate, zoom, tileX, tileY);
-        if (!buf) return null;
-
-        const srcLeft = Math.max(0, -canvasLeft);
-        const srcTop = Math.max(0, -canvasTop);
-        const dstLeft = Math.max(0, canvasLeft);
-        const dstTop = Math.max(0, canvasTop);
-        const visW = Math.min(tileSize - srcLeft, width - dstLeft);
-        const visH = Math.min(tileSize - srcTop, height - dstTop);
-
-        if (visW <= 0 || visH <= 0) return null;
-
-        // Always extract to the visible rectangle — sharp requires composite
-        // inputs to be no larger than the canvas in either dimension.
-        let input: Buffer;
-        if (srcLeft > 0 || srcTop > 0 || visW < tileSize || visH < tileSize) {
-          input = await sharp(buf)
-            .extract({ left: srcLeft, top: srcTop, width: visW, height: visH })
-            .toBuffer();
-        } else {
-          input = buf;
-        }
-
-        return { input, top: dstTop, left: dstLeft };
-      },
-    ),
+  await Promise.all(
+    tiles.map(async ({ tileX, tileY, dstLeft, dstTop }) => {
+      const buf = await provider(urlTemplate, zoom, tileX, tileY);
+      if (!buf) return;
+      const img = await loadImage(buf);
+      ctx.drawImage(img, dstLeft, dstTop, tileSize, tileSize);
+    }),
   );
-
-  return entries.filter(
-    (e): e is NonNullable<typeof e> => e !== null,
-  ) satisfies sharp.OverlayOptions[];
 }
 
-function buildOverlaySVG(
+function drawFeatures(
+  ctx: CanvasRenderingContext2D,
   zoom: number,
   xCenter: number,
   yCenter: number,
@@ -200,61 +160,62 @@ function buildOverlaySVG(
   height: number,
   tileSize: number,
   features: Feature[],
-  attribution?: string,
-): Buffer {
+): void {
   const toPx = (pos: GeoJSON.Position): [number, number] => [
     xToPx(lonToX(pos[0]!, zoom), xCenter, width, tileSize),
     yToPx(latToY(pos[1]!, zoom), yCenter, height, tileSize),
   ];
 
-  const pts = (coords: GeoJSON.Position[]) =>
-    coords
-      .map(c =>
-        toPx(c)
-          .map(v => v.toFixed(2))
-          .join(","),
-      )
-      .join(" ");
-
-  const sanitize = (s: string) => String(s).replace(/[<>"'&]/g, "");
-
-  const polygons = features.filter(
-    (f): f is GeoJSON.Feature<GeoJSON.Polygon, PolygonProperties> =>
-      f.geometry.type === "Polygon",
-  );
-  const lines = features.filter(
-    (f): f is GeoJSON.Feature<GeoJSON.LineString, LineStringProperties> =>
-      f.geometry.type === "LineString",
-  );
-  const points = features.filter(
-    (f): f is GeoJSON.Feature<GeoJSON.Point, PointProperties> =>
-      f.geometry.type === "Point",
-  );
-
-  const polygonSvg = polygons
-    .map(f => {
-      const p = f.properties ?? {};
-      const fill = sanitize(p.fill ?? "#555555");
+  for (const f of features) {
+    if (f.geometry.type === "Polygon") {
+      const p =
+        (f as GeoJSON.Feature<GeoJSON.Polygon, PolygonProperties>).properties ??
+        {};
+      const fill = p.fill ?? "#555555";
       const fillOpacity = p["fill-opacity"] ?? 0.6;
-      const stroke = sanitize(p.stroke ?? "#555555");
+      const stroke = p.stroke ?? "#555555";
       const strokeWidth = p["stroke-width"] ?? 2;
-      return `<polygon points="${pts(f.geometry.coordinates[0]!)}" fill="${fill}" fill-opacity="${fillOpacity}" stroke="${stroke}" stroke-width="${strokeWidth}"/>`;
-    })
-    .join("\n  ");
+      const coords = f.geometry.coordinates[0]!;
 
-  const lineSvg = lines
-    .map(f => {
-      const p = f.properties ?? {};
-      const stroke = sanitize(p.stroke ?? "#555555");
+      ctx.beginPath();
+      const [startX, startY] = toPx(coords[0]!);
+      ctx.moveTo(startX, startY);
+      for (let i = 1; i < coords.length; i++) {
+        const [px, py] = toPx(coords[i]!);
+        ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.globalAlpha = fillOpacity;
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = strokeWidth;
+      ctx.stroke();
+    } else if (f.geometry.type === "LineString") {
+      const p =
+        (f as GeoJSON.Feature<GeoJSON.LineString, LineStringProperties>)
+          .properties ?? {};
+      const stroke = p.stroke ?? "#555555";
       const strokeWidth = p["stroke-width"] ?? 2;
-      return `<polyline points="${pts(f.geometry.coordinates)}" stroke="${stroke}" stroke-width="${strokeWidth}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
-    })
-    .join("\n  ");
+      const coords = f.geometry.coordinates;
 
-  const pointSvg = points
-    .map(f => {
-      const p = f.properties ?? {};
-      const color = sanitize(p["marker-color"] ?? "#7e7e7e");
+      ctx.beginPath();
+      const [startX, startY] = toPx(coords[0]!);
+      ctx.moveTo(startX, startY);
+      for (let i = 1; i < coords.length; i++) {
+        const [px, py] = toPx(coords[i]!);
+        ctx.lineTo(px, py);
+      }
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = strokeWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.stroke();
+    } else if (f.geometry.type === "Point") {
+      const p =
+        (f as GeoJSON.Feature<GeoJSON.Point, PointProperties>).properties ?? {};
+      const color = p["marker-color"] ?? "#7e7e7e";
       const size = p["marker-size"];
       const r =
         size === "small"
@@ -265,38 +226,40 @@ function buildOverlaySVG(
               ? size
               : 7;
       const [cx, cy] = toPx(f.geometry.coordinates);
-      return `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${r}" fill="${color}"/>`;
-    })
-    .join("\n  ");
 
-  let attributionSvg = "";
-  if (attribution) {
-    const text = sanitize(attribution);
-    const fontSize = 10;
-    const padX = 4;
-    const padY = 2;
-    const ctx = createCanvas(1, 1).getContext("2d");
-    ctx.font = `${fontSize}px sans-serif`;
-    const textW = ctx.measureText(text).width;
-    const boxW = textW + padX * 2;
-    const boxH = fontSize + padY * 2;
-    const boxX = width - boxW;
-    const boxY = height - boxH;
-    const textX = width - padX;
-    const textY = height - padY;
-    attributionSvg =
-      `<rect x="${boxX.toFixed(2)}" y="${boxY.toFixed(2)}" width="${boxW.toFixed(2)}" height="${boxH.toFixed(2)}" rx="2" fill="#f2f2f2"/>` +
-      `<text x="${textX}" y="${textY}" font-size="${fontSize}" font-family="sans-serif" fill="#1f1f1f" text-anchor="end">${text}</text>`;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
   }
+}
 
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-  ${polygonSvg}
-  ${lineSvg}
-  ${pointSvg}
-  ${attributionSvg}
-</svg>`;
+function drawAttribution(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  attribution: string,
+): void {
+  const fontSize = 10;
+  const padX = 4;
+  const padY = 2;
 
-  return Buffer.from(svg);
+  ctx.font = `${fontSize}px Arial sans-serif`;
+  const textW = ctx.measureText(attribution).width;
+  const boxW = textW + padX * 2;
+  const boxH = fontSize + padY * 2;
+  const boxX = width - boxW;
+  const boxY = height - boxH;
+
+  ctx.fillStyle = "#f2f2f2";
+  ctx.beginPath();
+  ctx.roundRect(boxX, boxY, boxW, boxH, [2, 0, 0, 0]);
+  ctx.fill();
+
+  ctx.fillStyle = "#1f1f1f";
+  ctx.textBaseline = "top";
+  ctx.fillText(attribution, boxX + padX, boxY + padY);
 }
 
 function featureExtent(
