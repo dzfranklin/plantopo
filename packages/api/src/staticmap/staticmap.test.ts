@@ -5,7 +5,7 @@ import { PNG } from "pngjs";
 import { assert, describe, expect, it } from "vitest";
 
 import type { TileFetcher } from "../tile-cache.js";
-import { type StaticMapOptions, renderStaticMap } from "./staticmap.js";
+import { renderStaticMap } from "./staticmap.js";
 
 const FIXTURES = join(import.meta.dirname, "test-fixtures");
 const SNAPSHOTS = join(FIXTURES, "snapshots");
@@ -89,12 +89,12 @@ async function expectMatchesSnapshot(
   }
 }
 
-const BASE_OPTS: StaticMapOptions = {
+const BASE_OPTS = {
   width: 300,
   height: 200,
   source: { tiles: OSM_TEMPLATE },
   tileProvider,
-};
+} as const;
 
 describe("renderStaticMap", () => {
   it("renders without error given valid source and no features", async () => {
@@ -142,6 +142,20 @@ describe("renderStaticMap", () => {
         tileProvider,
       }),
     ).rejects.toThrow("cannot render empty map");
+  });
+
+  it("retina option doubles resolution and scale", async () => {
+    const buf = await renderStaticMap({
+      ...BASE_OPTS,
+      width: 300,
+      height: 200,
+      zoom: 10,
+      center: LONDON_CENTER,
+      retina: true,
+    });
+    const img = PNG.sync.read(buf);
+    expect(img.width).toBe(600);
+    expect(img.height).toBe(400);
   });
 
   describe("snapshots", () => {
@@ -256,6 +270,75 @@ describe("renderStaticMap", () => {
         ],
       });
       await expectMatchesSnapshot(buf, "attribution");
+    });
+
+    it("renders retina", async () => {
+      const buf = await renderStaticMap({
+        ...BASE_OPTS,
+        width: 200,
+        height: 100,
+        retina: true,
+        source: {
+          ...BASE_OPTS.source,
+          attribution: "© OpenStreetMap",
+        },
+        features: [
+          {
+            type: "Feature" as const,
+            geometry: {
+              type: "Polygon" as const,
+              coordinates: [
+                [
+                  [-0.3, 51.45],
+                  [-0.05, 51.45],
+                  [-0.05, 51.57],
+                  [-0.3, 51.57],
+                  [-0.3, 51.45],
+                ],
+              ],
+            },
+            properties: {
+              fill: "#457b9d",
+              "fill-opacity": 0.4,
+              stroke: "#1d3557",
+              "stroke-width": 2,
+            },
+          },
+          {
+            type: "Feature" as const,
+            geometry: {
+              type: "LineString" as const,
+              coordinates: [
+                [-0.35, 51.45],
+                [-0.1, 51.55],
+                [0.0, 51.4],
+              ],
+            },
+            properties: { stroke: "#ffffff", "stroke-width": 8 },
+          },
+          {
+            type: "Feature" as const,
+            geometry: {
+              type: "LineString" as const,
+              coordinates: [
+                [-0.35, 51.45],
+                [-0.1, 51.55],
+                [0.0, 51.4],
+              ],
+            },
+            properties: { stroke: "#e63946", "stroke-width": 4 },
+          },
+          {
+            type: "Feature" as const,
+            geometry: { type: "Point" as const, coordinates: LONDON_CENTER },
+            properties: {
+              "marker-color": "#e63946",
+              "marker-size": "large" as const,
+            },
+          },
+        ],
+      });
+      await expectMatchesSnapshot(buf, "retina");
     });
   });
 });

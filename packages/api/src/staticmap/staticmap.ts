@@ -48,6 +48,7 @@ export type StaticMapOptions = {
   zoom?: number; // auto-calculated if omitted
   center?: GeoJSON.Position; // [lng, lat]; auto-calculated from features if omitted
   features?: Feature[];
+  retina?: boolean; // render at 2x resolution; output is 2*width x 2*height
   tileProvider?: TileFetcher; // injectable for testing
 };
 
@@ -66,6 +67,11 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
   const provider = opts.tileProvider ?? fetchTile;
   const { width, height, features = [] } = opts;
   const padding = opts.padding ?? 10;
+  const retina = opts.retina ?? false;
+  const scale = retina ? 2 : 1;
+
+  // Resolve retina tile URL: replace {r} placeholder with "@2x" or ""
+  const resolvedUrlTemplate = urlTemplate.replace("{r}", retina ? "@2x" : "");
 
   const zoom =
     opts.zoom ?? calculateZoom(features, width, height, tileSize, padding);
@@ -84,8 +90,10 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
     yCenter = latToY((minLat + maxLat) / 2, zoom);
   }
 
-  const canvas = createCanvas(width, height);
+  const canvas = createCanvas(width * scale, height * scale);
   const ctx = canvas.getContext("2d");
+
+  if (retina) ctx.scale(2, 2);
 
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
@@ -98,13 +106,13 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
     width,
     height,
     tileSize,
-    urlTemplate,
+    resolvedUrlTemplate,
     provider,
   );
   drawFeatures(ctx, zoom, xCenter, yCenter, width, height, tileSize, features);
   if (attribution) drawAttribution(ctx, width, height, attribution);
 
-  return canvas.toBuffer("image/png");
+  return canvas.toBuffer("image/png", { resolution: retina ? 144 : 72 });
 }
 
 async function drawTiles(
