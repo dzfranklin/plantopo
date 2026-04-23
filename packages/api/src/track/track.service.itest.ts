@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { type LocalRecordedTrack, decodePolyline } from "@pt/shared";
 
+import db from "../db.js";
 import { TEST_USER } from "../test/setupDb.js";
+import { recordedTrack } from "./track.schema.js";
 import {
   getRecordedTrack,
   getRecordedTrackWithPointDetail,
@@ -76,6 +78,7 @@ const MINIMAL_TRACK: UploadInput = {
 
 describe("uploadedRecordedTrack", () => {
   it("is idempotent on re-upload", async () => {
+    await db.delete(recordedTrack);
     await uploadedRecordedTrack(TEST_USER.id, BASE_TRACK);
     await uploadedRecordedTrack(TEST_USER.id, BASE_TRACK);
     const list = await listRecordedTracks(TEST_USER.id);
@@ -109,10 +112,12 @@ describe("uploadedRecordedTrack", () => {
 
 describe("listRecordedTracks", () => {
   it("returns empty list when no tracks", async () => {
+    await db.delete(recordedTrack);
     expect(await listRecordedTracks(TEST_USER.id)).toEqual([]);
   });
 
   it("returns summaries ordered by startTime desc", async () => {
+    await db.delete(recordedTrack);
     await uploadedRecordedTrack(TEST_USER.id, BASE_TRACK);
     await uploadedRecordedTrack(TEST_USER.id, MINIMAL_TRACK);
     const list = await listRecordedTracks(TEST_USER.id);

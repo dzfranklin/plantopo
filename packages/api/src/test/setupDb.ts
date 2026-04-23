@@ -3,8 +3,9 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
 
-import { user } from "../auth/auth.schema.js";
+import { session, user } from "../auth/auth.schema.js";
 import { db } from "../db.js";
+import { recordedTrack } from "../track/track.schema.js";
 
 export const TEST_USER = {
   id: "test",
@@ -17,6 +18,9 @@ export const TEST_USER = {
   createdAt: new Date(0),
   updatedAt: new Date(0),
 } as const;
+
+const checkTestUserType = (u: typeof user.$inferInsert) => u;
+checkTestUserType(TEST_USER);
 
 export const TEST_SESSION = {
   session: {
@@ -32,6 +36,21 @@ export const TEST_SESSION = {
   user: TEST_USER,
 } as const;
 
+const TEST_SESSION_ROW: typeof session.$inferInsert = TEST_SESSION.session;
+
+export const TEST_TRACK: typeof recordedTrack.$inferInsert = {
+  id: "test-track",
+  userId: TEST_USER.id,
+  name: "Test Track",
+  startTime: new Date(0),
+  endTime: new Date(1000),
+  path: [
+    [0, 0],
+    [1, 1],
+  ],
+  pointTimestamps: [0, 1000],
+};
+
 export async function resetDb() {
   const { rows } = await db.execute<{ tablename: string }>(
     sql`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != 'spatial_ref_sys'`,
@@ -40,14 +59,24 @@ export async function resetDb() {
     const tables = rows.map(r => `"${r.tablename}"`).join(", ");
     await db.execute(sql.raw(`TRUNCATE TABLE ${tables} CASCADE`));
   }
-  await ensureTestUser();
+  await upsertFixtures();
 }
 
-export async function ensureTestUser() {
+export async function upsertFixtures() {
   await db
     .insert(user)
     .values(TEST_USER)
     .onConflictDoUpdate({ target: user.id, set: TEST_USER });
+
+  await db
+    .insert(session)
+    .values(TEST_SESSION_ROW)
+    .onConflictDoUpdate({ target: session.id, set: TEST_SESSION_ROW });
+
+  await db
+    .insert(recordedTrack)
+    .values(TEST_TRACK)
+    .onConflictDoUpdate({ target: recordedTrack.id, set: TEST_TRACK });
 }
 
 export async function setupDb() {
@@ -67,5 +96,5 @@ export async function setupDb() {
   await migrate(migrateDb, { migrationsFolder: "drizzle" });
   await migrateDb.$client.end();
 
-  await ensureTestUser();
+  await upsertFixtures();
 }
