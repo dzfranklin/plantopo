@@ -8,9 +8,18 @@ import {
   RiGpsFill,
   RiLandscapeFill,
   RiLandscapeLine,
+  RiLockFill,
+  RiLockLine,
   RiSubtractLine,
 } from "@remixicon/react";
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import type {
   GeolocateState,
@@ -103,10 +112,8 @@ function BearingControlGroup() {
   const pitchIncrement = maxPitch / 5;
   const incrementDuration = 150;
 
-  const map = useMapManager()?.map;
-
-  const [bearing, setBearing] = useState(0);
-  const [pitch, setPitch] = useState(0);
+  const manager = useMapManager();
+  const map = manager?.map;
 
   const [expanded, setExpanded] = useState<"false" | "by-hover" | "by-press">(
     "false",
@@ -147,17 +154,41 @@ function BearingControlGroup() {
     };
   }, [map]);
 
-  useEffect(() => {
-    if (!map) return;
-    const onRotate = () => setBearing(map.getBearing());
-    const onPitch = () => setPitch(map.getPitch());
-    map.on("rotate", onRotate);
-    map.on("pitch", onPitch);
-    return () => {
-      map.off("rotate", onRotate);
-      map.off("pitch", onPitch);
-    };
-  }, [map]);
+  const bearing = useSyncExternalStore(
+    useCallback(
+      notify => {
+        if (!map) return () => {};
+        map.on("rotate", notify);
+        return () => map.off("rotate", notify);
+      },
+      [map],
+    ),
+    () => map?.getBearing() ?? 0,
+  );
+
+  const pitch = useSyncExternalStore(
+    useCallback(
+      notify => {
+        if (!map) return () => {};
+        map.on("pitch", notify);
+        return () => map.off("pitch", notify);
+      },
+      [map],
+    ),
+    () => map?.getPitch() ?? 0,
+  );
+
+  const pitchLocked = useSyncExternalStore(
+    useCallback(
+      notify => {
+        if (!manager || !map) return () => {};
+        map.on("plantopo:pitchlockchange", notify);
+        return () => map.off("plantopo:pitchlockchange", notify);
+      },
+      [manager, map],
+    ),
+    () => manager?.getPitchLocked() ?? false,
+  );
 
   return (
     <div
@@ -177,8 +208,19 @@ function BearingControlGroup() {
           style={{ boxShadow: "none" }}>
           <HorizontalControlGroup>
             <ControlButton
+              title={pitchLocked ? "Unlock pitch" : "Lock pitch"}
+              active={pitchLocked}
+              onClick={() => manager?.setPitchLocked(!pitchLocked)}
+              horizontal>
+              {pitchLocked ? (
+                <RiLockFill size={16} />
+              ) : (
+                <RiLockLine size={16} />
+              )}
+            </ControlButton>
+            <ControlButton
               title={`Pitch down ${pitchIncrement}°`}
-              disabled={pitch <= 0}
+              disabled={pitchLocked || pitch <= 0}
               onClick={() => {
                 const p = map?.getPitch() ?? 0;
                 map?.easeTo({
@@ -194,7 +236,7 @@ function BearingControlGroup() {
             </ControlButton>
             <ControlButton
               title={`Pitch up ${pitchIncrement}°`}
-              disabled={pitch >= maxPitch}
+              disabled={pitchLocked || pitch >= maxPitch}
               onClick={() => {
                 const p = map?.getPitch() ?? 0;
                 map?.easeTo({

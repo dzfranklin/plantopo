@@ -5,7 +5,7 @@ import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-csp-worker.js?url";
 import { BottomInfoControl } from "./BottomInfoControl";
 import { getHashParam, setHashParam } from "./hashParams";
 import { InteractionManager } from "./interaction/InteractionManager";
-import type { MapProps } from "./types";
+import type { MapProps, SerializedCameraOptions } from "./types";
 import { getDebugFlag } from "@/hooks/debug-flags";
 import { connectMaplibreWorkerLogs } from "@/logger";
 import { throttle } from "@/util/throttle";
@@ -18,6 +18,8 @@ const TERRAIN_OPTIONS: ml.TerrainSpecification = {
   source: TERRAIN_SOURCE,
   exaggeration: 1,
 };
+
+const MAX_PITCH = 60;
 
 export class MapManager {
   static _nextTraceID = 1;
@@ -60,6 +62,7 @@ export class MapManager {
       this._m.dragRotate.isEnabled() && this._m.touchZoomRotate.isEnabled()
         ? (camera.bearing ?? 0)
         : this._m.getBearing();
+    this.setPitchLocked(camera.pitchLocked === true);
     this._m.jumpTo({ ...camera, bearing });
     return true;
   };
@@ -106,7 +109,7 @@ export class MapManager {
 
     this._hashEnabled = initialProps.hash ?? false;
 
-    let initialCamera: ml.CameraOptions = {};
+    let initialCamera: SerializedCameraOptions = {};
     if (initialProps.initialCamera === "fit") {
       this._initialCameraFit = true;
     } else if (typeof initialProps.initialCamera === "string") {
@@ -126,6 +129,8 @@ export class MapManager {
       zoomSnap: 1, // controls discrete ops (map.zoomIn/Out, keyboard) — gesture snap is handled by InteractionManager
       ...initialCamera,
     });
+
+    this.setPitchLocked(initialCamera.pitchLocked === true);
 
     this._bottomInfoControl = new BottomInfoControl(
       initialProps.distanceUnit,
@@ -229,17 +234,19 @@ export class MapManager {
     }
   }
 
-  getCamera(): ml.CameraOptions {
+  getCamera(): SerializedCameraOptions {
     if (!this._m) throw new Error("MapManager destroyed");
+    const maxPitch = this._m.getMaxPitch();
     return {
       center: this._m.getCenter(),
       zoom: this._m.getZoom(),
       bearing: this._m.getBearing(),
       pitch: this._m.getPitch(),
+      ...(maxPitch === 0 ? { pitchLocked: true } : {}),
     };
   }
 
-  serializeCamera(camera?: ml.CameraOptions): string {
+  serializeCamera(camera?: SerializedCameraOptions): string {
     const c = camera ?? (this._m ? this.getCamera() : null);
     if (!c) return "";
     // Based on <https://github.com/maplibre/maplibre-gl-js/blob/8584c2e766b8a3d54023450dbef8aeee91b99762/src/ui/hash.ts#L45>
@@ -253,14 +260,17 @@ export class MapManager {
       lng = Math.round(center.lng * m) / m,
       lat = Math.round(center.lat * m) / m,
       bearing = c.bearing ?? 0,
-      pitch = c.pitch ?? 0;
+      pitchLocked = c.pitchLocked === true,
+      pitchVal = pitchLocked ? 0 : (c.pitch ?? 0),
+      pitchStr = pitchLocked ? "-" : String(Math.round(pitchVal));
     let hash = `${zoom}/${lat}/${lng}`;
-    if (bearing || pitch) hash += `/${Math.round((bearing ?? 0) * 10) / 10}`;
-    if (pitch) hash += `/${Math.round(pitch)}`;
+    if (bearing || pitchLocked || pitchVal)
+      hash += `/${Math.round((bearing ?? 0) * 10) / 10}`;
+    if (pitchLocked || pitchVal) hash += `/${pitchStr}`;
     return hash;
   }
 
-  static deserializeCamera(hash: string): ml.CameraOptions {
+  static deserializeCamera(hash: string): SerializedCameraOptions {
     const parts = hash.split("/");
     if (parts.length < 3) return {};
     const [zoomStr, latStr, lngStr, bearingStr, pitchStr] = parts;
@@ -268,7 +278,7 @@ export class MapManager {
     const lat = parseFloat(latStr!);
     const lng = parseFloat(lngStr!);
     if (isNaN(zoom) || isNaN(lat) || isNaN(lng)) return {};
-    const options: ml.CameraOptions = {
+    const options: SerializedCameraOptions = {
       zoom,
       center: [lng, lat],
     };
@@ -277,10 +287,32 @@ export class MapManager {
       if (!isNaN(bearing)) options.bearing = bearing;
     }
     if (pitchStr) {
-      const pitch = parseFloat(pitchStr);
-      if (!isNaN(pitch)) options.pitch = pitch;
+      if (pitchStr === "-") {
+        options.pitch = 0;
+        options.pitchLocked = true;
+      } else {
+        const pitch = parseFloat(pitchStr);
+        if (!isNaN(pitch)) options.pitch = pitch;
+      }
     }
     return options;
+  }
+
+  getPitchLocked(): boolean {
+    if (!this._m) return false;
+    return this._m.getMaxPitch() === 0;
+  }
+
+  setPitchLocked(locked: boolean) {
+    if (!this._m) return;
+    const current = this.getPitchLocked();
+    if (current !== locked) {
+      this._m.setMaxPitch(locked ? 0 : MAX_PITCH);
+      if (locked) {
+        this._m.setPitch(0);
+      }
+      this._m.fire("plantopo:pitchlockchange");
+    }
   }
 
   // Called every React render
