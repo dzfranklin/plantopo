@@ -92,7 +92,7 @@ async function expectMatchesSnapshot(
 const BASE_OPTS: StaticMapOptions = {
   width: 300,
   height: 200,
-  source: { tiles: [OSM_TEMPLATE], tileSize: 256 },
+  source: { tiles: OSM_TEMPLATE },
   tileProvider,
 };
 
@@ -125,7 +125,7 @@ describe("renderStaticMap", () => {
     const buf = await renderStaticMap({
       width: 256,
       height: 256,
-      source: { tiles: [OSM_TEMPLATE], tileSize: 256 },
+      source: { tiles: OSM_TEMPLATE, tileSize: 256 },
       zoom: 3,
       center: [179.9, 0],
       tileProvider: async () => null,
@@ -138,7 +138,7 @@ describe("renderStaticMap", () => {
       renderStaticMap({
         width: 300,
         height: 200,
-        source: { tiles: [OSM_TEMPLATE], tileSize: 256 },
+        source: { tiles: OSM_TEMPLATE, tileSize: 256 },
         tileProvider,
       }),
     ).rejects.toThrow("cannot render empty map");
@@ -228,6 +228,34 @@ describe("renderStaticMap", () => {
         ],
       });
       await expectMatchesSnapshot(buf, "bridge-line");
+    });
+
+    it("renders attribution", async () => {
+      const buf = await renderStaticMap({
+        ...BASE_OPTS,
+        width: 800,
+        height: 400,
+        source: {
+          tiles: OSM_TEMPLATE,
+          attribution: "© OpenStreetMap",
+        },
+        features: [
+          {
+            type: "Feature",
+            properties: {
+              stroke: "magenta",
+            },
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [-3.72322, 56.06642],
+                [-3.73392, 56.06311],
+              ],
+            },
+          },
+        ],
+      });
+      await expectMatchesSnapshot(buf, "attribution");
     });
   });
 });

@@ -1,17 +1,23 @@
 // Based on <https://github.com/komoot/staticmap/>
+import { createCanvas } from "canvas";
 import type GeoJSON from "geojson";
 import sharp from "sharp";
+import z from "zod";
 
+import { env } from "../env.js";
 import { type TileFetcher, fetchTile } from "../tile-cache.js";
 
-export type RasterSource = {
-  tiles: [string, ...string[]];
-  tileSize?: number; // default 512 (matches MapLibre default); OSM uses 256
-};
+const RasterSourceSchema = z.object({
+  tiles: z.string(),
+  tileSize: z.number().optional(), // default 256
+  attribution: z.string().optional(),
+});
+
+export type RasterSource = z.infer<typeof RasterSourceSchema>;
 
 export const OSM_SOURCE: RasterSource = {
-  tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-  tileSize: 256,
+  tiles: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  attribution: "© OpenStreetMap",
 };
 
 // GeoJSON simplestyle properties
@@ -50,13 +56,14 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
   let source: RasterSource;
   if (opts.source) {
     source = opts.source;
-  } else if (process.env.STATICMAP_TILES_URL) {
-    source = { tiles: [process.env.STATICMAP_TILES_URL], tileSize: 256 };
+  } else if (env.STATICMAP_SOURCE) {
+    source = RasterSourceSchema.parse(JSON.parse(env.STATICMAP_SOURCE));
   } else {
     source = OSM_SOURCE;
   }
-  const tileSize = source.tileSize ?? 512;
-  const urlTemplate = source.tiles[0];
+  const tileSize = source.tileSize ?? 256;
+  const urlTemplate = source.tiles;
+  const attribution = source.attribution;
   const provider = opts.tileProvider ?? fetchTile;
   const { width, height, features = [] } = opts;
   const padding = opts.padding ?? 10;
@@ -89,7 +96,7 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
     provider,
   );
 
-  const svgBuf = buildFeaturesSvg(
+  const svgBuf = buildOverlaySVG(
     zoom,
     xCenter,
     yCenter,
@@ -97,6 +104,7 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
     height,
     tileSize,
     features,
+    attribution,
   );
 
   const composites: sharp.OverlayOptions[] = [
@@ -184,7 +192,7 @@ async function buildTileLayer(
   ) satisfies sharp.OverlayOptions[];
 }
 
-function buildFeaturesSvg(
+function buildOverlaySVG(
   zoom: number,
   xCenter: number,
   yCenter: number,
@@ -192,6 +200,7 @@ function buildFeaturesSvg(
   height: number,
   tileSize: number,
   features: Feature[],
+  attribution?: string,
 ): Buffer {
   const toPx = (pos: GeoJSON.Position): [number, number] => [
     xToPx(lonToX(pos[0]!, zoom), xCenter, width, tileSize),
@@ -260,10 +269,31 @@ function buildFeaturesSvg(
     })
     .join("\n  ");
 
+  let attributionSvg = "";
+  if (attribution) {
+    const text = sanitize(attribution);
+    const fontSize = 10;
+    const padX = 4;
+    const padY = 2;
+    const ctx = createCanvas(1, 1).getContext("2d");
+    ctx.font = `${fontSize}px sans-serif`;
+    const textW = ctx.measureText(text).width;
+    const boxW = textW + padX * 2;
+    const boxH = fontSize + padY * 2;
+    const boxX = width - boxW;
+    const boxY = height - boxH;
+    const textX = width - padX;
+    const textY = height - padY;
+    attributionSvg =
+      `<rect x="${boxX.toFixed(2)}" y="${boxY.toFixed(2)}" width="${boxW.toFixed(2)}" height="${boxH.toFixed(2)}" rx="2" fill="#f2f2f2"/>` +
+      `<text x="${textX}" y="${textY}" font-size="${fontSize}" font-family="sans-serif" fill="#1f1f1f" text-anchor="end">${text}</text>`;
+  }
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
   ${polygonSvg}
   ${lineSvg}
   ${pointSvg}
+  ${attributionSvg}
 </svg>`;
 
   return Buffer.from(svg);

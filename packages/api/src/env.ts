@@ -17,7 +17,7 @@ const schema = z.object({
   SERVER_TILE_KEY: z.string().optional(),
   VALHALLA: z.string().optional(),
   PHOTON: z.string().optional(),
-  STATICMAP_TILES_URL: z.string().optional(),
+  STATICMAP_SOURCE: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);

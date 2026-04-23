@@ -15,16 +15,17 @@
     "@trpc/server": "^11.15.0",
     "archiver": "^7.0.1",
     "better-auth": "^1.5.6",
+    "canvas": "^3.2.3",
     "drizzle-orm": "^0.45.1",
-    "wkx": "^0.5.0",
     "express": "^5.2.1",
     "pg": "^8.20.0",
     "pino": "^10.3.1",
-    "sharp": "^0.34.2"
+    "sharp": "^0.34.2",
+    "wkx": "^0.5.0"
   },
   "devDependencies": {
-    "@trpc/client": "^11.15.0",
     "@pt/web": "*",
+    "@trpc/client": "^11.15.0",
     "@types/express": "^5.0.6",
     "@types/pg": "^8.20.0",
     "pino-pretty": "^13.1.3",
