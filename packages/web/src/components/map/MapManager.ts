@@ -3,10 +3,12 @@ import ml from "maplibre-gl";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-csp-worker.js?url";
 
 import { BottomInfoControl } from "./BottomInfoControl";
+import { getHashParam, setHashParam } from "./hashParams";
 import { InteractionManager } from "./interaction/InteractionManager";
 import type { MapProps } from "./types";
 import { getDebugFlag } from "@/hooks/debug-flags";
 import { connectMaplibreWorkerLogs } from "@/logger";
+import { throttle } from "@/util/throttle";
 
 ml.setWorkerUrl(maplibreWorkerUrl);
 ml.importScriptInWorkers("/maplibre-gl-worker-log-forwarder.js");
@@ -34,6 +36,33 @@ export class MapManager {
   private _lastInteractiveDeps: unknown[] | undefined;
   private _lastGeojsonDeps: unknown[] | undefined;
   private _lastFitDeps: unknown[] | undefined;
+
+  private _hashEnabled = false;
+  // Mobile Safari doesn't allow updating the hash more than 100 times per 30 seconds.
+  // Based on https://github.com/maplibre/maplibre-gl-js/blob/50d9756cbbe9df104ae8e8692b1719b7b04099ec/src/ui/hash.ts#L155
+  private _updateHash = throttle(
+    () => this._updateHashUnthrottled(),
+    (30 * 1000) / 100,
+  );
+
+  private _updateHashUnthrottled() {
+    if (!this._m) return;
+    setHashParam("c", this.serializeCamera());
+  }
+
+  private _onHashChange = (): boolean => {
+    if (!this._m) return false;
+    const cameraStr = getHashParam("c");
+    if (!cameraStr) return false;
+    const camera = MapManager.deserializeCamera(cameraStr);
+    if (!camera.center) return false;
+    const bearing =
+      this._m.dragRotate.isEnabled() && this._m.touchZoomRotate.isEnabled()
+        ? (camera.bearing ?? 0)
+        : this._m.getBearing();
+    this._m.jumpTo({ ...camera, bearing });
+    return true;
+  };
 
   private _onError = (e: ml.ErrorEvent) =>
     console.error("[MapManager]", e.error);
@@ -75,6 +104,8 @@ export class MapManager {
     inner.style.height = "100%";
     container.appendChild(inner);
 
+    this._hashEnabled = initialProps.hash ?? false;
+
     let initialCamera: ml.CameraOptions = {};
     if (initialProps.initialCamera === "fit") {
       this._initialCameraFit = true;
@@ -88,7 +119,7 @@ export class MapManager {
       container: inner,
       style: buildStyle(initialProps),
       interactive: initialProps.interactive ?? false,
-      hash: initialProps.hash ? "c" : false,
+      hash: false,
       minZoom: 1,
       boxZoom: false,
       attributionControl: false, // in our BottomInfoControl
@@ -115,6 +146,13 @@ export class MapManager {
         this.onCameraChangeIdle?.();
       }
     });
+
+    if (this._hashEnabled) {
+      this._m.on("moveend", this._updateHash);
+      window.addEventListener("hashchange", this._onHashChange, false);
+      // Apply hash from URL if present, otherwise write current camera to hash
+      if (!this._onHashChange()) this._updateHash();
+    }
 
     // Disable MapLibre's built-in interaction handlers — InteractionManager owns all gestures
     this._m.scrollZoom.disable();
