@@ -2,7 +2,6 @@ import { RiArrowRightSLine } from "@remixicon/react";
 
 import { by0 } from "@pt/shared";
 
-import { cn } from "@/cn";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -22,6 +21,7 @@ import {
   setDebugFlag,
   useDebugFlags,
 } from "@/hooks/debug-flags";
+import { cn } from "@/util/cn";
 
 export function DebugFlagsPanel({
   collapsible = false,

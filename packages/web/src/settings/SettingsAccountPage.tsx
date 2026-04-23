@@ -15,9 +15,9 @@ import { providersInfo } from "@/auth/providers";
 import { authKeys } from "@/auth/queryKeys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import download from "@/download";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTRPC } from "@/trpc";
-import { usePageTitle } from "@/usePageTitle";
+import download from "@/util/download";
 
 export default function SettingsAccountPage() {
   usePageTitle("Account settings");

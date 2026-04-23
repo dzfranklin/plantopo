@@ -7,11 +7,11 @@ import type { AppRouter } from "@pt/api";
 import { LogViewerPanel } from "./components/LogViewerPanel.tsx";
 import { QueryDevtoolsPanel } from "./components/QueryDevtoolsPanel.tsx";
 import { Toaster } from "./components/ui/sonner.tsx";
-import { isUnauthorizedError } from "./errors.ts";
 import { useApiOfflineEffect } from "./hooks/useIsOnline.ts";
 import { getClientInfo, logger } from "./logger.ts";
 import { AppRoutes } from "./routes.tsx";
 import { TRPCProvider } from "./trpc.ts";
+import { isUnauthorizedError } from "./util/errors.ts";
 
 function Effects() {
   useApiOfflineEffect();

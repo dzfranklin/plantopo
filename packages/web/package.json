@@ -12,7 +12,7 @@
     "preview": "vite preview"
   },
   "exports": {
-    "./dev": "./src/dev.ts"
+    "./util/dev": "./src/util/dev.ts"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.5.6",

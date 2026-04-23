@@ -7,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { usePageTitle } from "@/usePageTitle";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function SettingsInterfacePage() {
   usePageTitle("Interface settings");

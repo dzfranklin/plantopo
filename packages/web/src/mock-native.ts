@@ -1,9 +1,3 @@
-import { getDebugFlag } from "./hooks/debug-flags";
-
-if (getDebugFlag("mockNative")) {
-  window.Native = mockNative();
-}
-
 export function mockNative(): NativeInterface {
   return {
     version: () => "0.0.0-mock",

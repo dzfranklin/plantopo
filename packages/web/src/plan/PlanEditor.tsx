@@ -1,6 +1,6 @@
 import { PlanMapOverlay } from "./PlanMapOverlay";
-import { cn } from "@/cn";
 import { AppMap } from "@/components/map";
+import { cn } from "@/util/cn";
 
 export function PlanEditor() {
   return (

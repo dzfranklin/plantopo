@@ -6,7 +6,7 @@ import {
 import { Select as SelectPrimitive } from "radix-ui";
 import * as React from "react";
 
-import { cn } from "@/cn";
+import { cn } from "@/util/cn";
 
 function Select({
   ...props

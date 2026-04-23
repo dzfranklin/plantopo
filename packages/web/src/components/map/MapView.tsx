@@ -7,7 +7,6 @@ import { MapManagerContext } from "./MapManagerContext";
 import { NavControls } from "./NavControls";
 import { getHashParam, setHashParam } from "./hashParams";
 import type { MapProps } from "./types";
-import { cn } from "@/cn";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useDebugFlag } from "@/hooks/debug-flags";
+import { cn } from "@/util/cn";
 
 export function MapView(props: MapProps) {
   const { children, className, ...forwardedProps } = props;

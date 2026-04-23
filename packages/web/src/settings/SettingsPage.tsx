@@ -3,7 +3,7 @@ import { NavLink, Outlet } from "react-router-dom";
 
 import { UserAvatar } from "@/auth/UserAvatar";
 import { useRequiredUser } from "@/auth/auth-client";
-import { cn } from "@/cn";
+import { cn } from "@/util/cn";
 
 const navItems = [
   { to: "/settings/account", label: "Account", icon: RiUserLine },

@@ -1,6 +1,5 @@
 import { useState, useSyncExternalStore } from "react";
 
-import { cn } from "@/cn.ts";
 import { setDebugFlag, useDebugFlag } from "@/hooks/debug-flags.ts";
 import { useFullscreenLandscape } from "@/hooks/useFullscreenLandscape.ts";
 import { useIsDesktop } from "@/hooks/useMediaQuery.ts";
@@ -11,6 +10,7 @@ import {
   safeStringify,
   subscribeLogViewer,
 } from "@/logger.ts";
+import { cn } from "@/util/cn";
 
 export function LogViewerPanel() {
   const isOpen = useDebugFlag("openLogViewer");

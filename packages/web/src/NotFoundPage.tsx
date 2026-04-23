@@ -1,4 +1,4 @@
-import { usePageTitle } from "./usePageTitle";
+import { usePageTitle } from "./hooks/usePageTitle";
 
 export default function NotFoundPage() {
   usePageTitle("Not Found");

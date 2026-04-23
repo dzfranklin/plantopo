@@ -1,10 +1,10 @@
 import React, { Suspense } from "react";
 
-import { cn } from "@/cn.ts";
 import { Skeleton } from "@/components/ui/skeleton.tsx";
 import { setDebugFlag, useDebugFlag } from "@/hooks/debug-flags.ts";
 import { useFullscreenLandscape } from "@/hooks/useFullscreenLandscape.ts";
 import { useIsDesktop } from "@/hooks/useMediaQuery.ts";
+import { cn } from "@/util/cn";
 
 const ReactQueryDevtoolsProduction = React.lazy(() =>
   import("@tanstack/react-query-devtools/build/modern/production.js").then(

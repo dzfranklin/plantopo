@@ -1,5 +1,5 @@
 import { type Session } from "@/auth/auth-client";
-import { cn } from "@/cn";
+import { cn } from "@/util/cn";
 
 export function UserAvatar({
   user,

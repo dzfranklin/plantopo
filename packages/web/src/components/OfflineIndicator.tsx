@@ -6,8 +6,8 @@ import type {
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { cn } from "@/cn";
 import { useIsOnline } from "@/hooks/useIsOnline";
+import { cn } from "@/util/cn";
 
 function usePauseEvents(onPause: () => void) {
   const client = useQueryClient();

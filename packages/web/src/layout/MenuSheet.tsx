@@ -7,11 +7,11 @@ import { Drawer } from "vaul";
 import { signOut, useUser } from "../auth/auth-client";
 import { FooterLinkComponent } from "./Navbar";
 import { FOOTER_LINKS, type NavTab, useNavTabs } from "./nav";
-import { cn } from "@/cn";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { Button } from "@/components/ui/button";
 import { setDebugFlag, useDebugFlag } from "@/hooks/debug-flags";
 import { useUpdateAvailable } from "@/hooks/useUpdateAvailable";
+import { cn } from "@/util/cn";
 
 function MobileMenuSheetTab({
   to,

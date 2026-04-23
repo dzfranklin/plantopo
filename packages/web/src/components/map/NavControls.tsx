@@ -19,7 +19,7 @@ import type {
 import { GeolocateStateMachine } from "./GeolocateStateMachine";
 import { useMapManager } from "./MapManagerContext";
 import { NorthArrowIcon } from "./NorthArrowIcon";
-import { cn } from "@/cn";
+import { cn } from "@/util/cn";
 
 interface NavControlsProps {
   terrain: boolean;

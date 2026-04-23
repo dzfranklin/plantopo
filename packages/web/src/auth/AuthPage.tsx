@@ -7,8 +7,8 @@ import { GoogleIcon } from "./GoogleIcon.tsx";
 import { PasskeyIcon } from "./PasskeyIcon.tsx";
 import { authClient } from "./auth-client.ts";
 import { providersInfo } from "./providers.tsx";
+import { usePageTitle } from "@/hooks/usePageTitle.ts";
 import { logger } from "@/logger.ts";
-import { usePageTitle } from "@/usePageTitle.ts";
 
 async function signInWithPasskey(returnToURL: string) {
   const result = await authClient.signIn.passkey({

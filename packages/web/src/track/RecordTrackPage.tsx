@@ -6,7 +6,7 @@ import { NativeRequiredError } from "../AppError.js";
 import { AppMap, type MapManager } from "../components/map/index.js";
 import { type RecordTrackState, RecordTrackStateSchema } from "./types.js";
 import { Button } from "@/components/ui/button";
-import { usePageTitle } from "@/usePageTitle.js";
+import { usePageTitle } from "@/hooks/usePageTitle.js";
 
 function trackToGeoJSON(recording: LocalRecordedTrack): GeoJSON.Feature {
   return {

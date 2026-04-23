@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { authClient } from "@/auth/auth-client";
 import { authKeys } from "@/auth/queryKeys";
 import { Button } from "@/components/ui/button";
-import { usePageTitle } from "@/usePageTitle";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function DevErrorPage() {
   usePageTitle("dev:Errors");

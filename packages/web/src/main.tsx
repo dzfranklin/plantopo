@@ -1,6 +1,3 @@
-// This checks a debug flag and if enabled mocks window.Native
-import "./mock-native.ts";
-
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -10,6 +7,11 @@ import "./auth/auth-client.ts";
 import "./index.css";
 
 import { getDebugFlag } from "./hooks/debug-flags.ts";
+import { mockNative } from "./mock-native.ts";
+
+if (getDebugFlag("mockNative")) {
+  window.Native = mockNative();
+}
 
 if (window.Native && !window.__INITIAL_USER__) {
   window.Native.reportUnauthorized();

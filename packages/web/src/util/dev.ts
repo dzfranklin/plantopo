@@ -1,15 +1,16 @@
 import { readFile } from "node:fs/promises";
 import { Server } from "node:http";
-import { dirname, resolve } from "node:path";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const indexPath = resolve(__dirname, "../index.html");
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const root = path.join(moduleDir, "..", "..");
+const indexPath = path.join(root, "index.html");
 
 export async function createDevMiddleware(httpServer: Server) {
   const vite = await createServer({
-    root: resolve(__dirname, ".."),
+    root: root,
     server: { middlewareMode: true, hmr: { server: httpServer } },
     appType: "custom",
   });

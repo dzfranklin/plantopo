@@ -10,8 +10,8 @@ import { METERS_TO_FT, type Point } from "@pt/shared";
 
 import { useMapManager } from "./MapManagerContext";
 import { useUserPrefs } from "@/auth/auth-client";
-import { cn } from "@/cn";
 import { useTRPC } from "@/trpc";
+import { cn } from "@/util/cn";
 
 function ExternalMapLink({
   href,

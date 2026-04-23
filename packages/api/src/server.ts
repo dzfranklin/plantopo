@@ -86,7 +86,7 @@ async function renderWithSession(
 const httpServer = createServer(app);
 
 if (isDev) {
-  const { createDevMiddleware } = await import("@pt/web/dev");
+  const { createDevMiddleware } = await import("@pt/web/util/dev");
   const { middleware, getIndexHtml } = await createDevMiddleware(httpServer);
 
   registerDevNativeAssetsRoutes(app);

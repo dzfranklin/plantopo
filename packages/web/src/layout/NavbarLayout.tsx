@@ -1,7 +1,7 @@
 import { Outlet } from "react-router-dom";
 
-import { cn } from "../cn.ts";
 import { OfflineIndicator } from "../components/OfflineIndicator.tsx";
+import { cn } from "../util/cn.ts";
 import { DebugDialog } from "./DebugDialog.tsx";
 import { MenuSheet } from "./MenuSheet.tsx";
 import { DesktopFooter, MobileBottomNav, Navbar } from "./Navbar.tsx";
