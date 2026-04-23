@@ -18,6 +18,7 @@
     "db:migrate": "NODE_ENV=development node --conditions=development --import tsx/esm packages/api/src/migrate.ts",
     "db:studio": "NODE_ENV=development tsx scripts/with-api-env.ts drizzle-kit studio",
     "db:psql": "NODE_ENV=development tsx scripts/with-api-env.ts bash -c 'psql $DATABASE_URL'",
+    "db:seed-from-export": "NODE_ENV=development LOG_LEVEL=info tsx scripts/with-api-env.ts tsx scripts/seed-from-export.ts",
     "local-prod": "bash scripts/local-prod.sh",
     "check": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/api/tsconfig.json && tsc --noEmit -p packages/web/tsconfig.json && prettier --write --log-level warn . && eslint --fix .",
     "test": "vitest run",
