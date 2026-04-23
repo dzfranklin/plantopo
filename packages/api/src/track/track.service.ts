@@ -58,8 +58,10 @@ export async function uploadedRecordedTrack(
     coordinates: pts.map(p => [p.longitude, p.latitude]),
   });
 
+  // On my phone I've noticed bearing and bearingAccuracy can have some null values
+  // even if generally present.
   const nullableArray = <T>(arr: (T | null)[]): T[] | null =>
-    arr.some(v => v === null) ? null : (arr as T[]);
+    arr.every(v => v === null) ? null : (arr as T[]);
 
   await db
     .insert(recordedTrack)
