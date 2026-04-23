@@ -2,7 +2,7 @@ import { relations } from "drizzle-orm";
 import { doublePrecision, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 import { user } from "../auth/auth.schema.js";
-import { geometry } from "../postgis.js";
+import { lineString } from "../postgis.js";
 
 export const recordedTrack = pgTable("recorded_track", {
   id: text("id").primaryKey(),
@@ -12,7 +12,7 @@ export const recordedTrack = pgTable("recorded_track", {
   name: text("name"),
   startTime: timestamp("start_time", { withTimezone: true }).notNull(),
   endTime: timestamp("end_time", { withTimezone: true }).notNull(),
-  path: geometry("path").notNull(), // LineString(lng lat, ...), SRID 4326
+  path: lineString("path").notNull(),
   pointTimestamps: doublePrecision("point_timestamps").array().notNull(),
   pointGpsElevation: doublePrecision("point_gps_elevation").array(), // NULL = device lacks GPS elevation
   pointHorizontalAccuracy: doublePrecision("point_horizontal_accuracy").array(),
