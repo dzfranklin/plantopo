@@ -5,15 +5,15 @@ import z from "zod";
 
 import { type TileFetcher, fetchTile } from "../tile-cache.js";
 
-export const RasterSourceSchema = z.object({
+export const SourceSchema = z.object({
   tiles: z.string(),
   tileSize: z.number().optional(), // default 256
   attribution: z.string().optional(),
 });
 
-export type RasterSource = z.infer<typeof RasterSourceSchema>;
+export type Source = z.infer<typeof SourceSchema>;
 
-export const OSM_SOURCE: RasterSource = {
+export const OSM_SOURCE: Source = {
   tiles: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
   attribution: "© OpenStreetMap",
 };
@@ -43,7 +43,7 @@ export type StaticMapOptions = {
   width: number;
   height: number;
   padding?: number; // px inset from edge when auto-fitting features; default 10
-  source?: RasterSource; // default: OSM_SOURCE
+  source?: Source; // default: OSM_SOURCE
   zoom?: number; // auto-calculated if omitted
   center?: GeoJSON.Position; // [lng, lat]; auto-calculated from features if omitted
   features?: Feature[];
@@ -52,7 +52,7 @@ export type StaticMapOptions = {
 };
 
 export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
-  let source: RasterSource;
+  let source: Source;
   if (opts.source) {
     source = opts.source;
   } else {
