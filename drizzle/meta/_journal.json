@@ -71,6 +71,13 @@
       "when": 1776244013834,
       "tag": "0009_recorded_track",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776933962268,
+      "tag": "0010_update-recorded-track-nullability",
+      "breakpoints": true
     }
   ]
 }

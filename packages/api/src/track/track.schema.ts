@@ -11,8 +11,8 @@ export const recordedTrack = pgTable("recorded_track", {
     .references(() => user.id, { onDelete: "cascade" }),
   name: text("name"),
   startTime: timestamp("start_time", { withTimezone: true }).notNull(),
-  endTime: timestamp("end_time", { withTimezone: true }),
-  path: geometry("path"), // LineString(lng lat, ...), SRID 4326; null if no points
+  endTime: timestamp("end_time", { withTimezone: true }).notNull(),
+  path: geometry("path").notNull(), // LineString(lng lat, ...), SRID 4326
   pointTimestamps: doublePrecision("point_timestamps").array().notNull(),
   pointGpsElevation: doublePrecision("point_gps_elevation").array(), // NULL = device lacks GPS elevation
   pointHorizontalAccuracy: doublePrecision("point_horizontal_accuracy").array(),

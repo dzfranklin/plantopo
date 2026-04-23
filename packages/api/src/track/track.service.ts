@@ -43,21 +43,23 @@ export type RecordedTrackWithPointDetail = z.infer<
 
 export async function uploadedRecordedTrack(
   userId: string,
-  payload: LocalRecordedTrack,
+  payload: Omit<LocalRecordedTrack, "status"> & { endTime: number },
 ) {
+  const log = getLog().child({ userId, trackId: payload.id });
   const pts = payload.points;
 
-  // LineString requires at least 2 points; a single point cannot form a valid line
-  const path =
-    pts.length < 2
-      ? null
-      : JSON.stringify({
-          type: "LineString",
-          coordinates: pts.map(p => [p.longitude, p.latitude]),
-        });
+  if (pts.length < 2) {
+    log.warn({ payload }, "Track has fewer than 2 points, rejecting");
+    return;
+  }
+
+  const path = JSON.stringify({
+    type: "LineString",
+    coordinates: pts.map(p => [p.longitude, p.latitude]),
+  });
 
   const nullableArray = <T>(arr: (T | null)[]): T[] | null =>
-    arr.every(v => v === null) ? null : (arr as T[]);
+    arr.some(v => v === null) ? null : (arr as T[]);
 
   await db
     .insert(recordedTrack)
@@ -66,26 +68,22 @@ export async function uploadedRecordedTrack(
       userId,
       name: payload.name ?? null,
       startTime: new Date(payload.startTime),
-      endTime: payload.endTime != null ? new Date(payload.endTime) : null,
-      path: path ? sql`ST_GeomFromGeoJSON(${path})` : null,
+      endTime: new Date(payload.endTime),
+      path: sql`ST_GeomFromGeoJSON(${path})`,
       pointTimestamps: pts.map(p => p.timestamp),
-      pointGpsElevation: nullableArray(pts.map(p => p.elevation ?? null)),
+      pointGpsElevation: nullableArray(pts.map(p => p.elevation)),
       pointHorizontalAccuracy: nullableArray(
-        pts.map(p => p.horizontalAccuracy ?? null),
+        pts.map(p => p.horizontalAccuracy),
       ),
-      pointVerticalAccuracy: nullableArray(
-        pts.map(p => p.verticalAccuracy ?? null),
-      ),
-      pointSpeed: nullableArray(pts.map(p => p.speed ?? null)),
-      pointSpeedAccuracy: nullableArray(pts.map(p => p.speedAccuracy ?? null)),
-      pointBearing: nullableArray(pts.map(p => p.bearing ?? null)),
-      pointBearingAccuracy: nullableArray(
-        pts.map(p => p.bearingAccuracy ?? null),
-      ),
+      pointVerticalAccuracy: nullableArray(pts.map(p => p.verticalAccuracy)),
+      pointSpeed: nullableArray(pts.map(p => p.speed)),
+      pointSpeedAccuracy: nullableArray(pts.map(p => p.speedAccuracy)),
+      pointBearing: nullableArray(pts.map(p => p.bearing)),
+      pointBearingAccuracy: nullableArray(pts.map(p => p.bearingAccuracy)),
     })
     .onConflictDoNothing();
 
-  getLog().info({ trackId: payload.id }, "uploadedRecordedTrack");
+  log.info("uploadedRecordedTrack");
 }
 
 const summaryColumns = {

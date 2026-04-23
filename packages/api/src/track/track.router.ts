@@ -12,7 +12,11 @@ import {
 
 export const trackRouter = router({
   uploadRecordedTrack: authedProcedure
-    .input(LocalRecordedTrackSchema)
+    .input(
+      LocalRecordedTrackSchema.omit({ status: true }).extend({
+        endTime: z.number(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       await uploadedRecordedTrack(ctx.session.user.id, input);
     }),
