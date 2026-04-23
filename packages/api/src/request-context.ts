@@ -3,13 +3,13 @@ import type pino from "pino";
 
 import type { ClientInfo } from "@pt/shared";
 
-import type { Session } from "./auth/auth.js";
+import type { User } from "./auth/auth.js";
 
 export interface RequestContext {
   reqID: string;
   path: string;
   logger: pino.Logger;
-  session: Session | null;
+  user: User | null;
   client?: ClientInfo;
 }
 

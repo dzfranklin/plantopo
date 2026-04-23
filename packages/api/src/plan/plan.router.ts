@@ -10,7 +10,7 @@ export const planRouter = router({
   suggestRoute: publicProcedure
     .input(z.object({ a: PointSchema, b: PointSchema }))
     .query(({ input, ctx, signal }) => {
-      const accessScopes = userAccessScopes(ctx.session?.user);
+      const accessScopes = userAccessScopes(ctx.user);
       return suggestRoute(input.a, input.b, accessScopes, { signal });
     }),
 });

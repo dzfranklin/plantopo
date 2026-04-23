@@ -20,22 +20,22 @@ export const trackRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       getLog().info({ input: JSON.stringify(input) }, "TODO: record");
-      await uploadedRecordedTrack(ctx.session.user.id, input);
+      await uploadedRecordedTrack(ctx.user.id, input);
     }),
 
   listRecordedTracks: authedProcedure.query(async ({ ctx }) => {
-    return listRecordedTracks(ctx.session.user.id);
+    return listRecordedTracks(ctx.user.id);
   }),
 
   getRecordedTrack: authedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-      return getRecordedTrack(ctx.session.user.id, input.id);
+      return getRecordedTrack(ctx.user.id, input.id);
     }),
 
   getRecordedTrackWithPointDetail: authedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-      return getRecordedTrackWithPointDetail(ctx.session.user.id, input.id);
+      return getRecordedTrackWithPointDetail(ctx.user.id, input.id);
     }),
 });

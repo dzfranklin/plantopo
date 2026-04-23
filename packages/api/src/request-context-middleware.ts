@@ -4,7 +4,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import type { ClientInfo } from "@pt/shared";
 
-import { type Session, auth } from "./auth/auth.js";
+import { type User, auth } from "./auth/auth.js";
 import { logger } from "./logger.js";
 import { type RequestContext, runWithRequestCtx } from "./request-context.js";
 
@@ -32,18 +32,19 @@ export async function requestContextMiddleware(
     }
   }
 
-  let session: Session | null = null;
+  let user: User | null = null;
   try {
-    const resp = await auth.api.getSession({
+    const { headers, response } = await auth.api.getSession({
       headers: fromNodeHeaders(req.headers),
       returnHeaders: true,
     });
 
-    session = resp.response;
-    logBindings.sessionID = session?.session.id;
-    logBindings.userId = session?.user.id;
+    user = response?.user ?? null;
 
-    for (const [key, value] of resp.headers) {
+    logBindings.sessionID = response?.session.id;
+    logBindings.userId = user?.id;
+
+    for (const [key, value] of headers) {
       res.setHeader(key, value);
     }
   } catch (err) {
@@ -56,7 +57,7 @@ export async function requestContextMiddleware(
     path: req.originalUrl,
     reqID,
     logger: logger.child(logBindings),
-    session,
+    user,
     client,
   };
 

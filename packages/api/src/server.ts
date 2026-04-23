@@ -7,7 +7,7 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
 
-import { auth } from "./auth/auth.js";
+import { auth, userAccessScopes } from "./auth/auth.js";
 import { registerAuthRoutes } from "./auth/auth.routes.js";
 import { registerClientLogsRoutes } from "./client-logs.routes.js";
 import { registerDevNativeAssetsRoutes } from "./dev-native-assets.routes.js";
@@ -42,7 +42,10 @@ app.get("/api/v1/_smoke-test", async (_req, res) => {
     context: {
       reqID: ctx.reqID,
       path: ctx.path,
-      sessionUser: ctx.session?.user ?? null,
+      user: ctx.user
+        ? { id: ctx.user.id, email: ctx.user.email, prefs: ctx.user.prefs }
+        : null,
+      userAccessScopes: ctx.user ? userAccessScopes(ctx.user) : [],
       client: ctx.client,
     },
   });
@@ -74,7 +77,7 @@ async function renderWithSession(
   res: express.Response,
 ) {
   const ctx = requestContext();
-  const script = `<script>window.__INITIAL_USER__ = JSON.parse(${JSON.stringify(JSON.stringify(ctx.session?.user ?? null))});</script>`;
+  const script = `<script>window.__INITIAL_USER__ = JSON.parse(${JSON.stringify(JSON.stringify(ctx.user))});</script>`;
   res
     .setHeader("Content-Type", "text/html")
     .end(html.replace("</head>", `${script}\n</head>`));

@@ -10,23 +10,23 @@ export const mapRouter = router({
   catalog: publicProcedure
     .output(z.custom<StyleCatalog>())
     .query(async ({ ctx }) => {
-      const scopes = userAccessScopes(ctx.session?.user);
+      const scopes = userAccessScopes(ctx.user);
       return await getCatalog(scopes);
     }),
   style: publicProcedure
     .input(z.string())
     .output(z.custom<AppStyle>())
     .query(async ({ ctx, input }) => {
-      const scopes = userAccessScopes(ctx.session?.user);
-      const tileKey = ctx.session?.user.tileKey;
+      const scopes = userAccessScopes(ctx.user);
+      const tileKey = ctx.user?.tileKey;
       return await getStyle(input, scopes, tileKey);
     }),
   overlay: publicProcedure
     .input(z.string())
     .output(z.custom<AppStyle>())
     .query(async ({ ctx, input }) => {
-      const scopes = userAccessScopes(ctx.session?.user);
-      const tileKey = ctx.session?.user.tileKey;
+      const scopes = userAccessScopes(ctx.user);
+      const tileKey = ctx.user?.tileKey;
       return await getOverlay(input, scopes, tileKey);
     }),
 });

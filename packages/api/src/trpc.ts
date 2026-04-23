@@ -52,8 +52,8 @@ const loggingMiddleware = t.middleware(
 export const publicProcedure = t.procedure.use(loggingMiddleware);
 
 const authMiddleware = t.middleware(({ ctx, next }) => {
-  if (!ctx.session) throw new TRPCError({ code: "UNAUTHORIZED" });
-  return next({ ctx: { session: ctx.session } });
+  if (!ctx.user) throw new TRPCError({ code: "UNAUTHORIZED" });
+  return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
 export const authedProcedure = publicProcedure.use(authMiddleware);

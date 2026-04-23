@@ -7,11 +7,11 @@ import { deleteStravaConnection, getStravaAccount } from "./strava.service.js";
 
 export const stravaRouter = router({
   account: authedProcedure.query(async ({ ctx }) => {
-    return getStravaAccount(ctx.session.user.id);
+    return getStravaAccount(ctx.user.id);
   }),
 
   disconnect: authedProcedure.mutation(async ({ ctx }) => {
-    const deleted = await deleteStravaConnection(ctx.session.user.id);
+    const deleted = await deleteStravaConnection(ctx.user.id);
     if (!deleted) {
       throw new TRPCError({
         code: "NOT_FOUND",
@@ -30,6 +30,6 @@ export const stravaRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      return getLoggedInAthleteActivities(ctx.session.user.id, input);
+      return getLoggedInAthleteActivities(ctx.user.id, input);
     }),
 });
