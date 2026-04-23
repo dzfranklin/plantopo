@@ -19,7 +19,7 @@ for (const name of envSources) {
   });
   if (!result.error) loadedEnvSources.push(path.join(parentDirName, name));
 }
-if (loadedEnvSources.length > 0) {
+if (loadedEnvSources.length > 0 && process.env.NODE_ENV !== "test") {
   process.stderr.write(
     "[loadEnv.ts] Loaded " + loadedEnvSources.join(", ") + "\n\n",
   );
