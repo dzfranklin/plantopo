@@ -4,6 +4,7 @@ const schema = z.object({
   // LOG_LEVEL is read directly in logger.ts
   APP_URL: z.url(),
   DATABASE_URL: z.url(),
+  REDIS_URL: z.url(),
   WEB_DIST: z.string().default("packages/web/dist"),
   BETTER_AUTH_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: z.string().optional(),

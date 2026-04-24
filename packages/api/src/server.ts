@@ -6,13 +6,16 @@ import express from "express";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
+import { inspect } from "util";
 
 import { auth, userAccessScopes } from "./auth/auth.js";
 import { registerAuthRoutes } from "./auth/auth.routes.js";
 import { registerClientLogsRoutes } from "./client-logs.routes.js";
+import db from "./db.js";
 import { registerDevNativeAssetsRoutes } from "./dev-native-assets.routes.js";
 import { env } from "./env.js";
 import { registerExportRoutes } from "./export/export.routes.js";
+import { closeJobQueues, startWorkers } from "./jobs.js";
 import { logger } from "./logger.js";
 import { requestContextMiddleware } from "./request-context-middleware.js";
 import { requestContext } from "./request-context.js";
@@ -24,7 +27,10 @@ process.on("uncaughtException", function (err) {
 });
 
 process.on("unhandledRejection", (reason, promise) => {
-  logger.error({ promise, reason }, "Unhandled rejection");
+  logger.error(
+    { promise: inspect(promise), reason: inspect(reason) },
+    "Unhandled rejection",
+  );
 });
 
 const app = express();
@@ -145,5 +151,24 @@ httpServer.listen(4000, () => {
   );
 });
 
-process.on("SIGINT", () => process.exit(0));
-process.on("SIGTERM", () => process.exit(0));
+const workers = startWorkers();
+
+let shuttingDown = false;
+async function shutdown(signal: string) {
+  if (shuttingDown) {
+    logger.warn(
+      { signal },
+      "Already shutting down, ignoring additional signal",
+    );
+    return;
+  }
+  shuttingDown = true;
+  logger.info({ signal }, "Shutting down");
+  await Promise.all(workers.map(w => w.close()));
+  await Promise.all([closeJobQueues(), db.$client.end()]);
+  httpServer.close();
+  process.exit(0);
+}
+
+process.on("SIGINT", () => void shutdown("SIGINT"));
+process.on("SIGTERM", () => void shutdown("SIGTERM"));

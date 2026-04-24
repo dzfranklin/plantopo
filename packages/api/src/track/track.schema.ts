@@ -22,7 +22,7 @@ export const recordedTrack = pgTable("recorded_track", {
   pointBearing: doublePrecision("point_bearing").array(),
   pointBearingAccuracy: doublePrecision("point_bearing_accuracy").array(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  // dtmElevation will be added in a future task (background DTM elevation fill job)
+  // demElevation will be added in a future task
 });
 
 export const recordedTrackRelations = relations(recordedTrack, ({ one }) => ({
