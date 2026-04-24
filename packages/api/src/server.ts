@@ -19,6 +19,14 @@ import { requestContext } from "./request-context.js";
 import { appRouter } from "./router.js";
 import { registerStravaRoutes } from "./strava/strava.routes.js";
 
+process.on("uncaughtException", function (err) {
+  logger.error({ err }, "Uncaught exception");
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  logger.error({ promise, reason }, "Unhandled rejection");
+});
+
 const app = express();
 const isDev = process.env.NODE_ENV !== "production";
 
