@@ -1,0 +1,1 @@
+ALTER TABLE "recorded_track" ADD COLUMN "point_dem_elevation" double precision[];

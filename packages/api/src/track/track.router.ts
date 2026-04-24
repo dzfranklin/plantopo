@@ -8,7 +8,7 @@ import {
   getRecordedTrack,
   getRecordedTrackWithPointDetail,
   listRecordedTracks,
-  uploadedRecordedTrack,
+  uploadRecordedTrack,
 } from "./track.service.js";
 
 export const trackRouter = router({
@@ -20,7 +20,7 @@ export const trackRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       getLog().info({ input: JSON.stringify(input) }, "TODO: record");
-      await uploadedRecordedTrack(ctx.user.id, input);
+      await uploadRecordedTrack(ctx.user.id, input);
     }),
 
   listRecordedTracks: authedProcedure.query(async ({ ctx }) => {

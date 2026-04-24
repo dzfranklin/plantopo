@@ -1,9 +1,11 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import z from "zod";
 
 import { type LocalRecordedTrack } from "@pt/shared";
 
 import { db } from "../db.js";
+import { getElevations } from "../elevation/elevation.service.js";
+import { enqueueJob } from "../jobs.js";
 import { getLog } from "../logger.js";
 import { recordedTrack } from "./track.schema.js";
 
@@ -24,12 +26,13 @@ export const RecordedTrackSchema = RecordedTrackSummarySchema.extend({
   polyline: z.string(), // full resolution, for map/detail view
   pointTimestamps: z.array(z.number()),
   pointSpeed: z.array(z.number().nullable()).nullable(),
-  pointSpeedAccuracy: z.array(z.number().nullable()).nullable(),
+  pointDemElevation: z.array(z.number().nullable()).nullable(),
 });
 
 export type RecordedTrack = z.infer<typeof RecordedTrackSchema>;
 
 export const RecordedTrackWithPointDetailSchema = RecordedTrackSchema.extend({
+  pointSpeedAccuracy: z.array(z.number().nullable()).nullable(),
   pointGpsElevation: z.array(z.number().nullable()).nullable(),
   pointHorizontalAccuracy: z.array(z.number().nullable()).nullable(),
   pointVerticalAccuracy: z.array(z.number().nullable()).nullable(),
@@ -41,11 +44,12 @@ export type RecordedTrackWithPointDetail = z.infer<
   typeof RecordedTrackWithPointDetailSchema
 >;
 
-export async function uploadedRecordedTrack(
+export async function uploadRecordedTrack(
   userId: string,
   payload: Omit<LocalRecordedTrack, "status"> & { endTime: number },
 ) {
-  const log = getLog().child({ userId, trackId: payload.id });
+  const id = payload.id;
+  const log = getLog().child({ userId, trackId: id });
   const pts = payload.points;
 
   if (pts.length < 2) {
@@ -66,7 +70,7 @@ export async function uploadedRecordedTrack(
   await db
     .insert(recordedTrack)
     .values({
-      id: payload.id,
+      id,
       userId,
       name: payload.name ?? null,
       startTime: new Date(payload.startTime),
@@ -85,7 +89,45 @@ export async function uploadedRecordedTrack(
     })
     .onConflictDoNothing();
 
+  await enqueuePopulateDemElevationJob(id);
+
   log.info("uploadedRecordedTrack");
+}
+
+export async function enqueuePopulateDemElevationJob(trackId: string) {
+  return await enqueueJob(
+    "recordedTrack.populateDemElevation",
+    { trackId },
+    { jobId: "recordedTrack.populateDemElevation." + trackId },
+  );
+}
+
+export async function populateDemElevation(trackId: string): Promise<void> {
+  const log = getLog().child({ trackId });
+
+  const [row] = await db
+    .select({ path: recordedTrack.path })
+    .from(recordedTrack)
+    .where(
+      and(
+        eq(recordedTrack.id, trackId),
+        isNull(recordedTrack.pointDemElevation),
+      ),
+    );
+
+  if (!row) {
+    log.info("populateDemElevation: track not found or already populated");
+    return;
+  }
+
+  const { data } = await getElevations(row.path, []);
+
+  await db
+    .update(recordedTrack)
+    .set({ pointDemElevation: data })
+    .where(eq(recordedTrack.id, trackId));
+
+  log.info("populateDemElevation: done");
 }
 
 const summaryColumns = {
@@ -131,7 +173,7 @@ export async function getRecordedTrack(
       >`ST_AsEncodedPolyline(${recordedTrack.path})`.as("polyline"),
       pointTimestamps: recordedTrack.pointTimestamps,
       pointSpeed: recordedTrack.pointSpeed,
-      pointSpeedAccuracy: recordedTrack.pointSpeedAccuracy,
+      pointDemElevation: recordedTrack.pointDemElevation,
     })
     .from(recordedTrack)
     .where(
@@ -145,7 +187,7 @@ export async function getRecordedTrack(
     polyline: row.polyline!,
     pointTimestamps: row.pointTimestamps,
     pointSpeed: row.pointSpeed,
-    pointSpeedAccuracy: row.pointSpeedAccuracy,
+    pointDemElevation: row.pointDemElevation,
   };
 }
 
@@ -162,6 +204,7 @@ export async function getRecordedTrackWithPointDetail(
       pointTimestamps: recordedTrack.pointTimestamps,
       pointSpeed: recordedTrack.pointSpeed,
       pointSpeedAccuracy: recordedTrack.pointSpeedAccuracy,
+      pointDemElevation: recordedTrack.pointDemElevation,
       pointGpsElevation: recordedTrack.pointGpsElevation,
       pointHorizontalAccuracy: recordedTrack.pointHorizontalAccuracy,
       pointVerticalAccuracy: recordedTrack.pointVerticalAccuracy,
@@ -181,6 +224,7 @@ export async function getRecordedTrackWithPointDetail(
     pointTimestamps: row.pointTimestamps,
     pointSpeed: row.pointSpeed,
     pointSpeedAccuracy: row.pointSpeedAccuracy,
+    pointDemElevation: row.pointDemElevation,
     pointGpsElevation: row.pointGpsElevation,
     pointHorizontalAccuracy: row.pointHorizontalAccuracy,
     pointVerticalAccuracy: row.pointVerticalAccuracy,

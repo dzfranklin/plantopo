@@ -36,3 +36,9 @@ await build({
   entryPoints: ["packages/api/src/migrate.ts"],
   outfile: "migrate.js",
 });
+
+await build({
+  ...shared,
+  entryPoints: ["packages/api/src/run-task.ts"],
+  outfile: "run-task.js",
+});

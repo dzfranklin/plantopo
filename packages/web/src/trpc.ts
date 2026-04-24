@@ -1,9 +1,17 @@
+import type { UseQueryResult } from "@tanstack/react-query";
+import type { TRPCClientErrorLike } from "@trpc/client";
 import { createTRPCContext } from "@trpc/tanstack-react-query";
 
 import type { AppRouter } from "@pt/api";
 
 type TRPCContext = ReturnType<
   typeof createTRPCContext<AppRouter, { keyPrefix: true }>
+>;
+
+export type AppTRPCClientError = TRPCClientErrorLike<AppRouter>;
+export type AppUseQueryResult<TData> = UseQueryResult<
+  TData,
+  AppTRPCClientError
 >;
 
 const ctx = createTRPCContext<AppRouter, { keyPrefix: true }>();

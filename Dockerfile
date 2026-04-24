@@ -30,6 +30,10 @@ COPY --from=builder /app/server.js      ./server.js
 COPY --from=builder /app/server.js.map  ./server.js.map
 COPY --from=builder /app/migrate.js     ./migrate.js
 COPY --from=builder /app/migrate.js.map ./migrate.js.map
+COPY --from=builder /app/run-task.js     ./run-task.js
+COPY --from=builder /app/run-task.js.map ./run-task.js.map
+RUN printf '#!/bin/sh\nexec node --enable-source-maps /app/run-task.js "$@"\n' \
+    > /usr/local/bin/run-task && chmod +x /usr/local/bin/run-task
 COPY --from=builder /app/packages/web/dist/ ./static/
 COPY drizzle/ ./drizzle/
 COPY entrypoint.sh ./

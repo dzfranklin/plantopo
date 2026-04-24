@@ -2,14 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 
+import type { Point } from "@pt/shared";
+
+import type { RecordedTrack } from "../../../api/src/track/track.service";
 import { decodePolyline } from "../../../shared/src/polyline";
 import { AppMap } from "@/components/map";
-import { useTRPC } from "@/trpc";
+import { type AppUseQueryResult, useTRPC } from "@/trpc";
 
 export default function TrackDetailPage() {
   const id = useParams().trackID!;
-  const trpc = useTRPC();
-  const query = useQuery(trpc.track.getRecordedTrack.queryOptions({ id }));
+  const query = useTrackDetailQuery(id);
 
   const geojson = useMemo(() => {
     if (!query.data) return null;
@@ -17,7 +19,7 @@ export default function TrackDetailPage() {
       type: "Feature",
       geometry: {
         type: "LineString",
-        coordinates: decodePolyline(query.data.polyline),
+        coordinates: query.data.coordinates,
       },
       properties: {},
     } as const;
@@ -42,4 +44,32 @@ export default function TrackDetailPage() {
       />
     </div>
   );
+}
+
+type HydratedRecordedTrack = RecordedTrack & {
+  coordinates: Point[];
+};
+
+function useTrackDetailQuery(
+  id: string,
+): AppUseQueryResult<HydratedRecordedTrack | null> {
+  const trpc = useTRPC();
+  return useQuery(
+    trpc.track.getRecordedTrack.queryOptions(
+      { id },
+      {
+        select: selectHydratedRecordedTrack,
+      },
+    ),
+  );
+}
+
+function selectHydratedRecordedTrack(
+  data: RecordedTrack | null,
+): HydratedRecordedTrack | null {
+  if (!data) return null;
+  return {
+    ...data,
+    coordinates: decodePolyline(data.polyline),
+  };
 }

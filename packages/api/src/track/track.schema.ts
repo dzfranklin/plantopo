@@ -1,8 +1,22 @@
 import { relations } from "drizzle-orm";
-import { doublePrecision, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  customType,
+  doublePrecision,
+  pgTable,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
 
 import { user } from "../auth/auth.schema.js";
 import { lineString } from "../postgis.js";
+
+// double precision[] where individual elements may be NULL
+const nullableDoublePrecisionArray = customType<{
+  data: (number | null)[] | null;
+  driverData: string;
+}>({
+  dataType: () => "double precision[]",
+});
 
 export const recordedTrack = pgTable("recorded_track", {
   id: text("id").primaryKey(),
@@ -14,15 +28,19 @@ export const recordedTrack = pgTable("recorded_track", {
   endTime: timestamp("end_time", { withTimezone: true }).notNull(),
   path: lineString("path").notNull(),
   pointTimestamps: doublePrecision("point_timestamps").array().notNull(),
-  pointGpsElevation: doublePrecision("point_gps_elevation").array(), // NULL = device lacks GPS elevation
-  pointHorizontalAccuracy: doublePrecision("point_horizontal_accuracy").array(),
-  pointVerticalAccuracy: doublePrecision("point_vertical_accuracy").array(),
-  pointSpeed: doublePrecision("point_speed").array(),
-  pointSpeedAccuracy: doublePrecision("point_speed_accuracy").array(),
-  pointBearing: doublePrecision("point_bearing").array(),
-  pointBearingAccuracy: doublePrecision("point_bearing_accuracy").array(),
+  pointGpsElevation: nullableDoublePrecisionArray("point_gps_elevation"), // NULL = device lacks GPS elevation
+  pointHorizontalAccuracy: nullableDoublePrecisionArray(
+    "point_horizontal_accuracy",
+  ),
+  pointVerticalAccuracy: nullableDoublePrecisionArray(
+    "point_vertical_accuracy",
+  ),
+  pointSpeed: nullableDoublePrecisionArray("point_speed"),
+  pointSpeedAccuracy: nullableDoublePrecisionArray("point_speed_accuracy"),
+  pointBearing: nullableDoublePrecisionArray("point_bearing"),
+  pointBearingAccuracy: nullableDoublePrecisionArray("point_bearing_accuracy"),
+  pointDemElevation: nullableDoublePrecisionArray("point_dem_elevation"), // NULL = not yet populated
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  // demElevation will be added in a future task
 });
 
 export const recordedTrackRelations = relations(recordedTrack, ({ one }) => ({
