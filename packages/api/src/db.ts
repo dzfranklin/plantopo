@@ -5,8 +5,8 @@ import { getLog } from "./logger.js";
 
 export const db = drizzle(env.DATABASE_URL, {
   logger: {
-    logQuery(query, params) {
-      getLog().debug({ query, params }, "Database query");
+    logQuery(query, _params) {
+      getLog().debug({ query }, "Database query");
     },
   },
 });
