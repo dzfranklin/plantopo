@@ -30,6 +30,7 @@ wait_for_status() {
 }
 
 rollback() {
+  set +e
   systemctl --user status --no-pager $SERVICE
   echo "Rolling back to $OLD_IMAGE..."
   sed -i "s|^Image=.*|Image=$OLD_IMAGE|" $CONTAINER_FILE
@@ -46,17 +47,16 @@ sed -i "s|^Image=.*|Image=$IMAGE|" $CONTAINER_FILE
 
 systemctl --user daemon-reload
 
+trap rollback EXIT
+
 echo "Restarting service..."
 systemctl --user restart $SERVICE
 
 echo "Checking if service is active..."
 if ! systemctl --user is-active $SERVICE; then
   echo "Service is not active after restart"
-  systemctl --user status --no-pager $SERVICE
   exit 1
 fi
-
-trap rollback EXIT
 
 wait_for_status
 
