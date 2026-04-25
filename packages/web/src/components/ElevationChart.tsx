@@ -264,7 +264,7 @@ export default function ElevationChart({
       ? formatElevation(elevation, userPrefs)
       : "No data";
     tooltip.querySelector('[data-slot="distance"]')!.textContent =
-      formatDistance(distance, userPrefs);
+      formatDistance(distance, userPrefs, 2);
     if (timestamps) {
       tooltip.querySelector('[data-slot="duration"]')!.textContent = duration
         ? formatDuration(duration, "digital")
