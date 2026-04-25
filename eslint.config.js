@@ -29,6 +29,12 @@ export default defineConfig([
   {
     files: ["packages/web/**/*.{ts,tsx}"],
     extends: [reactHooks.configs.flat.recommended, reactRefresh.configs.vite],
+    rules: {
+      "react-refresh/only-export-components": [
+        "warn",
+        { allowExportNames: ["exportedForTesting"] }, // stripped in vite.config.js
+      ],
+    },
   },
   {
     files: ["packages/web/src/components/ui/**/*.{ts,tsx}"],

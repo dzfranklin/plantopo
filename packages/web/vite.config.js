@@ -7,22 +7,39 @@ import { defineConfig } from "vite";
 import thirdPartyGenerator from "./vite-third-party-generator";
 
 // https://vite.dev/config/
+
+/** @type {import('vite').Plugin} */
+const stripExportedForTesting = {
+  name: "strip-exported-for-testing",
+  apply: "serve",
+  transform(code, _id, options) {
+    if (options?.ssr || process.env.VITEST) return null;
+    if (!code.includes("exportedForTesting")) return null;
+    return code.replace(/\nexport const exportedForTesting\s*=[\s\S]*?;/, "");
+  },
+};
+
+/** @type {import('vite').Plugin} */
+const writeBuildVersion = {
+  name: "write-version",
+  apply: "build",
+  closeBundle: () =>
+    writeFile("dist/VERSION", `${process.env.VITE_COMMIT_HASH ?? "unknown"}\n`),
+};
+
 export default defineConfig(({ command }) => ({
-  server:
-    command === "serve" ? { host: "0.0.0.0", allowedHosts: true } : undefined,
+  server: {
+    ...(command === "serve" ? { host: "0.0.0.0", allowedHosts: true } : {}),
+    watch: {
+      ignored: ["**/*.{test,itest}.{ts,tsx}"],
+    },
+  },
   plugins: [
     tailwindcss(),
     react(),
     thirdPartyGenerator,
-    {
-      name: "write-version",
-      apply: "build",
-      closeBundle: () =>
-        writeFile(
-          "dist/VERSION",
-          `${process.env.VITE_COMMIT_HASH ?? "unknown"}\n`,
-        ),
-    },
+    stripExportedForTesting,
+    writeBuildVersion,
     // command === "serve" && {
     //   name: "react-devtools",
     //   transformIndexHtml: () => [
