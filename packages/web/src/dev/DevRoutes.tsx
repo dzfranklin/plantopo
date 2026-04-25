@@ -1,19 +1,26 @@
 import { Link, Route, Routes } from "react-router-dom";
 
 import DevCompleteRoutePage from "./DevCompleteRoutePage.tsx";
+import DevElevationProfilePage from "./DevElevationProfilePage.tsx";
 import DevErrorsPage from "./DevErrorsPage.tsx";
 import DevMapPage from "./DevMapPage.tsx";
 import DevMapViewPage from "./DevMapViewPage.tsx";
 import NotFoundPage from "@/NotFoundPage.tsx";
+import { usePageTitle } from "@/hooks/usePageTitle.ts";
 
 const DEV_ROUTES = [
   { path: "map", element: <DevMapPage /> },
   { path: "mapview", element: <DevMapViewPage /> },
   { path: "errors", element: <DevErrorsPage /> },
   { path: "complete-route", element: <DevCompleteRoutePage /> },
-];
+  { path: "elevation-profile", element: <DevElevationProfilePage /> },
+].map(r => ({
+  ...r,
+  element: <DevPageWrapper path={r.path}>{r.element}</DevPageWrapper>,
+}));
 
 function DevIndexPage() {
+  usePageTitle("/dev");
   return (
     <ul className="space-y-1 p-4">
       <li>
@@ -30,6 +37,17 @@ function DevIndexPage() {
       ))}
     </ul>
   );
+}
+
+function DevPageWrapper({
+  path,
+  children,
+}: {
+  path: string;
+  children: React.ReactNode;
+}) {
+  usePageTitle("/" + path);
+  return children;
 }
 
 export default function DevRoutes() {

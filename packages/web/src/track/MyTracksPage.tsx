@@ -2,9 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 
 import { DistanceView, DurationView, InstantView } from "@/components/format";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTRPC } from "@/trpc";
 
 export default function MyTracksPage() {
+  usePageTitle("My Tracks");
   const trpc = useTRPC();
   const query = useQuery(trpc.track.listRecordedTracks.queryOptions());
 

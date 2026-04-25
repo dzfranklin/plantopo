@@ -6,12 +6,22 @@ import type { Point } from "@pt/shared";
 
 import type { RecordedTrack } from "../../../api/src/track/track.service";
 import { decodePolyline } from "../../../shared/src/polyline";
+import { formatInstant } from "@/components/format";
 import { AppMap } from "@/components/map";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { type AppUseQueryResult, useTRPC } from "@/trpc";
 
 export default function TrackDetailPage() {
   const id = useParams().trackID!;
   const query = useTrackDetailQuery(id);
+
+  usePageTitle(
+    query.data
+      ? query.data.name
+        ? `Track: ${query.data.name}`
+        : `Track on ${formatInstant(query.data.startTime, "date")}`
+      : "Track",
+  );
 
   const geojson = useMemo(() => {
     if (!query.data) return null;
