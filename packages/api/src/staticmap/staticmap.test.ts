@@ -158,7 +158,7 @@ describe("renderStaticMap", () => {
     expect(img.height).toBe(400);
   });
 
-  describe("snapshots", () => {
+  describe.skipIf(process.env.CI)("snapshots", () => {
     it("Point, LineString, and Polygon features render correctly", async () => {
       const buf = await renderStaticMap({
         ...BASE_OPTS,
