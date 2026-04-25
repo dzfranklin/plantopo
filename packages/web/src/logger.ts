@@ -137,23 +137,33 @@ type ConsoleMessageMethodName = (typeof consoleMessageMethods)[number];
 // Patch console.* to forward non-pino logs into enqueue.
 // pino with asObject:true calls console[method] with a single object
 // { level: number, msg: string, ... } — detect and skip to avoid double-send.
+//
 // Skip in test mode: vitest installs its own console proxy, and wrapping it
 // causes infinite recursion since target[method] routes back through ours.
+//
+// We define properties directly on the console object rather than replacing
+// globalThis.console with a Proxy. That way console always refers to the same
+// object, so fast refresh re-execution sees the already-patched methods rather
+// than wrapping a proxy in another proxy. We store the native function under a
+// private key on the console object itself so we can skip re-patching on
+// subsequent hot reloads.
+const PATCHED_KEY = "__pt_patched__";
 if (import.meta.env.MODE !== "test") {
-  globalThis.console = new Proxy(console, {
-    get(target, prop: keyof Console) {
-      if (consoleMessageMethods.includes(prop as ConsoleMessageMethodName)) {
-        const method = prop as ConsoleMessageMethodName;
-        return function (...args: unknown[]) {
+  if (!(PATCHED_KEY in console)) {
+    for (const method of consoleMessageMethods) {
+      const native = console[method].bind(console);
+      Object.defineProperty(console, method, {
+        configurable: true,
+        enumerable: true,
+        value: function (...args: unknown[]) {
           const entry = convertConsoleArgsToLogEntry(method, args);
           if (entry) enqueue(entry);
-          return target[method](...args);
-        };
-      } else {
-        return target[prop];
-      }
-    },
-  });
+          return native(...args);
+        },
+      });
+    }
+    (console as unknown as Record<string, unknown>)[PATCHED_KEY] = true;
+  }
 }
 
 // see public/maplibre-gl-worker-log-forwarder.js
