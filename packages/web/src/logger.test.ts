@@ -33,11 +33,14 @@ beforeEach(async () => {
 
   // Reset console every time so logger doesn't wrap multiple times.
   // Stub to keep out of test output.
-  global.console = new Proxy(global.console, {
-    get(_target, _prop) {
-      return () => {};
-    },
-  });
+  global.console = {
+    trace: () => {},
+    debug: () => {},
+    log: () => {},
+    info: () => {},
+    warn: () => {},
+    error: () => {},
+  } as unknown as Console;
 
   const idleCallbacks: IdleRequestCallback[] = [];
 
