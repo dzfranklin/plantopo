@@ -31,9 +31,9 @@ export default function MyTracksPage() {
                   )}
                 </p>
                 <p className="text-gray-600">
-                  <InstantView date={track.startTime} /> &bull;{" "}
                   <DistanceView m={track.distanceM} /> &bull;{" "}
-                  <DurationView ms={track.durationMs} />
+                  <DurationView ms={track.durationMs} /> &bull;{" "}
+                  <InstantView date={track.startTime} />
                 </p>
               </Link>
             </li>
