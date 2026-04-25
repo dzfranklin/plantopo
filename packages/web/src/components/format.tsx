@@ -145,14 +145,19 @@ const fallbackDurationFmt: Pick<Intl.DurationFormat, "format"> = {
   },
 };
 
-// style: short gives e.g. "3 hrs, 2 mins". "narrow" ("3h 2m") isn't suitable
-// because it conflics with how we display metres ("3m")
-const durationFmt = Intl.DurationFormat
-  ? new Intl.DurationFormat(locale, { style: "short" })
-  : fallbackDurationFmt;
-if (durationFmt === fallbackDurationFmt) {
+if (!Intl.DurationFormat) {
   logger.warn("Intl.DurationFormat not supported, using fallback");
 }
+
+// style: short gives e.g. "3 hrs, 2 mins". "narrow" ("3h 2m") isn't suitable
+// because it conflics with how we display metres ("3m")
+const shortDurationFmt = Intl.DurationFormat
+  ? new Intl.DurationFormat(locale, { style: "short" })
+  : fallbackDurationFmt;
+
+const digitalDurationFmt = Intl.DurationFormat
+  ? new Intl.DurationFormat(locale, { style: "digital" })
+  : fallbackDurationFmt;
 
 type Duration = Partial<Record<Intl.DurationFormatUnit, number>>;
 type DurationInput = Duration | number;
@@ -173,35 +178,53 @@ function toDuration(d: DurationInput): Duration {
   }
 }
 
-export function formatDuration(ms: number): string {
+type DurationVariant = "short" | "digital";
+
+export function formatDuration(
+  ms: number,
+  variant: DurationVariant = "short",
+): string {
   const d = toDuration(ms);
-  const order: Intl.DurationFormatUnit[] = [
-    "years",
-    "months",
-    "weeks",
-    "days",
-    "hours",
-    "minutes",
-  ];
+  switch (variant) {
+    case "short": {
+      const order: Intl.DurationFormatUnit[] = [
+        "years",
+        "months",
+        "weeks",
+        "days",
+        "hours",
+        "minutes",
+      ];
 
-  const highestUnitI = order.findIndex(unit => d[unit]);
-  if (highestUnitI === -1) return "0 mins";
+      const highestUnitI = order.findIndex(unit => d[unit]);
+      if (highestUnitI === -1) return "0 mins";
 
-  const displayOrder = order.slice(
-    highestUnitI,
-    Math.min(highestUnitI + 3, order.length),
-  );
-  const displayDuration: Duration = {};
-  for (const unit of displayOrder) {
-    if (d[unit]) displayDuration[unit] = d[unit];
+      const displayOrder = order.slice(
+        highestUnitI,
+        Math.min(highestUnitI + 3, order.length),
+      );
+      const displayDuration: Duration = {};
+      for (const unit of displayOrder) {
+        if (d[unit]) displayDuration[unit] = d[unit];
+      }
+
+      return shortDurationFmt.format(displayDuration);
+    }
+    case "digital":
+      return digitalDurationFmt.format({
+        hours: d.hours ?? 0,
+        minutes: d.minutes ?? 0,
+        seconds: d.seconds ?? 0,
+      });
   }
-  return durationFmt.format(displayDuration);
 }
 
-export function DurationView(
-  props: ({ ms: number } | { from: DateInput; to: DateInput }) &
-    Omit<React.ComponentPropsWithoutRef<"span">, "children">,
-) {
+export function DurationView({
+  variant,
+  ...props
+}: ({ ms: number } | { from: DateInput; to: DateInput }) & {
+  variant?: DurationVariant;
+} & Omit<React.ComponentPropsWithoutRef<"span">, "children">) {
   let ms: number;
   let forwardedProps: React.ComponentPropsWithoutRef<"span">;
   if ("ms" in props) {
@@ -217,7 +240,7 @@ export function DurationView(
     ms = to.getTime() - from.getTime();
   }
 
-  return <span {...forwardedProps}>{formatDuration(ms)}</span>;
+  return <span {...forwardedProps}>{formatDuration(ms, variant)}</span>;
 }
 
 const FEET_IN_METER = 3.28084;
@@ -276,8 +299,12 @@ export function DistanceView({
   );
 }
 
-const elevationFormatterMetric = newUnitFormatter("meter");
-const elevationFormatterImperial = newUnitFormatter("foot");
+const elevationFormatterMetric = newUnitFormatter("meter", {
+  maximumFractionDigits: 0,
+});
+const elevationFormatterImperial = newUnitFormatter("foot", {
+  maximumFractionDigits: 0,
+});
 
 export function formatElevation(
   m: number,

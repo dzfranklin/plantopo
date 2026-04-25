@@ -1,8 +1,8 @@
 import { lineString } from "@turf/helpers";
 import { length } from "@turf/length";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
-import { type Point, add2, createSeededRandom } from "@pt/shared";
+import { type Point, add2, createSeededRandom, round2 } from "@pt/shared";
 
 import ElevationChart from "@/components/ElevationChart";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ export default function DevElevationChartPage() {
   const [maxE, setMaxE] = useState(846);
   const [dFactor, setDFactor] = useState(1);
   const [nullPct, setNullPct] = useState(0);
+  const inspectRef = useRef<HTMLPreElement>(null);
 
   const data =
     maxE - minE > 0.001
@@ -24,6 +25,11 @@ export default function DevElevationChartPage() {
       data?.points ? length(lineString(data?.points), { units: "meters" }) : 0,
     [data?.points],
   );
+
+  const onPointHover = (point: Point | null) => {
+    if (!inspectRef.current) return;
+    inspectRef.current.textContent = JSON.stringify(point, null);
+  };
 
   return (
     <div className="m-4 mx-auto flex w-full max-w-2xl flex-col gap-8">
@@ -88,7 +94,18 @@ export default function DevElevationChartPage() {
         Total distance: {(totalDistance / 1000).toFixed(2)} km
       </div>
 
-      {data && <ElevationChart {...data} className="h-[200px] w-full" />}
+      {data && (
+        <ElevationChart
+          {...data}
+          onPointHover={onPointHover}
+          className="h-[200px] w-full"
+        />
+      )}
+
+      <pre
+        ref={inspectRef}
+        className="bg-muted max-h-96 overflow-auto rounded p-4 text-xs"
+      />
     </div>
   );
 }
@@ -108,24 +125,25 @@ function generateData(
   const points: Point[] = [];
   const elevations = [];
   const timestamps = [];
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 1000; i++) {
     const lastPoint = points[points.length - 1] ?? [originLng, originLat];
     points.push(
-      add2(lastPoint, [
-        (rng() + 1) * 0.001 * dFactor,
-        (rng() + 1) * 0.0001 * dFactor,
-      ]),
+      round2(
+        add2(lastPoint, [rng() * 0.001 * dFactor, rng() * 0.0001 * dFactor]),
+        6,
+      ),
     );
 
     if (rng() < nullPct / 100) {
       elevations.push(null);
     } else {
       elevations.push(
-        ((Math.sin(i / 10 + (rng() - 0.5) / 3) + 1) / 2) * (maxE - minE) + minE,
+        ((Math.sin(i / 100 + (rng() - 0.5) / 6) + 1) / 2) * (maxE - minE) +
+          minE,
       );
     }
 
-    timestamps.push(originT + i * 1000 + rng());
+    timestamps.push(originT + i * 1000 + 60 * rng());
   }
   return { points, elevations, timestamps };
 }

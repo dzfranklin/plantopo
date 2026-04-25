@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { featureCollection, lineString, point } from "@turf/helpers";
 import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 
@@ -9,6 +10,7 @@ import { decodePolyline } from "../../../shared/src/polyline";
 import ElevationChart from "@/components/ElevationChart";
 import { formatInstant } from "@/components/format";
 import { AppMap } from "@/components/map";
+import useAnimationThrottledState from "@/hooks/useAnimationThrottledState";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { type AppUseQueryResult, useTRPC } from "@/trpc";
 
@@ -24,17 +26,29 @@ export default function TrackDetailPage() {
       : "Track",
   );
 
+  const [hoveredPoint, setHoveredPoint] =
+    useAnimationThrottledState<Point | null>(null);
+
   const geojson = useMemo(() => {
     if (!query.data) return null;
-    return {
-      type: "Feature",
-      geometry: {
-        type: "LineString",
-        coordinates: query.data.coordinates,
-      },
-      properties: {},
-    } as const;
-  }, [query.data]);
+
+    const fc = featureCollection<GeoJSON.Geometry>([
+      lineString(query.data.coordinates, {
+        stroke: "hsl(240 91% 47%)",
+        "stroke-width": 5,
+      }),
+    ]);
+
+    if (hoveredPoint) {
+      fc.features.push(
+        point(hoveredPoint, {
+          "marker-color": "hsl(240 91.2% 90%)",
+        }),
+      );
+    }
+
+    return fc;
+  }, [hoveredPoint, query.data]);
 
   return (
     <div className="mx-auto w-full max-w-4xl p-8">
@@ -58,6 +72,7 @@ export default function TrackDetailPage() {
           points={query.data.coordinates}
           elevations={query.data.pointDemElevation}
           timestamps={query.data.pointTimestamps}
+          onPointHover={setHoveredPoint}
           className="mt-4 h-[200px] rounded"
         />
       )}

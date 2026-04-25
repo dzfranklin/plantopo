@@ -3,32 +3,46 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 
 import type { Point } from "@pt/shared";
 
-import { formatDistance, formatElevation } from "./format";
+import { formatDistance, formatDuration, formatElevation } from "./format";
 import { useUserPrefs } from "@/auth/auth-client";
 import useResizeObserver from "@/hooks/useResizeObserver";
 import logger from "@/logger";
+import { cn } from "@/util/cn";
 
 interface Props {
   points: Point[];
   elevations: (number | null)[]; // in meters, same length as points
   timestamps?: (number | null)[]; // epoch ms, same length as points
   className?: string;
+  onPointHover?: (point: Point | null) => void;
 }
 
 const dpr = window.devicePixelRatio || 1;
+
+type UnscaleFn = (px: number, py: number) => { x: number; y: number };
 
 export default function ElevationChart({
   points,
   elevations,
   timestamps,
   className,
+  onPointHover,
 }: Props) {
   const userPrefs = useUserPrefs();
-  const divRef = useRef<HTMLDivElement>(null);
+  const sizerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
-  const resizeEntry = useResizeObserver(divRef, { box: "content-box" });
+  const chartRef = useRef<{
+    unscale: UnscaleFn;
+    l: number;
+    r: number;
+    t: number;
+    b: number;
+  } | null>(null);
+
+  const resizeEntry = useResizeObserver(sizerRef, { box: "content-box" });
   const ctxWidth = resizeEntry?.contentBoxSize[0]!.inlineSize;
   const ctxHeight = resizeEntry?.contentBoxSize[0]!.blockSize;
 
@@ -99,7 +113,7 @@ export default function ElevationChart({
     // Left/Right/Top/Bottom edges of chart area
     const chartL = maxYLabelW + labelPad + 1;
     const chartR = ctxWidth - (maxXLabelW / 2 + 1);
-    const chartT = maxYLabelH / 2 + headroom + 1;
+    const chartT = maxYLabelH / 2 + 1;
     const chartB = ctxHeight - (maxXLabelH + labelPad + 1);
 
     const maxX = Math.max(maxD, xTicks[xTicks.length - 1]!.value);
@@ -108,7 +122,15 @@ export default function ElevationChart({
 
     const scaleX = (x: number) => chartL + (x / maxX) * (chartR - chartL);
     const scaleY = (y: number) =>
-      chartB - ((y - minY) / (maxY - minY)) * (chartB - chartT);
+      chartB - ((y - minY) / (maxY - minY)) * (chartB - chartT - headroom);
+    const unscale: UnscaleFn = (px, py) => {
+      const x = ((px - chartL) / (chartR - chartL)) * maxX;
+      const y =
+        ((chartB - py) / (chartB - chartT - headroom)) * (maxY - minY) + minY;
+      return { x, y };
+    };
+
+    chartRef.current = { unscale, l: chartL, r: chartR, t: chartT, b: chartB };
 
     // Draw chart
 
@@ -147,7 +169,7 @@ export default function ElevationChart({
       const { value } = xTicks[i]!;
       const x = scaleX(value);
       ctx.beginPath();
-      ctx.moveTo(x, chartT - headroom);
+      ctx.moveTo(x, chartT);
       ctx.lineTo(x, chartB);
       ctx.stroke();
     }
@@ -159,7 +181,7 @@ export default function ElevationChart({
 
     ctx.beginPath();
     ctx.moveTo(chartL, chartB + labelPad);
-    ctx.lineTo(chartL, chartT - headroom);
+    ctx.lineTo(chartL, chartT);
     ctx.moveTo(chartL - labelPad, chartB);
     ctx.lineTo(chartR, chartB);
     ctx.stroke();
@@ -186,12 +208,99 @@ export default function ElevationChart({
     };
   }, [elevations, timestamps, runningD, ctxWidth, ctxHeight, userPrefs]);
 
+  const tooltipWidth = 80;
+  const tooltipXMarkerWidth = 1.5;
+
+  const onMouseMove = (e: React.MouseEvent) => {
+    if (!chartRef.current || !tooltipRef.current || !sizerRef.current) return;
+    const chart = chartRef.current;
+    const tooltip = tooltipRef.current;
+
+    const rect = sizerRef.current.getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    if (offsetX <= chart.l || offsetX >= chart.r) {
+      tooltipRef.current.style.display = "none";
+      onPointHover?.(null);
+      return;
+    }
+    const { x } = chart.unscale(offsetX, offsetY);
+
+    let closestIndex = 0;
+    for (let i = 1; i < runningD.length; i++) {
+      if (Math.abs(runningD[i]! - x) < Math.abs(runningD[closestIndex]! - x)) {
+        closestIndex = i;
+      }
+    }
+
+    const point = points[closestIndex]!;
+    const elevation = elevations[closestIndex]!;
+    const distance = runningD[closestIndex]!;
+
+    let duration: number | null = null;
+    let timestamp: number | null = null;
+    if (timestamps) {
+      const startT = timestamps[0]!;
+      timestamp = timestamps[closestIndex]!;
+      if (startT !== null && timestamp !== null) duration = timestamp - startT;
+    }
+
+    tooltip.style.display = "";
+    tooltip.style.top = `${chart.t}px`;
+    tooltip.style.height = `${chart.b - chart.t}px`;
+    if (rect.width - offsetX > tooltipWidth * 1.2) {
+      tooltip.style.left = `${offsetX - tooltipXMarkerWidth}px`;
+      tooltip.style.right = "";
+      tooltip.style.borderLeftWidth = `${tooltipXMarkerWidth}px`;
+      tooltip.style.borderRightWidth = "0";
+    } else {
+      tooltip.style.left = "";
+      tooltip.style.right = `${rect.width - offsetX}px`;
+      tooltip.style.borderLeftWidth = "0";
+      tooltip.style.borderRightWidth = `${tooltipXMarkerWidth}px`;
+    }
+
+    tooltip.querySelector('[data-slot="elevation"]')!.textContent = elevation
+      ? formatElevation(elevation, userPrefs)
+      : "No data";
+    tooltip.querySelector('[data-slot="distance"]')!.textContent =
+      formatDistance(distance, userPrefs);
+    if (timestamps) {
+      tooltip.querySelector('[data-slot="duration"]')!.textContent = duration
+        ? formatDuration(duration, "digital")
+        : "No data";
+    } else {
+      tooltip.querySelector('[data-slot="duration"]')!.textContent = "";
+    }
+
+    onPointHover?.(point);
+  };
+
+  const onMouseLeave = () => {
+    if (tooltipRef.current) tooltipRef.current.style.display = "none";
+    onPointHover?.(null);
+  };
+
   return (
-    <div
-      ref={divRef}
-      style={{ overflow: "hidden" }} // Required by resize implementation
-      className={className}>
-      {resizeEntry && <canvas ref={canvasRef} />}
+    <div className={cn(className, "relative")}>
+      <div
+        className="absolute h-full w-full overflow-hidden"
+        ref={sizerRef}
+        onMouseMove={onMouseMove}
+        onMouseLeave={onMouseLeave}>
+        {resizeEntry && <canvas ref={canvasRef} />}
+      </div>
+
+      <div
+        ref={tooltipRef}
+        className="pointer-events-none absolute flex flex-col border-[hsl(0,0%,50%)]"
+        style={{ display: "none", width: `${tooltipWidth}px` }}>
+        <div className="mx-2 mt-auto mb-2 flex flex-col rounded bg-white px-1 py-0.5 text-xs text-gray-800 shadow">
+          <span data-slot="elevation" />
+          <span data-slot="distance" />
+          <span data-slot="duration" />
+        </div>
+      </div>
     </div>
   );
 }
