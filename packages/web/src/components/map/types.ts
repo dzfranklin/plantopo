@@ -8,6 +8,7 @@ export interface MapProps {
   hash?: boolean;
   style?: ml.StyleSpecification;
   initialCamera?: SerializedCameraOptions | string | "fit";
+  initialLayers?: SelectedLayers;
   distanceUnit?: "km" | "mi";
   /** GeoJSON data to display on the map.
    * Supports [simplestyle](https://github.com/mapbox/simplestyle-spec/tree/master/1.1.0). */

@@ -33,6 +33,7 @@ export function AppMap(props: AppMapProps) {
 
   const localDefaults = useMemo(() => getLocalDefaults(), []);
   const [selectedLayers, setSelectedLayers] = useState(() => {
+    if (props.initialLayers) return props.initialLayers;
     if (hash) {
       const fromHash = getHashLayers();
       if (fromHash) return fromHash;
@@ -130,7 +131,9 @@ export function AppMap(props: AppMapProps) {
       initialCamera={initialCamera ?? localDefaults.camera}>
       <PointInfoPopup />
       <div className="absolute right-2 bottom-8 z-10">
-        <LayerPicker selected={selectedLayers} onSelect={onSelectLayers} />
+        {props.interactive !== false && (
+          <LayerPicker selected={selectedLayers} onSelect={onSelectLayers} />
+        )}
       </div>
       {children}
     </MapView>
