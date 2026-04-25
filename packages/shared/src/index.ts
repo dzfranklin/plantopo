@@ -132,6 +132,28 @@ export function round2(
   return [round(v[0], precision), round(v[1], precision)];
 }
 
+export function add2(
+  a: [number, number],
+  b: [number, number],
+): [number, number] {
+  return [a[0] + b[0], a[1] + b[1]];
+}
+
+export function mul2(v: [number, number], factor: number): [number, number] {
+  return [v[0] * factor, v[1] * factor];
+}
+
+export function sub2(
+  a: [number, number],
+  b: [number, number],
+): [number, number] {
+  return [a[0] - b[0], a[1] - b[1]];
+}
+
+export function div2(v: [number, number], factor: number): [number, number] {
+  return [v[0] / factor, v[1] / factor];
+}
+
 export const ClientInfoSchema = z.object({
   userID: z.string().optional(),
   sessionID: z.string().optional(),
@@ -158,3 +180,13 @@ export const ClientLogsPostBodySchema = z.object({
 });
 
 export type ClientLogsPostBody = z.infer<typeof ClientLogsPostBodySchema>;
+
+export function createSeededRandom(seed: number) {
+  return function () {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}

@@ -1,7 +1,7 @@
 import { Link, Route, Routes } from "react-router-dom";
 
 import DevCompleteRoutePage from "./DevCompleteRoutePage.tsx";
-import DevElevationProfilePage from "./DevElevationProfilePage.tsx";
+import DevElevationChartPage from "./DevElevationChartPage.tsx";
 import DevErrorsPage from "./DevErrorsPage.tsx";
 import DevMapPage from "./DevMapPage.tsx";
 import DevMapViewPage from "./DevMapViewPage.tsx";
@@ -13,7 +13,7 @@ const DEV_ROUTES = [
   { path: "mapview", element: <DevMapViewPage /> },
   { path: "errors", element: <DevErrorsPage /> },
   { path: "complete-route", element: <DevCompleteRoutePage /> },
-  { path: "elevation-profile", element: <DevElevationProfilePage /> },
+  { path: "elevation-chart", element: <DevElevationChartPage /> },
 ].map(r => ({
   ...r,
   element: <DevPageWrapper path={r.path}>{r.element}</DevPageWrapper>,

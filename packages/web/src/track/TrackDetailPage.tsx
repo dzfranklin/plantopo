@@ -6,6 +6,7 @@ import type { Point } from "@pt/shared";
 
 import type { RecordedTrack } from "../../../api/src/track/track.service";
 import { decodePolyline } from "../../../shared/src/polyline";
+import ElevationChart from "@/components/ElevationChart";
 import { formatInstant } from "@/components/format";
 import { AppMap } from "@/components/map";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -52,6 +53,14 @@ export default function TrackDetailPage() {
         geojson={geojson}
         initialCamera="fit"
       />
+      {query.data && query.data.pointDemElevation && (
+        <ElevationChart
+          points={query.data.coordinates}
+          elevations={query.data.pointDemElevation}
+          timestamps={query.data.pointTimestamps}
+          className="mt-4 h-[200px] rounded"
+        />
+      )}
     </div>
   );
 }
