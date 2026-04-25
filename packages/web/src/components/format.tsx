@@ -1,120 +1,313 @@
-import { useState } from "react";
-
+/* eslint-disable react-refresh/only-export-components */
 import { useUserPrefs } from "@/auth/auth-client";
+import logger from "@/logger";
 
-type DateLike = Date | string | number;
+// Only use English locales for consistency with the rest of the UI
+const locale = navigator.languages.find(l => l.startsWith("en")) || "en";
+
+type DateInput = Date | string | number;
+
+const dateNoYearStyle: Intl.DateTimeFormatOptions = {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+};
+const dateWithYearStyle: Intl.DateTimeFormatOptions = {
+  ...dateNoYearStyle,
+  year: "numeric",
+};
+const timeStyle: Intl.DateTimeFormatOptions = {
+  hour: "numeric",
+  minute: "numeric",
+};
+const relativeDatetimeStyle: Intl.RelativeTimeFormatOptions = {
+  numeric: "auto",
+};
+
+const dateFmtNoYear = new Intl.DateTimeFormat(locale, dateNoYearStyle);
+const dateWithYearFmt = new Intl.DateTimeFormat(locale, dateWithYearStyle);
+const timeFmt = new Intl.DateTimeFormat(locale, timeStyle);
+const datetimeNoYearFmt = new Intl.DateTimeFormat(locale, {
+  ...dateNoYearStyle,
+  ...timeStyle,
+});
+const dateTimeWithYearFmt = new Intl.DateTimeFormat(locale, {
+  ...dateWithYearStyle,
+  ...timeStyle,
+});
+const relativeDatetimeFmt = new Intl.RelativeTimeFormat(
+  locale,
+  relativeDatetimeStyle,
+);
+
+function shouldDisplayYear(date: Date) {
+  // show year if more than ~10 months difference
+  const maxDeltaMs = 1000 * 60 * 60 * 24 * 300;
+  return Math.abs(Date.now() - date.getTime()) < maxDeltaMs;
+}
+
+function shouldDisplayRelative(date: Date) {
+  // show relative for dates within ~15 days
+  const maxDeltaMs = 1000 * 60 * 60 * 24 * 15;
+  return Math.abs(Date.now() - date.getTime()) < maxDeltaMs;
+}
+
+function toDate(date: DateInput) {
+  return typeof date === "object" ? date : new Date(date);
+}
+
+export type InstantVariant = "date" | "datetime" | "time" | "relative";
+
+export function formatInstant(
+  date: DateInput,
+  variant: InstantVariant = "relative",
+): string {
+  const d = toDate(date);
+  if (isNaN(d.getTime())) return String(date);
+  switch (variant) {
+    case "date":
+      return fmtDate(d);
+    case "datetime":
+      return fmtDatetime(d);
+    case "time":
+      return timeFmt.format(d);
+    case "relative":
+      return formatRelativeDatetime(d);
+  }
+}
+
+const fmtDate = (d: Date) =>
+  shouldDisplayYear(d) ? dateFmtNoYear.format(d) : dateWithYearFmt.format(d);
+
+const fmtDatetime = (d: Date) =>
+  shouldDisplayYear(d)
+    ? datetimeNoYearFmt.format(d)
+    : dateTimeWithYearFmt.format(d);
+
+function formatRelativeDatetime(date: Date): string {
+  if (!shouldDisplayRelative(date)) return fmtDate(date);
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.round(diffMs / 1000);
+  const diffMin = Math.round(diffSec / 60);
+  const diffHr = Math.round(diffMin / 60);
+  const diffDay = Math.round(diffHr / 24);
+
+  if (Math.abs(diffSec) < 60) {
+    return relativeDatetimeFmt.format(0, "second"); // show "now"
+  } else if (Math.abs(diffMin) < 60) {
+    return relativeDatetimeFmt.format(-diffMin, "minute");
+  } else if (Math.abs(diffHr) < 24) {
+    return relativeDatetimeFmt.format(-diffHr, "hour");
+  } else {
+    return (
+      relativeDatetimeFmt.format(-diffDay, "day") +
+      " at " +
+      timeFmt.format(date)
+    );
+  }
+}
 
 export function InstantView({
   date,
-  className,
-  variant = "auto",
+  variant,
+  ...forwardedProps
 }: {
-  date: DateLike;
-  className?: string;
-  variant?: "date" | "datetime" | "time" | "relative" | "auto";
-}) {
-  const [now] = useState(() => new Date());
+  date: DateInput;
+  variant?: InstantVariant;
+} & Omit<React.ComponentPropsWithoutRef<"time">, "dateTime" | "children">) {
   const d = toDate(date);
-
-  if (isNaN(d.getTime())) return null;
-
-  let display: string;
-  const fullDisplay = d.toLocaleString();
-  if (variant === "date") {
-    display = d.toLocaleDateString();
-  } else if (variant === "datetime") {
-    display = d.toLocaleString();
-  } else if (variant === "time") {
-    display = d.toLocaleTimeString();
-  } else if (variant === "relative") {
-    display = formatRelative(d, now);
-  } else {
-    display = formatAuto(d, now);
-  }
-
   return (
-    <time dateTime={d.toISOString()} className={className} title={fullDisplay}>
-      {display}
+    <time
+      dateTime={d.toISOString()}
+      title={dateTimeWithYearFmt.format(d)}
+      {...forwardedProps}>
+      {formatInstant(d, variant)}
     </time>
   );
 }
 
-export function DurationView(
-  props: ({ ms: number } | { from: DateLike; to: DateLike }) & {
-    className?: string;
+const fallbackDurationFmt: Pick<Intl.DurationFormat, "format"> = {
+  format(d): string {
+    const unitOrder = [
+      "years",
+      "months",
+      "weeks",
+      "days",
+      "hours",
+      "minutes",
+    ] as const;
+    return unitOrder
+      .map(unit => (d[unit] ? `${d[unit]} ${unit}` : null))
+      .filter(Boolean)
+      .join(" ");
   },
+};
+
+// style: short gives e.g. "3 hrs, 2 mins". "narrow" ("3h 2m") isn't suitable
+// because it conflics with how we display metres ("3m")
+const durationFmt = Intl.DurationFormat
+  ? new Intl.DurationFormat(locale, { style: "short" })
+  : fallbackDurationFmt;
+if (durationFmt === fallbackDurationFmt) {
+  logger.warn("Intl.DurationFormat not supported, using fallback");
+}
+
+type Duration = Partial<Record<Intl.DurationFormatUnit, number>>;
+type DurationInput = Duration | number;
+
+function toDuration(d: DurationInput): Duration {
+  if (typeof d === "number") {
+    // interpret as ms
+    const seconds = Math.floor(d / 1000) % 60;
+    const minutes = Math.floor(d / (1000 * 60)) % 60;
+    const hours = Math.floor(d / (1000 * 60 * 60)) % 24;
+    const days = Math.floor(d / (1000 * 60 * 60 * 24)) % 7;
+    const weeks = Math.floor(d / (1000 * 60 * 60 * 24 * 7)) % 4;
+    const months = Math.floor(d / (1000 * 60 * 60 * 24 * 30)) % 12;
+    const years = Math.floor(d / (1000 * 60 * 60 * 24 * 365));
+    return { years, months, weeks, days, hours, minutes, seconds };
+  } else {
+    return d;
+  }
+}
+
+export function formatDuration(ms: number): string {
+  const d = toDuration(ms);
+  const order: Intl.DurationFormatUnit[] = [
+    "years",
+    "months",
+    "weeks",
+    "days",
+    "hours",
+    "minutes",
+  ];
+
+  const highestUnitI = order.findIndex(unit => d[unit]);
+  if (highestUnitI === -1) return "0 mins";
+
+  const displayOrder = order.slice(
+    highestUnitI,
+    Math.min(highestUnitI + 3, order.length),
+  );
+  const displayDuration: Duration = {};
+  for (const unit of displayOrder) {
+    if (d[unit]) displayDuration[unit] = d[unit];
+  }
+  return durationFmt.format(displayDuration);
+}
+
+export function DurationView(
+  props: ({ ms: number } | { from: DateInput; to: DateInput }) &
+    Omit<React.ComponentPropsWithoutRef<"span">, "children">,
 ) {
   let ms: number;
+  let forwardedProps: React.ComponentPropsWithoutRef<"span">;
   if ("ms" in props) {
-    ms = props.ms;
+    const { ms: msProp, ...rest } = props;
+    ms = msProp;
+    forwardedProps = rest;
   } else {
-    const from = toDate(props.from);
-    const to = toDate(props.to);
+    const { from: fromProp, to: toProp, ...rest } = props;
+    const from = toDate(fromProp);
+    const to = toDate(toProp);
+    forwardedProps = rest;
     if (isNaN(from.getTime()) || isNaN(to.getTime())) return null;
     ms = to.getTime() - from.getTime();
   }
-  const { className } = props;
 
-  const seconds = Math.floor(ms / 1000) % 60;
-  const minutes = Math.floor(ms / (1000 * 60)) % 60;
-  const hours = Math.floor(ms / (1000 * 60 * 60));
-
-  const display = [
-    hours > 0 ? `${hours}h` : null,
-    minutes > 0 ? `${minutes}m` : null,
-    `${seconds}s`,
-  ]
-    .filter(Boolean)
-    .join(" ");
-
-  return <span className={className}>{display}</span>;
+  return <span {...forwardedProps}>{formatDuration(ms)}</span>;
 }
 
-function toDate(date: DateLike) {
-  return typeof date === "object" ? date : new Date(date);
-}
+const FEET_IN_METER = 3.28084;
+const MILE_IN_METER = 0.000621371;
 
-function formatRelative(date: Date, now: Date = new Date()) {
-  const diffMs = now.getTime() - date.getTime();
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHr = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHr / 24);
+const distanceFormatterMetric1 = newUnitFormatter("kilometer", {
+  maximumFractionDigits: 1,
+});
+const distanceFormatterMetric2 = newUnitFormatter("kilometer", {
+  maximumFractionDigits: 2,
+});
+const distanceFormatterImperial1 = newUnitFormatter("mile", {
+  maximumFractionDigits: 1,
+});
+const distanceFormatterImperial2 = newUnitFormatter("mile", {
+  maximumFractionDigits: 2,
+});
 
-  if (diffSec < 60) {
-    return `${pluralize(diffSec, "second")} ago`;
-  } else if (diffMin < 60) {
-    return `${pluralize(diffMin, "minute")} ago`;
-  } else if (diffHr < 24) {
-    return `${pluralize(diffHr, "hour")} ago`;
+type DistanceFractionDigits = 1 | 2;
+
+export function formatDistance(
+  m: number,
+  prefs: { distanceUnit: "km" | "mi" },
+  maxFractionDigits: DistanceFractionDigits = 1,
+): string {
+  if (prefs.distanceUnit === "mi") {
+    switch (maxFractionDigits) {
+      case 1:
+        return distanceFormatterImperial1.format(m * MILE_IN_METER);
+      case 2:
+        return distanceFormatterImperial2.format(m * MILE_IN_METER);
+    }
   } else {
-    return `${pluralize(diffDay, "day")} ago`;
+    switch (maxFractionDigits) {
+      case 1:
+        return distanceFormatterMetric1.format(m / 1000);
+      case 2:
+        return distanceFormatterMetric2.format(m / 1000);
+    }
   }
 }
 
-function formatAuto(date: Date, now: Date = new Date()) {
-  const diffMs = now.getTime() - date.getTime();
-  const diffDay = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+export function DistanceView({
+  m,
+  maxFractionDigits,
+  ...forwardedProps
+}: { m: number; maxFractionDigits?: DistanceFractionDigits } & Omit<
+  React.ComponentPropsWithoutRef<"span">,
+  "children"
+>) {
+  const prefs = useUserPrefs();
+  return (
+    <span {...forwardedProps}>
+      {formatDistance(m, prefs, maxFractionDigits)}
+    </span>
+  );
+}
 
-  if (diffDay >= 7) {
-    return date.toLocaleDateString();
+const elevationFormatterMetric = newUnitFormatter("meter");
+const elevationFormatterImperial = newUnitFormatter("foot");
+
+export function formatElevation(
+  m: number,
+  prefs: { distanceUnit: "km" | "mi" },
+): string {
+  if (prefs.distanceUnit === "mi") {
+    return elevationFormatterImperial.format(m * FEET_IN_METER);
   } else {
-    return formatRelative(date);
+    return elevationFormatterMetric.format(m);
   }
 }
 
-function pluralize(count: number, singular: string, plural?: string) {
-  if (count === 1) return `1 ${singular}`;
-  return `${count} ${plural ?? singular + "s"}`;
+export function ElevationView({
+  m,
+  ...forwardedProps
+}: { m: number } & Omit<React.ComponentPropsWithoutRef<"span">, "children">) {
+  const prefs = useUserPrefs();
+  return <span {...forwardedProps}>{formatElevation(m, prefs)}</span>;
 }
 
-export function DistanceView({ m }: { m: number }) {
-  const { distanceUnit } = useUserPrefs();
-  let display: string;
-  if (distanceUnit === "mi") {
-    display = `${(m * 0.000621371).toFixed(2)} mi`;
+function newUnitFormatter(
+  unit: string,
+  opts?: Omit<Intl.NumberFormatOptions, "style" | "unit">,
+) {
+  if (Intl.supportedValuesOf("unit").includes(unit)) {
+    return new Intl.NumberFormat(locale, { style: "unit", unit, ...opts });
   } else {
-    display = `${(m / 1000).toFixed(2)} km`;
+    logger.warn(
+      `Unit "${unit}" not supported in Intl.NumberFormat, using fallback`,
+    );
+    return new Intl.NumberFormat(locale);
   }
-  return <span>{display}</span>;
 }
