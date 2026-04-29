@@ -16,6 +16,13 @@ ENV VITE_COMMIT_HASH=$COMMIT_HASH
 RUN npm -w packages/web run build
 RUN node esbuild.config.mjs
 
+COPY drizzle/ ./drizzle/
+
+FROM builder AS test
+COPY vitest.config.ts ./
+ENV SNAPSHOT_TESTS=1
+CMD ["npm", "test", "--", "--run"]
+
 FROM node:24 AS production
 WORKDIR /app
 
@@ -35,7 +42,6 @@ COPY --from=builder /app/run-task.js.map ./run-task.js.map
 RUN printf '#!/bin/sh\nexec node --enable-source-maps /app/run-task.js "$@"\n' \
     > /usr/local/bin/run-task && chmod +x /usr/local/bin/run-task
 COPY --from=builder /app/packages/web/dist/ ./static/
-COPY drizzle/ ./drizzle/
 COPY entrypoint.sh ./
 RUN chmod +x entrypoint.sh
 

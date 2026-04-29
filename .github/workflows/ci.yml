@@ -35,7 +35,11 @@ jobs:
           npx eslint .
           npx prettier --check .
 
+      - name: Build test image
+        run: docker build --target test -t plantopo-test .
+
       - name: Test
-        run: npm test -- --run
-        env:
-          DATABASE_URL: postgres://postgres@localhost/plantopo_test
+        run: |
+          docker run --rm \
+            --network host \
+            plantopo-test

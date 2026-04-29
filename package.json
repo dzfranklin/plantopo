@@ -24,6 +24,7 @@
     "local-prod": "bash scripts/local-prod.sh",
     "check": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/api/tsconfig.json && tsc --noEmit -p packages/web/tsconfig.json && prettier --write --log-level warn . && eslint --fix .",
     "test": "vitest run",
+    "test:docker": "docker build --target test -t plantopo-test . && docker run --rm --network host plantopo-test",
     "test:watch": "vitest",
     "prepare": "[ \"$npm_command\" = \"ci\" ] || husky",
     "cloc": "tokei --type TSX,Typescript --sort code ."
