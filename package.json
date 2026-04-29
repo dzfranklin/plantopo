@@ -21,22 +21,15 @@
     "db:psql": "NODE_ENV=development tsx scripts/with-api-env.ts bash -c 'exec psql $DATABASE_URL'",
     "db:seed-from-export": "NODE_ENV=development LOG_LEVEL=info tsx scripts/with-api-env.ts tsx scripts/seed-from-export.ts",
     "jobs:studio": "NODE_ENV=development tsx scripts/with-api-env.ts bash -c 'docker run --name=bullstudio --rm -d --network=host -e PORT=4010 -e REDIS_URL=$REDIS_URL emirce/bullstudio && trap \"docker stop bullstudio\" INT TERM && echo \"bullstudio running at http://localhost:4010\" && sleep infinity'",
-    "local-prod": "bash scripts/local-prod.sh",
+    "local-prod": "./scripts/local-prod.sh",
+    "local-ci-run-tests": "docker build . --target test -t plantopo-test && export GITHUB_STEP_SUMMARY=/tmp/github-step-summary.md && GITHUB_ACTIONS=true ./scripts/ci-run-tests.sh; bat $GITHUB_STEP_SUMMARY 2>/dev/null || cat $GITHUB_STEP_SUMMARY",
     "check": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/api/tsconfig.json && tsc --noEmit -p packages/web/tsconfig.json && prettier --write --log-level warn . && eslint --fix .",
     "test": "vitest run",
+    "test:docker": "docker build --target test -t plantopo-test . && (docker run --name plantopo-test-run --network host plantopo-test; EXIT=$?; docker cp plantopo-test-run:/app/packages/api/src/staticmap/test-fixtures/snapshots/. packages/api/src/staticmap/test-fixtures/snapshots/ 2>/dev/null; docker rm plantopo-test-run; exit $EXIT)",
     "test:watch": "vitest",
     "prepare": "[ \"$npm_command\" = \"ci\" ] || husky",
-    "cloc": "tokei --type TSX,Typescript --sort code ."
-  },
-  "dependencies": {
-    "@pt/web": "^0.0.0",
-    "@types/geojson": "^7946.0.16",
-    "dompurify": "^3.3.3",
-    "dotenv": "^17.3.1",
-    "geodesy": "^2.4.0",
-    "react-devtools": "^7.0.1",
-    "sharp": "^0.34.5",
-    "zod": "^4.3.6"
+    "cloc": "tokei --type TSX,Typescript --sort code .",
+    "download-fonts": "./scripts/download-fonts.sh"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
@@ -49,7 +42,6 @@
     "@types/node": "^24.12.0",
     "@types/pngjs": "^6.0.5",
     "drizzle-kit": "^0.31.10",
-    "esbuild": "^0.27.4",
     "eslint": "^9.39.4",
     "husky": "^9.1.7",
     "jsdom": "^29.0.1",

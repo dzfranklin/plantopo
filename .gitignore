@@ -1,6 +1,5 @@
 *.local.*
 *.local
-.*.env
 
 node_modules/
 dist/
@@ -9,6 +8,7 @@ dist/
 .node_repl_history
 
 .cache/
+.fonts/
 
 *.log
 npm-debug.log*

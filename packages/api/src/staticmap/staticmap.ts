@@ -4,6 +4,7 @@ import type GeoJSON from "geojson";
 import z from "zod";
 
 import { type TileFetcher, fetchTile } from "../tile-cache.js";
+import { ensureFonts } from "./ensure-fonts.js";
 
 export const SourceSchema = z.object({
   tiles: z.string(),
@@ -52,6 +53,7 @@ export type StaticMapOptions = {
 };
 
 export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
+  await ensureFonts();
   let source: Source;
   if (opts.source) {
     source = opts.source;
@@ -254,14 +256,18 @@ function drawAttribution(
   height: number,
   attribution: string,
 ): void {
-  const fontSize = 10;
   const padX = 4;
   const padY = 2;
 
-  ctx.font = `${fontSize}px Arial sans-serif`;
-  const textW = ctx.measureText(attribution).width;
+  ctx.antialias = "subpixel";
+  ctx.font = `300 10px "Source Sans 3"`;
+  ctx.textBaseline = "alphabetic";
+  const metrics = ctx.measureText(attribution);
+  const textW = metrics.width;
+  const textH =
+    metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
   const boxW = textW + padX * 2;
-  const boxH = fontSize + padY * 2;
+  const boxH = textH + padY * 2;
   const boxX = width - boxW;
   const boxY = height - boxH;
 
@@ -271,8 +277,11 @@ function drawAttribution(
   ctx.fill();
 
   ctx.fillStyle = "#1f1f1f";
-  ctx.textBaseline = "top";
-  ctx.fillText(attribution, boxX + padX, boxY + padY);
+  ctx.fillText(
+    attribution,
+    boxX + padX,
+    boxY + padY + metrics.actualBoundingBoxAscent + 0.5,
+  );
 }
 
 function featureExtent(

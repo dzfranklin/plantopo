@@ -100,6 +100,8 @@ async function renderWithSession(
 const httpServer = createServer(app);
 
 if (isDev) {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore This branch is dead in production
   const { createDevMiddleware } = await import("@pt/web/util/dev");
   const { middleware, getIndexHtml } = await createDevMiddleware(httpServer);
 

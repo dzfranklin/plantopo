@@ -1,6 +1,6 @@
 # From .gitignore
-*.local.json
-*.env
+*.local.*
+*.local
 node_modules/
 dist/
 .DS_Store
@@ -12,9 +12,10 @@ pids
 *.pid
 *.seed
 *.tsbuildinfo
+/.fonts
+/fonts
 
 # Additional
 .git
 .vscode
 .claude
-packages/web/dist/

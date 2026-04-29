@@ -8,7 +8,8 @@
     "./webTestSupport": "./src/test/webTestSupport.ts"
   },
   "scripts": {
-    "server": "tsx src/server.ts"
+    "server": "tsx src/server.ts",
+    "build": "tsc --build"
   },
   "dependencies": {
     "@better-auth/passkey": "^1.5.6",
@@ -17,12 +18,17 @@
     "better-auth": "^1.5.6",
     "bullmq": "^5.76.1",
     "canvas": "^3.2.3",
+    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
+    "node-addon-api": "^7.1.1",
+    "node-gyp": "^12.3.0",
     "pg": "^8.20.0",
+    "pg-native": "^3.7.0",
     "pino": "^10.3.1",
-    "sharp": "^0.34.2",
-    "wkx": "^0.5.0"
+    "sharp": "^0.34.5",
+    "wkx": "^0.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@pt/web": "*",

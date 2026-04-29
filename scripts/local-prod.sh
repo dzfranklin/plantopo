@@ -4,6 +4,7 @@ set -e
 api_env_file=$(mktemp)
 trap 'rm -f "$api_env_file"' EXIT
 NODE_ENV=production npx tsx scripts/with-api-env.ts > "$api_env_file"
+cat "$api_env_file"
 
 createdb plantopo_prod 2>/dev/null || true
 

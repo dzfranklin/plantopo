@@ -10,8 +10,14 @@
       "default": "./dist/index.js"
     }
   },
-  "dependencies": {
-    "zod": "*",
-    "vitest": "*"
+  "scripts": {
+    "build": "tsc --build"
+  },
+  "peerDependencies": {
+    "zod": "4.x"
+  },
+  "devDependencies": {
+    "vitest": "*",
+    "typescript": "5.9"
   }
 }

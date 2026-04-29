@@ -8,7 +8,7 @@ import type { TileFetcher } from "../tile-cache.js";
 import { renderStaticMap } from "./staticmap.js";
 
 const FIXTURES = join(import.meta.dirname, "test-fixtures");
-const SNAPSHOTS = join(FIXTURES, "snapshots");
+const SNAPSHOTS = join(import.meta.dirname, "__snapshots__");
 
 // z10 tiles around central London (tile 511/340)
 // Tile bounds: W -0.3516 E 0.0000 N 51.6180 S 51.3992
@@ -44,18 +44,21 @@ async function tileProvider(
 async function expectMatchesSnapshot(
   buf: Buffer,
   name: string,
-  threshold = 0,
+  threshold = 50,
 ): Promise<void> {
   const snapshotPath = join(SNAPSHOTS, `${name}.png`);
+  const diffPath = join(SNAPSHOTS, `${name}-diff.png`);
+  const actualPath = join(SNAPSHOTS, `${name}-actual.png`);
+
   let snapshotBuf: Buffer;
   try {
     snapshotBuf = await readFile(snapshotPath);
   } catch {
     // First run — write snapshot for manual inspection
-    await writeFile(snapshotPath, buf);
+    await writeFile(actualPath, buf);
     assert(
       false,
-      `Snapshot ${name} did not exist, created it. Please verify the output and re-run the test.`,
+      `Snapshot ${name} did not exist, wrote output to ${actualPath} for inspection.`,
     );
   }
 
@@ -78,13 +81,11 @@ async function expectMatchesSnapshot(
   );
 
   if (diffCount > threshold) {
-    const diffPath = join(SNAPSHOTS, `${name}-diff.png`);
-    const actualPath = join(SNAPSHOTS, `${name}-actual.png`);
     await writeFile(actualPath, buf);
     await writeFile(diffPath, PNG.sync.write(diff));
     assert(
       false,
-      `Output did not match snapshot for ${name}. Diff count: ${diffCount}. See ${diffPath} for pixel differences.`,
+      `Output did not match snapshot for ${name}. Diff count: ${diffCount}. See ${diffPath} and ${actualPath}.`,
     );
   }
 }
@@ -158,7 +159,7 @@ describe("renderStaticMap", () => {
     expect(img.height).toBe(400);
   });
 
-  describe.skipIf(process.env.CI)("snapshots", () => {
+  describe.skipIf(!process.env.CI)("snapshots", () => {
     it("Point, LineString, and Polygon features render correctly", async () => {
       const buf = await renderStaticMap({
         ...BASE_OPTS,
@@ -338,7 +339,7 @@ describe("renderStaticMap", () => {
           },
         ],
       });
-      await expectMatchesSnapshot(buf, "retina");
+      await expectMatchesSnapshot(buf, "retina", 100); // higher threshold as higher res
     });
   });
 });

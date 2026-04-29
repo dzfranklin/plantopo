@@ -7,7 +7,9 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { env } from "./env.js";
 import { logger } from "./logger.js";
 
-logger.info("Connecting to database...");
+const log = logger.child({ script: "migrate.js" });
+
+log.info("Connecting to database...");
 const db = drizzle(env.DATABASE_URL);
 
 const getApplied = () =>
@@ -15,7 +17,7 @@ const getApplied = () =>
     sql`SELECT hash FROM drizzle.__drizzle_migrations`,
   );
 
-logger.info("Running migrations...");
+log.info("Running migrations...");
 const before = await getApplied().catch(() => ({ rows: [] }));
 await migrate(db, { migrationsFolder: "drizzle" });
 const after = await getApplied();
@@ -23,9 +25,9 @@ const applied = after.rows.filter(
   r => !before.rows.some(b => b.hash === r.hash),
 );
 if (applied.length > 0) {
-  logger.info({ applied: applied.map(r => r.hash) }, "Migrations applied");
+  log.info({ applied: applied.map(r => r.hash) }, "Migrations applied");
 } else {
-  logger.info("No new migrations");
+  log.info("No new migrations");
 }
 
 await db.$client.end();
