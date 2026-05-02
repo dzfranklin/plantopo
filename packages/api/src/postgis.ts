@@ -27,6 +27,6 @@ export const lineString = customType<{ data: Point[]; driverData: Buffer }>({
     if (!(geom instanceof wkx.LineString)) {
       throw new Error(`Expected LineString, got ${geom.constructor.name}`);
     }
-    return geom.points.map(p => [p.x, p.y] as Point);
+    return geom.points.map(p => [p.x, p.y]);
   },
 });
