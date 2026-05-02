@@ -341,5 +341,60 @@ describe("renderStaticMap", () => {
       });
       await expectMatchesSnapshot(buf, "retina", 100); // higher threshold as higher res
     });
+
+    it("maxzoom downscales tiles when auto-zoom exceeds the cap", async () => {
+      // Kincardine bridge is tiny — auto-zoom would be ~16. Cap at 10 to force
+      // tile downscaling so the bridge appears as a small line on a wide view.
+      const buf = await renderStaticMap({
+        ...BASE_OPTS,
+        source: { ...BASE_OPTS.source, maxzoom: 10 },
+        features: [
+          {
+            type: "Feature",
+            properties: { stroke: "magenta", "stroke-width": 3 },
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [-3.72322, 56.06642],
+                [-3.73392, 56.06311],
+              ],
+            },
+          },
+        ],
+      });
+      await expectMatchesSnapshot(buf, "maxzoom-downscale");
+    });
+
+    it("minzoom upscales tiles when auto-zoom is below the floor", async () => {
+      // London polygon auto-fits at ~9. Force to 15 so tiles are upscaled and
+      // the polygon fills only a small corner of the image.
+      const buf = await renderStaticMap({
+        ...BASE_OPTS,
+        source: { ...BASE_OPTS.source, minzoom: 15 },
+        features: [
+          {
+            type: "Feature",
+            properties: {
+              fill: "#00ff00",
+              stroke: "#ff0000",
+              "stroke-width": 4,
+            },
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [-0.3, 51.45],
+                  [-0.05, 51.45],
+                  [-0.05, 51.57],
+                  [-0.3, 51.57],
+                  [-0.3, 51.45],
+                ],
+              ],
+            },
+          },
+        ],
+      });
+      await expectMatchesSnapshot(buf, "minzoom-upscale");
+    });
   });
 });

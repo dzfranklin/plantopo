@@ -3,20 +3,28 @@ import { type CanvasRenderingContext2D, createCanvas, loadImage } from "canvas";
 import type GeoJSON from "geojson";
 import z from "zod";
 
+import { env } from "../env.js";
 import { type TileFetcher, fetchTile } from "../tile-cache.js";
 import { ensureFonts } from "./ensure-fonts.js";
 
 export const SourceSchema = z.object({
   tiles: z.string(),
   tileSize: z.number().optional(), // default 256
+  minzoom: z.number().optional(),
+  maxzoom: z.number().optional(),
   attribution: z.string().optional(),
 });
 
 export type Source = z.infer<typeof SourceSchema>;
 
 export const OSM_SOURCE: Source = {
-  tiles: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-  attribution: "© OpenStreetMap",
+  tiles:
+    "https://api.thunderforest.com/outdoors/{z}/{x}/{y}@2x.png?apikey=" +
+    env.THUNDERFOREST_KEY,
+  minzoom: 0,
+  maxzoom: 22,
+  attribution:
+    '<a href="https://www.thunderforest.com/">&copy; Thunderforest</a> <a href="https://www.openstreetmap.org/copyright">&copy; OpenStreetMap</a>',
 };
 
 // GeoJSON simplestyle properties
@@ -45,7 +53,7 @@ export type StaticMapOptions = {
   height: number;
   padding?: number; // px inset from edge when auto-fitting features; default 10
   source?: Source; // default: OSM_SOURCE
-  zoom?: number; // auto-calculated if omitted
+  zoom?: number; // fractional zoom; auto-calculated if omitted
   center?: GeoJSON.Position; // [lng, lat]; auto-calculated from features if omitted
   features?: Feature[];
   retina?: boolean; // render at 2x resolution; output is 2*width x 2*height
@@ -72,8 +80,16 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
   // Resolve retina tile URL: replace {r} placeholder with "@2x" or ""
   const resolvedUrlTemplate = urlTemplate.replace("{r}", retina ? "@2x" : "");
 
-  const zoom =
+  let zoom =
     opts.zoom ?? calculateZoom(features, width, height, tileSize, padding);
+  if (source.minzoom !== undefined) zoom = Math.max(zoom, source.minzoom);
+  if (source.maxzoom !== undefined) zoom = Math.min(zoom, source.maxzoom);
+
+  // Tile servers only serve integer zoom levels. The fractional remainder and
+  // any clamping delta are absorbed into effectiveTileSize so that tiles are
+  // drawn at the correct visual scale without re-fetching at a different zoom.
+  const tileZoom = Math.floor(zoom);
+  const effectiveTileSize = tileSize * Math.pow(2, zoom - tileZoom);
 
   let xCenter: number, yCenter: number;
   if (opts.center) {
@@ -99,16 +115,26 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
 
   await drawTiles(
     ctx,
+    tileZoom,
     zoom,
     xCenter,
     yCenter,
     width,
     height,
-    tileSize,
+    effectiveTileSize,
     resolvedUrlTemplate,
     provider,
   );
-  drawFeatures(ctx, zoom, xCenter, yCenter, width, height, tileSize, features);
+  drawFeatures(
+    ctx,
+    zoom,
+    xCenter,
+    yCenter,
+    width,
+    height,
+    effectiveTileSize,
+    features,
+  );
   if (attribution) drawAttribution(ctx, width, height, attribution);
 
   const resolution = retina ? 144 : 72;
@@ -124,21 +150,28 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
 
 async function drawTiles(
   ctx: CanvasRenderingContext2D,
+  tileZoom: number,
   zoom: number,
   xCenter: number,
   yCenter: number,
   width: number,
   height: number,
-  tileSize: number,
+  effectiveTileSize: number,
   urlTemplate: string,
   provider: TileFetcher,
 ): Promise<void> {
-  const xMin = Math.floor(xCenter - (0.5 * width) / tileSize);
-  const yMin = Math.floor(yCenter - (0.5 * height) / tileSize);
-  const xMax = Math.ceil(xCenter + (0.5 * width) / tileSize);
-  const yMax = Math.ceil(yCenter + (0.5 * height) / tileSize);
+  // Tile grid is computed in fractional zoom-space then mapped to tileZoom tiles.
+  // xCenter/yCenter are at fractional zoom; scale them down to tileZoom space.
+  const zoomScale = Math.pow(2, tileZoom - zoom); // < 1 when zoom > tileZoom
+  const xCenterTile = xCenter * zoomScale;
+  const yCenterTile = yCenter * zoomScale;
 
-  const n = Math.pow(2, zoom);
+  const xMin = Math.floor(xCenterTile - (0.5 * width) / effectiveTileSize);
+  const yMin = Math.floor(yCenterTile - (0.5 * height) / effectiveTileSize);
+  const xMax = Math.ceil(xCenterTile + (0.5 * width) / effectiveTileSize);
+  const yMax = Math.ceil(yCenterTile + (0.5 * height) / effectiveTileSize);
+
+  const n = Math.pow(2, tileZoom);
 
   const tiles: {
     tileX: number;
@@ -150,18 +183,22 @@ async function drawTiles(
     for (let y = yMin; y < yMax; y++) {
       const tileX = ((x % n) + n) % n;
       const tileY = ((y % n) + n) % n;
-      const dstLeft = Math.round((x - xCenter) * tileSize + width / 2);
-      const dstTop = Math.round((y - yCenter) * tileSize + height / 2);
+      const dstLeft = Math.round(
+        (x - xCenterTile) * effectiveTileSize + width / 2,
+      );
+      const dstTop = Math.round(
+        (y - yCenterTile) * effectiveTileSize + height / 2,
+      );
       tiles.push({ tileX, tileY, dstLeft, dstTop });
     }
   }
 
   await Promise.all(
     tiles.map(async ({ tileX, tileY, dstLeft, dstTop }) => {
-      const buf = await provider(urlTemplate, zoom, tileX, tileY);
+      const buf = await provider(urlTemplate, tileZoom, tileX, tileY);
       if (!buf) return;
       const img = await loadImage(buf);
-      ctx.drawImage(img, dstLeft, dstTop, tileSize, tileSize);
+      ctx.drawImage(img, dstLeft, dstTop, effectiveTileSize, effectiveTileSize);
     }),
   );
 }
@@ -173,12 +210,12 @@ function drawFeatures(
   yCenter: number,
   width: number,
   height: number,
-  tileSize: number,
+  effectiveTileSize: number,
   features: Feature[],
 ): void {
   const toPx = (pos: GeoJSON.Position): [number, number] => [
-    xToPx(lonToX(pos[0]!, zoom), xCenter, width, tileSize),
-    yToPx(latToY(pos[1]!, zoom), yCenter, height, tileSize),
+    xToPx(lonToX(pos[0]!, zoom), xCenter, width, effectiveTileSize),
+    yToPx(latToY(pos[1]!, zoom), yCenter, height, effectiveTileSize),
   ];
 
   for (const f of features) {
@@ -334,18 +371,19 @@ function calculateZoom(
   tileSize: number,
   padding: number,
 ): number {
-  const extent = featureExtent(features, undefined, undefined);
-  const [minLon, minLat, maxLon, maxLat] = extent;
+  const [minLon, minLat, maxLon, maxLat] = featureExtent(
+    features,
+    undefined,
+    undefined,
+  );
   const availW = width - padding * 2;
   const availH = height - padding * 2;
 
   for (let z = 17; z >= 0; z--) {
     const pxWidth = (lonToX(maxLon, z) - lonToX(minLon, z)) * tileSize;
     if (pxWidth > availW) continue;
-
     const pxHeight = (latToY(minLat, z) - latToY(maxLat, z)) * tileSize;
     if (pxHeight > availH) continue;
-
     return z;
   }
   return 0;
