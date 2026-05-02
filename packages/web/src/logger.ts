@@ -266,7 +266,7 @@ export function convertPinoEventToLogEntry(
       stack: extra.err.stack,
     };
   }
-  return { level, msg, ts, extra };
+  return { level, msg, ts, extra: truncateExtra(extra) };
 }
 
 export function convertConsoleArgsToLogEntry(
@@ -306,7 +306,7 @@ export function convertConsoleArgsToLogEntry(
     level: method === "log" ? "info" : method,
     msg: parts.join(" "),
     ts: Date.now(),
-    extra,
+    extra: truncateExtra(extra),
   };
 }
 
@@ -324,6 +324,42 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   if (typeof v !== "object" || v === null || Array.isArray(v)) return false;
   const proto = Object.getPrototypeOf(v);
   return proto === Object.prototype || proto === null;
+}
+
+const MAX_KEY_LEN = 64;
+const MAX_STR_LEN = 512;
+const MAX_EXTRA_DEPTH = 2; // extra.foo.bar is depth 2; extra.foo.bar.baz is truncated
+
+function truncateExtra(
+  extra: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const k of Object.keys(extra)) {
+    const key = k.length > MAX_KEY_LEN ? k.slice(0, MAX_KEY_LEN) + "…" : k;
+    out[key] = truncateValue(extra[k], 1);
+  }
+  return out;
+}
+
+function truncateValue(v: unknown, depth: number): unknown {
+  if (typeof v === "string") {
+    return v.length > MAX_STR_LEN ? v.slice(0, MAX_STR_LEN) + "…" : v;
+  }
+  if (depth >= MAX_EXTRA_DEPTH) {
+    if (Array.isArray(v)) return "[Array]";
+    if (typeof v === "object" && v !== null) return "[Object]";
+    return v;
+  }
+  if (Array.isArray(v)) return v.map(x => truncateValue(x, depth + 1));
+  if (isPlainObject(v)) {
+    const out: Record<string, unknown> = {};
+    for (const k of Object.keys(v)) {
+      const key = k.length > MAX_KEY_LEN ? k.slice(0, MAX_KEY_LEN) + "…" : k;
+      out[key] = truncateValue(v[k], depth + 1);
+    }
+    return out;
+  }
+  return v;
 }
 
 function sanitizeForLog(v: unknown, seen: Set<unknown> = new Set()): unknown {
