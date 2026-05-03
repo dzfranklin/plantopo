@@ -35,7 +35,7 @@ export function MapSearch() {
 
   const geocodeQuery = useQuery(
     trpc.geocoder.geocode.queryOptions(
-      debouncedQuery
+      debouncedQuery && debouncedQuery.length > 0 && isExpanded
         ? { query: debouncedQuery, locationBias, limit: 5 }
         : skipToken,
       { staleTime: Infinity, throwOnError: false },
