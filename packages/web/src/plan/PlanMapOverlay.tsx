@@ -15,7 +15,7 @@ export function PlanMapOverlay() {
     const m = mm.map;
     const im = mm.interactionManager;
 
-    const renderer = new PlanRenderer(m.getCanvasContainer(), m);
+    const renderer = new PlanRenderer(m.getCanvasContainer(), m.getCanvas(), m);
     rendererRef.current = renderer;
 
     const repaintNow = () => renderer.render(stateRef.current);

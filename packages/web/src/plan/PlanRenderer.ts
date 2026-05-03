@@ -103,6 +103,7 @@ interface MarkerEls {
 
 export class PlanRenderer {
   private _container: HTMLElement;
+  private _mlCanvas: HTMLCanvasElement;
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private _handleLayer: HTMLDivElement;
@@ -112,8 +113,13 @@ export class PlanRenderer {
   private _hoveredId: number | null = null;
   private _activeId: number | null = null;
 
-  constructor(container: HTMLElement, projector: Projector) {
+  constructor(
+    container: HTMLElement,
+    mlCanvas: HTMLCanvasElement,
+    projector: Projector,
+  ) {
     this._container = container;
+    this._mlCanvas = mlCanvas;
     this.projector = projector;
 
     this.canvas = document.createElement("canvas");
@@ -229,25 +235,25 @@ export class PlanRenderer {
   }
 
   private _syncCanvas() {
+    // Read dimensions from MapLibre's canvas — it's always up to date, even
+    // during resize, whereas our overlay canvas has a stale explicit style.width.
     const dpr = window.devicePixelRatio ?? 1;
-    const { offsetWidth, offsetHeight } = this.canvas;
-    const w = Math.round(offsetWidth * dpr);
-    const h = Math.round(offsetHeight * dpr);
+    const w = this._mlCanvas.width;
+    const h = this._mlCanvas.height;
     if (this.canvas.width !== w || this.canvas.height !== h) {
       this.canvas.width = w;
       this.canvas.height = h;
-      this.canvas.style.width = `${offsetWidth}px`;
-      this.canvas.style.height = `${offsetHeight}px`;
+      this.canvas.style.width = `${w / dpr}px`;
+      this.canvas.style.height = `${h / dpr}px`;
     }
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.clearRect(0, 0, w, h);
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   private _drawLines(state: PlanState) {
     if (state.points.length < 2) return;
-    const dpr = window.devicePixelRatio ?? 1;
     const ctx = this.ctx;
-    ctx.save();
-    ctx.scale(dpr, dpr);
     ctx.beginPath();
     for (let i = 0; i < state.points.length; i++) {
       const [lng, lat] = state.points[i]!.point;
@@ -258,7 +264,6 @@ export class PlanRenderer {
     ctx.strokeStyle = BLUE;
     ctx.lineWidth = 2;
     ctx.stroke();
-    ctx.restore();
   }
 
   private _syncMarkers(state: PlanState) {
