@@ -27,10 +27,10 @@ if (targetRows.length === 0) {
   console.error(`No user found with email ${targetEmail}`);
   process.exit(1);
 }
-const targetID = targetRows[0]!.id;
+const targetId = targetRows[0]!.id;
 
 console.log(
-  `Seeding recorded tracks for user ${targetEmail} (id ${targetID}) from export ${exportPath}`,
+  `Seeding recorded tracks for user ${targetEmail} (id ${targetId}) from export ${exportPath}`,
 );
 
 const exportDir = await fs.mkdtempDisposable(
@@ -53,7 +53,7 @@ for (const trackFile of trackFiles) {
   const raw = await fs.readFile(path.join(trackDir, trackFile), "utf-8");
   const data = JSON.parse(raw);
 
-  data.userId = targetID;
+  data.userId = targetId;
   data.startTime = new Date(data.startTime);
   data.endTime = new Date(data.endTime);
   data.createdAt = new Date(data.createdAt);

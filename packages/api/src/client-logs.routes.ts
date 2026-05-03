@@ -26,8 +26,8 @@ export function registerClientLogsRoutes(app: Router) {
 
     const entries = data.data.entries.map(entry => ({
       ...entry,
-      userID: session?.user.id,
-      sessionID: session?.session?.id,
+      userId: session?.user.id,
+      sessionId: session?.session?.id,
     }));
 
     for (const entry of entries) {

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let logger: typeof import("./logger").logger;
 let loggerModule: typeof import("./logger");
-let clientID: string;
+let clientId: string;
 let triggerIdleCallbacks: () => void;
 
 type ListenerEntry = {
@@ -94,7 +94,7 @@ beforeEach(async () => {
 
   loggerModule = await import("./logger");
   logger = loggerModule.logger;
-  clientID = loggerModule.clientID;
+  clientId = loggerModule.clientId;
 });
 
 afterEach(() => {
@@ -241,7 +241,7 @@ describe("maplibre worker log integration", () => {
   it("ignores logs for different client", async () => {
     const chan = new BroadcastChannel("plantopo-maplibre-worker-logs");
     chan.postMessage({
-      clientID: "other-client",
+      clientId: "other-client",
       method: "warn",
       args: ["Worker log", 42],
     });
@@ -254,7 +254,7 @@ describe("maplibre worker log integration", () => {
   it("receives logs", async () => {
     const chan = new BroadcastChannel("plantopo-maplibre-worker-logs");
     chan.postMessage({
-      clientID: clientID,
+      clientId,
       method: "warn",
       args: ["worker log", 42],
     });

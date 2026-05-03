@@ -55,7 +55,7 @@ app.get("/api/v1/_smoke-test", async (_req, res) => {
   const ctx = requestContext();
   res.json({
     context: {
-      reqID: ctx.reqID,
+      reqId: ctx.reqId,
       path: ctx.path,
       user: ctx.user
         ? { id: ctx.user.id, email: ctx.user.email, prefs: ctx.user.prefs }

@@ -69,7 +69,7 @@ export function subscribeLogViewer(onChange: () => void) {
 // --- Log shipping ---
 
 const ENDPOINT = "/api/v1/client-logs";
-export const clientID =
+export const clientId =
   crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
 let shipQueue: ClientLogEntry[] = [];
 let shipScheduled = false;
@@ -83,7 +83,7 @@ export function getClientInfo(): ClientInfo {
     .join(",");
 
   return {
-    clientID,
+    clientId,
     clientVersion,
     clientDebugFlags: debugFlags,
     nativeVersion: window.Native?.version?.(),
@@ -112,7 +112,7 @@ export function safeStringify(value: unknown, indent?: number): string {
 export function connectMaplibreWorkerLogs(map: MapLibreMap) {
   map.style.dispatcher.broadcast(
     "_plantopo_log_forwarder_connect" as MaplibreMessageType,
-    { clientID },
+    { clientId },
   );
 }
 
@@ -170,11 +170,11 @@ if (import.meta.env.MODE !== "test") {
 const maplibreChannel = new BroadcastChannel("plantopo-maplibre-worker-logs");
 maplibreChannel.onmessage = e => {
   const data = e.data as {
-    clientID: string;
+    clientId: string;
     method: ConsoleMessageMethodName;
     args: unknown[];
   };
-  if (data.clientID === clientID) {
+  if (data.clientId === clientId) {
     const entry = convertConsoleArgsToLogEntry(
       data.method,
       data.args,

@@ -15,7 +15,7 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { type AppUseQueryResult, useTRPC } from "@/trpc";
 
 export default function TrackDetailPage() {
-  const id = useParams().trackID!;
+  const id = useParams().trackId!;
   const query = useTrackDetailQuery(id);
 
   usePageTitle(

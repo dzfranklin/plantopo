@@ -22,9 +22,9 @@ const TERRAIN_OPTIONS: ml.TerrainSpecification = {
 const MAX_PITCH = 60;
 
 export class MapManager {
-  static _nextTraceID = 1;
+  static _nextTraceId = 1;
 
-  traceID = MapManager._nextTraceID++;
+  traceId = MapManager._nextTraceId++;
 
   private _m: ml.Map | null;
   private _bottomInfoControl: BottomInfoControl | null = null;
@@ -448,7 +448,7 @@ export class MapManager {
     const msg = typeof arg1 === "string" ? arg1 : null;
     const data = typeof arg1 === "string" ? arg2 : arg1;
 
-    const summary = `[MapManager ${this.traceID} ${position}]${msg ? " " + msg : ""}`;
+    const summary = `[MapManager ${this.traceId} ${position}]${msg ? " " + msg : ""}`;
 
     console.groupCollapsed(summary);
     console.trace(

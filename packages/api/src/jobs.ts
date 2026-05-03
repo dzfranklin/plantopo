@@ -81,7 +81,7 @@ export async function enqueueJob<Name extends JobName>(
 
   const requestContext = getRequestContext();
   const meta: JobMeta = {
-    enqueuedByReqId: requestContext?.reqID,
+    enqueuedByReqId: requestContext?.reqId,
     enqueuedByReqUserId: requestContext?.user?.id,
   };
 

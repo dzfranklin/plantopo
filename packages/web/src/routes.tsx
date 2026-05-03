@@ -68,7 +68,7 @@ export function AppRoutes() {
                 <Route path="interface" element={<SettingsInterfacePage />} />
               </Route>
               <Route path="/tracks" element={<MyTracksPage />} />
-              <Route path="/track/:trackID" element={<TrackDetailPage />} />
+              <Route path="/track/:trackId" element={<TrackDetailPage />} />
             </Route>
 
             <Route path="/dev/*" element={<DevRoutes />} />

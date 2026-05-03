@@ -15,8 +15,8 @@ export async function requestContextMiddleware(
 ) {
   const logBindings: Record<string, unknown> = {};
 
-  const reqID = randomUUID();
-  logBindings.reqID = reqID;
+  const reqId = randomUUID();
+  logBindings.reqId = reqId;
 
   const rawClientInfo = req.get("x-client-info");
   let client: ClientInfo | undefined = undefined;
@@ -41,7 +41,7 @@ export async function requestContextMiddleware(
 
     user = response?.user ?? null;
 
-    logBindings.sessionID = response?.session.id;
+    logBindings.sessionId = response?.session.id;
     logBindings.userId = user?.id;
 
     for (const [key, value] of headers) {
@@ -55,7 +55,7 @@ export async function requestContextMiddleware(
 
   const ctx: RequestContext = {
     path: req.originalUrl,
-    reqID,
+    reqId: reqId,
     logger: logger.child(logBindings),
     user,
     client,

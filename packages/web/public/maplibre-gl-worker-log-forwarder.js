@@ -19,34 +19,34 @@
   const originalConsole = globalThis.console;
   patchConsole();
 
-  let clientID = null;
+  let clientId = null;
 
   self.worker.actor.registerMessageHandler(
     "_plantopo_log_forwarder_connect",
-    async (_mapId, { clientID: newClientID }) => {
-      if (clientID !== null) {
-        if (clientID !== newClientID) {
+    async (_mapId, { clientId: newClientId }) => {
+      if (clientId !== null) {
+        if (clientId !== newClientId) {
           originalConsole.warn(
-            "[maplibre-gl-worker-log-forwarder] Received connect message with clientID",
-            newClientID,
-            "but already connected with clientID",
-            clientID,
-            "overwriting clientID and continuing to forward logs to the new clientID",
+            "[maplibre-gl-worker-log-forwarder] Received connect message with clientId",
+            newClientId,
+            "but already connected with clientId",
+            clientId,
+            "overwriting clientId and continuing to forward logs to the new clientId",
           );
         }
         return;
       }
 
-      clientID = newClientID;
+      clientId = newClientId;
       originalConsole.info(
-        "[maplibre-gl-worker-log-forwarder] Connected to client with clientID",
-        clientID,
+        "[maplibre-gl-worker-log-forwarder] Connected to client with clientId",
+        clientId,
       );
     },
   );
 
   function postLog(method, args) {
-    channel.postMessage({ clientID, method, args });
+    channel.postMessage({ clientId, method, args });
   }
 
   function patchConsole() {

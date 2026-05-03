@@ -155,9 +155,9 @@ export function div2(v: [number, number], factor: number): [number, number] {
 }
 
 export const ClientInfoSchema = z.object({
-  userID: z.string().optional(),
-  sessionID: z.string().optional(),
-  clientID: z.string().optional(),
+  userId: z.string().optional(),
+  sessionId: z.string().optional(),
+  clientId: z.string().optional(),
   clientVersion: z.string().optional(),
   clientDebugFlags: z.string().optional(),
   nativeVersion: z.string().optional(),
