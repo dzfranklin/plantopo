@@ -205,9 +205,9 @@ export async function geocode(
   if (options.lang !== null) params.set("lang", options.lang ?? "en");
   if (options.locationBias !== undefined) {
     const { point, zoom, scale } = options.locationBias;
-    params.set("lon", String(point[0]));
-    params.set("lat", String(point[1]));
-    if (zoom !== undefined) params.set("zoom", String(zoom));
+    params.set("lon", point[0].toFixed(6));
+    params.set("lat", point[1].toFixed(6));
+    if (zoom !== undefined) params.set("zoom", String(Math.round(zoom)));
     if (scale !== undefined) params.set("location_bias_scale", String(scale));
   }
   if (options.bbox !== undefined) params.set("bbox", options.bbox.join(","));

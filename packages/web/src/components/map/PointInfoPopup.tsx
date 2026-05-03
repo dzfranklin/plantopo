@@ -78,8 +78,6 @@ export function PointInfoPopup() {
   } | null>(null);
 
   useEffect(() => {
-    if (!manager || !manager.map) return;
-
     const map = manager.map;
     const canvas = map.getCanvas();
 
@@ -132,12 +130,11 @@ export function PointInfoPopup() {
   );
 
   useEffect(() => {
-    const map = manager?.map;
-    if (!map || !position) return;
+    if (!position) return;
 
     popup.setLngLat(position.point);
     popup.setDOMContent(container);
-    popup.addTo(map);
+    popup.addTo(manager.map);
 
     return () => {
       popup.remove();
@@ -147,7 +144,7 @@ export function PointInfoPopup() {
   const [copied, setCopied] = useState(false);
 
   function copyLink() {
-    if (!manager || !position) return;
+    if (!position) return;
     const camera = manager.serializeCamera({
       ...position.camera,
       center: position.point,

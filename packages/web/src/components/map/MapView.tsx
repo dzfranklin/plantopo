@@ -23,6 +23,7 @@ export function MapView(props: MapProps) {
   const mayShowDebug = useDebugFlag("showDebugOptions");
   const managerRef = useRef<MapManager | null>(null);
   const [manager, setManager] = useState<MapManager | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
   const hashTerrain = props.hash && props.terrain === undefined;
   const [uncontrolledTerrain, setUncontrolledTerrain] = useState(() =>
     hashTerrain ? getHashParam("t") === "1" : false,
@@ -64,10 +65,12 @@ export function MapView(props: MapProps) {
       managerRef.current = m;
       setManager(m);
       forwardedProps.onManager?.(m);
+      m.map!.once("load", () => setMapLoaded(true));
     } else {
       managerRef.current?.destroy();
       managerRef.current = null;
       setManager(null);
+      setMapLoaded(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -80,20 +83,24 @@ export function MapView(props: MapProps) {
     <MapManagerContext.Provider value={manager}>
       <div className={cn("relative h-full w-full", className)}>
         <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-        {interactive && manager && (
-          <NavControls
-            terrain={terrain}
-            onTerrainChange={
-              props.terrain === undefined
-                ? v => {
-                    setUncontrolledTerrain(v);
-                    if (hashTerrain) setHashParam("t", v ? "1" : null);
-                  }
-                : undefined
-            }
-          />
+        {manager && mapLoaded && (
+          <>
+            {interactive && (
+              <NavControls
+                terrain={terrain}
+                onTerrainChange={
+                  props.terrain === undefined
+                    ? v => {
+                        setUncontrolledTerrain(v);
+                        if (hashTerrain) setHashParam("t", v ? "1" : null);
+                      }
+                    : undefined
+                }
+              />
+            )}
+            {children}
+          </>
         )}
-        {children}
         <Dialog
           open={attributionModalHTML !== null}
           onOpenChange={open => {

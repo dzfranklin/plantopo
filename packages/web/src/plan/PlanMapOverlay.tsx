@@ -12,9 +12,8 @@ export function PlanMapOverlay() {
   const mm = useMapManager();
 
   useEffect(() => {
-    const m = mm?.map;
-    const im = mm?.interactionManager;
-    if (!m || !im) return;
+    const m = mm.map;
+    const im = mm.interactionManager;
 
     const renderer = new PlanRenderer(m.getCanvasContainer(), m);
     rendererRef.current = renderer;

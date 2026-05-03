@@ -80,6 +80,7 @@ export class MapManager {
       }
     };
     const checkInterval = setInterval(checkForStyleLoad, 100);
+    checkForStyleLoad();
   };
 
   private _onstylechange = () => {
@@ -457,6 +458,11 @@ export class MapManager {
     console.groupEnd();
   }
 }
+
+export type ReadyMapManager = MapManager & {
+  map: ml.Map;
+  interactionManager: InteractionManager;
+};
 
 function buildStyle(props: MapProps): ml.StyleSpecification {
   const base: ml.StyleSpecification = props.style ?? {

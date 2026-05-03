@@ -36,7 +36,7 @@ interface NavControlsProps {
 }
 
 export function NavControls({ terrain, onTerrainChange }: NavControlsProps) {
-  const map = useMapManager()?.map;
+  const map = useMapManager().map;
 
   const [geolocate, setGeolocate] = useState<GeolocateState>({
     watchState: "OFF",
@@ -46,7 +46,6 @@ export function NavControls({ terrain, onTerrainChange }: NavControlsProps) {
   const geolocateMachineRef = useRef<GeolocateStateMachine | null>(null);
 
   useEffect(() => {
-    if (!map) return;
     const machine = new GeolocateStateMachine(map, setGeolocate);
     geolocateMachineRef.current = machine;
     return () => {
@@ -113,7 +112,7 @@ function BearingControlGroup() {
   const incrementDuration = 150;
 
   const manager = useMapManager();
-  const map = manager?.map;
+  const map = manager.map;
 
   const [expanded, setExpanded] = useState<"false" | "by-hover" | "by-press">(
     "false",
@@ -181,13 +180,12 @@ function BearingControlGroup() {
   const pitchLocked = useSyncExternalStore(
     useCallback(
       notify => {
-        if (!manager || !map) return () => {};
         map.on("plantopo:pitchlockchange", notify);
         return () => map.off("plantopo:pitchlockchange", notify);
       },
-      [manager, map],
+      [map],
     ),
-    () => manager?.getPitchLocked() ?? false,
+    () => manager.getPitchLocked(),
   );
 
   return (
