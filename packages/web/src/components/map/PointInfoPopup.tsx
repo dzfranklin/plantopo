@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 
-import { METERS_TO_FT, type Point } from "@pt/shared";
+import { METERS_TO_FT, type Point2 } from "@pt/shared";
 
 import { useMapManager } from "./MapManagerContext";
 import { useUserPrefs } from "@/auth/auth-client";
@@ -72,7 +72,7 @@ export function PointInfoPopup() {
   }, []);
 
   const [position, setPosition] = useState<{
-    point: Point;
+    point: Point2;
     osGrid: OSGridRef | null;
     camera: ml.CameraOptions;
   } | null>(null);

@@ -1,8 +1,8 @@
-import type { Point, Point3 } from "@pt/shared";
+import type { Point2, Point3 } from "@pt/shared";
 
 interface PlanPoint {
   id: number;
-  point: Point | Point3;
+  point: Point2 | Point3;
   type: "control";
 }
 

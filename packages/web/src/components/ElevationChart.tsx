@@ -1,7 +1,7 @@
 import { distance } from "@turf/distance";
 import { useLayoutEffect, useMemo, useRef } from "react";
 
-import type { Point } from "@pt/shared";
+import type { Point2 } from "@pt/shared";
 
 import { formatDistance, formatDuration, formatElevation } from "./format";
 import { useUserPrefs } from "@/auth/auth-client";
@@ -10,11 +10,11 @@ import logger from "@/logger";
 import { cn } from "@/util/cn";
 
 interface Props {
-  points: Point[];
+  points: Point2[];
   elevations: (number | null)[]; // in meters, same length as points
   timestamps?: (number | null)[]; // epoch ms, same length as points
   className?: string;
-  onPointHover?: (point: Point | null) => void;
+  onPointHover?: (point: Point2 | null) => void;
 }
 
 const dpr = window.devicePixelRatio || 1;
@@ -372,7 +372,7 @@ function measureLabels(
   return { maxH: maxHeight, maxW: maxWidth };
 }
 
-function computeRunningDistance(points: Point[]): number[] {
+function computeRunningDistance(points: Point2[]): number[] {
   const distances: number[] = [];
   let total = 0;
   for (let i = 0; i < points.length; i++) {

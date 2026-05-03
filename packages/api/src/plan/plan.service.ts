@@ -1,13 +1,13 @@
 import z from "zod";
 
-import { type Point, type Point3, decodePolyline, round2 } from "@pt/shared";
+import { type Point2, type Point3, decodePolyline, round2 } from "@pt/shared";
 
 import { getElevations } from "../elevation/elevation.service.js";
 import { env } from "../env.js";
 
 export async function suggestRoute(
-  a: Point,
-  b: Point,
+  a: Point2,
+  b: Point2,
   accessScopes: string[],
   { signal }: { signal?: AbortSignal } = {},
 ): Promise<Point3[] | null> {
@@ -18,10 +18,10 @@ export async function suggestRoute(
 }
 
 async function queryValhalla(
-  a: Point,
-  b: Point,
+  a: Point2,
+  b: Point2,
   signal?: AbortSignal,
-): Promise<Point[] | null> {
+): Promise<Point2[] | null> {
   if (!env.VALHALLA) throw new Error("Valhalla not configured");
 
   a = round2(a, 6);

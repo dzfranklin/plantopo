@@ -3,7 +3,7 @@ import { featureCollection, lineString, point } from "@turf/helpers";
 import { useMemo } from "react";
 import { useParams } from "react-router-dom";
 
-import type { Point } from "@pt/shared";
+import type { Point2 } from "@pt/shared";
 
 import type { RecordedTrack } from "../../../api/src/track/track.service";
 import { decodePolyline } from "../../../shared/src/polyline";
@@ -27,7 +27,7 @@ export default function TrackDetailPage() {
   );
 
   const [hoveredPoint, setHoveredPoint] =
-    useAnimationThrottledState<Point | null>(null);
+    useAnimationThrottledState<Point2 | null>(null);
 
   const geojson = useMemo(() => {
     if (!query.data) return null;
@@ -81,7 +81,7 @@ export default function TrackDetailPage() {
 }
 
 type HydratedRecordedTrack = RecordedTrack & {
-  coordinates: Point[];
+  coordinates: Point2[];
 };
 
 function useTrackDetailQuery(

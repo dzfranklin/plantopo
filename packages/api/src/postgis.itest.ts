@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { pgTable, text } from "drizzle-orm/pg-core";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import type { Point } from "@pt/shared";
+import type { Point2 } from "@pt/shared";
 
 import db from "./db.js";
 import { lineString } from "./postgis.js";
@@ -28,7 +28,7 @@ beforeEach(async () => {
 
 describe("lineString", () => {
   it(`round-trips list`, async () => {
-    const points: Point[] = [
+    const points: Point2[] = [
       [-122.4194, 37.7749],
       [-73.935242, 40.73061],
     ];

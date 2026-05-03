@@ -1,9 +1,9 @@
 import { customType } from "drizzle-orm/pg-core";
 import wkx from "wkx";
 
-import type { Point } from "@pt/shared";
+import type { Point2 } from "@pt/shared";
 
-export const lineString = customType<{ data: Point[]; driverData: Buffer }>({
+export const lineString = customType<{ data: Point2[]; driverData: Buffer }>({
   dataType() {
     return "geometry(LineString,4326)";
   },
@@ -11,7 +11,7 @@ export const lineString = customType<{ data: Point[]; driverData: Buffer }>({
   fromDriver: lineStringFromDriver,
 });
 
-export function lineStringToDriver(value: Point[]): Buffer {
+export function lineStringToDriver(value: Point2[]): Buffer {
   const line = new wkx.LineString(
     value.map(([lng, lat]) => new wkx.Point(lng, lat)),
     4326,
@@ -19,7 +19,7 @@ export function lineStringToDriver(value: Point[]): Buffer {
   return line.toEwkb();
 }
 
-export function lineStringFromDriver(value: unknown): Point[] {
+export function lineStringFromDriver(value: unknown): Point2[] {
   let buf: Buffer;
   if (typeof value === "string") {
     buf = Buffer.from(value, "hex");

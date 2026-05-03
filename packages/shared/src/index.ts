@@ -7,7 +7,7 @@ export const METERS_TO_FT = 3.28084;
 
 export const PointSchema = z.tuple([z.number(), z.number()]);
 
-export type Point = [number, number];
+export type Point2 = [number, number];
 export type Point3 = [number, number, number | null];
 
 const LocalRecordingStatusSchema = z.enum([

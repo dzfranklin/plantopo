@@ -2,7 +2,7 @@ import { lineString } from "@turf/helpers";
 import { length } from "@turf/length";
 import { useMemo, useRef, useState } from "react";
 
-import { type Point, add2, createSeededRandom, round2 } from "@pt/shared";
+import { type Point2, add2, createSeededRandom, round2 } from "@pt/shared";
 
 import ElevationChart from "@/components/ElevationChart";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ export default function DevElevationChartPage() {
     [data?.points],
   );
 
-  const onPointHover = (point: Point | null) => {
+  const onPointHover = (point: Point2 | null) => {
     if (!inspectRef.current) return;
     inspectRef.current.textContent = JSON.stringify(point, null);
   };
@@ -122,7 +122,7 @@ function generateData(
   const originLng = -2.4;
   const originLat = 57;
 
-  const points: Point[] = [];
+  const points: Point2[] = [];
   const elevations = [];
   const timestamps = [];
   for (let i = 0; i < 1000; i++) {

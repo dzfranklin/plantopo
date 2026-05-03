@@ -1,19 +1,19 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 
-import { type Point, type Point3, round2 } from "@pt/shared";
+import { type Point2, type Point3, round2 } from "@pt/shared";
 
 import { AppMap, type MapManager } from "@/components/map";
 import { useTRPCClient } from "@/trpc";
 
-function segmentKeyOf(a: Point, b: Point): string {
+function segmentKeyOf(a: Point2, b: Point2): string {
   return [a, b].map(p => p.join(",")).join(":");
 }
 
 export default function DevCompleteRoutePage() {
   const trpc = useTRPCClient();
-  const [controlPoints, setControlPoints] = useState<Point[]>([]);
+  const [controlPoints, setControlPoints] = useState<Point2[]>([]);
   const [segments, setSegments] = useState<Record<string, Point3[]>>({});
-  const controlPointsRef = useRef<Point[]>([]);
+  const controlPointsRef = useRef<Point2[]>([]);
 
   const onManager = useCallback(
     (manager: MapManager) => {
@@ -58,7 +58,7 @@ export default function DevCompleteRoutePage() {
       const segment = segments[segmentKeyOf(a, b)];
       // line.geometry.coordinates.push(a);
       if (segment)
-        line.geometry.coordinates.push(...(segment as unknown as Point[]));
+        line.geometry.coordinates.push(...(segment as unknown as Point2[]));
       else line.geometry.coordinates.push(a, b);
       // if (i === controlPoints.length - 2) line.geometry.coordinates.push(b);
     }
