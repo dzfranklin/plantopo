@@ -91,7 +91,8 @@ CMD ["npm", "test", "--", "--run"]
 FROM base AS production
 WORKDIR /app
 
-COPY --link --chmod=+x entrypoint.sh scripts/run-task ./
+COPY --link --chmod=+x entrypoint.sh ./
+COPY --link --chmod=+x scripts/run-task /usr/local/bin/run-task
 COPY --link --from=builder /build/fonts/ /fonts/
 COPY --from=builder /app/ ./
 
