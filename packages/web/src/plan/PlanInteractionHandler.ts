@@ -61,6 +61,7 @@ export class PlanInteractionHandler implements Handler {
   }
 
   reset() {
+    this._getRenderer()?.setActive(null);
     this._draggingId = null;
     this._dragMoved = false;
     this._lastPoint = null;
@@ -75,6 +76,7 @@ export class PlanInteractionHandler implements Handler {
     this._dragMoved = false;
     this._lastPoint = point;
     this._grabOffset = { x: hit.grabOffsetX, y: hit.grabOffsetY };
+    this._getRenderer()?.setActive(hit.id);
     e.preventDefault();
     return { capture: true };
   };
