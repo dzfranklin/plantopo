@@ -1,8 +1,6 @@
 import DOMPurify from "dompurify";
 import ml from "maplibre-gl";
 
-import "./BottomInfoControl.css";
-
 // Based on <https://github.com/maplibre/maplibre-gl-js/blob/1fe69fd961d62c9b017debfc7eb49c32c53e5339/src/ui/control/attribution_control.ts>
 
 const DEFAULT_DISTANCE_UNIT = "km";

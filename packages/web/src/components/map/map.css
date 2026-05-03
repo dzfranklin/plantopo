@@ -1,3 +1,7 @@
+.maplibregl-popup {
+  z-index: 10;
+}
+
 .maplibregl-map .maplibregl-ctrl-bottom-right {
   left: 106px; /* always leave room for OS logo */
 }

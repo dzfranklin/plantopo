@@ -1,4 +1,5 @@
 import "maplibre-gl/dist/maplibre-gl.css";
+import "./map.css";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
