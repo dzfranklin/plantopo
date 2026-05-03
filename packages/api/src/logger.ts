@@ -4,7 +4,6 @@ import { getJobContext } from "./job-context.js";
 import { getRequestContext } from "./request-context.js";
 
 const isDev = process.env.NODE_ENV !== "production";
-const ownFilename = import.meta.filename.replace(import.meta.dirname + "/", "");
 
 export const logger = pino({
   level: process.env.LOG_LEVEL ?? (isDev ? "debug" : "info"),
@@ -31,7 +30,7 @@ function getNonLogCallerStack(maxDepth: number = 6): string[] | undefined {
   let i = 0;
   for (; i < stack.length; i++) {
     const line = stack[i]!;
-    if (line.includes("node_modules/pino") || line.includes(ownFilename)) {
+    if (line.includes("node_modules/pino") || line.includes("logger.ts")) {
       continue;
     }
     break;
