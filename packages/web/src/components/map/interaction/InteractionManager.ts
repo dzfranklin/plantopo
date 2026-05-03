@@ -201,7 +201,7 @@ export class InteractionManager {
     }
     this._changes = [];
     if (this._frameId !== undefined) {
-      cancelAnimationFrame(this._frameId);
+      this._map._renderTaskQueue.remove(this._frameId);
       this._frameId = undefined;
     }
   }
@@ -412,35 +412,34 @@ export class InteractionManager {
     }
 
     const map = this._map;
-    const center = map.project(map.getCenter());
+    const tr = map.transform;
+
     const around =
       (result.pinchAround !== undefined ? result.pinchAround : result.around) ??
-      center;
+      tr.centerPoint;
 
-    let newCenter = center;
-    let newZoom = map.getZoom();
-    let newBearing = map.getBearing();
-    let newPitch = map.getPitch();
-
-    if (result.panDelta) newCenter = newCenter.sub(result.panDelta);
-    if (result.bearingDelta) newBearing += result.bearingDelta;
-    if (result.pitchDelta) newPitch += result.pitchDelta;
+    if (result.bearingDelta) tr.setBearing(tr.bearing + result.bearingDelta);
+    if (result.pitchDelta) tr.setPitch(tr.pitch + result.pitchDelta);
 
     if (result.zoomDelta) {
       if (this._zoomGestureStart === null)
         this._zoomGestureStart = map.getZoom();
       this._zoomAround = around;
-      newZoom += result.zoomDelta;
-      const scale = Math.pow(2, result.zoomDelta);
-      newCenter = around.add(newCenter.sub(around).div(scale));
+      tr.setZoom(tr.zoom + result.zoomDelta);
     }
 
-    map.jumpTo({
-      center: map.unproject(newCenter),
-      zoom: newZoom,
-      bearing: newBearing,
-      pitch: newPitch,
-    });
+    if (result.panDelta || result.zoomDelta) {
+      // Keep the point under `around` fixed in screen space — same approach as
+      // maplibre's cameraHelper.handleMapControlsPan / setLocationAtPoint.
+      if (around.distSqr(tr.centerPoint) >= 1.0e-2) {
+        const preZoomAroundLoc = tr.screenPointToLocation(
+          result.panDelta ? around.sub(result.panDelta) : around,
+        );
+        tr.setLocationAtPoint(preZoomAroundLoc, around);
+      }
+    }
+
+    map._update();
 
     if (!result.noInertia) {
       this._inertia.record({
@@ -628,9 +627,9 @@ export class InteractionManager {
 
   private _triggerRenderFrame() {
     if (this._frameId === undefined) {
-      this._frameId = requestAnimationFrame(timestamp => {
+      this._map.triggerRepaint();
+      this._frameId = this._map._renderTaskQueue.add(timestamp => {
         this._frameId = undefined;
-        // Dispatch a synthetic renderFrame event
         this._handleEvent(
           new CustomEvent("renderFrame", { detail: { timeStamp: timestamp } }),
         );
