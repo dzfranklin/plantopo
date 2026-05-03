@@ -152,3 +152,12 @@ export async function closeJobQueues(): Promise<void> {
     await redisConnection.quit();
   }
 }
+
+export async function exportPrometheusMetrics() {
+  return (
+    await Promise.all([
+      cpuQueue.exportPrometheusMetrics(),
+      defaultQueue.exportPrometheusMetrics(),
+    ])
+  ).join("\n");
+}

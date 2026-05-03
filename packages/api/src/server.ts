@@ -17,6 +17,7 @@ import { env } from "./env.js";
 import { registerExportRoutes } from "./export/export.routes.js";
 import { closeJobQueues, startWorkers } from "./jobs.js";
 import { logger } from "./logger.js";
+import { createMetricsServer } from "./metrics.js";
 import { requestContextMiddleware } from "./request-context-middleware.js";
 import { requestContext } from "./request-context.js";
 import { appRouter } from "./router.js";
@@ -156,6 +157,12 @@ httpServer.listen(4000, () => {
 });
 
 const workers = startWorkers();
+
+const metricsPort = 4001;
+const metricsServer = createMetricsServer();
+metricsServer.listen(metricsPort, () => {
+  logger.info({ port: metricsPort }, "Metrics server listening");
+});
 
 let shuttingDown = false;
 async function shutdown(signal: string) {
