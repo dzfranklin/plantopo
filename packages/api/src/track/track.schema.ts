@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
   customType,
   doublePrecision,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -9,6 +10,10 @@ import {
 
 import { user } from "../auth/auth.schema.js";
 import { lineString } from "../postgis.js";
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType: () => "bytea",
+});
 
 // double precision[] where individual elements may be NULL
 const nullableDoublePrecisionArray = customType<{
@@ -40,6 +45,12 @@ export const recordedTrack = pgTable("recorded_track", {
   pointBearing: nullableDoublePrecisionArray("point_bearing"),
   pointBearingAccuracy: nullableDoublePrecisionArray("point_bearing_accuracy"),
   pointDemElevation: nullableDoublePrecisionArray("point_dem_elevation"), // NULL = not yet populated
+  previewLargeSrc: bytea("preview_large_src"),
+  previewLargeWidth: integer("preview_large_width"),
+  previewLargeHeight: integer("preview_large_height"),
+  previewSmallSrc: bytea("preview_small_src"),
+  previewSmallWidth: integer("preview_small_width"),
+  previewSmallHeight: integer("preview_small_height"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

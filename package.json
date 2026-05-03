@@ -41,7 +41,7 @@
     "@types/geodesy": "^2.2.8",
     "@types/node": "^24.12.0",
     "@types/pngjs": "^6.0.5",
-    "drizzle-kit": "^0.31.10",
+    "drizzle-kit": "*",
     "eslint": "^9.39.4",
     "husky": "^9.1.7",
     "jsdom": "^29.0.1",

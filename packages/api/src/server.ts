@@ -21,6 +21,7 @@ import { requestContextMiddleware } from "./request-context-middleware.js";
 import { requestContext } from "./request-context.js";
 import { appRouter } from "./router.js";
 import { registerStravaRoutes } from "./strava/strava.routes.js";
+import { registerTrackPreviewRoutes } from "./track/track-preview.routes.js";
 
 process.on("uncaughtException", function (err) {
   logger.error({ err }, "Uncaught exception");
@@ -71,6 +72,7 @@ registerAuthRoutes(app);
 registerStravaRoutes(app);
 registerClientLogsRoutes(app);
 registerExportRoutes(app);
+registerTrackPreviewRoutes(app);
 
 app.use(
   "/api/v1/trpc",

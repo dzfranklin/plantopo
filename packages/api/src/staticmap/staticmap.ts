@@ -23,8 +23,7 @@ export const OSM_SOURCE: Source = {
     env.THUNDERFOREST_KEY,
   minzoom: 0,
   maxzoom: 22,
-  attribution:
-    '<a href="https://www.thunderforest.com/">&copy; Thunderforest</a> <a href="https://www.openstreetmap.org/copyright">&copy; OpenStreetMap</a>',
+  attribution: "&copy; Thunderforest &copy; OpenStreetMap",
 };
 
 // GeoJSON simplestyle properties
@@ -81,7 +80,16 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
   const resolvedUrlTemplate = urlTemplate.replace("{r}", retina ? "@2x" : "");
 
   let zoom =
-    opts.zoom ?? calculateZoom(features, width, height, tileSize, padding);
+    opts.zoom ??
+    calculateZoom(
+      features,
+      width,
+      height,
+      tileSize,
+      padding,
+      source.minzoom ?? 0,
+      source.maxzoom ?? 22,
+    );
   if (source.minzoom !== undefined) zoom = Math.max(zoom, source.minzoom);
   if (source.maxzoom !== undefined) zoom = Math.min(zoom, source.maxzoom);
 
@@ -296,6 +304,10 @@ function drawAttribution(
   const padX = 4;
   const padY = 2;
 
+  attribution = attribution
+    .replaceAll("&copy;", "©")
+    .replaceAll(/<[^>]+>/g, "");
+
   ctx.antialias = "subpixel";
   ctx.font = `300 10px "Source Sans 3"`;
   ctx.textBaseline = "alphabetic";
@@ -370,6 +382,8 @@ function calculateZoom(
   height: number,
   tileSize: number,
   padding: number,
+  minzoom: number,
+  maxzoom: number,
 ): number {
   const [minLon, minLat, maxLon, maxLat] = featureExtent(
     features,
@@ -379,7 +393,7 @@ function calculateZoom(
   const availW = width - padding * 2;
   const availH = height - padding * 2;
 
-  for (let z = 17; z >= 0; z--) {
+  for (let z = maxzoom; z >= minzoom; z--) {
     const pxWidth = (lonToX(maxLon, z) - lonToX(minLon, z)) * tileSize;
     if (pxWidth > availW) continue;
     const pxHeight = (latToY(minLat, z) - latToY(maxLat, z)) * tileSize;

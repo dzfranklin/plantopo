@@ -5,7 +5,10 @@ import { env } from "./env.js";
 import { type JobContext, runWithJobCtx } from "./job-context.js";
 import { getLog, logger } from "./logger.js";
 import { getRequestContext } from "./request-context.js";
-import { populateDemElevation } from "./track/track.service.js";
+import {
+  populateDemElevation,
+  populatePreviewImages,
+} from "./track/track.service.js";
 
 type JobName = keyof typeof jobRegistry;
 type JobData<Name extends JobName = JobName> = Parameters<
@@ -58,6 +61,12 @@ export const jobRegistry = {
     queue: cpuQueue,
     handler: async (data: { trackId: string }) => {
       await populateDemElevation(data.trackId);
+    },
+  },
+  "recordedTrack.populatePreviewImages": {
+    queue: cpuQueue,
+    handler: async (data: { trackId: string }) => {
+      await populatePreviewImages(data.trackId);
     },
   },
 } as const;

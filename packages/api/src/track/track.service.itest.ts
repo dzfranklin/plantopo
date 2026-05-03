@@ -10,6 +10,7 @@ import {
   getRecordedTrack,
   getRecordedTrackWithPointDetail,
   listRecordedTracks,
+  populatePreviewImages,
   uploadRecordedTrack,
 } from "./track.service.js";
 
@@ -77,20 +78,41 @@ const MINIMAL_TRACK: UploadInput = {
   })),
 };
 
+const nullTileProvider = async () => null;
+
 describe("uploadRecordedTrack", () => {
   it("enqueues elevation population job", async () => {
     await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
-    expect(getEnqueuedJobs()).toEqual([
+    expect(getEnqueuedJobs()).toContainEqual(
       expect.objectContaining({ name: "recordedTrack.populateDemElevation" }),
-    ]);
+    );
+  });
+
+  it("enqueues preview images job", async () => {
+    await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
+    expect(getEnqueuedJobs()).toContainEqual(
+      expect.objectContaining({ name: "recordedTrack.populatePreviewImages" }),
+    );
   });
 
   it("does not enqueue elevation population job if already exists", async () => {
     await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
     await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
-    expect(getEnqueuedJobs()).toEqual([
-      expect.objectContaining({ name: "recordedTrack.populateDemElevation" }),
-    ]);
+    expect(
+      getEnqueuedJobs().filter(
+        j => j.name === "recordedTrack.populateDemElevation",
+      ).length,
+    ).toEqual(1);
+  });
+
+  it("does not enqueue preview images job if already exists", async () => {
+    await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
+    await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
+    expect(
+      getEnqueuedJobs().filter(
+        j => j.name === "recordedTrack.populatePreviewImages",
+      ).length,
+    ).toEqual(1);
   });
 
   it("is idempotent on re-upload", async () => {
@@ -119,7 +141,7 @@ describe("uploadRecordedTrack", () => {
       1776935348691, 1776935349690, 1776935350690,
     ]);
     expect(result!.pointSpeed).toEqual([0.98773247, 0.98773277, 0.9877347]);
-    expect(result!.summaryPolyline).toBeTruthy();
+    expect(result!.pointDemElevation).toBeNull();
     expect(result!.distanceM).toBeGreaterThan(0);
     expect(decodePolyline(result!.polyline!)).toHaveLength(3);
   });
@@ -150,7 +172,8 @@ describe("listRecordedTracks", () => {
     expect(summary!.endTime).toBe(BASE_TRACK.endTime);
     expect(summary!.durationMs).toBe(3600_000);
     expect(summary!.distanceM).toBeGreaterThan(0);
-    expect(summary!.summaryPolyline).toBeTruthy();
+    expect(summary!.preview).toBeNull();
+    expect(summary!.previewSmall).toBeNull();
   });
 
   it("does not return other users' tracks", async () => {
@@ -239,9 +262,42 @@ describe("getRecordedTrackWithPointDetail", () => {
     );
     // Fields from RecordedTrack are present
     expect(track!.polyline).toBeTruthy();
-    expect(track!.summaryPolyline).toBeTruthy();
+    expect(track!.distanceM).toBeGreaterThan(0);
     expect(track!.distanceM).toBeGreaterThan(0);
     expect(track!.pointTimestamps).toHaveLength(3);
     expect(track!.pointSpeed).toHaveLength(3);
+  });
+});
+
+describe("populatePreviewImages", () => {
+  it("stores both sizes and marks them non-null", async () => {
+    await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
+    await populatePreviewImages(BASE_TRACK.id, nullTileProvider);
+
+    const [summary] = await listRecordedTracks(TEST_USER.id);
+    expect(summary!.preview).not.toBeNull();
+    expect(summary!.preview!.width).toBe(600);
+    expect(summary!.preview!.height).toBe(150);
+    expect(summary!.preview!.src).toContain("/preview/large");
+    expect(summary!.previewSmall).not.toBeNull();
+    expect(summary!.previewSmall!.width).toBe(300);
+    expect(summary!.previewSmall!.height).toBe(75);
+    expect(summary!.previewSmall!.src).toContain("/preview/small");
+  });
+
+  it("is idempotent", async () => {
+    await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
+    await populatePreviewImages(BASE_TRACK.id, nullTileProvider);
+    await populatePreviewImages(BASE_TRACK.id, nullTileProvider);
+
+    const [summary] = await listRecordedTracks(TEST_USER.id);
+    expect(summary!.preview).not.toBeNull();
+  });
+
+  it("does nothing for unknown track", async () => {
+    await populatePreviewImages(
+      "00000000-0000-0000-0000-000000000099",
+      nullTileProvider,
+    );
   });
 });

@@ -1,3 +1,4 @@
+import { lineString } from "@turf/helpers";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import z from "zod";
 
@@ -5,9 +6,18 @@ import { type LocalRecordedTrack } from "@pt/shared";
 
 import { db } from "../db.js";
 import { getElevations } from "../elevation/elevation.service.js";
+import { env } from "../env.js";
 import { enqueueJob } from "../jobs.js";
 import { getLog } from "../logger.js";
+import { lineStringFromDriver } from "../postgis.js";
+import { renderStaticMap } from "../staticmap/staticmap.js";
 import { recordedTrack } from "./track.schema.js";
+
+const PreviewSchema = z.object({
+  src: z.string(),
+  width: z.number(),
+  height: z.number(),
+});
 
 export const RecordedTrackSummarySchema = z.object({
   id: z.string(),
@@ -17,7 +27,8 @@ export const RecordedTrackSummarySchema = z.object({
   createdAt: z.number(), // epoch ms
   distanceM: z.number(),
   durationMs: z.number(),
-  summaryPolyline: z.string(), // simplified ~100m tolerance, for thumbnail display
+  preview: PreviewSchema.nullable(),
+  previewSmall: PreviewSchema.nullable(),
 });
 
 export type RecordedTrackSummary = z.infer<typeof RecordedTrackSummarySchema>;
@@ -90,6 +101,7 @@ export async function uploadRecordedTrack(
     .onConflictDoNothing();
 
   await enqueuePopulateDemElevationJob(id);
+  await enqueuePopulatePreviewImagesJob(id);
 
   log.info("uploadedRecordedTrack");
 }
@@ -130,6 +142,79 @@ export async function populateDemElevation(trackId: string): Promise<void> {
   log.info("populateDemElevation: done");
 }
 
+export async function enqueuePopulatePreviewImagesJob(trackId: string) {
+  return await enqueueJob(
+    "recordedTrack.populatePreviewImages",
+    { trackId },
+    { jobId: "recordedTrack.populatePreviewImages." + trackId },
+  );
+}
+
+export async function populatePreviewImages(
+  trackId: string,
+  tileProvider?: Parameters<typeof renderStaticMap>[0]["tileProvider"],
+): Promise<void> {
+  const log = getLog().child({ trackId });
+
+  const [row] = await db
+    .select({
+      path: sql`ST_Simplify(${recordedTrack.path}, 0.00001)`.as("path"),
+    })
+    .from(recordedTrack)
+    .where(
+      and(eq(recordedTrack.id, trackId), isNull(recordedTrack.previewLargeSrc)),
+    );
+
+  if (!row) {
+    log.info("populatePreviewImages: track not found or already populated");
+    return;
+  }
+
+  const coords = lineStringFromDriver(row.path);
+  const features = [
+    lineString(coords, { stroke: "#ffffff", "stroke-width": 10 }),
+    lineString(coords, { stroke: "#2563eb", "stroke-width": 4 }),
+  ];
+
+  const width = 600;
+  const height = width / 4;
+  const smallWidth = 300;
+  const smallHeight = smallWidth / 4;
+
+  const [largeBuf, smallBuf] = await Promise.all([
+    renderStaticMap({
+      width,
+      height,
+      retina: true,
+      padding: 10,
+      features,
+      tileProvider,
+    }),
+    renderStaticMap({
+      width: smallWidth,
+      height: smallHeight,
+      retina: true,
+      padding: 10,
+      features,
+      tileProvider,
+    }),
+  ]);
+
+  await db
+    .update(recordedTrack)
+    .set({
+      previewLargeSrc: largeBuf,
+      previewLargeWidth: width,
+      previewLargeHeight: height,
+      previewSmallSrc: smallBuf,
+      previewSmallWidth: smallWidth,
+      previewSmallHeight: smallHeight,
+    })
+    .where(eq(recordedTrack.id, trackId));
+
+  log.info("populatePreviewImages: done");
+}
+
 const summaryColumns = {
   id: recordedTrack.id,
   name: recordedTrack.name,
@@ -143,10 +228,10 @@ const summaryColumns = {
     sql<number>`(EXTRACT(EPOCH FROM (${recordedTrack.endTime} - ${recordedTrack.startTime})) * 1000)::float8`.as(
       "duration_ms",
     ),
-  summaryPolyline:
-    sql<string>`ST_AsEncodedPolyline(ST_Simplify(${recordedTrack.path}, 0.001))`.as(
-      "summary_polyline",
-    ),
+  previewLargeWidth: recordedTrack.previewLargeWidth,
+  previewLargeHeight: recordedTrack.previewLargeHeight,
+  previewSmallWidth: recordedTrack.previewSmallWidth,
+  previewSmallHeight: recordedTrack.previewSmallHeight,
 };
 
 export async function listRecordedTracks(
@@ -189,6 +274,37 @@ export async function getRecordedTrack(
     pointSpeed: row.pointSpeed,
     pointDemElevation: row.pointDemElevation,
   };
+}
+
+export async function getRecordedTrackPreview(
+  userId: string,
+  trackId: string,
+  size: "large" | "small",
+): Promise<{ buf: Buffer; width: number; height: number } | null> {
+  const selectCols =
+    size === "large"
+      ? {
+          buf: recordedTrack.previewLargeSrc,
+          width: recordedTrack.previewLargeWidth,
+          height: recordedTrack.previewLargeHeight,
+        }
+      : {
+          buf: recordedTrack.previewSmallSrc,
+          width: recordedTrack.previewSmallWidth,
+          height: recordedTrack.previewSmallHeight,
+        };
+
+  const [row] = await db
+    .select(selectCols)
+    .from(recordedTrack)
+    .where(
+      and(eq(recordedTrack.id, trackId), eq(recordedTrack.userId, userId)),
+    );
+  if (!row) return null;
+
+  const { buf, width, height } = row;
+  if (!buf || !width || !height) return null;
+  return { buf, width, height };
 }
 
 export async function getRecordedTrackWithPointDetail(
@@ -241,8 +357,24 @@ function toSummary(row: {
   createdAt: Date;
   distanceM: number;
   durationMs: number;
-  summaryPolyline: string | null;
+  previewLargeWidth: number | null;
+  previewLargeHeight: number | null;
+  previewSmallWidth: number | null;
+  previewSmallHeight: number | null;
 }): RecordedTrackSummary {
+  const preview = (
+    size: string,
+    width: number | null,
+    height: number | null,
+  ) =>
+    width && height
+      ? {
+          src: `${env.APP_URL}/api/v1/track/${row.id}/preview/${size}`,
+          width,
+          height,
+        }
+      : null;
+
   return {
     id: row.id,
     name: row.name,
@@ -251,6 +383,11 @@ function toSummary(row: {
     createdAt: row.createdAt.getTime(),
     distanceM: row.distanceM,
     durationMs: row.durationMs,
-    summaryPolyline: row.summaryPolyline!,
+    preview: preview("large", row.previewLargeWidth, row.previewLargeHeight),
+    previewSmall: preview(
+      "small",
+      row.previewSmallWidth,
+      row.previewSmallHeight,
+    ),
   };
 }
