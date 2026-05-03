@@ -5,7 +5,8 @@ WORKDIR /app
 # Base for production and test images. Does not contain built assets
 
 RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends unzip && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    unzip libexpat1 && \
     rm -rf /var/lib/apt/lists/*
 
 FROM node:24 AS builder
