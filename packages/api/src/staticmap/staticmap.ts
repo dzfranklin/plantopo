@@ -147,7 +147,7 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
 
   const resolution = retina ? 144 : 72;
 
-  return new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     canvas.toBuffer(
       (err, buf) => (err ? reject(err) : resolve(buf)),
       "image/png",
