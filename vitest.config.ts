@@ -1,3 +1,5 @@
+import os from "node:os";
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -26,6 +28,10 @@ export default defineConfig({
           include: ["packages/web/src/**/*.test.{ts,tsx}"],
           setupFiles: ["packages/web/src/test/setup.ts"],
           environment: "jsdom",
+          execArgv: [
+            "--localstorage-file",
+            path.resolve(os.tmpdir(), `vitest-${process.pid}.localstorage`),
+          ],
         },
       },
       {
