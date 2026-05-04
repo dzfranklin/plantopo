@@ -11,9 +11,7 @@ import { usePageTitle } from "@/hooks/usePageTitle.ts";
 import { logger } from "@/logger.ts";
 
 async function signInWithPasskey(returnToURL: string) {
-  const result = await authClient.signIn.passkey({
-    extensions: { credProps: true },
-  } as Parameters<typeof authClient.signIn.passkey>[0]); // override type def bug
+  const result = await authClient.signIn.passkey();
   if (result.error) {
     logger.warn({ err: result.error }, "Passkey sign-in failed");
     toast.error("Sign-in failed. Please try again.");
