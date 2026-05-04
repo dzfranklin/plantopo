@@ -47,6 +47,7 @@ if (process.env.NODE_ENV !== "production") {
     "http://localhost:4000",
     "http://10.0.2.2:4000",
     "http://prin:4000",
+    "https://prin.reindeer-neon.ts.net",
     "plantopo-debug://oauth-callback",
   );
 }
@@ -54,7 +55,7 @@ if (process.env.NODE_ENV !== "production") {
 let configuredPasskey = passkey({
   rpName: "PlanTopo",
   rpID: "plantopo.com",
-  origin: env.APP_URL,
+  origin: trustedOrigins,
 });
 if (process.env.NODE_ENV !== "production") {
   configuredPasskey = passkey({
