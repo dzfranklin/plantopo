@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "dev": "NODE_ENV=development node --conditions=development --import tsx/esm packages/api/src/server.ts",
+    "dev:funnel": "./scripts/dev-funnel.sh",
     "scratch": "NODE_ENV=development node --conditions=development --watch --import tsx/esm packages/api/src/.scratch.local.ts",
     "run-task": "NODE_ENV=development node --conditions=development --import tsx/esm packages/api/src/run-task.ts",
     "dev:android-devtools": "adb reverse tcp:8097 tcp:8097 && react-devtools",
@@ -26,7 +27,7 @@
     "check": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/api/tsconfig.json && tsc --noEmit -p packages/web/tsconfig.json && prettier --write --log-level warn . && eslint --fix .",
     "test": "vitest run",
     "test:docker": "docker build --target test -t plantopo-test . && (docker run --name plantopo-test-run --network host plantopo-test; EXIT=$?; docker cp plantopo-test-run:/app/packages/api/src/staticmap/test-fixtures/snapshots/. packages/api/src/staticmap/test-fixtures/snapshots/ 2>/dev/null; docker rm plantopo-test-run; exit $EXIT)",
-    "test:watch": "vitest",
+    "test:watch": "vitest --typecheck",
     "prepare": "[ \"$npm_command\" = \"ci\" ] || husky",
     "cloc": "tokei --type TSX,Typescript --sort code .",
     "download-fonts": "./scripts/download-fonts.sh"
