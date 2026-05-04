@@ -32,18 +32,21 @@ function DialogTrigger({
 }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
   return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
+Dialog.Trigger = DialogTrigger;
 
 function DialogPortal({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Portal>) {
   return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
+Dialog.Portal = DialogPortal;
 
 function DialogClose({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Close>) {
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
+Dialog.Close = DialogClose;
 
 function DialogOverlay({
   className,
@@ -60,6 +63,7 @@ function DialogOverlay({
     />
   );
 }
+Dialog.Overlay = DialogOverlay;
 
 function DialogContent({
   className,
@@ -95,6 +99,7 @@ function DialogContent({
     </DialogPortal>
   );
 }
+Dialog.Content = DialogContent;
 
 function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -105,6 +110,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
     />
   );
 }
+Dialog.Header = DialogHeader;
 
 function DialogFooter({
   className,
@@ -131,6 +137,7 @@ function DialogFooter({
     </div>
   );
 }
+Dialog.Footer = DialogFooter;
 
 function DialogTitle({
   className,
@@ -144,6 +151,7 @@ function DialogTitle({
     />
   );
 }
+Dialog.Title = DialogTitle;
 
 function DialogDescription({
   className,
@@ -160,6 +168,7 @@ function DialogDescription({
     />
   );
 }
+Dialog.Description = DialogDescription;
 
 export {
   Dialog,

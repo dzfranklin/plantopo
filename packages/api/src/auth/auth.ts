@@ -1,8 +1,14 @@
 import { passkey } from "@better-auth/passkey";
-import { betterAuth } from "better-auth";
+import { type BetterAuthPlugin, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { type APIError, createAuthMiddleware } from "better-auth/api";
+import {
+  type APIError,
+  createAuthEndpoint,
+  createAuthMiddleware,
+} from "better-auth/api";
+import { deleteSessionCookie, setSessionCookie } from "better-auth/cookies";
 import { bearer } from "better-auth/plugins";
+import { z } from "zod";
 
 import { db } from "../db.js";
 import { env } from "../env.js";
@@ -67,7 +73,11 @@ if (process.env.NODE_ENV !== "production") {
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg", schema }),
-  plugins: [bearer(), configuredPasskey],
+  plugins: [
+    bearer(),
+    configuredPasskey,
+    ...(process.env.NODE_ENV === "development" ? [devImpersonatePlugin()] : []),
+  ],
   secret: env.BETTER_AUTH_SECRET,
   baseURL: `${env.APP_URL}/api/v1/auth`,
   socialProviders,
@@ -216,10 +226,58 @@ export const auth = betterAuth({
     }),
   },
 });
+
 export function userAccessScopes(user: User | undefined | null): string[] {
   if (!user) return [];
   const scopes = ["public"];
   if (isOwnerEmail(user.email)) scopes.push("personal");
   if (user.eduAccess) scopes.push("edu");
   return scopes;
+}
+
+function devImpersonatePlugin(): BetterAuthPlugin {
+  // Adapted from <https://github.com/better-auth/better-auth/blob/main/packages/better-auth/src/plugins/admin/routes.ts#L1013>
+  if (process.env.NODE_ENV !== "development") {
+    throw new Error("devImpersonatePlugin should only be used in development");
+  }
+  return {
+    id: "dev-impersonate",
+    endpoints: {
+      impersonate: createAuthEndpoint(
+        "/_dev-impersonate/impersonate",
+        {
+          method: "POST",
+          body: z.object({ userId: z.string() }),
+        },
+        async ctx => {
+          const targetId = ctx.body.userId;
+          const ia = ctx.context.internalAdapter;
+
+          const targetUser = await ia.findUserById(targetId);
+          if (!targetUser) {
+            ctx.error("BAD_REQUEST", { message: "No user with that ID" });
+            return;
+          }
+
+          getLog().warn({ targetId }, "Impersonating user (dev only)");
+
+          const session = await ia.createSession(targetUser.id, true, {
+            impersonatedBy: "dev-impersonate-endpoint",
+          });
+          deleteSessionCookie(ctx);
+          await setSessionCookie(ctx, { session, user: targetUser }, true);
+          return ctx.json({});
+        },
+      ),
+      listUsers: createAuthEndpoint(
+        "/_dev-impersonate/users",
+        { method: "GET" },
+        async ctx => {
+          const ia = ctx.context.internalAdapter;
+          const users = await ia.listUsers();
+          return ctx.json(users.map(u => ({ id: u.id, email: u.email })));
+        },
+      ),
+    },
+  };
 }

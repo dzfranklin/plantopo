@@ -1,3 +1,4 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
 import React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -5,8 +6,9 @@ import { toast } from "sonner";
 import { GitHubIcon } from "./GitHubIcon.tsx";
 import { GoogleIcon } from "./GoogleIcon.tsx";
 import { PasskeyIcon } from "./PasskeyIcon.tsx";
-import { authClient } from "./auth-client.ts";
+import { authClient, useUser } from "./auth-client.ts";
 import { providersInfo } from "./providers.tsx";
+import { Dialog } from "@/components/ui/dialog.tsx";
 import { usePageTitle } from "@/hooks/usePageTitle.ts";
 import { logger } from "@/logger.ts";
 
@@ -100,8 +102,79 @@ export function AuthPage({ mode }: { mode: "signin" | "signup" }) {
               </Link>
             </>
           )}
+          {process.env.NODE_ENV === "development" && <DevImpersonateTarget />}
         </p>
       </div>
+    </div>
+  );
+}
+
+function DevImpersonateTarget() {
+  return (
+    <Dialog>
+      <Dialog.Trigger asChild>
+        <span className="mx-1">
+          [<button className="link">dev-impersonate</button>]
+        </span>
+      </Dialog.Trigger>
+      <Dialog.Content>
+        <Dialog.Title>Dev impersonate</Dialog.Title>
+        <Dialog.Description>
+          (Only available in development) Sign in as any user.
+        </Dialog.Description>
+        <DevImpersonatePanel />
+      </Dialog.Content>
+    </Dialog>
+  );
+}
+
+function DevImpersonatePanel() {
+  const user = useUser();
+
+  const users = useQuery({
+    queryKey: ["dev-impersonate", "users"],
+    queryFn: async () => {
+      const res = await fetch("/api/v1/auth/_dev-impersonate/users");
+      if (!res.ok) {
+        throw new Error("Failed to fetch users");
+      }
+      const data = await res.json();
+      return data as { id: string; email: string }[];
+    },
+  });
+
+  const impersonateUser = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await fetch("/api/v1/auth/_dev-impersonate/impersonate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to impersonate user");
+      }
+    },
+    onSuccess: () => {
+      window.location.href = "/";
+    },
+  });
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-sm">Current user: {user?.email ?? "None"}</p>
+      {users.isLoading && <p>Loading users...</p>}
+      <ul className="max-h-60 list-inside list-disc overflow-y-auto">
+        {users.data?.map(user => (
+          <li key={user.id}>
+            <button
+              className="link cursor-pointer text-base leading-relaxed disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={impersonateUser.isPending}
+              onClick={() => impersonateUser.mutate(user.id)}>
+              {user.email}
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
