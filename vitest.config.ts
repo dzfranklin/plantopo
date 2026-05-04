@@ -12,6 +12,7 @@ export default defineConfig({
           include: ["packages/api/src/**/*.test.ts"],
           setupFiles: ["packages/api/src/test/setup.ts"],
           environment: "node",
+          execArgv: ["--import=tsx/esm"],
         },
       },
       {

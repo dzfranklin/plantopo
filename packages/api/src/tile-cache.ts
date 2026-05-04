@@ -10,6 +10,7 @@ export type TileFetcher = (
   z: number,
   x: number,
   y: number,
+  signal?: AbortSignal,
 ) => Promise<Buffer | null>;
 
 const inFlight = new Map<string, Promise<Buffer | null>>();
@@ -20,6 +21,7 @@ export function fetchTile(
   z: number,
   x: number,
   y: number,
+  signal?: AbortSignal,
 ): Promise<Buffer | null> {
   const sourceKey = sourceCacheKey(urlTemplate);
   const cacheKey = `${sourceKey}/${z}/${x}/${y}`;
@@ -35,6 +37,11 @@ export function fetchTile(
       return cached.length === 0 ? null : cached;
     } catch {
       // Cache miss — fetch
+      if (process.env.NODE_ENV === "test") {
+        throw new Error(
+          `Tile cache miss for ${cacheKey} (no ${cachePath}) (tests should use a mocked provider)`,
+        );
+      }
     }
 
     let url = urlTemplate
@@ -48,10 +55,10 @@ export function fetchTile(
         : `?key=${env.SERVER_TILE_KEY}`;
     }
 
-    logger.debug({ url }, "Fetching staticmap tile");
+    logger.debug({ url }, "Fetching tile");
     let buf: Buffer<ArrayBuffer>;
     try {
-      const resp = await fetch(url);
+      const resp = await fetch(url, { signal });
       if (resp.status === 404) {
         await mkdir(cacheDir, { recursive: true });
         await writeFile(cachePath, "");
@@ -62,10 +69,11 @@ export function fetchTile(
       }
       buf = Buffer.from(await resp.arrayBuffer());
     } catch (err) {
-      logger.error({ url, err }, "Error fetching staticmap tile");
+      logger.error({ url, err }, "Error fetching tile");
       throw err;
     }
 
+    // (if we reached this point, write the data even if there's a cancellation)
     await mkdir(cacheDir, { recursive: true });
     await writeFile(cachePath, buf);
 

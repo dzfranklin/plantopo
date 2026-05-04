@@ -1,167 +1,168 @@
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { EventEmitter, PassThrough } from "node:stream";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { defaultDEMSource, eduDEMSource } from "../map/style.js";
-import type { TileFetcher } from "../tile-cache.js";
-import { getElevations } from "./elevation.service.js";
+import type { MsgFromWorker } from "./elevation.worker.js";
 
-const FIXTURES = join(import.meta.dirname, "test-fixtures");
+vi.mock("node:child_process", () => ({ fork: vi.fn() }));
 
-// Ben Nevis summit: 1,345 m
-const BEN_NEVIS: [number, number] = [-5.0035, 56.7969];
-// Fort William town centre: ~13 m
-const FORT_WILLIAM: [number, number] = [-5.1066, 56.8198];
+type ServiceModule = typeof import("./elevation.service.js");
 
-// Mapterhorn uses terrarium encoding, maxzoom 12, 512px
-function mapterhornProvider(): TileFetcher {
-  return async (_urlTemplate, z, x, y) =>
-    readFile(join(FIXTURES, `mapterhorn-${z}-${x}-${y}.webp`));
+let getElevations: ServiceModule["getElevations"];
+let mockedFork: ReturnType<typeof vi.fn>;
+let proc: EventEmitter & {
+  killed: boolean;
+  stdin: PassThrough;
+  stdout: PassThrough;
+};
+let stdin: PassThrough;
+let stdout: PassThrough;
+
+function mockMsgFromWorker(msg: MsgFromWorker): void {
+  stdout.push(JSON.stringify(msg) + "\n");
 }
 
-// Maptiler terrain-rgb-v2 uses mapbox encoding, maxzoom 14, 512px —
-// same encoding as the edu source, exercising the mapbox decode path.
-function maptilerProvider(): TileFetcher {
-  return async (_urlTemplate, z, x, y) =>
-    readFile(join(FIXTURES, `maptiler-${z}-${x}-${y}.webp`));
+function readMsgSentToWorker(): Promise<any> {
+  return new Promise(resolve => {
+    stdin.once("data", (chunk: Buffer) =>
+      resolve(JSON.parse(chunk.toString().trim())),
+    );
+  });
 }
 
-describe("getElevations — terrarium encoding (mapterhorn)", () => {
-  it("returns a plausible elevation near Ben Nevis summit", async () => {
-    const { data } = await getElevations([BEN_NEVIS], [], mapterhornProvider());
-    expect(data[0]).not.toBeNull();
-    expect(data[0]!).toBeGreaterThan(1100);
-    expect(data[0]!).toBeLessThanOrEqual(1345);
-  });
+beforeEach(async () => {
+  stdin = new PassThrough();
+  stdout = new PassThrough();
+  proc = Object.assign(new EventEmitter(), { killed: false, stdin, stdout });
 
-  it("returns a low elevation for Fort William", async () => {
-    const { data } = await getElevations(
-      [FORT_WILLIAM],
-      [],
-      mapterhornProvider(),
-    );
-    expect(data[0]).not.toBeNull();
-    expect(data[0]!).toBeGreaterThanOrEqual(0);
-    expect(data[0]!).toBeLessThan(50);
-  });
+  vi.resetModules();
+  const cp = await import("node:child_process");
+  mockedFork = vi.mocked(cp.fork);
+  mockedFork.mockReset();
+  mockedFork.mockReturnValue(proc);
 
-  it("returns null for a point outside source bounds", async () => {
-    const { data } = await getElevations([[200, 0]], [], mapterhornProvider());
-    expect(data[0]).toBeNull();
-  });
-
-  it("elevations are rounded to one decimal place", async () => {
-    const { data } = await getElevations([BEN_NEVIS], [], mapterhornProvider());
-    const elev = data[0]!;
-    expect(elev).toBe(Math.round(elev * 10) / 10);
-  });
-
-  it("fetches each tile only once for multiple points in the same tile", async () => {
-    let fetchCount = 0;
-    const countingProvider: TileFetcher = async (_url, z, x, y) => {
-      fetchCount++;
-      return readFile(join(FIXTURES, `mapterhorn-${z}-${x}-${y}.webp`));
-    };
-    // Both points are in the same z12 tile
-    await getElevations([BEN_NEVIS, BEN_NEVIS], [], countingProvider);
-    expect(fetchCount).toBe(1);
-  });
-
-  it("fetches neighbour tile when bilinear window crosses a tile edge", async () => {
-    // pxf ≈ 511.9 in tile 1991/1259 — px1 spills into tile 1992/1259
-    const ON_RIGHT_EDGE: [number, number] = [-4.921892166137695, 56.7969];
-    const fetched = new Set<string>();
-    const trackingProvider: TileFetcher = async (_url, z, x, y) => {
-      fetched.add(`${z}-${x}-${y}`);
-      return readFile(join(FIXTURES, `mapterhorn-${z}-${x}-${y}.webp`));
-    };
-    await getElevations([ON_RIGHT_EDGE], [], trackingProvider);
-    expect(fetched.has("12-1991-1259")).toBe(true);
-    expect(fetched.has("12-1992-1259")).toBe(true);
-  });
-
-  it("returns null for a point whose tile returns 404", async () => {
-    const notFoundProvider: TileFetcher = async () => null;
-    const { data } = await getElevations([BEN_NEVIS], [], notFoundProvider);
-    expect(data[0]).toBeNull();
-  });
-
-  it("returns correct meta for the default source", async () => {
-    const { meta } = await getElevations([BEN_NEVIS], [], mapterhornProvider());
-    expect(meta.sources[0]!.tiles).toBe(defaultDEMSource.tiles![0]);
-    expect(meta.sources[0]!.zoom).toBe(defaultDEMSource.maxzoom);
-  });
+  const mod = (await import("./elevation.service.js")) as ServiceModule;
+  getElevations = mod.getElevations;
 });
 
-describe("source selection", () => {
-  const nullProvider: TileFetcher = vi.fn().mockResolvedValue(Buffer.alloc(0));
+describe("getElevations", () => {
+  it("forks a worker and writes a start message to stdin", async () => {
+    const points: [number, number][] = [[-5.0035, 56.7969]];
+    const promise = getElevations(points, []);
 
-  it("uses the default source when no edu scope", async () => {
-    await getElevations([BEN_NEVIS], [], nullProvider).catch(() => {});
-    expect(vi.mocked(nullProvider)).toHaveBeenCalledWith(
-      defaultDEMSource.tiles![0],
-      expect.any(Number),
-      expect.any(Number),
-      expect.any(Number),
-    );
+    const msg = await readMsgSentToWorker();
+    expect(msg.type).toBe("start");
+    expect(msg.points).toEqual(points);
+    expect(msg.accessScopes).toEqual([]);
+
+    mockMsgFromWorker({
+      type: "result",
+      id: msg.id,
+      result: {
+        data: [1345],
+        meta: { sources: [] },
+      },
+    });
+    expect((await promise).data).toEqual([1345]);
   });
 
-  it("uses the default source when edu scope but point is outside edu bounds", async () => {
-    const outsideEdu: [number, number] = [-10, 40]; // within default, outside edu
-    await getElevations([outsideEdu], ["edu"], nullProvider).catch(() => {});
-    expect(vi.mocked(nullProvider)).toHaveBeenCalledWith(
-      defaultDEMSource.tiles![0],
-      expect.any(Number),
-      expect.any(Number),
-      expect.any(Number),
-    );
+  it("resolves with result data and meta", async () => {
+    const promise = getElevations([[-5.0035, 56.7969]], ["edu"]);
+    const msg = await readMsgSentToWorker();
+
+    const meta = { sources: ["https://example.com/12/{x}/{y}.webp"] };
+    mockMsgFromWorker({
+      type: "result",
+      id: msg.id,
+      result: { data: [42.5], meta },
+    });
+
+    const res = await promise;
+    expect(res.data).toEqual([42.5]);
+    expect(res.meta).toEqual(meta);
   });
 
-  it("uses the edu source when edu scope and all points are within edu bounds", async () => {
-    await getElevations([BEN_NEVIS], ["edu"], nullProvider).catch(() => {});
-    expect(vi.mocked(nullProvider)).toHaveBeenCalledWith(
-      eduDEMSource.tiles![0],
-      expect.any(Number),
-      expect.any(Number),
-      expect.any(Number),
-    );
+  it("rejects when the worker sends an error message", async () => {
+    const promise = getElevations([[0, 0]], []);
+    const msg = await readMsgSentToWorker();
+
+    mockMsgFromWorker({
+      type: "error",
+      id: msg.id,
+      err: "tile fetch failed",
+    });
+
+    await expect(promise).rejects.toThrow("tile fetch failed");
   });
 
-  it("returns correct meta for the edu source", async () => {
-    const { meta } = await getElevations(
-      [BEN_NEVIS],
-      ["edu"],
-      maptilerProvider(),
-    );
-    expect(meta.sources[0]!.tiles).toBe(eduDEMSource.tiles![0]);
-    expect(meta.sources[0]!.zoom).toBe(eduDEMSource.maxzoom);
-  });
-});
+  it("rejects all pending requests when the worker exits", async () => {
+    const p1 = getElevations([[0, 0]], []);
+    const p2 = getElevations([[1, 1]], []);
 
-describe("getElevations — mapbox encoding (maptiler terrain-rgb-v2)", () => {
-  // Both points are within edu source bounds (UK), so "edu" scope selects
-  // the edu/mapbox source, exercising the mapbox decode path.
-  const EDU_SCOPES = ["edu"];
+    stdin.resume();
+    await new Promise(r => setImmediate(r));
 
-  it("returns a plausible elevation near Ben Nevis summit", async () => {
-    const { data } = await getElevations(
-      [BEN_NEVIS],
-      EDU_SCOPES,
-      maptilerProvider(),
-    );
-    expect(data[0]).not.toBeNull();
-    expect(data[0]!).toBeGreaterThan(1000);
-    expect(data[0]!).toBeLessThanOrEqual(1345);
+    proc.emit("exit", 1, null);
+
+    await expect(p1).rejects.toThrow("code=1");
+    await expect(p2).rejects.toThrow("code=1");
   });
 
-  it("returns a low elevation for Fort William", async () => {
-    const { data } = await getElevations(
-      [FORT_WILLIAM],
-      EDU_SCOPES,
-      maptilerProvider(),
-    );
-    expect(data[0]).not.toBeNull();
-    expect(data[0]!).toBeGreaterThanOrEqual(0);
-    expect(data[0]!).toBeLessThan(50);
+  it("reuses the same worker for multiple requests", async () => {
+    const p1 = getElevations([[0, 0]], []);
+    const p2 = getElevations([[1, 1]], []);
+
+    const written: Array<{ id: string }> = await new Promise(resolve => {
+      const chunks: Buffer[] = [];
+      stdin.on("data", (chunk: Buffer) => {
+        chunks.push(chunk);
+        const lines = Buffer.concat(chunks)
+          .toString()
+          .split("\n")
+          .filter(Boolean);
+        if (lines.length >= 2) resolve(lines.map(l => JSON.parse(l)));
+      });
+    });
+
+    for (const msg of written) {
+      mockMsgFromWorker({
+        type: "result",
+        id: msg.id,
+        result: { data: [0], meta: { sources: [] } },
+      });
+    }
+
+    await Promise.all([p1, p2]);
+    expect(mockedFork).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores responses with unknown ids", async () => {
+    const promise = getElevations([[0, 0]], []);
+    const msg = await readMsgSentToWorker();
+
+    mockMsgFromWorker({
+      type: "result",
+      id: "unknown-id",
+      result: { data: [999], meta: { sources: [] } },
+    });
+    mockMsgFromWorker({
+      type: "result",
+      id: msg.id,
+      result: { data: [1], meta: { sources: [] } },
+    });
+
+    expect((await promise).data).toEqual([1]);
+  });
+
+  it("writes a cancel message to stdin on abort", async () => {
+    const ac = new AbortController();
+    const promise = getElevations([[0, 0]], [], { signal: ac.signal });
+
+    const startMsg = await readMsgSentToWorker();
+
+    const cancelMsgPromise = readMsgSentToWorker();
+    ac.abort("some reason");
+    expect(await cancelMsgPromise).toEqual({ type: "cancel", id: startMsg.id });
+
+    expect(promise).rejects.toBe("some reason");
   });
 });

@@ -13,7 +13,7 @@ export async function suggestRoute(
 ): Promise<Point3[] | null> {
   const points = await queryValhalla(a, b, signal);
   if (!points) return null;
-  const elevations = await getElevations(points, accessScopes);
+  const elevations = await getElevations(points, accessScopes, { signal });
   return points.map((p, i) => [p[0], p[1], elevations.data[i]!]);
 }
 
