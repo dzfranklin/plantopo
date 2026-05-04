@@ -21,7 +21,10 @@ export const logger = pino({
   transport: isDev
     ? {
         target: "pino-pretty",
-        options: { colorize: true, ignore: "pid,hostname,isDev,env,extra" },
+        options: {
+          colorize: true,
+          ignore: "pid,hostname,isDev,env,extra,client",
+        },
       }
     : { target: "pino/file", options: { destination: 1 } },
 });

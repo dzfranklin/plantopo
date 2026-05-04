@@ -190,6 +190,7 @@ maplibreChannel.onmessage = e => {
 
 function enqueue(base: BaseLogEntry) {
   if (import.meta.env.MODE === "test") return;
+  if (base.level === "trace" || base.level === "debug") return;
 
   const entry: ClientLogEntry = {
     ...base,

@@ -17,13 +17,11 @@ export async function requestContextMiddleware(
   logBindings.reqId = reqId;
 
   const rawClientInfo = req.get("x-client-info");
-  let client: Record<string, string> | undefined = undefined;
+  let clientInfo: Record<string, string> | undefined = undefined;
   if (rawClientInfo) {
     try {
-      logBindings.client = JSON.parse(rawClientInfo, (_, value) =>
-        value.toString().slice(0, 100),
-      );
-      client = logBindings.client as Record<string, string>;
+      clientInfo = JSON.parse(rawClientInfo);
+      logBindings.client = clientInfo;
     } catch (err) {
       logger.warn(
         { err, rawClientInfo },
@@ -58,7 +56,7 @@ export async function requestContextMiddleware(
     reqId: reqId,
     logger: logger.child(logBindings),
     user,
-    clientInfo: client,
+    clientInfo,
   };
 
   runWithRequestCtx(ctx, next);
