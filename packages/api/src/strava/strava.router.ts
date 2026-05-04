@@ -2,7 +2,11 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { authedProcedure, router } from "../trpc.js";
-import { getLoggedInAthleteActivities } from "./strava.api.js";
+import {
+  ListActivitiesInputSchema,
+  getActivity,
+  listActivities,
+} from "./strava.api.js";
 import { deleteStravaConnection, getStravaAccount } from "./strava.service.js";
 
 export const stravaRouter = router({
@@ -21,15 +25,18 @@ export const stravaRouter = router({
   }),
 
   listActivities: authedProcedure
+    .input(ListActivitiesInputSchema.optional())
+    .mutation(async ({ ctx, input }) => {
+      return listActivities(ctx.user.id, input ?? {});
+    }),
+
+  getActivity: authedProcedure
     .input(
       z.object({
-        page: z.number().int().min(1).default(1),
-        per_page: z.number().int().min(1).max(100).default(30),
-        before: z.number().int().optional(),
-        after: z.number().int().optional(),
+        activityId: z.number().int(),
       }),
     )
-    .query(async ({ ctx, input }) => {
-      return getLoggedInAthleteActivities(ctx.user.id, input);
+    .mutation(async ({ ctx, input }) => {
+      return getActivity(ctx.user.id, input.activityId);
     }),
 });

@@ -31,7 +31,7 @@ const PolylineMapSchema = z.looseObject({
   summary_polyline: z.string().nullable(),
 });
 
-export const SummaryActivitySchema = z.looseObject({
+const SummaryActivityBaseSchema = z.looseObject({
   id: z.number(),
   name: z.string(),
   distance: z.number(),
@@ -42,14 +42,21 @@ export const SummaryActivitySchema = z.looseObject({
   start_date: z.string(),
   start_date_local: z.string(),
   timezone: z.string(),
+  trainer: z.boolean(),
+  commute: z.boolean(),
+  private: z.boolean(),
+  average_speed: z.number(),
+});
+
+const ManualSummaryActivitySchema = SummaryActivityBaseSchema.extend({
+  manual: z.literal(true),
+});
+
+const TrackedSummaryActivitySchema = SummaryActivityBaseSchema.extend({
+  manual: z.literal(false),
   start_latlng: LatLngSchema,
   end_latlng: LatLngSchema,
   map: PolylineMapSchema,
-  trainer: z.boolean(),
-  commute: z.boolean(),
-  manual: z.boolean(),
-  private: z.boolean(),
-  average_speed: z.number(),
   max_speed: z.number(),
   elev_high: z.number().optional(),
   elev_low: z.number().optional(),
@@ -58,6 +65,11 @@ export const SummaryActivitySchema = z.looseObject({
   average_watts: z.number().optional(),
   device_watts: z.boolean().optional(),
 });
+
+export const SummaryActivitySchema = z.discriminatedUnion("manual", [
+  ManualSummaryActivitySchema,
+  TrackedSummaryActivitySchema,
+]);
 
 export type SummaryActivity = z.infer<typeof SummaryActivitySchema>;
 
@@ -107,7 +119,7 @@ async function refreshAccessToken(
   return data.access_token;
 }
 
-async function getAccessToken(userId: string): Promise<string> {
+async function getAccessToken(appUserId: string): Promise<string> {
   const [row] = await db
     .select({
       accessToken: stravaConnection.accessToken,
@@ -115,14 +127,14 @@ async function getAccessToken(userId: string): Promise<string> {
       accessTokenExpiresAt: stravaConnection.accessTokenExpiresAt,
     })
     .from(stravaConnection)
-    .where(eq(stravaConnection.userId, userId))
+    .where(eq(stravaConnection.userId, appUserId))
     .limit(1);
 
-  if (!row) throw new Error(`No Strava connection for user ${userId}`);
+  if (!row) throw new Error(`No Strava connection for user ${appUserId}`);
 
   // Refresh if expiring within 5 minutes.
   if (row.accessTokenExpiresAt.getTime() - Date.now() < 5 * 60 * 1000) {
-    return refreshAccessToken(userId, row.refreshToken);
+    return refreshAccessToken(appUserId, row.refreshToken);
   }
   return row.accessToken;
 }
@@ -189,22 +201,27 @@ const DetailedSegmentEffortSchema = z.looseObject({
   hidden: z.boolean().optional(),
 });
 
-export const DetailedActivitySchema = SummaryActivitySchema.extend({
+const detailedActivityExtra = {
   description: z.string().nullable().optional(),
   calories: z.number().optional(),
   device_name: z.string().optional(),
   segment_efforts: z.array(DetailedSegmentEffortSchema).optional(),
   best_efforts: z.array(DetailedSegmentEffortSchema).optional(),
-});
+};
+
+export const DetailedActivitySchema = z.discriminatedUnion("manual", [
+  ManualSummaryActivitySchema.extend(detailedActivityExtra),
+  TrackedSummaryActivitySchema.extend(detailedActivityExtra),
+]);
 
 export type DetailedActivity = z.infer<typeof DetailedActivitySchema>;
 
 export async function getActivity(
-  userId: string,
+  appUserId: string,
   activityId: number,
 ): Promise<DetailedActivity> {
-  const accessToken = await getAccessToken(userId);
-  getLog().info({ userId, activityId }, "Fetching Strava activity");
+  const accessToken = await getAccessToken(appUserId);
+  getLog().info({ userId: appUserId, activityId }, "Fetching Strava activity");
   const response = await fetch(
     `https://www.strava.com/api/v3/activities/${activityId}?include_all_efforts=true`,
     { headers: { Authorization: `Bearer ${accessToken}` } },
@@ -216,11 +233,18 @@ export async function getActivity(
   return DetailedActivitySchema.parse(await response.json());
 }
 
-export async function getLoggedInAthleteActivities(
-  userId: string,
-  params: { before?: number; after?: number; page?: number; per_page?: number },
+export const ListActivitiesInputSchema = z.object({
+  before: z.int().optional(),
+  after: z.int().optional(),
+  page: z.int().min(1).optional(),
+  perPage: z.int().min(1).optional(),
+});
+
+export async function listActivities(
+  appUserId: string,
+  params: z.infer<typeof ListActivitiesInputSchema>,
 ): Promise<SummaryActivity[]> {
-  const accessToken = await getAccessToken(userId);
+  const accessToken = await getAccessToken(appUserId);
   const url = new URL("https://www.strava.com/api/v3/athlete/activities");
   if (params.before !== undefined)
     url.searchParams.set("before", String(params.before));
@@ -228,20 +252,24 @@ export async function getLoggedInAthleteActivities(
     url.searchParams.set("after", String(params.after));
   if (params.page !== undefined)
     url.searchParams.set("page", String(params.page));
-  if (params.per_page !== undefined)
-    url.searchParams.set("per_page", String(params.per_page));
+  if (params.perPage !== undefined)
+    url.searchParams.set("per_page", String(params.perPage));
 
-  getLog().info({ userId, params }, "Fetching Strava activities");
+  getLog().info({ userId: appUserId, params }, "Fetching Strava activities");
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!response.ok) {
-    const body = await response.text();
+    const body = (await response.text()).slice(0, 100);
     throw new Error(
       `Strava activities fetch failed: ${response.status} ${body}`,
     );
   }
-  const data = z.array(SummaryActivitySchema).parse(await response.json());
-  getLog().info({ userId, count: data.length }, "Fetched Strava activities");
+  const rawData = await response.json();
+  const data = z.array(SummaryActivitySchema).parse(rawData);
+  getLog().info(
+    { userId: appUserId, count: data.length },
+    "Fetched Strava activities",
+  );
   return data;
 }
