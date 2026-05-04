@@ -255,7 +255,7 @@ export async function getRecordedTrack(
       ...summaryColumns,
       polyline: sql<
         string | null
-      >`ST_AsEncodedPolyline(${recordedTrack.path})`.as("polyline"),
+      >`ST_AsEncodedPolyline(${recordedTrack.path}, 6)`.as("polyline"),
       pointTimestamps: recordedTrack.pointTimestamps,
       pointSpeed: recordedTrack.pointSpeed,
       pointDemElevation: recordedTrack.pointDemElevation,
