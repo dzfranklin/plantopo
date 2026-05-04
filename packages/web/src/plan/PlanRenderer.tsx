@@ -1,6 +1,7 @@
 import type { LngLatLike } from "maplibre-gl";
 
 import type { PlanState } from "./types";
+import { jsxToSVGElement } from "@/util/jsx";
 
 interface Projector {
   project: (lngLat: LngLatLike) => { x: number; y: number };
@@ -242,17 +243,46 @@ export class PlanRenderer {
     }
   }
 
-  private _handleSVG(id: number): string {
+  private _handleEl(id: number) {
     const dim = this._handleOffset + this._handleRadius;
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${dim}" height="${dim}" style="overflow:visible;pointer-events:auto;cursor:grab;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));" ${MARKER_ID_ATTR}="${id}">
-  <path d="${this._lollipopPath()}" fill="${BLUE}" stroke="${WHITE}" stroke-width="1.5" stroke-linejoin="round" />
-</svg>`;
+    return jsxToSVGElement(
+      <svg
+        width={dim}
+        height={dim}
+        style={{
+          overflow: "visible",
+          pointerEvents: "auto",
+          cursor: "grab",
+          filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.3))",
+        }}
+        {...{ [MARKER_ID_ATTR]: id }}>
+        <path
+          d={this._lollipopPath()}
+          fill={BLUE}
+          stroke={WHITE}
+          stroke-width="1.5"
+          stroke-linejoin="round"
+        />
+      </svg>,
+    );
   }
 
-  private _anchorSVG(): string {
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" style="overflow:visible;pointer-events:none;">
-  <circle cx="0" cy="0" r="${this._anchorRadius}" fill="${WHITE}" stroke="${BLUE_DARK}" stroke-width="1.5" />
-</svg>`;
+  private _anchorEl() {
+    return jsxToSVGElement(
+      <svg
+        width="1"
+        height="1"
+        style={{ overflow: "visible", pointerEvents: "none" }}>
+        <circle
+          cx="0"
+          cy="0"
+          r={this._anchorRadius}
+          fill={WHITE}
+          stroke={BLUE_DARK}
+          stroke-width="1.5"
+        />
+      </svg>,
+    );
   }
 
   /**
@@ -305,13 +335,14 @@ export class PlanRenderer {
     const handle = document.createElement("div");
     handle.style.cssText =
       "position:absolute; top:0; left:0; pointer-events:none;";
-    handle.innerHTML = this._handleSVG(id);
-    const handlePath = handle.querySelector("path") as SVGPathElement;
+    const handleSvg = this._handleEl(id);
+    handle.append(handleSvg);
+    const handlePath = handleSvg.querySelector("path") as SVGPathElement;
 
     const anchor = document.createElement("div");
     anchor.style.cssText =
       "position:absolute; top:0; left:0; pointer-events:none;";
-    anchor.innerHTML = this._anchorSVG();
+    anchor.append(this._anchorEl());
 
     return { handle, handlePath, anchor };
   }
