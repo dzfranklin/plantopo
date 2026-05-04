@@ -11,7 +11,10 @@ Logging: Provide errors to pino under the err key (logger.error({err}, "message"
 Put important/exported functions first, and helpers after the functions they
 relate to
 
-packages/web
+Testing: export private functions for testing under
+`export const exportedForTesting = { ... }`
+
+## packages/web
 
 Use shadcn instead of reimplementing simple components such as input elements
 (npx -w @pt/web shadcn add ...)
