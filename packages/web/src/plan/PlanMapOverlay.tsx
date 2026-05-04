@@ -4,18 +4,24 @@ import { PlanInteractionHandler } from "./PlanInteractionHandler";
 import { PlanRenderer } from "./PlanRenderer";
 import { type PlanState } from "./types";
 import { useMapManager } from "@/components/map/MapManagerContext";
+import { useIsMobile } from "@/hooks/useMediaQuery";
 
 export function PlanMapOverlay() {
   const rendererRef = useRef<PlanRenderer | null>(null);
   const stateRef = useRef<PlanState>({ points: [] });
-
+  const isMobile = useIsMobile();
   const mm = useMapManager();
 
   useEffect(() => {
     const m = mm.map;
     const im = mm.interactionManager;
 
-    const renderer = new PlanRenderer(m.getCanvasContainer(), m.getCanvas(), m);
+    const renderer = new PlanRenderer({
+      container: m.getCanvasContainer(),
+      mlCanvas: m.getCanvas(),
+      projector: m,
+      isMobile,
+    });
     rendererRef.current = renderer;
 
     const repaintNow = () => renderer.render(stateRef.current);
@@ -55,7 +61,7 @@ export function PlanMapOverlay() {
       renderer.destroy();
       rendererRef.current = null;
     };
-  }, [mm]);
+  }, [isMobile, mm]);
 
   return null;
 }

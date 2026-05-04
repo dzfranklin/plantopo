@@ -6,87 +6,12 @@ interface Projector {
   project: (lngLat: LngLatLike) => { x: number; y: number };
 }
 
-// The small anchor dot drawn at the exact coordinate
-const ANCHOR_RADIUS = 4;
-const LOLLIPOP_OFFSET = 3;
-
-// Handle blob centre, offset from the anchor point
-const HANDLE_RADIUS = 10;
-const HANDLE_OFFSET_X = 16;
-const HANDLE_OFFSET_Y = 16;
-
-const LAYER_STYLE =
-  "position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;";
-
-const SVG_W = HANDLE_OFFSET_X + HANDLE_RADIUS + 3;
-const SVG_H = HANDLE_OFFSET_Y + HANDLE_RADIUS + 3;
-
 const MARKER_ID_ATTR = "data-plan-marker-id";
 
 const BLUE = "#2563eb";
 const BLUE_LIGHT = "#3b82f6";
 const BLUE_DARK = "#1d4ed8";
 const WHITE = "#ffffff";
-
-/**
- * Single rounded lollipop path: tapers from a point at the origin to a full
- * rounded blob at the handle centre. Uses quadratic curves so the sides
- * curve smoothly outward rather than meeting the circle with a hard corner.
- */
-function _lollipopPath(): string {
-  const cx = HANDLE_OFFSET_X;
-  const cy = HANDLE_OFFSET_Y;
-  const len = Math.hypot(cx, cy);
-  // Unit vectors along and perpendicular to the stem
-  const ax = cx / len;
-  const ay = cy / len;
-  const px = -ay;
-  const py = ax;
-
-  // Tangent points on the far side of the handle circle (away from anchor).
-  // The Q curves run from the origin tip to these points, then the minor arc
-  // sweeps around the far cap to close the blob.
-  const t1x = cx + px * HANDLE_RADIUS;
-  const t1y = cy + py * HANDLE_RADIUS;
-  const t2x = cx - px * HANDLE_RADIUS;
-  const t2y = cy - py * HANDLE_RADIUS;
-
-  // Control points sit on the perpendicular at a fraction along the stem,
-  // so the sides taper smoothly from the tip.
-  const cpFrac = 0.6;
-  const cp1x = ax * len * cpFrac + px * HANDLE_RADIUS;
-  const cp1y = ay * len * cpFrac + py * HANDLE_RADIUS;
-  const cp2x = ax * len * cpFrac - px * HANDLE_RADIUS;
-  const cp2y = ay * len * cpFrac - py * HANDLE_RADIUS;
-
-  // Tip starts at the edge of the anchor dot, not its centre
-  const tipX = ax * (ANCHOR_RADIUS + LOLLIPOP_OFFSET);
-  const tipY = ay * (ANCHOR_RADIUS + LOLLIPOP_OFFSET);
-
-  const f = (n: number) => n.toFixed(2);
-  return [
-    `M ${f(tipX)} ${f(tipY)}`,
-    `Q ${f(cp1x)} ${f(cp1y)} ${f(t1x)} ${f(t1y)}`,
-    // large-arc=1, sweep=0: go around the far side of the circle
-    `A ${HANDLE_RADIUS} ${HANDLE_RADIUS} 0 1 0 ${f(t2x)} ${f(t2y)}`,
-    `Q ${f(cp2x)} ${f(cp2y)} ${f(tipX)} ${f(tipY)}`,
-    `Z`,
-  ].join(" ");
-}
-
-const LOLLIPOP_PATH = _lollipopPath();
-
-function _handleSVG(id: number): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${SVG_W}" height="${SVG_H}" style="overflow:visible;pointer-events:auto;cursor:grab;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));" ${MARKER_ID_ATTR}="${id}">
-  <path d="${LOLLIPOP_PATH}" fill="${BLUE}" stroke="${WHITE}" stroke-width="1.5" stroke-linejoin="round" />
-</svg>`;
-}
-
-function _anchorSVG(): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" style="overflow:visible;pointer-events:none;">
-  <circle cx="0" cy="0" r="${ANCHOR_RADIUS}" fill="${WHITE}" stroke="${BLUE_DARK}" stroke-width="1.5" />
-</svg>`;
-}
 
 export interface HitResult {
   id: number;
@@ -101,6 +26,11 @@ interface MarkerEls {
   anchor: HTMLDivElement;
 }
 
+const LAYER_STYLE =
+  "position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;";
+
+const MOBILE_SCALE_FACTOR = 1.3;
+
 export class PlanRenderer {
   private _container: HTMLElement;
   private _mlCanvas: HTMLCanvasElement;
@@ -113,14 +43,35 @@ export class PlanRenderer {
   private _hoveredId: number | null = null;
   private _activeId: number | null = null;
 
-  constructor(
-    container: HTMLElement,
-    mlCanvas: HTMLCanvasElement,
-    projector: Projector,
-  ) {
+  // The small anchor dot drawn at the exact coordinate
+  private _anchorRadius = 4;
+  private _lollipopOffset = 3;
+
+  // Handle blob centre, offset from the anchor point
+  private _handleRadius = 10;
+  private _handleOffset = 19;
+
+  constructor({
+    container,
+    mlCanvas,
+    projector,
+    isMobile,
+  }: {
+    container: HTMLElement;
+    mlCanvas: HTMLCanvasElement;
+    projector: Projector;
+    isMobile: boolean;
+  }) {
     this._container = container;
     this._mlCanvas = mlCanvas;
     this.projector = projector;
+
+    if (isMobile) {
+      this._anchorRadius *= MOBILE_SCALE_FACTOR;
+      this._lollipopOffset *= MOBILE_SCALE_FACTOR;
+      this._handleRadius *= MOBILE_SCALE_FACTOR;
+      this._handleOffset *= MOBILE_SCALE_FACTOR;
+    }
 
     this.canvas = document.createElement("canvas");
     this.canvas.style.cssText = LAYER_STYLE;
@@ -186,8 +137,8 @@ export class PlanRenderer {
   moveDragPoint(id: number, x: number, y: number) {
     const els = this.markerEls.get(id);
     if (els) {
-      _setElPos(els.handle, x, y);
-      _setElPos(els.anchor, x, y);
+      this._setElPos(els.handle, x, y);
+      this._setElPos(els.anchor, x, y);
     }
   }
 
@@ -272,15 +223,15 @@ export class PlanRenderer {
       seen.add(pt.id);
       let els = this.markerEls.get(pt.id);
       if (!els) {
-        els = _createMarkerEls(pt.id);
+        els = this._createMarkerEls(pt.id);
         this.markerEls.set(pt.id, els);
         this._handleLayer.append(els.handle);
         this._anchorLayer.append(els.anchor);
       }
       const [lng, lat] = pt.point;
       const { x, y } = this.projector.project([lng, lat]);
-      _setElPos(els.handle, x, y);
-      _setElPos(els.anchor, x, y);
+      this._setElPos(els.handle, x, y);
+      this._setElPos(els.anchor, x, y);
     }
     for (const [id, els] of this.markerEls) {
       if (!seen.has(id)) {
@@ -290,24 +241,83 @@ export class PlanRenderer {
       }
     }
   }
-}
 
-function _createMarkerEls(id: number): MarkerEls {
-  const handle = document.createElement("div");
-  handle.style.cssText =
-    "position:absolute; top:0; left:0; pointer-events:none;";
-  handle.innerHTML = _handleSVG(id);
-  const handlePath = handle.querySelector("path") as SVGPathElement;
+  private _handleSVG(id: number): string {
+    const dim = this._handleOffset + this._handleRadius;
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${dim}" height="${dim}" style="overflow:visible;pointer-events:auto;cursor:grab;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));" ${MARKER_ID_ATTR}="${id}">
+  <path d="${this._lollipopPath()}" fill="${BLUE}" stroke="${WHITE}" stroke-width="1.5" stroke-linejoin="round" />
+</svg>`;
+  }
 
-  const anchor = document.createElement("div");
-  anchor.style.cssText =
-    "position:absolute; top:0; left:0; pointer-events:none;";
-  anchor.innerHTML = _anchorSVG();
+  private _anchorSVG(): string {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" style="overflow:visible;pointer-events:none;">
+  <circle cx="0" cy="0" r="${this._anchorRadius}" fill="${WHITE}" stroke="${BLUE_DARK}" stroke-width="1.5" />
+</svg>`;
+  }
 
-  return { handle, handlePath, anchor };
-}
+  /**
+   * Single rounded lollipop path: tapers from a point at the origin to a full
+   * rounded blob at the handle centre. Uses quadratic curves so the sides
+   * curve smoothly outward rather than meeting the circle with a hard corner.
+   */
+  private _lollipopPath(): string {
+    const cx = this._handleOffset;
+    const cy = this._handleOffset;
+    const len = Math.hypot(cx, cy);
+    // Unit vectors along and perpendicular to the stem
+    const ax = cx / len;
+    const ay = cy / len;
+    const px = -ay;
+    const py = ax;
 
-function _setElPos(el: HTMLDivElement, x: number, y: number) {
-  // translate so that (0,0) of the SVG sits at the anchor pixel
-  el.style.transform = `translate(${x}px, ${y}px)`;
+    // Tangent points on the far side of the handle circle (away from anchor).
+    // The Q curves run from the origin tip to these points, then the minor arc
+    // sweeps around the far cap to close the blob.
+    const t1x = cx + px * this._handleRadius;
+    const t1y = cy + py * this._handleRadius;
+    const t2x = cx - px * this._handleRadius;
+    const t2y = cy - py * this._handleRadius;
+
+    // Control points sit on the perpendicular at a fraction along the stem,
+    // so the sides taper smoothly from the tip.
+    const cpFrac = 0.6;
+    const cp1x = ax * len * cpFrac + px * this._handleRadius;
+    const cp1y = ay * len * cpFrac + py * this._handleRadius;
+    const cp2x = ax * len * cpFrac - px * this._handleRadius;
+    const cp2y = ay * len * cpFrac - py * this._handleRadius;
+
+    // Tip starts at the edge of the anchor dot, not its centre
+    const tipX = ax * (this._anchorRadius + this._lollipopOffset);
+    const tipY = ay * (this._anchorRadius + this._lollipopOffset);
+
+    const f = (n: number) => n.toFixed(2);
+    return [
+      `M ${f(tipX)} ${f(tipY)}`,
+      `Q ${f(cp1x)} ${f(cp1y)} ${f(t1x)} ${f(t1y)}`,
+      // large-arc=1, sweep=0: go around the far side of the circle
+      `A ${this._handleRadius} ${this._handleRadius} 0 1 0 ${f(t2x)} ${f(t2y)}`,
+      `Q ${f(cp2x)} ${f(cp2y)} ${f(tipX)} ${f(tipY)}`,
+      `Z`,
+    ].join(" ");
+  }
+
+  private _createMarkerEls(id: number): MarkerEls {
+    const handle = document.createElement("div");
+    handle.style.cssText =
+      "position:absolute; top:0; left:0; pointer-events:none;";
+    handle.innerHTML = this._handleSVG(id);
+    const handlePath = handle.querySelector("path") as SVGPathElement;
+
+    const anchor = document.createElement("div");
+    anchor.style.cssText =
+      "position:absolute; top:0; left:0; pointer-events:none;";
+    anchor.innerHTML = this._anchorSVG();
+
+    return { handle, handlePath, anchor };
+  }
+
+  private _setElPos(el: HTMLDivElement, x: number, y: number) {
+    // translate so that (0,0) of the SVG sits at the anchor pixel
+    el.style.transform = `translate(${x}px, ${y}px)`;
+  }
 }
