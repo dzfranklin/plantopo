@@ -13,7 +13,8 @@
   "scripts": {
     "dev": "NODE_ENV=development node --conditions=development --import tsx/esm packages/api/src/server.ts",
     "dev:funnel": "./scripts/dev-funnel.sh",
-    "scratch": "NODE_ENV=development node --conditions=development --watch --inspect --import tsx/esm packages/api/src/.scratch.local.ts",
+    "scratch": "NODE_ENV=development node --conditions=development --watch --import tsx/esm packages/api/src/.scratch.local.ts",
+    "scratch:inspect": "NODE_ENV=development node --conditions=development --inspect-wait --import tsx/esm packages/api/src/.scratch.local.ts",
     "run-task": "NODE_ENV=development node --conditions=development --import tsx/esm packages/api/src/run-task.ts",
     "dev:android-devtools": "adb reverse tcp:8097 tcp:8097 && react-devtools",
     "db:generate": "NODE_ENV=development tsx scripts/with-api-env.ts drizzle-kit generate",
