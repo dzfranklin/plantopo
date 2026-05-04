@@ -1,5 +1,5 @@
 import archiver from "archiver";
-import { eq } from "drizzle-orm";
+import { eq, getTableColumns } from "drizzle-orm";
 import { createWriteStream } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -75,8 +75,18 @@ async function exportRecordedTrackTable({ scratch, userId }: Run) {
     .where(eq(recordedTrack.userId, userId));
 
   for (const { id } of list) {
+    const {
+      previewLargeSrc: _previewLargeSrc,
+      previewLargeWidth: _previewLargeWidth,
+      previewLargeHeight: _previewLargeHeight,
+      previewSmallSrc: _previewSmallSrc,
+      previewSmallWidth: _previewSmallWidth,
+      previewSmallHeight: _previewSmallHeight,
+      ...cols
+    } = getTableColumns(recordedTrack);
+
     const row = await db
-      .select()
+      .select(cols)
       .from(recordedTrack)
       .where(eq(recordedTrack.id, id))
       .then(rows => rows[0]);

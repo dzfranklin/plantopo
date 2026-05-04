@@ -6,6 +6,8 @@ import path from "node:path";
 
 import { user } from "../packages/api/src/auth/auth.schema.js";
 import db from "../packages/api/src/db.js";
+import { closeJobQueues } from "../packages/api/src/jobs.js";
+import backfillPreviewImages from "../packages/api/src/track/backfill-preview-images.js";
 import { recordedTrack } from "../packages/api/src/track/track.schema.js";
 
 const [, , ...args] = process.argv;
@@ -65,4 +67,9 @@ for (const trackFile of trackFiles) {
   console.log(`Inserted track ${data.id} (${data.name})`);
 }
 
+await backfillPreviewImages({ resetExisting: true });
+console.log("Enqueued preview image backfill jobs");
+
 await db.$client.end();
+await closeJobQueues();
+console.log("Done");

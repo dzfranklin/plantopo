@@ -95,6 +95,32 @@ export async function enqueueJob<Name extends JobName>(
   return job as Job<QueueJobData<JobData<Name>>>;
 }
 
+export async function resetJobsByName<Name extends JobName>(
+  name: Name,
+): Promise<void> {
+  const def = jobRegistry[name];
+  if (!def) throw new Error(`Unknown job: ${name}`);
+
+  const queue = def.queue;
+  const jobs = await queue.getJobs();
+  for (const job of jobs) {
+    if (job.name === name) {
+      try {
+        await job.remove();
+        getLog().info(
+          { jobId: job.id, jobName: name },
+          "Job removed during reset",
+        );
+      } catch (err) {
+        getLog().warn(
+          { jobId: job.id, jobName: name, err },
+          "Failed to remove job during reset",
+        );
+      }
+    }
+  }
+}
+
 function startQueueWorker(queueName: string, concurrency: number): AppWorker {
   const worker: AppWorker = new Worker(
     queueName,

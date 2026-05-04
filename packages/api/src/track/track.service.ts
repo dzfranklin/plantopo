@@ -7,7 +7,7 @@ import { type LocalRecordedTrack } from "@pt/shared";
 import { db } from "../db.js";
 import { getElevations } from "../elevation/elevation.service.js";
 import { env } from "../env.js";
-import { enqueueJob } from "../jobs.js";
+import { enqueueJob, resetJobsByName } from "../jobs.js";
 import { getLog } from "../logger.js";
 import { lineStringFromDriver } from "../postgis.js";
 import { renderStaticMap } from "../staticmap/staticmap.js";
@@ -148,6 +148,10 @@ export async function enqueuePopulatePreviewImagesJob(trackId: string) {
     { trackId },
     { jobId: "recordedTrack.populatePreviewImages." + trackId },
   );
+}
+
+export async function resetPopulatePreviewImagesJobs() {
+  return await resetJobsByName("recordedTrack.populatePreviewImages");
 }
 
 export async function populatePreviewImages(
