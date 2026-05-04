@@ -1,4 +1,4 @@
-import "./loadEnv.js";
+import "./env/load.js";
 
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { toNodeHandler } from "better-auth/node";
@@ -14,6 +14,7 @@ import { registerClientLogsRoutes } from "./client-logs.routes.js";
 import db from "./db.js";
 import { registerDevNativeAssetsRoutes } from "./dev-native-assets.routes.js";
 import { env } from "./env.js";
+import { sanitizeEnvForLogging } from "./env/helpers.js";
 import { registerExportRoutes } from "./export/export.routes.js";
 import { closeJobQueues, startWorkers } from "./jobs.js";
 import { logger } from "./logger.js";
@@ -23,6 +24,13 @@ import { requestContext } from "./request-context.js";
 import { appRouter } from "./router.js";
 import { registerStravaRoutes } from "./strava/strava.routes.js";
 import { registerTrackPreviewRoutes } from "./track/track-preview.routes.js";
+
+const isDev = process.env.NODE_ENV !== "production";
+
+logger.setBindings({
+  isDev,
+  env: sanitizeEnvForLogging(env),
+});
 
 process.on("uncaughtException", function (err) {
   logger.error({ err }, "Uncaught exception");
@@ -36,7 +44,6 @@ process.on("unhandledRejection", (reason, promise) => {
 });
 
 const app = express();
-const isDev = process.env.NODE_ENV !== "production";
 
 if (isDev) {
   // Simulate latency in dev so network behaviour is visible
@@ -62,7 +69,7 @@ app.get("/api/v1/_smoke-test", async (_req, res) => {
         ? { id: ctx.user.id, email: ctx.user.email, prefs: ctx.user.prefs }
         : null,
       userAccessScopes: ctx.user ? userAccessScopes(ctx.user) : [],
-      client: ctx.client,
+      client: ctx.clientInfo,
     },
   });
 });
@@ -149,19 +156,15 @@ app.use(
   },
 );
 
-httpServer.listen(4000, () => {
-  logger.info(
-    { port: 4000, env: isDev ? "dev" : "production" },
-    "Server listening",
-  );
+httpServer.listen(env.PORT, () => {
+  logger.info(`Server listening on :${env.PORT}`);
 });
 
 const workers = startWorkers();
 
-const metricsPort = 4001;
 const metricsServer = createMetricsServer();
-metricsServer.listen(metricsPort, () => {
-  logger.info({ port: metricsPort }, "Metrics server listening");
+metricsServer.listen(env.METRICS_PORT, () => {
+  logger.info(`Metrics server listening on :${env.METRICS_PORT}`);
 });
 
 let shuttingDown = false;

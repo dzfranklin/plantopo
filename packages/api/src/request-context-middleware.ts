@@ -2,8 +2,6 @@ import { fromNodeHeaders } from "better-auth/node";
 import { randomUUID } from "crypto";
 import type { NextFunction, Request, Response } from "express";
 
-import type { ClientInfo } from "@pt/shared";
-
 import { type User, auth } from "./auth/auth.js";
 import { logger } from "./logger.js";
 import { type RequestContext, runWithRequestCtx } from "./request-context.js";
@@ -19,11 +17,13 @@ export async function requestContextMiddleware(
   logBindings.reqId = reqId;
 
   const rawClientInfo = req.get("x-client-info");
-  let client: ClientInfo | undefined = undefined;
+  let client: Record<string, string> | undefined = undefined;
   if (rawClientInfo) {
     try {
-      client = JSON.parse(rawClientInfo);
-      logBindings.client = client;
+      logBindings.client = JSON.parse(rawClientInfo, (_, value) =>
+        value.toString().slice(0, 100),
+      );
+      client = logBindings.client as Record<string, string>;
     } catch (err) {
       logger.warn(
         { err, rawClientInfo },
@@ -58,7 +58,7 @@ export async function requestContextMiddleware(
     reqId: reqId,
     logger: logger.child(logBindings),
     user,
-    client,
+    clientInfo: client,
   };
 
   runWithRequestCtx(ctx, next);

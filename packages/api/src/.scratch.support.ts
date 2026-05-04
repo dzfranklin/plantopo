@@ -1,4 +1,4 @@
-import "./loadEnv.js";
+import "./env/load.js";
 
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { eq } from "drizzle-orm";

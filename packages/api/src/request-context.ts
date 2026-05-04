@@ -1,8 +1,6 @@
 import { AsyncLocalStorage } from "async_hooks";
 import type pino from "pino";
 
-import type { ClientInfo } from "@pt/shared";
-
 import type { User } from "./auth/auth.js";
 
 export interface RequestContext {
@@ -10,7 +8,7 @@ export interface RequestContext {
   path: string;
   logger: pino.Logger;
   user: User | null;
-  client?: ClientInfo;
+  clientInfo?: Record<string, string>;
 }
 
 const requestContextStore = new AsyncLocalStorage<RequestContext>();

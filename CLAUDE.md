@@ -6,7 +6,7 @@ Key scripts:
 - npm run check (typecheck + lint)
 - npm run test
 
-Logging: Provide errors to pino under the err key
+Logging: Provide errors to pino under the err key (logger.error({err}, "message"))
 
 Put important/exported functions first, and helpers after the functions they
 relate to

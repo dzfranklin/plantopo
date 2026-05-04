@@ -13,9 +13,17 @@ export const logger = pino({
     }
     return {};
   },
-  ...(isDev && {
-    transport: { target: "pino-pretty", options: { colorize: true } },
-  }),
+  formatters: {
+    level(label) {
+      return { level: label };
+    },
+  },
+  transport: isDev
+    ? {
+        target: "pino-pretty",
+        options: { colorize: true, ignore: "pid,hostname,isDev,env,extra" },
+      }
+    : { target: "pino/file", options: { destination: 1 } },
 });
 
 export function getLog() {

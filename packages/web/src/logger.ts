@@ -5,11 +5,7 @@ import type {
 } from "maplibre-gl";
 import pino from "pino/browser";
 
-import type {
-  ClientInfo,
-  ClientLogEntry,
-  ClientLogsPostBody,
-} from "@pt/shared";
+import type { ClientLogEntry, ClientLogsPostBody } from "@pt/shared";
 
 import {
   getDebugFlag,
@@ -76,19 +72,27 @@ let shipScheduled = false;
 
 // --- Utilities ---
 
-export function getClientInfo(): ClientInfo {
+export function getClientInfo(): Record<string, string> {
   const debugFlags = Object.entries(getDebugFlags())
     .filter(([, v]) => v)
     .map(([k]) => k)
     .join(",");
 
-  return {
+  const info: Record<string, string> = {
     clientId,
-    clientVersion,
+    clientVersion: clientVersion ?? "unknown",
     clientDebugFlags: debugFlags,
-    nativeVersion: window.Native?.version?.(),
     href: window.location.href,
+    screenWidth: String(window.screen.width),
+    screenHeight: String(window.screen.height),
   };
+
+  if (window.Native) {
+    info.nativeVersion = window.Native.version();
+    info.spaUpdateAvailable = String(window.Native.spaUpdateAvailable());
+  }
+
+  return info;
 }
 
 export function safeStringify(value: unknown, indent?: number): string {

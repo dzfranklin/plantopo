@@ -56,37 +56,29 @@ interface ByOptions {
   numeric?: boolean;
 }
 
+type Comparator<T extends object> = (a: T, b: T) => number;
+type ByKeys<T extends object> = keyof T | (keyof T)[];
+type ByGetter<T extends object> = (obj: T) => unknown;
+
 /**
  * by is a sort helper. Usage: array.sort(by('key1', 'key2')) or array.sort(by(['key1', 'key2'], { numeric: true }))
  * If the primary keys compare equal, remaining keys from both objects are compared in alphabetical order for a stable sort.
  */
-export function by(keys: string | string[], options: ByOptions = {}) {
-  const keyList = Array.isArray(keys) ? keys : [keys];
-  const keySet = new Set(keyList);
-  return (a: Record<string, unknown>, b: Record<string, unknown>) => {
-    let va;
-    let vb;
-    for (const key of keyList) {
-      va = a[key];
-      if (va === undefined) continue;
-      break;
-    }
-    for (const key of keyList) {
-      vb = b[key];
-      if (vb === undefined) continue;
-      break;
-    }
-    const primary = compareValues(va, vb, options);
-    if (primary !== 0) return primary;
-    const fallbackKeys = [...new Set([...Object.keys(a), ...Object.keys(b)])]
-      .filter(k => !keySet.has(k))
-      .sort();
-    for (const key of fallbackKeys) {
-      const result = compareValues(a[key], b[key], options);
-      if (result !== 0) return result;
-    }
-    return 0;
-  };
+export function by<T extends object>(
+  keys: ByKeys<T>,
+  opts?: ByOptions,
+): Comparator<T>;
+export function by<T extends object>(
+  fn: ByGetter<T>,
+  opts?: ByOptions,
+): Comparator<T>;
+
+export function by<T extends object>(
+  arg1: ByKeys<T> | ByGetter<T>,
+  opts: ByOptions = {},
+): Comparator<T> {
+  if (typeof arg1 === "function") return byGetter(arg1, opts);
+  else return byKeys(arg1, opts);
 }
 
 export function by0(options: ByOptions = {}) {
@@ -101,23 +93,54 @@ function byN(n: number, options: ByOptions = {}) {
   return (a: unknown[], b: unknown[]) => compareValues(a[n], b[n], options);
 }
 
-function compareValues(va: unknown, vb: unknown, options: ByOptions): number {
-  if ((va === undefined || va === null) && (vb === undefined || vb === null))
-    return 0;
-  if (va === undefined || va === null) return 1;
-  if (vb === undefined || vb === null) return -1;
+function byKeys<T extends object>(
+  keys: ByKeys<T>,
+  opts: ByOptions = {},
+): Comparator<T> {
+  return (a, b) => {
+    for (const key of Array.isArray(keys) ? keys : [keys]) {
+      const aHas = key in a;
+      const bHas = key in b;
+      if (!aHas && !bHas) continue;
+      else if (!aHas) return -1;
+      else if (!bHas) return 1;
+
+      const cmp = compareValues(a[key], b[key], opts);
+      if (cmp !== 0) return cmp;
+    }
+    return compareValues(a, b);
+  };
+}
+
+function byGetter<T extends object>(
+  getter: (obj: T) => unknown,
+  opts: ByOptions = {},
+): Comparator<T> {
+  return (a, b) => {
+    const va = getter(a);
+    const vb = getter(b);
+    return compareValues(va, vb, opts) || compareValues(a, b);
+  };
+}
+
+function compareValues(va: unknown, vb: unknown, opts: ByOptions = {}): number {
+  if (va === vb) return 0;
+
+  // sort strings with localeCompare if either locale or numeric option is specified
   if (
     typeof va === "string" &&
     typeof vb === "string" &&
-    (options.locale || options.numeric !== undefined)
+    (opts.locale || opts.numeric !== undefined)
   ) {
     return va.localeCompare(vb, undefined, {
-      numeric: options.numeric,
+      numeric: opts.numeric,
     });
   }
-  if (va < vb) return -1;
-  if (va > vb) return 1;
-  return 0;
+
+  // to match default sort behavior, convert to strings
+  const sa = String(va);
+  const sb = String(vb);
+  return sa < sb ? -1 : 1;
 }
 
 export function round(n: number, precision: number): number {
@@ -154,19 +177,7 @@ export function div2(v: [number, number], factor: number): [number, number] {
   return [v[0] / factor, v[1] / factor];
 }
 
-export const ClientInfoSchema = z.object({
-  userId: z.string().optional(),
-  sessionId: z.string().optional(),
-  clientId: z.string().optional(),
-  clientVersion: z.string().optional(),
-  clientDebugFlags: z.string().optional(),
-  nativeVersion: z.string().optional(),
-  href: z.string().optional(),
-});
-
-export type ClientInfo = z.infer<typeof ClientInfoSchema>;
-
-export const ClientLogEntrySchema = ClientInfoSchema.extend({
+export const ClientLogEntrySchema = z.object({
   level: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]),
   msg: z.string(),
   ts: z.number(),

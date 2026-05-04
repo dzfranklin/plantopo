@@ -1,21 +1,20 @@
 import { spawnSync } from "node:child_process";
-import path from "node:path";
 
-const src = path.resolve(import.meta.dirname, "../packages/api/src");
-
-const envBefore = { ...process.env };
-
-// Load env the same way the API does
-await import(path.resolve(src, "loadEnv.js"));
+import { parseEnvFiles } from "../packages/api/src/env/helpers";
 
 const [, , ...args] = process.argv;
 
+const result = parseEnvFiles(process.env);
+process.stderr.write(
+  `> with-api-env.ts Loaded ${result.envName} env from files: ${result.loadedFiles.join(", ")}\n\n`,
+);
+
 if (args.length === 0) {
-  for (const [key, value] of Object.entries(process.env)) {
-    if (envBefore[key] !== value) {
-      process.stdout.write(`${key}=${value}\n`);
-    }
-  }
+  process.stdout.write(
+    Object.entries(result.env)
+      .map(([k, v]) => `${k}=${v}`)
+      .join("\n"),
+  );
 } else {
   const result = spawnSync(args[0], args.slice(1), { stdio: "inherit" });
   process.exit(result.status ?? 1);
