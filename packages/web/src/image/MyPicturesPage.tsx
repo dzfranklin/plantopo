@@ -11,7 +11,7 @@ export default function MyPicturesPage() {
       <h1 className="mb-4 text-2xl font-bold">My Pictures</h1>
       <div className="flex flex-wrap gap-4">
         {images?.map(image => (
-          <div key={image.s3Key} className="bg-muted overflow-hidden rounded">
+          <div key={image.id} className="bg-muted overflow-hidden rounded">
             <img {...image.imageSmallSquare} alt="" />
           </div>
         ))}

@@ -4,7 +4,7 @@ import { Dialog } from "radix-ui";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import type { ImageSrc } from "@pt/api";
+import type { ImageInfo } from "@pt/api";
 import type { Point2 } from "@pt/shared";
 
 import type { RecordedTrack } from "../../../api/src/track/track.service";
@@ -14,6 +14,7 @@ import { formatInstant } from "@/components/format";
 import { AppMap } from "@/components/map";
 import { Button } from "@/components/ui/button";
 import { Carousel, type CarouselApi } from "@/components/ui/carousel";
+import { ContextMenu } from "@/components/ui/context-menu";
 import useAnimationThrottledState from "@/hooks/useAnimationThrottledState";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { type AppUseQueryResult, useTRPC } from "@/trpc";
@@ -131,7 +132,7 @@ function TrackImageCarousel({
   images,
   variant,
 }: {
-  images: { image: ImageSrc; imageSmallSquare: ImageSrc }[];
+  images: ImageInfo[];
   variant?: "modalContent";
 }) {
   const [api, setApi] = useState<CarouselApi>();
@@ -165,13 +166,15 @@ function TrackImageCarousel({
             <Carousel.Item
               key={i}
               className={variant === "modalContent" ? "" : "basis-1/3"}>
-              <img
-                alt=""
-                className="bg-muted rounded"
-                {...(variant === "modalContent"
-                  ? img.image
-                  : img.imageSmallSquare)}
-              />
+              {variant === "modalContent" ? (
+                <img
+                  alt={img.filename}
+                  className="bg-muted rounded"
+                  {...img.image}
+                />
+              ) : (
+                <TrackImage image={img} />
+              )}
             </Carousel.Item>
           ))}
         </Carousel.Content>
@@ -207,5 +210,27 @@ function SkeletonImageCarousel() {
         ))}
       </div>
     </div>
+  );
+}
+
+function TrackImage({ image: img }: { image: ImageInfo }) {
+  return (
+    <ContextMenu>
+      <ContextMenu.Trigger>
+        <img
+          alt={img.filename}
+          className="bg-muted rounded"
+          {...img.imageSmallSquare}
+        />
+      </ContextMenu.Trigger>
+      <ContextMenu.Content>
+        <ContextMenu.Item
+          onSelect={() =>
+            window.open(img.originalImage.src, "_blank", "noopener")
+          }>
+          View original
+        </ContextMenu.Item>
+      </ContextMenu.Content>
+    </ContextMenu>
   );
 }

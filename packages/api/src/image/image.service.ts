@@ -4,17 +4,17 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { and, eq, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import z from "zod";
 
 import { db } from "../db.js";
 import { env } from "../env.js";
-import { ImageSrcSchema } from "../index.js";
+import { type ImageSrc, ImageSrcSchema } from "../index.js";
 import { getLog } from "../logger.js";
-import { recordedTrackImage } from "../track/track.schema.js";
+import { recordedTrackImage } from "../track/track-image.schema.js";
 import { image } from "./image.schema.js";
-import { imgproxy } from "./imgproxy.js";
+import { generateImgproxyRawUrl, imgproxy } from "./imgproxy.js";
 
 export const s3 = new S3Client({
   endpoint: env.S3_ENDPOINT,
@@ -28,83 +28,124 @@ export const s3 = new S3Client({
 const UPLOAD_TTL = 60 * 60; // 1 hour in seconds
 
 export const ImageSchema = z.object({
-  s3Key: z.string(),
-  width: z.number(),
-  height: z.number(),
+  id: z.string(),
+  filename: z.string(),
   takenAt: z.string().nullable(),
   createdAt: z.number(),
   image: ImageSrcSchema,
   imageSmallSquare: ImageSrcSchema,
+  originalImage: ImageSrcSchema,
 });
 
 export type ImageInfo = z.infer<typeof ImageSchema>;
 
+const infoColumns = {
+  s3Key: image.s3Key,
+  filename: image.filename,
+  width: image.width,
+  height: image.height,
+  takenAt: image.takenAt,
+  createdAt: image.createdAt,
+} as const;
+
 export async function listImagesByTrack(trackId: string): Promise<ImageInfo[]> {
   const rows = await db
-    .select({
-      s3Key: image.s3Key,
-      width: image.width,
-      height: image.height,
-      takenAt: image.takenAt,
-      createdAt: image.createdAt,
-    })
+    .select(infoColumns)
     .from(recordedTrackImage)
     .innerJoin(image, eq(recordedTrackImage.imageS3Key, image.s3Key))
     .where(
       and(eq(recordedTrackImage.trackId, trackId), eq(image.uploaded, true)),
     )
-    .orderBy(sql`${image.createdAt} ASC`);
+    .orderBy(asc(recordedTrackImage.createdAt));
 
   return rows.map(toImageInfo);
 }
 
 export async function listImagesByUser(userId: string): Promise<ImageInfo[]> {
   const rows = await db
-    .select({
-      s3Key: image.s3Key,
-      width: image.width,
-      height: image.height,
-      takenAt: image.takenAt,
-      createdAt: image.createdAt,
-    })
+    .select(infoColumns)
     .from(image)
     .where(and(eq(image.userId, userId), eq(image.uploaded, true)))
-    .orderBy(sql`${image.createdAt} DESC`);
+    .orderBy(desc(image.createdAt));
 
   return rows.map(toImageInfo);
 }
 
+export const RequestUploadSchema = z.object({
+  linkedTrackId: z.string().optional(),
+  filename: z.string().max(255),
+  sha256: z.string().length(64),
+  mimeType: z.string(),
+  size: z.number().int().positive(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  takenAt: z.string().optional(),
+  location: z.object({ lat: z.number(), lng: z.number() }).optional(),
+  exif: z.record(z.string(), z.unknown()).optional(),
+});
+
+export type RequestUpload = z.infer<typeof RequestUploadSchema>;
+
+export const RequestUploadResponseSchema = z.object({
+  s3Key: z.string(),
+  uploadUrl: z.url().nullable(),
+  preview: ImageSrcSchema.nullable(),
+});
+
+export type RequestUploadResponse = z.infer<typeof RequestUploadResponseSchema>;
+
 export async function requestUpload(
   userId: string,
-  opts: {
-    linkedTrackId?: string;
-    sha256: string;
-    mimeType: string;
-    size: number;
-    width: number;
-    height: number;
-    takenAt?: string;
-    location?: { lat: number; lng: number };
-    exif?: Record<string, unknown>;
-  },
-): Promise<{ s3Key: string; uploadUrl: string | null }> {
-  const [existing] = await db
-    .select({ s3Key: image.s3Key, uploaded: image.uploaded })
-    .from(image)
-    .where(and(eq(image.userId, userId), eq(image.sha256, opts.sha256)));
+  opts: RequestUpload,
+): Promise<RequestUploadResponse> {
+  const takenAt = opts.takenAt ? normalizeExifDate(opts.takenAt) : null;
 
-  if (existing?.uploaded) {
+  const { s3Key, uploaded: alreadyUploaded } = await db
+    .insert(image)
+    .values({
+      s3Key: `users/${userId}/${nanoid(40)}`,
+      userId,
+      filename: opts.filename,
+      sha256: opts.sha256,
+      mimeType: opts.mimeType,
+      size: opts.size,
+      width: opts.width,
+      height: opts.height,
+      uploaded: false,
+      takenAt,
+      location: opts.location ?? null,
+      exif: opts.exif ?? null,
+    })
+    .onConflictDoUpdate({
+      target: [image.userId, image.sha256],
+      set: {
+        filename: opts.filename,
+        mimeType: opts.mimeType,
+        size: opts.size,
+        width: opts.width,
+        height: opts.height,
+        takenAt,
+        location: opts.location ?? null,
+        exif: opts.exif ?? null,
+      },
+    })
+    .returning({ s3Key: image.s3Key, uploaded: image.uploaded })
+    .then(r => r[0]!);
+
+  if (alreadyUploaded) {
     if (opts.linkedTrackId) {
       await db
         .insert(recordedTrackImage)
-        .values({ trackId: opts.linkedTrackId, imageS3Key: existing.s3Key })
+        .values({ trackId: opts.linkedTrackId, imageS3Key: s3Key })
         .onConflictDoNothing();
     }
-    return { s3Key: existing.s3Key, uploadUrl: null };
-  }
 
-  const s3Key = existing?.s3Key ?? `users/${userId}/${nanoid(40)}`;
-  const takenAt = opts.takenAt ? normalizeExifDate(opts.takenAt) : null;
+    return {
+      s3Key,
+      uploadUrl: null,
+      preview: imageSmallSquare(s3Key),
+    };
+  }
 
   const uploadUrl = await getSignedUrl(
     s3,
@@ -117,34 +158,42 @@ export async function requestUpload(
     { expiresIn: UPLOAD_TTL },
   );
 
-  if (!existing) {
-    await db.insert(image).values({
-      s3Key,
-      userId,
-      sha256: opts.sha256,
-      mimeType: opts.mimeType,
-      size: opts.size,
-      width: opts.width,
-      height: opts.height,
-      uploaded: false,
-      takenAt,
-      location: opts.location ?? null,
-      exif: opts.exif ?? null,
-    });
-
-    if (opts.linkedTrackId) {
-      await db
-        .insert(recordedTrackImage)
-        .values({ trackId: opts.linkedTrackId, imageS3Key: s3Key })
-        .onConflictDoNothing();
-    }
+  if (opts.linkedTrackId) {
+    await db
+      .insert(recordedTrackImage)
+      .values({ trackId: opts.linkedTrackId, imageS3Key: s3Key })
+      .onConflictDoNothing();
   }
 
-  return { s3Key, uploadUrl };
+  return { s3Key, uploadUrl, preview: null };
 }
 
-export async function confirmUpload(s3Key: string): Promise<void> {
+export const ConfirmUploadResponseSchema = z.object({
+  preview: ImageSrcSchema,
+});
+
+export type ConfirmUploadResponse = z.infer<typeof ConfirmUploadResponseSchema>;
+
+export async function confirmUpload(
+  s3Key: string,
+): Promise<ConfirmUploadResponse> {
   await db.update(image).set({ uploaded: true }).where(eq(image.s3Key, s3Key));
+  return { preview: imageSmallSquare(s3Key) };
+}
+
+export async function isImageOwnedBy({
+  s3Key,
+  userId,
+}: {
+  s3Key: string;
+  userId: string;
+}): Promise<boolean> {
+  const [row] = await db
+    .select({ userId: image.userId })
+    .from(image)
+    .where(eq(image.s3Key, s3Key));
+
+  return !!row && row.userId === userId;
 }
 
 export async function unlinkImageFromTrack(
@@ -166,9 +215,6 @@ export async function deleteImage(s3Key: string): Promise<void> {
     new DeleteObjectCommand({ Bucket: env.S3_IMAGE_BUCKET, Key: s3Key }),
   );
 
-  await db
-    .delete(recordedTrackImage)
-    .where(eq(recordedTrackImage.imageS3Key, s3Key));
   await db.delete(image).where(eq(image.s3Key, s3Key));
 }
 
@@ -197,31 +243,45 @@ export async function sweepUnconfirmedImages(): Promise<void> {
   }
 }
 
-function toImageInfo(row: {
+function toImageInfo({
+  createdAt,
+  s3Key,
+  width,
+  height,
+  ...rest
+}: {
   s3Key: string;
+  filename: string;
   width: number;
   height: number;
   takenAt: string | null;
   createdAt: Date;
 }): ImageInfo {
   return {
-    s3Key: row.s3Key,
-    width: row.width,
-    height: row.height,
-    takenAt: row.takenAt,
-    createdAt: row.createdAt.getTime(),
-    image: imgproxy(imageURI(row.s3Key), {
-      width: row.width,
-      height: row.height,
+    ...rest,
+    id: s3Key,
+    createdAt: createdAt.getTime(),
+    image: imgproxy(imageURI(s3Key), {
+      width: width,
+      height: height,
       maxSize: 2048,
     }),
-    imageSmallSquare: imgproxy(imageURI(row.s3Key), {
-      width: 300,
-      height: 300,
-      resizing_type: "fill",
-      gravity: { type: "sm" },
-    }),
+    imageSmallSquare: imageSmallSquare(s3Key),
+    originalImage: {
+      width,
+      height,
+      src: generateImgproxyRawUrl(imageURI(s3Key), rest.filename),
+    },
   };
+}
+
+function imageSmallSquare(s3Key: string): ImageSrc {
+  return imgproxy(imageURI(s3Key), {
+    width: 300,
+    height: 300,
+    resizing_type: "fill",
+    gravity: { type: "sm" },
+  });
 }
 
 function imageURI(s3Key: string): string {

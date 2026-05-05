@@ -1,9 +1,13 @@
-import { RiCheckboxCircleFill } from "@remixicon/react";
+import { RiAddCircleFill, RiCheckboxCircleFill } from "@remixicon/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { nanoid } from "nanoid";
 import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 
+import type { ConfirmUploadResponse, RequestUploadResponse } from "@pt/api";
+
+import { Button } from "./ui/button";
+import { Dialog } from "./ui/dialog";
 import { Progress } from "./ui/progress";
 import { Skeleton } from "./ui/skeleton";
 import logger from "@/logger";
@@ -13,7 +17,6 @@ import { cn } from "@/util/cn";
 interface FileUpload {
   localId: string;
   file: File;
-  name: string;
   previewUrl: string;
   linkedTrackId?: string;
   stage: "preparing" | "uploading" | "confirming" | "done" | "error";
@@ -110,7 +113,7 @@ export default function ImageUploader({
       </div>
 
       {files.length > 0 && (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-wrap gap-4">
           {files.map(u => (
             <FileInfo key={u.localId} info={u} />
           ))}
@@ -120,10 +123,57 @@ export default function ImageUploader({
   );
 }
 
+export function ImageUploaderDialog({
+  trigger,
+  linkedTrackId,
+}: {
+  trigger?: React.ReactNode;
+} & Pick<Props, "linkedTrackId">) {
+  return (
+    <Dialog>
+      {trigger ?? <ImageUploaderDialogTrigger />}
+      <Dialog.Content
+        aria-describedby={undefined}
+        className="min-h-[min(80svh,700px)] w-2xl max-w-[80svw]!">
+        <Dialog.Header className="mx-auto w-full max-w-xl">
+          <Dialog.Title className="text-lg font-semibold">
+            Upload pictures
+          </Dialog.Title>
+        </Dialog.Header>
+
+        <ImageUploader linkedTrackId={linkedTrackId} />
+
+        <Dialog.Footer>
+          <Dialog.Close asChild>
+            <Button variant="secondary" size="lg">
+              Done
+            </Button>
+          </Dialog.Close>
+        </Dialog.Footer>
+      </Dialog.Content>
+    </Dialog>
+  );
+}
+
+function ImageUploaderDialogTrigger({ className }: { className?: string }) {
+  return (
+    <Dialog.Trigger asChild>
+      <button
+        className={cn(
+          "group flex aspect-square h-full items-center justify-center rounded-md bg-gray-100 p-1 text-center transition-colors hover:bg-gray-200",
+          className,
+        )}>
+        <RiAddCircleFill className="size-10 text-gray-400 transition-colors group-hover:text-gray-700" />
+      </button>
+    </Dialog.Trigger>
+  );
+}
+ImageUploaderDialog.Trigger = ImageUploaderDialogTrigger;
+
 function FileInfo({ info: u }: { info: FileUpload }) {
   return (
-    <div className="relative overflow-hidden rounded border border-gray-200">
-      <PreviewImage url={u.previewUrl} />
+    <div className="relative size-[140px] overflow-hidden rounded border border-gray-200">
+      <PreviewImage url={u.previewUrl} key={u.previewUrl} />
 
       {(u.stage === "preparing" ||
         u.stage === "uploading" ||
@@ -177,7 +227,6 @@ function newFileUpload({
     ...rest,
     localId: nanoid(),
     file,
-    name: file.name,
     previewUrl: URL.createObjectURL(file),
     stage: "preparing",
   };
@@ -209,11 +258,15 @@ async function processFile(
   ]);
   update({ stage: "uploading" });
 
-  const { s3Key, uploadUrl } = await requestUpload(trpcClient, info);
+  const requestResponse = await requestUpload(trpcClient, info);
+  const { uploadUrl, s3Key } = requestResponse;
 
   if (!uploadUrl) {
     // Already uploaded
     update({ stage: "done", uploadProgress: undefined });
+    if (requestResponse.preview) {
+      update({ previewUrl: requestResponse.preview.src });
+    }
     return;
   }
 
@@ -223,8 +276,12 @@ async function processFile(
   );
 
   update({ stage: "confirming", uploadProgress: undefined });
-  await confirmUpload(trpcClient, s3Key);
-  update({ stage: "done", uploadProgress: undefined });
+  const confirmation = await confirmUpload(trpcClient, s3Key);
+  update({
+    stage: "done",
+    uploadProgress: undefined,
+    previewUrl: confirmation.preview.src,
+  });
 }
 
 interface ExifInfo {
@@ -311,22 +368,30 @@ async function readDimensions(file: File): Promise<Dimensions> {
 }
 
 async function computeFileSha256(file: File): Promise<string> {
-  const hashBuffer = await crypto.subtle.digest(
-    "SHA-256",
-    await file.arrayBuffer(),
-  );
+  const nameBytes = new TextEncoder().encode(file.name);
+  const contentBytes = new Uint8Array(await file.arrayBuffer());
+
+  const combined = new Uint8Array(nameBytes.length + contentBytes.length);
+  combined.set(nameBytes);
+  combined.set(contentBytes, nameBytes.length);
+
+  const hashBuffer = await crypto.subtle.digest("SHA-256", combined);
   return Array.from(new Uint8Array(hashBuffer))
     .map(b => b.toString(16).padStart(2, "0"))
     .join("");
 }
 
-async function requestUpload(client: AppTRPCClient, info: FileUpload) {
+async function requestUpload(
+  client: AppTRPCClient,
+  info: FileUpload,
+): Promise<RequestUploadResponse> {
   if (!info.sha256 || !info.dimensions || !info.exif) {
     throw new Error("missing upload requirements");
   }
   try {
     return await client.image.requestUpload.mutate({
       linkedTrackId: info.linkedTrackId,
+      filename: info.file.name,
       sha256: info.sha256,
       mimeType: info.file.type,
       size: info.file.size,
@@ -341,9 +406,12 @@ async function requestUpload(client: AppTRPCClient, info: FileUpload) {
   }
 }
 
-async function confirmUpload(client: AppTRPCClient, s3Key: string) {
+async function confirmUpload(
+  client: AppTRPCClient,
+  s3Key: string,
+): Promise<ConfirmUploadResponse> {
   try {
-    await client.image.confirmUpload.mutate({ s3Key });
+    return await client.image.confirmUpload.mutate({ s3Key });
   } catch (err) {
     throw new UIError("Failed to confirm upload", { cause: err });
   }

@@ -11,7 +11,6 @@ import {
 
 import { user } from "../auth/auth.schema.js";
 import { point } from "../postgis.js";
-import { recordedTrackImage } from "../track/track.schema.js";
 
 export const image = pgTable(
   "image",
@@ -21,6 +20,7 @@ export const image = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     sha256: text("sha256").notNull(),
+    filename: text("filename").notNull(),
     mimeType: text("mime_type").notNull(),
     size: integer("size").notNull(),
     width: integer("width").notNull(),
@@ -34,20 +34,9 @@ export const image = pgTable(
   t => [unique("image_user_sha256").on(t.userId, t.sha256)],
 );
 
-export const imageRelations = relations(image, ({ one, many }) => ({
+export const imageRelations = relations(image, ({ one }) => ({
   user: one(user, {
     fields: [image.userId],
     references: [user.id],
   }),
-  recordedTrackImages: many(recordedTrackImage),
 }));
-
-export const recordedTrackImageToImageRelation = relations(
-  recordedTrackImage,
-  ({ one }) => ({
-    image: one(image, {
-      fields: [recordedTrackImage.imageS3Key],
-      references: [image.s3Key],
-    }),
-  }),
-);

@@ -31,3 +31,13 @@ export function generateImgproxyUrl(url: string, opts: Options = {}): string {
     options: opts,
   });
 }
+
+export function generateImgproxyRawUrl(url: string, filename: string): string {
+  const base = generateImgproxyUrl(url, { raw: true });
+  return base + "?" + new URLSearchParams({ filename }).toString();
+}
+
+export function urlSafeBase64(input: string): string {
+  const bytes = new TextEncoder().encode(input);
+  return Buffer.from(bytes).toString("base64url");
+}

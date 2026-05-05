@@ -1,10 +1,11 @@
 import { RiDeleteBin2Line } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
-import type { ImageInfo } from "../../../api/src/image/image.service";
-import ImageUploader from "@/components/ImageUploader";
+import type { ImageInfo } from "@pt/api";
+
+import { ImageUploaderDialog } from "@/components/ImageUploader";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -16,8 +17,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { useTRPC, useTRPCClient } from "@/trpc";
+import { useTRPC } from "@/trpc";
+import { cn } from "@/util/cn";
 
 export default function TrackEditPage() {
   const id = useParams<{ trackId: string }>().trackId!;
@@ -43,11 +46,14 @@ export default function TrackEditPage() {
     updateMutation.mutate({ id, name: displayName || null });
   };
 
-  if (query.isLoading) return <div className="p-8">Loading...</div>;
-  if (!query.data) return <div className="p-8">Track not found.</div>;
-
   return (
     <div className="mx-auto w-full max-w-xl space-y-8 p-8">
+      <div>
+        <Link to={`/track/${id}`} className={cn("text-sm", "text-blue-600")}>
+          ← Back to track
+        </Link>
+      </div>
+
       <section className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="track-name">Name</Label>
@@ -55,18 +61,20 @@ export default function TrackEditPage() {
             id="track-name"
             value={displayName}
             onChange={e => setName(e.target.value)}
-            placeholder="Unnamed track"
+            placeholder={query.isLoading ? "Loading..." : "Unnamed track"}
+            disabled={query.isLoading}
           />
         </div>
-        <Button onClick={handleSaveName} disabled={updateMutation.isPending}>
+        <Button
+          onClick={handleSaveName}
+          disabled={updateMutation.isPending || query.isLoading}>
           {updateMutation.isPending ? "Saving…" : "Save"}
         </Button>
       </section>
 
       <section className="space-y-4">
         <h2 className="text-xl font-semibold">Photos</h2>
-        <ImageUploader linkedTrackId={id} />
-        <TrackImageList id={id} />
+        <TrackImageEditer id={id} />
       </section>
     </div>
   );
@@ -77,12 +85,10 @@ interface DeleteConfirmState {
   alsoDeleteFromAccount: boolean;
 }
 
-function TrackImageList({ id }: { id: string }) {
+function TrackImageEditer({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const trpc = useTRPC();
-  const trpcClient = useTRPCClient();
   const [pending, setPending] = useState<DeleteConfirmState | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: images } = useQuery(
     trpc.track.getRecordedTrack.queryOptions(
@@ -90,46 +96,63 @@ function TrackImageList({ id }: { id: string }) {
       { select: d => d?.images },
     ),
   );
-  if (!images || images.length === 0) return null;
 
-  const handleConfirmDelete = async () => {
-    if (!pending) return;
-    setIsDeleting(true);
-    try {
-      if (pending.alsoDeleteFromAccount) {
-        await trpcClient.image.delete.mutate({ s3Key: pending.image.s3Key });
+  const deleteMutation = useMutation(
+    trpc.image.delete.mutationOptions({
+      onSuccess: () => {
         queryClient.invalidateQueries(trpc.image.pathFilter());
-      } else {
-        await trpcClient.image.unlinkFromTrack.mutate({
-          s3Key: pending.image.s3Key,
-          trackId: id,
-        });
-      }
-      queryClient.invalidateQueries(trpc.track.pathFilter());
-    } finally {
-      setIsDeleting(false);
-      setPending(null);
+        queryClient.invalidateQueries(trpc.track.pathFilter());
+        setPending(null);
+      },
+    }),
+  );
+
+  const unlinkMutation = useMutation(
+    trpc.image.unlinkFromTrack.mutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries(trpc.track.pathFilter());
+        setPending(null);
+      },
+    }),
+  );
+
+  const isDeleting = deleteMutation.isPending || unlinkMutation.isPending;
+
+  const handleConfirmDelete = () => {
+    if (!pending) return;
+    if (pending.alsoDeleteFromAccount) {
+      deleteMutation.mutate({ s3Key: pending.image.id });
+    } else {
+      unlinkMutation.mutate({ s3Key: pending.image.id, trackId: id });
     }
   };
 
   return (
     <>
-      <div className="grid grid-cols-3 gap-2">
-        {images.map(img => (
-          <TrackImage
-            key={img.s3Key}
+      <div className="flex flex-wrap gap-4">
+        {!images && <Skeleton className="size-[160px]" />}
+
+        {images?.map(img => (
+          <TrackImageEdit
+            key={img.id}
             image={img}
             onDelete={() =>
               setPending({ image: img, alsoDeleteFromAccount: false })
             }
           />
         ))}
+
+        <ImageUploaderDialog
+          linkedTrackId={id}
+          trigger={
+            <ImageUploaderDialog.Trigger className="size-[160px]" />
+          }></ImageUploaderDialog>
       </div>
 
       <Dialog
         open={pending !== null}
         onOpenChange={open => !open && setPending(null)}>
-        <DialogContent>
+        <DialogContent aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Remove image</DialogTitle>
           </DialogHeader>
@@ -167,7 +190,7 @@ function TrackImageList({ id }: { id: string }) {
   );
 }
 
-function TrackImage({
+function TrackImageEdit({
   image,
   onDelete,
 }: {
@@ -175,18 +198,18 @@ function TrackImage({
   onDelete: () => void;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded border border-gray-200">
+    <div className="group relative size-[160px] overflow-hidden rounded border border-gray-200">
       <img
         src={image.imageSmallSquare.src}
         width={image.imageSmallSquare.width}
         height={image.imageSmallSquare.height}
-        alt=""
+        alt={image.filename}
         className="aspect-square w-full object-cover"
       />
       <button
         type="button"
         onClick={onDelete}
-        className="absolute top-1 right-1 rounded bg-white/80 p-1 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-white">
+        className="absolute top-1 right-1 rounded bg-white/80 p-1 transition-colors hover:bg-white">
         <RiDeleteBin2Line className="size-4 text-red-600" />
       </button>
     </div>

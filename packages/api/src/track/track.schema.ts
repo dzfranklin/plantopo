@@ -54,30 +54,9 @@ export const recordedTrack = pgTable("recorded_track", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const recordedTrackImage = pgTable("recorded_track_image", {
-  trackId: text("track_id")
-    .notNull()
-    .references(() => recordedTrack.id, { onDelete: "cascade" }),
-  imageS3Key: text("image_s3_key").notNull(),
-});
-
-export const recordedTrackRelations = relations(
-  recordedTrack,
-  ({ one, many }) => ({
-    user: one(user, {
-      fields: [recordedTrack.userId],
-      references: [user.id],
-    }),
-    recordedTrackImages: many(recordedTrackImage),
+export const recordedTrackRelations = relations(recordedTrack, ({ one }) => ({
+  user: one(user, {
+    fields: [recordedTrack.userId],
+    references: [user.id],
   }),
-);
-
-export const recordedTrackImageRelations = relations(
-  recordedTrackImage,
-  ({ one }) => ({
-    track: one(recordedTrack, {
-      fields: [recordedTrackImage.trackId],
-      references: [recordedTrack.id],
-    }),
-  }),
-);
+}));
