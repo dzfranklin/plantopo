@@ -112,6 +112,16 @@ root@box> chown root:root /tmp/infra/plantopo-deploy && mv /tmp/infra/plantopo-d
 root@box> chown app:app /tmp/infra/plantopo.container && mv /tmp/infra/plantopo.container /home/app/.config/containers/systemd
 ```
 
+### b2
+
+- Create bucket plantopo-images (private)
+- b2 bucket update --lifecycle-rule '{"daysFromHidingToDeleting": null, "daysFromUploadingToHiding": null, "fileNamePrefix": "", "daysFromStartingToCancelingUnfinishedLargeFiles": 1}' plantopo-images
+- b2 bucket update --cors-rules '[{"corsRuleName": "allowPut", "allowedOrigins": ["https://plantopo.com"], "allowedOperations": ["s3_put"], "allowedHeaders": ["content-type"], "exposeHeaders": ["ETag"], "maxAgeSeconds": 3600}]' plantopo-images
+
+- Create bucket plantopo-images-dev (private)
+- b2 bucket update --lifecycle-rule '{"daysFromHidingToDeleting": null, "daysFromUploadingToHiding": null, "fileNamePrefix": "", "daysFromStartingToCancelingUnfinishedLargeFiles": 1}' plantopo-images-dev
+- b2 bucket update --cors-rules '[{"corsRuleName": "allowPut", "allowedOrigins": ["http://localhost:3030", "http://localhost:4000", "http://10.0.2.2:4000", "https://prin.reindeer-neon.ts.net"], "allowedOperations": ["s3_put"], "allowedHeaders": ["content-type"], "exposeHeaders": ["ETag"], "maxAgeSeconds": 3600}]' plantopo-images-dev
+
 ## Rollback
 
 To roll back to a previous version, run the deploy script manually with an older

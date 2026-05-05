@@ -1,6 +1,7 @@
 import {
   type RemixiconComponentType,
   RiEarthLine,
+  RiFolderImageLine,
   RiFootprintLine,
   RiRecordCircleLine,
   RiRouteLine,
@@ -51,6 +52,12 @@ const NAV_TABS: NavTab[] = [
     to: "/tracks",
     label: "My Tracks",
     Icon: RiFootprintLine,
+    requireAuth: true,
+  },
+  {
+    to: "/pictures",
+    label: "My Pictures",
+    Icon: RiFolderImageLine,
     requireAuth: true,
   },
   {

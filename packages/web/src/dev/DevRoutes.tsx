@@ -3,6 +3,7 @@ import { Link, Route, Routes } from "react-router-dom";
 import DevCompleteRoutePage from "./DevCompleteRoutePage.tsx";
 import DevElevationChartPage from "./DevElevationChartPage.tsx";
 import DevErrorsPage from "./DevErrorsPage.tsx";
+import DevImageUploaderPage from "./DevImageUploaderPage.tsx";
 import DevMapPage from "./DevMapPage.tsx";
 import DevMapViewPage from "./DevMapViewPage.tsx";
 import NotFoundPage from "@/NotFoundPage.tsx";
@@ -14,6 +15,7 @@ const DEV_ROUTES = [
   { path: "errors", element: <DevErrorsPage /> },
   { path: "complete-route", element: <DevCompleteRoutePage /> },
   { path: "elevation-chart", element: <DevElevationChartPage /> },
+  { path: "image-uploader", element: <DevImageUploaderPage /> },
 ].map(r => ({
   ...r,
   element: <DevPageWrapper path={r.path}>{r.element}</DevPageWrapper>,

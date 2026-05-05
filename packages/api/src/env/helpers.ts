@@ -25,6 +25,13 @@ export const EnvSchema = z.object({
   VALHALLA: z.string().optional(),
   PHOTON: z.string().optional(),
   THUNDERFOREST_KEY: z.string().optional(),
+  S3_ENDPOINT: z.url(),
+  S3_IMAGE_BUCKET: z.string(),
+  S3_IMAGE_ACCESS_KEY_ID: z.string(),
+  S3_IMAGE_SECRET_ACCESS_KEY: z.string(),
+  IMGPROXY_BASE_URL: z.url().default("https://imgproxy.plantopo.com"),
+  IMGPROXY_KEY: z.string(),
+  IMGPROXY_SALT: z.string(),
 });
 
 interface EnvResult {

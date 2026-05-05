@@ -24,6 +24,7 @@ export default defineConfig([
           destructuredArrayIgnorePattern: "^_",
         },
       ],
+      "prefer-const": ["error", { destructuring: "all" }],
     },
   },
   {

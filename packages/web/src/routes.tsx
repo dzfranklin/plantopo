@@ -9,6 +9,7 @@ import NotFoundPage from "./NotFoundPage.tsx";
 import LoginPage from "./auth/LoginPage.tsx";
 import SignUpPage from "./auth/SignUpPage.tsx";
 import { useUser } from "./auth/auth-client.ts";
+import MyPicturesPage from "./image/MyPicturesPage.tsx";
 import { NavbarLayout } from "./layout/NavbarLayout.tsx";
 import MapPage from "./map/MapPage.tsx";
 import PlanPage from "./plan/PlanPage.tsx";
@@ -18,6 +19,7 @@ import SettingsPage from "./settings/SettingsPage.tsx";
 import MyTracksPage from "./track/MyTracksPage.tsx";
 import RecordTrackPage from "./track/RecordTrackPage.tsx";
 import TrackDetailPage from "./track/TrackDetailPage.tsx";
+import TrackEditPage from "./track/TrackEditPage.tsx";
 
 const DevRoutes = lazy(() => import("./dev/DevRoutes.tsx"));
 
@@ -69,6 +71,8 @@ export function AppRoutes() {
               </Route>
               <Route path="/tracks" element={<MyTracksPage />} />
               <Route path="/track/:trackId" element={<TrackDetailPage />} />
+              <Route path="/track/:trackId/edit" element={<TrackEditPage />} />
+              <Route path="/pictures" element={<MyPicturesPage />} />
             </Route>
 
             <Route path="/dev/*" element={<DevRoutes />} />

@@ -2,6 +2,7 @@ import { type Job, type JobsOptions, Queue, Worker } from "bullmq";
 import { Redis as IORedis } from "ioredis";
 
 import { env } from "./env.js";
+import { sweepUnconfirmedImages } from "./image/image.service.js";
 import { type JobContext, runWithJobCtx } from "./job-context.js";
 import { getLog, logger } from "./logger.js";
 import { getRequestContext } from "./request-context.js";
@@ -67,6 +68,12 @@ export const jobRegistry = {
     queue: cpuQueue,
     handler: async (data: { trackId: string }) => {
       await populatePreviewImages(data.trackId);
+    },
+  },
+  "image.sweepUnconfirmed": {
+    queue: defaultQueue,
+    handler: async (_data: Record<string, never>) => {
+      await sweepUnconfirmedImages();
     },
   },
 } as const;
@@ -160,6 +167,15 @@ function startQueueWorker(queueName: string, concurrency: number): AppWorker {
   });
 
   return worker;
+}
+
+export async function scheduleRepeatableJobs(): Promise<void> {
+  if (process.env.NODE_ENV === "test") return;
+  await defaultQueue.add(
+    "image.sweepUnconfirmed",
+    { data: {}, meta: {} },
+    { repeat: { every: 30 * 60 * 1000 }, jobId: "image.sweepUnconfirmed" },
+  );
 }
 
 export function startWorkers(): AppWorker[] {

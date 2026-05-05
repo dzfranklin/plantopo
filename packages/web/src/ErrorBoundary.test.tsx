@@ -23,7 +23,6 @@ function makeTRPCError(
         message: "test",
         code: -32600,
         data: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           code: code as any,
           httpStatus: 500,
           path: "test",

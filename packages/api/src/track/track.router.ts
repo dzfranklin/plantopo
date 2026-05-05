@@ -8,10 +8,17 @@ import {
   getRecordedTrack,
   getRecordedTrackWithPointDetail,
   listRecordedTracks,
+  updateRecordedTrack,
   uploadRecordedTrack,
 } from "./track.service.js";
 
 export const trackRouter = router({
+  updateRecordedTrack: authedProcedure
+    .input(z.object({ id: z.string(), name: z.string().nullable() }))
+    .mutation(async ({ input, ctx }) => {
+      await updateRecordedTrack(ctx.user.id, input.id, { name: input.name });
+    }),
+
   uploadRecordedTrack: authedProcedure
     .input(
       LocalRecordedTrackSchema.omit({ status: true }).extend({

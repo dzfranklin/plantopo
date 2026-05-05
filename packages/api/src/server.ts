@@ -16,7 +16,11 @@ import { registerDevNativeAssetsRoutes } from "./dev-native-assets.routes.js";
 import { env } from "./env.js";
 import { sanitizeEnvForLogging } from "./env/helpers.js";
 import { registerExportRoutes } from "./export/export.routes.js";
-import { closeJobQueues, startWorkers } from "./jobs.js";
+import {
+  closeJobQueues,
+  scheduleRepeatableJobs,
+  startWorkers,
+} from "./jobs.js";
 import { logger } from "./logger.js";
 import { createMetricsServer } from "./metrics.js";
 import { requestContextMiddleware } from "./request-context-middleware.js";
@@ -161,6 +165,7 @@ httpServer.listen(env.PORT, () => {
 });
 
 const workers = startWorkers();
+await scheduleRepeatableJobs();
 
 const metricsServer = createMetricsServer();
 metricsServer.listen(env.METRICS_PORT, () => {

@@ -13,6 +13,7 @@ export type AppUseQueryResult<TData> = UseQueryResult<
   TData,
   AppTRPCClientError
 >;
+export type AppTRPCClient = ReturnType<TRPCContext["useTRPCClient"]>;
 
 const ctx = createTRPCContext<AppRouter, { keyPrefix: true }>();
 

@@ -26,12 +26,14 @@ function SelectGroup({
     />
   );
 }
+Select.Group = SelectGroup;
 
 function SelectValue({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Value>) {
   return <SelectPrimitive.Value data-slot="select-value" {...props} />;
 }
+Select.Value = SelectValue;
 
 function SelectTrigger({
   className,
@@ -57,6 +59,7 @@ function SelectTrigger({
     </SelectPrimitive.Trigger>
   );
 }
+Select.Trigger = SelectTrigger;
 
 function SelectContent({
   className,
@@ -93,6 +96,7 @@ function SelectContent({
     </SelectPrimitive.Portal>
   );
 }
+Select.Content = SelectContent;
 
 function SelectLabel({
   className,
@@ -106,6 +110,7 @@ function SelectLabel({
     />
   );
 }
+Select.Label = SelectLabel;
 
 function SelectItem({
   className,
@@ -129,6 +134,7 @@ function SelectItem({
     </SelectPrimitive.Item>
   );
 }
+Select.Item = SelectItem;
 
 function SelectSeparator({
   className,
@@ -145,6 +151,7 @@ function SelectSeparator({
     />
   );
 }
+Select.Separator = SelectSeparator;
 
 function SelectScrollUpButton({
   className,
@@ -162,6 +169,7 @@ function SelectScrollUpButton({
     </SelectPrimitive.ScrollUpButton>
   );
 }
+Select.ScrollUpButton = SelectScrollUpButton;
 
 function SelectScrollDownButton({
   className,
@@ -179,6 +187,7 @@ function SelectScrollDownButton({
     </SelectPrimitive.ScrollDownButton>
   );
 }
+Select.ScrollDownButton = SelectScrollDownButton;
 
 export {
   Select,

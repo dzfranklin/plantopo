@@ -7,6 +7,7 @@ import { type LocalRecordedTrack } from "@pt/shared";
 import { db } from "../db.js";
 import { getElevations } from "../elevation/elevation.service.js";
 import { env } from "../env.js";
+import { ImageSchema, listImagesByTrack } from "../image/image.service.js";
 import { enqueueJob, resetJobsByName } from "../jobs.js";
 import { getLog } from "../logger.js";
 import { lineStringFromDriver } from "../postgis.js";
@@ -38,6 +39,7 @@ export const RecordedTrackSchema = RecordedTrackSummarySchema.extend({
   pointTimestamps: z.array(z.number()),
   pointSpeed: z.array(z.number().nullable()).nullable(),
   pointDemElevation: z.array(z.number().nullable()).nullable(),
+  images: z.array(ImageSchema),
 });
 
 export type RecordedTrack = z.infer<typeof RecordedTrackSchema>;
@@ -54,6 +56,19 @@ export const RecordedTrackWithPointDetailSchema = RecordedTrackSchema.extend({
 export type RecordedTrackWithPointDetail = z.infer<
   typeof RecordedTrackWithPointDetailSchema
 >;
+
+export async function updateRecordedTrack(
+  userId: string,
+  trackId: string,
+  fields: { name?: string | null },
+): Promise<void> {
+  await db
+    .update(recordedTrack)
+    .set({ name: fields.name })
+    .where(
+      and(eq(recordedTrack.id, trackId), eq(recordedTrack.userId, userId)),
+    );
+}
 
 export async function uploadRecordedTrack(
   userId: string,
@@ -271,12 +286,15 @@ export async function getRecordedTrack(
 
   if (!row) return null;
 
+  const images = await listImagesByTrack(trackId);
+
   return {
     ...toSummary(row),
     polyline: row.polyline!,
     pointTimestamps: row.pointTimestamps,
     pointSpeed: row.pointSpeed,
     pointDemElevation: row.pointDemElevation,
+    images,
   };
 }
 
@@ -338,6 +356,8 @@ export async function getRecordedTrackWithPointDetail(
 
   if (!row) return null;
 
+  const images = await listImagesByTrack(trackId);
+
   return {
     ...toSummary(row),
     polyline: row.polyline!,
@@ -350,6 +370,7 @@ export async function getRecordedTrackWithPointDetail(
     pointVerticalAccuracy: row.pointVerticalAccuracy,
     pointBearing: row.pointBearing,
     pointBearingAccuracy: row.pointBearingAccuracy,
+    images,
   };
 }
 

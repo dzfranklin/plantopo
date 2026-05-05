@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { elevationRouter } from "./elevation/elevation.router.js";
 import { exportRouter } from "./export/export.router.js";
 import { geocoderRouter } from "./geocoder/geocoder.router.js";
+import { imageRouter } from "./image/image.router.js";
 import { mapRouter } from "./map/map.router.js";
 import { planRouter } from "./plan/plan.router.js";
 import { stravaRouter } from "./strava/strava.router.js";
@@ -20,6 +21,7 @@ const testRouter = router({
 
 export const appRouter = router({
   ping: publicProcedure.query(() => "pong"),
+  image: imageRouter,
   track: trackRouter,
   strava: stravaRouter,
   map: mapRouter,
