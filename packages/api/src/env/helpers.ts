@@ -26,6 +26,7 @@ export const EnvSchema = z.object({
   PHOTON: z.string().optional(),
   THUNDERFOREST_KEY: z.string().optional(),
   S3_ENDPOINT: z.url(),
+  S3_REGION: z.string(),
   S3_IMAGE_BUCKET: z.string(),
   S3_IMAGE_ACCESS_KEY_ID: z.string(),
   S3_IMAGE_SECRET_ACCESS_KEY: z.string(),
