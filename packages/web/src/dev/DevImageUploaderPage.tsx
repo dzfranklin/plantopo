@@ -81,7 +81,11 @@ export default function DevImageUploaderPage() {
                 onValueChange={value =>
                   updateMock(selectedMock.id, (p: any) =>
                     value === "error"
-                      ? { ...p, stage: value, error: "An error occurred" }
+                      ? {
+                          ...p,
+                          stage: value,
+                          error: "Failed to request upload",
+                        }
                       : { ...p, stage: value, error: undefined },
                   )
                 }>

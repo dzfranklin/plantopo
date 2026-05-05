@@ -138,12 +138,10 @@ function FileInfo({ info: u }: { info: FileUpload }) {
       )}
 
       {u.stage === "error" && (
-        <div
-          className={cn(
-            "absolute right-4 bottom-4 left-4 flex items-start justify-center truncate rounded-md px-2 py-1.5 text-center text-sm",
-            "bg-red-100 text-red-700",
-          )}>
-          <span>{u.error}</span>
+        <div className="absolute inset-1">
+          <div className="rounded-md bg-red-100 px-1.5 py-2 text-center align-middle text-sm text-red-700">
+            {u.error}
+          </div>
         </div>
       )}
 
