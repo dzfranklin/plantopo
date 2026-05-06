@@ -4,7 +4,8 @@ import { nanoid } from "nanoid";
 import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 
-import type { ConfirmUploadResponse, RequestUploadResponse } from "@pt/api";
+import type { ImageInfo, RequestUploadResponse } from "@pt/api";
+import { sha256 } from "@pt/shared";
 
 import { Button } from "./ui/button";
 import { Dialog } from "./ui/dialog";
@@ -280,7 +281,7 @@ async function processFile(
   update({
     stage: "done",
     uploadProgress: undefined,
-    previewUrl: confirmation.preview.src,
+    previewUrl: confirmation.imageSmallSquare.src,
   });
 }
 
@@ -368,17 +369,8 @@ async function readDimensions(file: File): Promise<Dimensions> {
 }
 
 async function computeFileSha256(file: File): Promise<string> {
-  const nameBytes = new TextEncoder().encode(file.name);
-  const contentBytes = new Uint8Array(await file.arrayBuffer());
-
-  const combined = new Uint8Array(nameBytes.length + contentBytes.length);
-  combined.set(nameBytes);
-  combined.set(contentBytes, nameBytes.length);
-
-  const hashBuffer = await crypto.subtle.digest("SHA-256", combined);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
+  const contentBytes = await file.arrayBuffer();
+  return await sha256(file.name, contentBytes);
 }
 
 async function requestUpload(
@@ -409,7 +401,7 @@ async function requestUpload(
 async function confirmUpload(
   client: AppTRPCClient,
   s3Key: string,
-): Promise<ConfirmUploadResponse> {
+): Promise<ImageInfo> {
   try {
     return await client.image.confirmUpload.mutate({ s3Key });
   } catch (err) {

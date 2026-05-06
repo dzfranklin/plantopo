@@ -18,6 +18,7 @@ function Progress({
         "bg-muted relative flex h-1 w-full items-center overflow-x-hidden rounded-md",
         className,
       )}
+      value={value}
       {...props}>
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"

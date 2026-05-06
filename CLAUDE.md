@@ -11,7 +11,12 @@ Logging: Provide errors to pino under the err key (logger.error({err}, "message"
 Put important/exported functions first, and helpers after the functions they
 relate to
 
-Testing: export private functions for testing under
+## Testing
+
+Tests for packages/api, packages/shared, and packages/web are configured
+together in /vitest.config.ts
+
+export private functions for testing under
 `export const exportedForTesting = { ... }`
 
 ## packages/web

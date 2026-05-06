@@ -4,6 +4,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, lt } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import z from "zod";
@@ -71,6 +72,16 @@ export async function listImagesByUser(userId: string): Promise<ImageInfo[]> {
   return rows.map(toImageInfo);
 }
 
+export async function getImage(s3Key: string): Promise<ImageInfo | null> {
+  const row = await db
+    .select(infoColumns)
+    .from(image)
+    .where(and(eq(image.s3Key, s3Key), eq(image.uploaded, true)))
+    .then(r => r[0] ?? null);
+
+  return row ? toImageInfo(row) : null;
+}
+
 export const RequestUploadSchema = z.object({
   linkedTrackId: z.string().optional(),
   filename: z.string().max(255),
@@ -132,14 +143,11 @@ export async function requestUpload(
     .returning({ s3Key: image.s3Key, uploaded: image.uploaded })
     .then(r => r[0]!);
 
-  if (alreadyUploaded) {
-    if (opts.linkedTrackId) {
-      await db
-        .insert(recordedTrackImage)
-        .values({ trackId: opts.linkedTrackId, imageS3Key: s3Key })
-        .onConflictDoNothing();
-    }
+  if (opts.linkedTrackId) {
+    await linkImageToTrack(s3Key, opts.linkedTrackId);
+  }
 
+  if (alreadyUploaded) {
     return {
       s3Key,
       uploadUrl: null,
@@ -158,27 +166,19 @@ export async function requestUpload(
     { expiresIn: UPLOAD_TTL },
   );
 
-  if (opts.linkedTrackId) {
-    await db
-      .insert(recordedTrackImage)
-      .values({ trackId: opts.linkedTrackId, imageS3Key: s3Key })
-      .onConflictDoNothing();
-  }
-
   return { s3Key, uploadUrl, preview: null };
 }
 
-export const ConfirmUploadResponseSchema = z.object({
-  preview: ImageSrcSchema,
-});
-
-export type ConfirmUploadResponse = z.infer<typeof ConfirmUploadResponseSchema>;
-
-export async function confirmUpload(
-  s3Key: string,
-): Promise<ConfirmUploadResponse> {
-  await db.update(image).set({ uploaded: true }).where(eq(image.s3Key, s3Key));
-  return { preview: imageSmallSquare(s3Key) };
+export async function confirmUpload(s3Key: string): Promise<ImageInfo> {
+  const rows = await db
+    .update(image)
+    .set({ uploaded: true })
+    .where(eq(image.s3Key, s3Key))
+    .returning(infoColumns);
+  if (!rows.length) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Image not found" });
+  }
+  return toImageInfo(rows[0]!);
 }
 
 export async function isImageOwnedBy({
@@ -194,6 +194,16 @@ export async function isImageOwnedBy({
     .where(eq(image.s3Key, s3Key));
 
   return !!row && row.userId === userId;
+}
+
+export async function linkImageToTrack(
+  s3Key: string,
+  trackId: string,
+): Promise<void> {
+  await db
+    .insert(recordedTrackImage)
+    .values({ trackId, imageS3Key: s3Key })
+    .onConflictDoNothing();
 }
 
 export async function unlinkImageFromTrack(
@@ -218,29 +228,28 @@ export async function deleteImage(s3Key: string): Promise<void> {
   await db.delete(image).where(eq(image.s3Key, s3Key));
 }
 
-export async function sweepUnconfirmedImages(): Promise<void> {
+export async function sweepUnconfirmedImages(cutoff?: Date): Promise<number> {
   const log = getLog();
-  const cutoff = new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
+  cutoff = cutoff ?? new Date(Date.now() - 60 * 60 * 1000); // 1 hour ago
 
   const orphans = await db
     .select({ s3Key: image.s3Key })
     .from(image)
     .where(and(eq(image.uploaded, false), lt(image.createdAt, cutoff)));
 
-  if (orphans.length === 0) return;
+  if (orphans.length === 0) return 0;
 
   log.info({ count: orphans.length }, "Sweeping unconfirmed images");
 
   for (const { s3Key } of orphans) {
     try {
-      await db
-        .delete(recordedTrackImage)
-        .where(eq(recordedTrackImage.imageS3Key, s3Key));
       await db.delete(image).where(eq(image.s3Key, s3Key));
     } catch (err) {
       log.error({ err, s3Key }, "Failed to sweep unconfirmed image");
     }
   }
+
+  return orphans.length;
 }
 
 function toImageInfo({

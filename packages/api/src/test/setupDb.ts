@@ -17,10 +17,15 @@ export const TEST_USER = {
   eduAccess: false,
   createdAt: new Date(0),
   updatedAt: new Date(0),
-} as const;
+} as const satisfies typeof user.$inferInsert;
 
-const checkTestUserType = (u: typeof user.$inferInsert) => u;
-checkTestUserType(TEST_USER);
+export const TEST_USER2 = {
+  ...TEST_USER,
+  id: "test2",
+  name: "Test2 User2",
+  email: "test2@example.com",
+  tileKey: "test2-tile-key",
+} as const satisfies typeof user.$inferInsert;
 
 export const TEST_SESSION = {
   session: {
@@ -67,6 +72,11 @@ export async function upsertFixtures() {
     .insert(user)
     .values(TEST_USER)
     .onConflictDoUpdate({ target: user.id, set: TEST_USER });
+
+  await db
+    .insert(user)
+    .values(TEST_USER2)
+    .onConflictDoUpdate({ target: user.id, set: TEST_USER2 });
 
   await db
     .insert(session)

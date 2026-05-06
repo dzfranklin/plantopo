@@ -4,7 +4,6 @@ export type { AppRouter } from "./router.js";
 export type { auth } from "./auth/auth.js";
 export type { GeocodingFeature } from "./geocoder/geocoder.service.js";
 export type {
-  ConfirmUploadResponse,
   RequestUploadResponse,
   ImageInfo,
 } from "./image/image.service.js";

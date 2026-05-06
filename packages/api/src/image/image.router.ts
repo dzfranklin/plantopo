@@ -3,7 +3,7 @@ import z from "zod";
 
 import { authedProcedure, router } from "../trpc.js";
 import {
-  ConfirmUploadResponseSchema,
+  ImageSchema,
   RequestUploadResponseSchema,
   RequestUploadSchema,
   confirmUpload,
@@ -24,7 +24,7 @@ export const imageRouter = router({
 
   confirmUpload: authedProcedure
     .input(z.object({ s3Key: z.string() }))
-    .output(ConfirmUploadResponseSchema)
+    .output(ImageSchema)
     .mutation(async ({ input: { s3Key }, ctx }) => {
       if (!(await isImageOwnedBy({ s3Key, userId: ctx.user.id }))) {
         throw new TRPCError({ code: "NOT_FOUND" });

@@ -17,8 +17,12 @@ export type LogEntry = ClientLogEntry;
 
 // --- Logger ---
 
+let level: pino.LevelWithSilent = "info";
+if (import.meta.env.DEV) level = "debug";
+if (import.meta.env.MODE === "test") level = "silent";
+
 export const logger = pino({
-  level: import.meta.env.DEV ? "debug" : "info",
+  level,
   browser: {
     asObject: true,
     transmit: { send: pinoSend },
