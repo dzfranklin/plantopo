@@ -55,40 +55,6 @@ EOF
 
 COPY --link drizzle/ /app/drizzle/
 
-FROM base AS test
-WORKDIR /test
-# Image for running tests in CI. No built assets.
-# Usage: mount /packages at /test/packages and run
-
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends postgresql-common ca-certificates && \
-    /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends postgresql-18-postgis-3 redis-server && \
-    rm -rf /var/lib/apt/lists/*
-
-COPY <<EOF /etc/postgresql/18/main/pg_hba.conf
-local all all trust
-host all all 0.0.0.0/0 trust
-host all all ::0/0 trust
-EOF
-
-COPY <<EOF /etc/redis/redis.conf
-bind 0.0.0.0
-protected-mode no
-daemonize yes
-EOF
-
-COPY --link --from=builder /build/fonts/ /fonts/
-COPY --link --chmod=+x scripts/test-entrypoint.sh /
-COPY --link package.json package-lock.json tsconfig.base.json ./
-COPY --link --from=builder /build/node_modules ./node_modules/
-COPY --link --from=builder /app/drizzle ./drizzle/
-COPY --link --from=builder /build-summary.md /build-summary.md
-
-ENV CI=true FONTS_DIR=/fonts
-ENTRYPOINT ["/test-entrypoint.sh"]
-CMD ["npm", "test", "--", "--run"]
-
 FROM base AS production
 WORKDIR /app
 

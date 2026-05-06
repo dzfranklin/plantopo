@@ -21,6 +21,7 @@ export default defineConfig({
           setupFiles: ["src/test/setup.integration.ts"],
           environment: "node",
           fileParallelism: false,
+          execArgv: ["--import=tsx/esm"],
         },
       },
     ],

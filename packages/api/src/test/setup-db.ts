@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import pg from "pg";
+import { Redis } from "ioredis";
 
 import { session, user } from "../auth/auth.schema.js";
 import { db } from "../db.js";
@@ -56,55 +56,59 @@ export const TEST_TRACK: typeof recordedTrack.$inferInsert = {
   pointTimestamps: [0, 1000],
 };
 
-export async function resetDb() {
-  const { rows } = await db.execute<{ tablename: string }>(
+export async function resetDb(client?: typeof db) {
+  await truncateDb(client);
+  await upsertFixtures(client);
+}
+
+async function truncateDb(client?: typeof db) {
+  client ??= db;
+  const { rows } = await client.execute<{ tablename: string }>(
     sql`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != 'spatial_ref_sys'`,
   );
   if (rows.length > 0) {
     const tables = rows.map(r => `"${r.tablename}"`).join(", ");
-    await db.execute(sql.raw(`TRUNCATE TABLE ${tables} CASCADE`));
+    await client.execute(sql.raw(`TRUNCATE TABLE ${tables} CASCADE`));
   }
-  await upsertFixtures();
 }
 
-export async function upsertFixtures() {
-  await db
+async function upsertFixtures(client?: typeof db) {
+  client ??= db;
+  await client
     .insert(user)
     .values(TEST_USER)
     .onConflictDoUpdate({ target: user.id, set: TEST_USER });
 
-  await db
+  await client
     .insert(user)
     .values(TEST_USER2)
     .onConflictDoUpdate({ target: user.id, set: TEST_USER2 });
 
-  await db
+  await client
     .insert(session)
     .values(TEST_SESSION_ROW)
     .onConflictDoUpdate({ target: session.id, set: TEST_SESSION_ROW });
 
-  await db
+  await client
     .insert(recordedTrack)
     .values(TEST_TRACK)
     .onConflictDoUpdate({ target: recordedTrack.id, set: TEST_TRACK });
 }
 
-export async function setupDb() {
-  const dbUrl = process.env.DATABASE_URL!;
-  const url = new URL(dbUrl);
-  const dbName = url.pathname.slice(1);
-  const adminUrl = new URL(dbUrl);
-  adminUrl.pathname = "/postgres";
+export async function setupDb(databaseUrl: string) {
+  const client = drizzle(databaseUrl);
+  await truncateDb(client);
+  await migrate(client, { migrationsFolder: "../../drizzle" });
+  await upsertFixtures(client);
+  await client.$client.end();
+}
 
-  const adminClient = new pg.Client(adminUrl.toString());
-  await adminClient.connect();
-  await adminClient.query(`DROP DATABASE IF EXISTS "${dbName}" WITH (FORCE)`);
-  await adminClient.query(`CREATE DATABASE "${dbName}"`);
-  await adminClient.end();
-
-  const migrateDb = drizzle(dbUrl);
-  await migrate(migrateDb, { migrationsFolder: "../../drizzle" });
-  await migrateDb.$client.end();
-
-  await upsertFixtures();
+export async function resetRedis(redisUrl?: string) {
+  redisUrl ??= process.env.REDIS_URL;
+  if (!redisUrl) {
+    throw new Error("REDIS_URL is not set");
+  }
+  const client = new Redis(redisUrl);
+  await client.flushdb();
+  await client.quit();
 }
