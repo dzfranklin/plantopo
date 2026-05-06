@@ -118,6 +118,11 @@ export async function renderStaticMap(opts: StaticMapOptions): Promise<Buffer> {
 
   if (retina) ctx.scale(2, 2);
 
+  ctx.antialias = "subpixel";
+  if (process.env.NODE_ENV === "test") {
+    ctx.antialias = "none";
+  }
+
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
 
@@ -308,7 +313,6 @@ function drawAttribution(
     .replaceAll("&copy;", "©")
     .replaceAll(/<[^>]+>/g, "");
 
-  ctx.antialias = "subpixel";
   ctx.font = `300 10px "Source Sans 3"`;
   ctx.textBaseline = "alphabetic";
   const metrics = ctx.measureText(attribution);

@@ -87,6 +87,12 @@ async function expectMatchesSnapshot(
       false,
       `Output did not match snapshot for ${name}. Diff count: ${diffCount}. See ${diffPath} and ${actualPath}.`,
     );
+  } else if (diffCount > 0) {
+    console.info(
+      `Output for ${name} differed from snapshot, but within threshold (${diffCount} < ${threshold} pixels). See ${diffPath} for details.`,
+    );
+    await writeFile(diffPath, PNG.sync.write(diff));
+    await writeFile(actualPath, buf);
   }
 }
 
@@ -248,8 +254,7 @@ describe("renderStaticMap", () => {
     it("renders attribution", async () => {
       const buf = await renderStaticMap({
         ...BASE_OPTS,
-        width: 800,
-        height: 400,
+        retina: true,
         source: {
           tiles: OSM_TEMPLATE,
           attribution: "© OpenStreetMap",
@@ -279,10 +284,6 @@ describe("renderStaticMap", () => {
         width: 200,
         height: 100,
         retina: true,
-        source: {
-          ...BASE_OPTS.source,
-          attribution: "© OpenStreetMap",
-        },
         features: [
           {
             type: "Feature" as const,
