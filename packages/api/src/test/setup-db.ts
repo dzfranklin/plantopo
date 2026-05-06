@@ -103,7 +103,7 @@ export async function setupDb() {
   await adminClient.end();
 
   const migrateDb = drizzle(dbUrl);
-  await migrate(migrateDb, { migrationsFolder: "drizzle" });
+  await migrate(migrateDb, { migrationsFolder: "../../drizzle" });
   await migrateDb.$client.end();
 
   await upsertFixtures();

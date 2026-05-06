@@ -1,167 +1,148 @@
-import { act, cleanup, fireEvent, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TRPCError } from "@trpc/server";
+import { HttpResponse, http } from "msw";
+import { beforeEach, expect, it } from "vitest";
+import { userEvent } from "vitest/browser";
 
-import ImageUploader from "./ImageUploader";
+import ImageUploader, { exportedForTesting } from "./ImageUploader";
+import { makeImageInfo, makeRequestUploadResponse } from "@/test/handlers";
+import { readTestFile } from "@/test/helpers";
+import { server } from "@/test/msw-server";
 import { renderWithProviders } from "@/test/render";
+import { trpc } from "@/test/trpc";
+
+const S3_URL = "https://s3.example.com/key";
+const CDN_URL = "https://cdn.example.com/img.jpg";
+const TEST_JPEG = "src/test/fixtures/test.jpg";
+
+const testJpegFile = await readTestFile(TEST_JPEG, { type: "image/jpeg" });
 
 beforeEach(() => {
-  vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake");
-  vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  server.use(
+    http.get(CDN_URL, () => new HttpResponse(testJpegFile, { status: 200 })),
+  );
 });
 
-afterEach(() => {
-  vi.restoreAllMocks();
-  cleanup();
-});
-
-function makeProcessFileMock(): ((
-  info: any,
-  options: { updateFn: (info: any) => void },
-) => Promise<any>) & {
-  updateFn: (info: any) => void;
-  resolve: () => void;
-  reject: (err: unknown) => void;
-} {
-  let capturedUpdateFn: ((info: any) => void) | null = null;
-  let resolvePromise!: () => void;
-  let rejectPromise!: (err: unknown) => void;
-
-  const mock: any = vi.fn(
-    (_info: any, { updateFn }: { updateFn: (info: any) => void }) => {
-      capturedUpdateFn = updateFn;
-      return new Promise<void>((res, rej) => {
-        resolvePromise = res;
-        rejectPromise = rej;
-      });
-    },
+it("happy path: uploads and confirms, shows CDN preview after upload", async () => {
+  server.use(
+    trpc.image.requestUpload(() => ({
+      uploadUrl: S3_URL,
+      s3Key: "key",
+      preview: null,
+    })),
+    trpc.image.confirmUpload(() =>
+      makeImageInfo({
+        filename: "test.jpg",
+        imageSmallSquare: { src: CDN_URL },
+      }),
+    ),
+    http.put(S3_URL, () => new HttpResponse(null, { status: 200 })),
   );
 
-  // Use defineProperty so the getter is live (Object.assign would invoke it immediately)
-  Object.defineProperty(mock, "updateFn", {
-    get(): (info: any) => void {
-      return capturedUpdateFn!;
-    },
-  });
-  mock.resolve = () => resolvePromise();
-  mock.reject = (err: unknown) => rejectPromise(err);
+  const screen = await renderWithProviders(<ImageUploader />);
 
-  return mock;
-}
+  const progressBar = screen.getByRole("progressbar");
 
-function getFileInput(): HTMLInputElement {
-  return document.querySelector<HTMLInputElement>('input[type="file"]')!;
-}
+  expect(progressBar).not.toBeInTheDocument();
+  await userEvent.upload(screen.getByLabelText(/photos/i), TEST_JPEG);
+  await expect.element(progressBar).toBeInTheDocument();
 
-async function dropFile(file: File) {
-  await act(async () => {
-    fireEvent.change(getFileInput(), { target: { files: [file] } });
-  });
-}
+  await expect.element(progressBar).not.toBeInTheDocument();
+  await expect
+    .element(screen.getByAltText("test.jpg"))
+    .toHaveAttribute("src", CDN_URL);
 
-const testFile = () => new File(["x"], "photo.jpg", { type: "image/jpeg" });
+  expect(trpc.image.requestUpload).toHaveBeenCalledWith(
+    expect.objectContaining({
+      filename: "test.jpg",
+      mimeType: "image/jpeg",
+    }),
+  );
+  expect(trpc.image.confirmUpload).toHaveBeenCalledWith({ s3Key: "key" });
+});
 
-describe("ImageUploader", () => {
-  it("shows the dropzone prompt initially with no file cards", async () => {
-    renderWithProviders(<ImageUploader />);
-    expect(
-      await screen.findByText("Drag photos here, or click to select"),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-  });
+it("already uploaded: skips S3 PUT and shows existing preview", async () => {
+  server.use(
+    trpc.image.requestUpload(() =>
+      makeRequestUploadResponse({
+        uploadUrl: null,
+        s3Key: "key",
+        preview: { src: CDN_URL, width: 800, height: 600 },
+      }),
+    ),
+  );
 
-  it("shows a progress bar after a file is dropped", async () => {
-    const mock = makeProcessFileMock();
-    renderWithProviders(<ImageUploader forTesting={{ processFile: mock }} />);
+  const screen = await renderWithProviders(<ImageUploader />);
+  await userEvent.upload(screen.getByLabelText(/photos/i), TEST_JPEG);
 
-    await dropFile(testFile());
+  await expect
+    .element(screen.getByAltText("test.jpg"))
+    .toHaveAttribute("src", CDN_URL);
 
-    expect(mock).toHaveBeenCalledOnce();
-    expect(screen.getByRole("progressbar")).toBeInTheDocument();
-  });
+  expect(trpc.image.confirmUpload).not.toHaveBeenCalled();
+});
 
-  it("reflects upload progress and transitions to done", async () => {
-    const mock = makeProcessFileMock();
-    renderWithProviders(<ImageUploader forTesting={{ processFile: mock }} />);
+it("requestUpload failure shows error message", async () => {
+  server.use(
+    trpc.image.requestUpload(() => {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    }),
+  );
 
-    await dropFile(testFile());
+  const screen = await renderWithProviders(<ImageUploader />);
+  await userEvent.upload(screen.getByLabelText(/photos/i), TEST_JPEG);
 
-    await act(async () => {
-      mock.updateFn({ stage: "uploading", uploadProgress: 0.5 });
-    });
-    expect(screen.getByRole("progressbar")).toHaveAttribute(
-      "aria-valuenow",
-      "50",
-    );
+  await expect
+    .element(screen.getByText("Failed to request upload"))
+    .toBeInTheDocument();
+});
 
-    await act(async () => {
-      mock.updateFn({ stage: "confirming", uploadProgress: undefined });
-    });
-    expect(screen.getByRole("progressbar")).not.toHaveAttribute(
-      "aria-valuenow",
-    );
+it("S3 upload failure shows error message", async () => {
+  server.use(
+    trpc.image.requestUpload(() =>
+      makeRequestUploadResponse({ uploadUrl: S3_URL, s3Key: "key" }),
+    ),
+    http.put(S3_URL, () => new HttpResponse(null, { status: 403 })),
+  );
 
-    await act(async () => {
-      mock.updateFn({ stage: "done", uploadProgress: undefined });
-      mock.resolve();
-    });
-    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-  });
+  const screen = await renderWithProviders(<ImageUploader />);
+  await userEvent.upload(screen.getByLabelText(/photos/i), TEST_JPEG);
 
-  it("shows default error message when processFile rejects", async () => {
-    const mock = makeProcessFileMock();
-    renderWithProviders(<ImageUploader forTesting={{ processFile: mock }} />);
+  await expect
+    .element(screen.getByText("Upload failed: 403"))
+    .toBeInTheDocument();
+});
 
-    await dropFile(testFile());
+it("confirmUpload failure shows error message", async () => {
+  server.use(
+    trpc.image.requestUpload(() =>
+      makeRequestUploadResponse({ uploadUrl: S3_URL, s3Key: "key" }),
+    ),
+    trpc.image.confirmUpload(() => {
+      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+    }),
+    http.put(S3_URL, () => new HttpResponse(null, { status: 200 })),
+  );
 
-    await act(async () => {
-      mock.reject(new Error("network failure"));
-    });
+  const screen = await renderWithProviders(<ImageUploader />);
+  await userEvent.upload(screen.getByLabelText(/photos/i), TEST_JPEG);
 
-    expect(screen.getByText("An error occurred")).toBeInTheDocument();
-    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
-  });
+  await expect
+    .element(screen.getByText("Failed to confirm upload"))
+    .toBeInTheDocument();
+});
 
-  it("preserves a specific error message set by processFile before rejecting", async () => {
-    const mock = makeProcessFileMock();
-    renderWithProviders(<ImageUploader forTesting={{ processFile: mock }} />);
+it("PreviewImage: shows skeleton fallback when image fails to load", async () => {
+  const BROKEN_URL = "https://cdn.example.com/broken.jpg";
+  server.use(
+    http.get(BROKEN_URL, () => new HttpResponse(null, { status: 500 })),
+  );
 
-    await dropFile(testFile());
+  const { PreviewImage } = exportedForTesting;
+  const screen = await renderWithProviders(
+    <PreviewImage url={BROKEN_URL} name="test.jpg" />,
+  );
 
-    // processFile sets the error stage itself before rejecting
-    await act(async () => {
-      mock.updateFn({
-        stage: "error",
-        error: "Failed to read image dimensions",
-      });
-      mock.reject(new Error("ignored as updateFn already set"));
-    });
-
-    expect(
-      screen.getByText("Failed to read image dimensions"),
-    ).toBeInTheDocument();
-  });
-
-  it("renders a card for each file in a multi-file drop", async () => {
-    let callCount = 0;
-    const mocks = [makeProcessFileMock(), makeProcessFileMock()];
-    const combinedMock = vi.fn((info, opts) => mocks[callCount++]!(info, opts));
-
-    renderWithProviders(
-      <ImageUploader forTesting={{ processFile: combinedMock }} />,
-    );
-
-    await act(async () => {
-      fireEvent.change(getFileInput(), {
-        target: {
-          files: [
-            new File(["a"], "a.jpg", { type: "image/jpeg" }),
-            new File(["b"], "b.jpg", { type: "image/jpeg" }),
-          ],
-        },
-      });
-    });
-
-    expect(combinedMock).toHaveBeenCalledTimes(2);
-    expect(screen.getAllByRole("progressbar")).toHaveLength(2);
-  });
+  await expect
+    .element(screen.getByTestId("preview-fallback"))
+    .toBeInTheDocument();
 });

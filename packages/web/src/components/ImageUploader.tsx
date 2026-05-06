@@ -107,10 +107,12 @@ export default function ImageUploader({
             ? "border-blue-500 bg-blue-50 text-blue-700"
             : "border-gray-300 text-gray-500 hover:border-gray-400",
         )}>
-        <input {...getInputProps()} />
-        {isDragActive
-          ? "Drop images here"
-          : "Drag photos here, or click to select"}
+        <label>
+          <input {...getInputProps()} />
+          {isDragActive
+            ? "Drop photos here"
+            : "Drag photos here, or click to select"}
+        </label>
       </div>
 
       {files.length > 0 && (
@@ -174,7 +176,7 @@ ImageUploaderDialog.Trigger = ImageUploaderDialogTrigger;
 function FileInfo({ info: u }: { info: FileUpload }) {
   return (
     <div className="relative size-[140px] overflow-hidden rounded border border-gray-200">
-      <PreviewImage url={u.previewUrl} key={u.previewUrl} />
+      <PreviewImage url={u.previewUrl} name={u.file.name} key={u.previewUrl} />
 
       {(u.stage === "preparing" ||
         u.stage === "uploading" ||
@@ -205,16 +207,24 @@ function FileInfo({ info: u }: { info: FileUpload }) {
   );
 }
 
-function PreviewImage({ url }: { url: string }) {
+function PreviewImage({ url, name }: { url: string; name: string }) {
   const [useFallback, setUseFallback] = useState(false);
   if (useFallback) {
-    return <Skeleton className="aspect-square w-full" />;
+    return (
+      <Skeleton
+        data-testid="preview-fallback"
+        className="aspect-square w-full"
+      />
+    );
   }
   return (
     <img
       src={url}
-      alt=""
-      onError={() => setUseFallback(true)}
+      alt={name}
+      onError={() => {
+        logger.warn({ url }, "Failed to load preview image, using fallback");
+        setUseFallback(true);
+      }}
       className="aspect-square w-full object-cover"
     />
   );
@@ -449,3 +459,7 @@ function setFilesUpdater(
       ),
     );
 }
+
+export const exportedForTesting = {
+  PreviewImage,
+};

@@ -1,70 +1,70 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render } from "@testing-library/react";
-import { createTRPCClient, httpBatchLink } from "@trpc/client";
+import { createTRPCClient, httpLink } from "@trpc/client";
 import { type ReactNode, Suspense } from "react";
 import { MemoryRouter } from "react-router-dom";
+import { render } from "vitest-browser-react";
 
 import type { AppRouter } from "@pt/api";
 
 import { TRPCProvider } from "../trpc.ts";
+import type { User } from "@/auth/auth-client.ts";
 
 export const TEST_USER = {
   id: "test",
   name: "Test User",
   email: "test@example.com",
-  emailVerified: true as const,
+  emailVerified: true,
   image: null,
   tileKey: "test-tile-key",
   eduAccess: false,
-  createdAt: new Date(0),
-  updatedAt: new Date(0),
-} as const;
+  createdAt: new Date("2024-01-01T00:00:00Z"),
+  updatedAt: new Date("2024-01-01T00:00:00Z"),
+  prefs: {},
+} as const satisfies User;
 
-export const TEST_SESSION = {
-  session: {
-    id: "test-session",
-    userId: TEST_USER.id,
-    token: "test-token",
-    expiresAt: new Date(Date.now() + 86400_000),
-    createdAt: new Date(0),
-    updatedAt: new Date(0),
-    ipAddress: null,
-    userAgent: null,
-  },
-  user: TEST_USER,
-} as const;
+const TRPC_BASE_URL = "http://localhost/api/v1/trpc";
 
-export function renderWithProviders(
+export async function renderWithProviders(
   ui: ReactNode,
   {
     initialPath = "/",
-    session = TEST_SESSION,
-  }: { initialPath?: string; session?: typeof TEST_SESSION | null } = {},
+    user = TEST_USER,
+  }: {
+    initialPath?: string;
+    user?: User | null;
+  } = {},
 ) {
-  window.__INITIAL_USER__ = session ? session.user : null;
+  window.__INITIAL_USER__ = user ?? null;
 
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+
   const trpcClient = createTRPCClient<AppRouter>({
     links: [
-      httpBatchLink({
-        url: `${process.env.TEST_API_URL}/api/v1/trpc`,
-        headers: session ? { "x-test-session": JSON.stringify(session) } : {},
+      httpLink({
+        url: TRPC_BASE_URL,
+        headers: user ? { "x-test-user": JSON.stringify(user) } : {},
       }),
     ],
   });
 
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <TRPCProvider
-        trpcClient={trpcClient}
-        queryClient={queryClient}
-        keyPrefix="trpc">
-        <MemoryRouter initialEntries={[initialPath]}>
-          <Suspense fallback={<div>Loading...</div>}>{ui}</Suspense>
-        </MemoryRouter>
-      </TRPCProvider>
-    </QueryClientProvider>,
-  );
+  function Providers({ children }: { children: ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TRPCProvider
+          trpcClient={trpcClient}
+          queryClient={queryClient}
+          keyPrefix="trpc">
+          <MemoryRouter initialEntries={[initialPath]}>
+            <Suspense fallback={<div>[Suspense fallback]</div>}>
+              {children}
+            </Suspense>
+          </MemoryRouter>
+        </TRPCProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  return render(ui, { wrapper: Providers });
 }

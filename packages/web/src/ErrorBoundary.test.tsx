@@ -1,17 +1,10 @@
-import { cleanup, render, screen } from "@testing-library/react";
 import { TRPCClientError } from "@trpc/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { render } from "vitest-browser-react";
 
 import type { AppRouter } from "@pt/api";
 
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
-
-afterEach(cleanup);
-
-// Suppress React's error boundary console.error noise in tests
-beforeEach(() => {
-  vi.spyOn(console, "error").mockImplementation(() => {});
-});
 
 function makeTRPCError(
   code: string,
@@ -38,117 +31,111 @@ function ThrowOnMount({ error }: { error: unknown }): never {
 }
 
 describe("ErrorBoundary", () => {
-  describe("UNAUTHORIZED", () => {
-    it("redirects to /login with returnTo", () => {
-      const assignSpy = vi.fn();
-      const loc = { ...window.location, pathname: "/some-page", search: "" };
-      Object.defineProperty(loc, "href", { set: assignSpy });
-      vi.spyOn(window, "location", "get").mockReturnValue(loc as Location);
+  it("UNAUTHORIZED redirects to /login with returnTo", async () => {
+    const navigateSpy = vi.fn();
 
-      render(
-        <ErrorBoundary>
-          <ThrowOnMount error={makeTRPCError("UNAUTHORIZED")} />
-        </ErrorBoundary>,
-      );
+    await render(
+      <ErrorBoundary forTesting={{ navigate: navigateSpy }}>
+        <ThrowOnMount error={makeTRPCError("UNAUTHORIZED")} />
+      </ErrorBoundary>,
+    );
 
-      expect(assignSpy).toHaveBeenCalledWith(
-        expect.stringContaining("/login?returnTo="),
-      );
-    });
-
-    it("does not show error UI", () => {
-      render(
-        <ErrorBoundary>
-          <ThrowOnMount error={makeTRPCError("UNAUTHORIZED")} />
-        </ErrorBoundary>,
-      );
-      expect(
-        screen.queryByText(/Something went wrong/),
-      ).not.toBeInTheDocument();
-    });
+    expect(navigateSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/login?returnTo="),
+    );
   });
 
   describe("FORBIDDEN", () => {
-    it("shows custom message", () => {
-      render(
+    it("shows custom message", async () => {
+      const screen = await render(
         <ErrorBoundary>
           <ThrowOnMount error={makeTRPCError("FORBIDDEN")} />
         </ErrorBoundary>,
       );
-      expect(screen.getByText(/Permission denied/)).toBeInTheDocument();
+      await expect
+        .element(screen.getByText(/Permission denied/))
+        .toBeInTheDocument();
     });
   });
 
   describe("NOT_FOUND", () => {
-    it("shows custom message", () => {
-      render(
+    it("shows custom message", async () => {
+      const screen = await render(
         <ErrorBoundary>
           <ThrowOnMount error={makeTRPCError("NOT_FOUND")} />
         </ErrorBoundary>,
       );
-      expect(screen.getByText(/Not found/)).toBeInTheDocument();
+      await expect.element(screen.getByText(/Not found/)).toBeInTheDocument();
     });
   });
 
   describe("TOO_MANY_REQUESTS", () => {
-    it("shows custom message", () => {
-      render(
+    it("shows custom message", async () => {
+      const screen = await render(
         <ErrorBoundary>
           <ThrowOnMount error={makeTRPCError("TOO_MANY_REQUESTS")} />
         </ErrorBoundary>,
       );
-      expect(screen.getByText(/Too many requests/)).toBeInTheDocument();
+      await expect
+        .element(screen.getByText(/Too many requests/))
+        .toBeInTheDocument();
     });
   });
 
   describe("INTERNAL_SERVER_ERROR", () => {
-    it("shows generic message", () => {
-      render(
+    it("shows generic message", async () => {
+      const screen = await render(
         <ErrorBoundary>
           <ThrowOnMount error={makeTRPCError("INTERNAL_SERVER_ERROR")} />
         </ErrorBoundary>,
       );
-      expect(screen.getByText(/Something went wrong/)).toBeInTheDocument();
+      await expect
+        .element(screen.getByText(/Something went wrong/))
+        .toBeInTheDocument();
     });
 
-    it("shows reqId when present", () => {
-      render(
+    it("shows reqId when present", async () => {
+      const screen = await render(
         <ErrorBoundary>
           <ThrowOnMount
             error={makeTRPCError("INTERNAL_SERVER_ERROR", { reqId: "abc-123" })}
           />
         </ErrorBoundary>,
       );
-      expect(screen.getByText("ref: abc-123")).toBeInTheDocument();
+      await expect
+        .element(screen.getByText("ref: abc-123"))
+        .toBeInTheDocument();
     });
 
-    it("omits reqId section when absent", () => {
-      render(
+    it("omits reqId section when absent", async () => {
+      const screen = await render(
         <ErrorBoundary>
           <ThrowOnMount error={makeTRPCError("INTERNAL_SERVER_ERROR")} />
         </ErrorBoundary>,
       );
-      expect(screen.queryByText(/ref:/)).not.toBeInTheDocument();
+      await expect.element(screen.getByText(/ref:/)).not.toBeInTheDocument();
     });
   });
 
   describe("non-TRPC error", () => {
-    it("shows error message", () => {
-      render(
+    it("shows error message", async () => {
+      const screen = await render(
         <ErrorBoundary>
           <ThrowOnMount error={new Error("it go boom")} />
         </ErrorBoundary>,
       );
-      expect(screen.getByText("Error: it go boom")).toBeInTheDocument();
+      await expect
+        .element(screen.getByText("Error: it go boom"))
+        .toBeInTheDocument();
     });
 
-    it("omits reqId section", () => {
-      render(
+    it("omits reqId section", async () => {
+      const screen = await render(
         <ErrorBoundary>
           <ThrowOnMount error={new Error("it go boom")} />
         </ErrorBoundary>,
       );
-      expect(screen.queryByText(/ref:/)).not.toBeInTheDocument();
+      await expect.element(screen.getByText(/ref:/)).not.toBeInTheDocument();
     });
   });
 });

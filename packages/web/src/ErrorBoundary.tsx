@@ -9,6 +9,9 @@ import { isUnauthorizedError } from "./util/errors.js";
 
 interface Props {
   children: ReactNode;
+  forTesting?: {
+    navigate: (to: string) => void;
+  };
 }
 
 interface State {
@@ -35,6 +38,14 @@ export class ErrorBoundary extends Component<Props, State> {
     return { error };
   }
 
+  private navigate(to: string) {
+    if (this.props.forTesting?.navigate) {
+      this.props.forTesting.navigate(to);
+    } else {
+      window.location.href = to;
+    }
+  }
+
   componentDidCatch(error: unknown, info: React.ErrorInfo) {
     logger.error(
       { error, componentStack: info.componentStack },
@@ -48,7 +59,7 @@ export class ErrorBoundary extends Component<Props, State> {
         const returnTo = encodeURIComponent(
           window.location.pathname + window.location.search,
         );
-        window.location.href = `/login?returnTo=${returnTo}`;
+        this.navigate(`/login?returnTo=${returnTo}`);
       }
     }
   }
@@ -92,7 +103,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </p>
             )}
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => this.navigate(window.location.href)}
               className="mt-6 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
               Refresh page
             </button>

@@ -16,3 +16,5 @@ pids
 *.pid
 *.seed
 *.tsbuildinfo
+.vitest-*
+__screenshots__/

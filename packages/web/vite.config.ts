@@ -1,14 +1,14 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { playwright } from "@vitest/browser-playwright";
 import { writeFile } from "node:fs/promises";
 import path from "path";
-import { defineConfig } from "vite";
+import { type Plugin, defineConfig } from "vite";
 
 import thirdPartyGenerator from "./vite-third-party-generator";
 
 // https://vite.dev/config/
 
-/** @type {import('vite').Plugin} */
 const stripExportedForTesting = {
   name: "strip-exported-for-testing",
   apply: "serve",
@@ -17,15 +17,14 @@ const stripExportedForTesting = {
     if (!code.includes("exportedForTesting")) return null;
     return code.replace(/\nexport const exportedForTesting\s*=[\s\S]*?;/, "");
   },
-};
+} satisfies Plugin;
 
-/** @type {import('vite').Plugin} */
 const writeBuildVersion = {
   name: "write-version",
   apply: "build",
   closeBundle: () =>
     writeFile("dist/VERSION", `${process.env.VITE_COMMIT_HASH ?? "unknown"}\n`),
-};
+} satisfies Plugin;
 
 export default defineConfig(({ command }) => ({
   server: {
@@ -40,16 +39,6 @@ export default defineConfig(({ command }) => ({
     thirdPartyGenerator,
     stripExportedForTesting,
     writeBuildVersion,
-    // command === "serve" && {
-    //   name: "react-devtools",
-    //   transformIndexHtml: () => [
-    //     {
-    //       tag: "script",
-    //       attrs: { src: "http://localhost:8097" },
-    //       injectTo: "head-prepend",
-    //     },
-    //   ],
-    // },
   ],
   build: {
     sourcemap: true,
@@ -70,5 +59,17 @@ export default defineConfig(({ command }) => ({
         ),
       },
     ],
+  },
+  test: {
+    name: "web",
+    silent: "passed-only",
+    include: ["src/**/*.test.{ts,tsx}"],
+    setupFiles: ["src/test/setup.ts"],
+    browser: {
+      enabled: true,
+      headless: true,
+      provider: playwright(),
+      instances: [{ browser: "chromium" }],
+    },
   },
 }));

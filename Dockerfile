@@ -80,7 +80,7 @@ EOF
 
 COPY --link --from=builder /build/fonts/ /fonts/
 COPY --link --chmod=+x scripts/test-entrypoint.sh /
-COPY --link package.json package-lock.json tsconfig.base.json vitest.config.ts ./
+COPY --link package.json package-lock.json tsconfig.base.json ./
 COPY --link --from=builder /build/node_modules ./node_modules/
 COPY --link --from=builder /app/drizzle ./drizzle/
 COPY --link --from=builder /build-summary.md /build-summary.md

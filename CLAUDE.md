@@ -13,8 +13,8 @@ relate to
 
 ## Testing
 
-Tests for packages/api, packages/shared, and packages/web are configured
-together in /vitest.config.ts
+packages/web uses vitest browser mode. Use await expect.element(locator)... so
+vitest polls for the locator.
 
 export private functions for testing under
 `export const exportedForTesting = { ... }`

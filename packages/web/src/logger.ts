@@ -19,7 +19,7 @@ export type LogEntry = ClientLogEntry;
 
 let level: pino.LevelWithSilent = "info";
 if (import.meta.env.DEV) level = "debug";
-if (import.meta.env.MODE === "test") level = "silent";
+// if (import.meta.env.MODE === "test") level = "silent";
 
 export const logger = pino({
   level,

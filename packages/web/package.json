@@ -8,7 +8,8 @@
     "build": "vite build",
     "postbuild": "tar -czf dist/native-assets.tar.gz -C dist $(ls dist | grep -v native-assets.tar.gz)",
     "lint": "eslint .",
-    "clean": "rm -rf ./dist node_modules"
+    "clean": "rm -rf ./dist node_modules",
+    "test": "vitest run"
   },
   "exports": {
     "./util/dev": "./src/util/dev.ts"
@@ -56,11 +57,16 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "@vitest/browser": "^4.1.5",
+    "@vitest/browser-playwright": "^4.1.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "maplibre-gl": "*",
+    "msw": "^2.14.3",
+    "playwright": "^1.59.1",
     "rollup-plugin-license": "^3.7.1",
-    "vite": "^8.0.1"
+    "vite": "^8.0.1",
+    "vitest-browser-react": "^2.2.0"
   }
 }
