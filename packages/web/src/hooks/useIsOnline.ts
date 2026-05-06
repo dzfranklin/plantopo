@@ -13,7 +13,7 @@ export function useIsOnline() {
 
 // Keeps onlineManager in sync with the apiOffline debug flag so React Query
 // itself pauses queries/mutations when the flag is set.
-export function useApiOfflineEffect() {
+export function useDebugFlagApiOfflineEffect() {
   useLayoutEffect(() => {
     onlineManager.setOnline(!getDebugFlag("apiOffline"));
     const unsubscribe = subscribeDebugFlags(() => {
