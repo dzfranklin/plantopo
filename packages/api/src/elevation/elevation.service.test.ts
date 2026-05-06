@@ -163,6 +163,6 @@ describe("getElevations", () => {
     ac.abort("some reason");
     expect(await cancelMsgPromise).toEqual({ type: "cancel", id: startMsg.id });
 
-    expect(promise).rejects.toBe("some reason");
+    await expect(promise).rejects.toBe("some reason");
   });
 });
