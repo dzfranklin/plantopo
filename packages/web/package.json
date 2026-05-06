@@ -4,12 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "prebuild": "rm -rf dist",
     "build": "vite build",
     "postbuild": "tar -czf dist/native-assets.tar.gz -C dist $(ls dist | grep -v native-assets.tar.gz)",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "clean": "rm -rf ./dist node_modules"
   },
   "exports": {
     "./util/dev": "./src/util/dev.ts"

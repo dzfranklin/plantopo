@@ -11,7 +11,7 @@ export const EnvSchema = z.object({
   APP_URL: z.url(),
   DATABASE_URL: z.url(),
   REDIS_URL: z.url(),
-  WEB_DIST: z.string().default("packages/web/dist"),
+  WEB_DIST: z.string().default("../web/dist"),
   BETTER_AUTH_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),

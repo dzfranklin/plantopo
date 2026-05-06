@@ -11,7 +11,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "NODE_ENV=development node --conditions=development --import tsx/esm packages/api/src/server.ts",
+    "start": "NODE_ENV=development DEV_LIVE_RELOAD_WEB=1 node --conditions=development --import tsx/esm packages/api/src/server.ts",
     "dev:funnel": "./scripts/dev-funnel.sh",
     "scratch": "NODE_ENV=development node --conditions=development --watch --import tsx/esm packages/api/src/.scratch.local.ts",
     "scratch:inspect": "NODE_ENV=development node --conditions=development --inspect-wait --import tsx/esm packages/api/src/.scratch.local.ts",
@@ -31,7 +31,8 @@
     "test:watch": "vitest --typecheck",
     "prepare": "[ \"$npm_command\" = \"ci\" ] || husky",
     "cloc": "tokei --type TSX,Typescript --sort code .",
-    "download-fonts": "./scripts/download-fonts.sh"
+    "download-fonts": "./scripts/download-fonts.sh",
+    "clean": "npm run --workspaces clean"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

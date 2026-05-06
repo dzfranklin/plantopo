@@ -10,4 +10,4 @@ trap 'tailscale funnel --https=443 off' EXIT
 APP_URL=$(tailscale funnel status --json | jq -r '.Web | keys[0] | sub("^(?<u>.+):443$"; "https://\(.u)")')
 export APP_URL
 
-npm run dev
+npm start

@@ -113,7 +113,7 @@ async function renderWithSession(
 
 const httpServer = createServer(app);
 
-if (isDev) {
+if (process.env.NODE_ENV === "development" && process.env.DEV_LIVE_RELOAD_WEB) {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore This branch is dead in production
   const { createDevMiddleware } = await import("@pt/web/util/dev");
