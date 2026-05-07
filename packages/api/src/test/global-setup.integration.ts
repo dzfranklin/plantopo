@@ -32,7 +32,9 @@ export async function setup() {
       )
       .start(),
     new RedisContainer("redis:7-alpine").withReuse().start(),
-    new MinioContainer("minio/minio:latest").withReuse().start(),
+    new MinioContainer("minio/minio:RELEASE.2025-09-07T16-13-09Z")
+      .withReuse()
+      .start(),
   ]);
 
   const databaseUrl = pg.getConnectionUri();
