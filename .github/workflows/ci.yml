@@ -43,22 +43,16 @@ jobs:
         run: npx -w @pt/web playwright install chromium --with-deps
 
       - name: Run tests
-        run: npm test -- --run
+        run: npm test -- --run --silent=false
 
-      - name: Upload test attachments (if tests failed)
+      - name: Upload test failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: vitest-attachments
-          path: "**/.vitest-attachments/**"
-          if-no-files-found: warn
-
-      - name: Upload snapshots (if tests failed)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: snapshots
-          path: "**/__snapshots__/**"
+          name: test-failures-${{ github.run_id }}
+          path: |
+            packages/**/.vitest-attachments/**
+            packages/**/__snapshots__/**
           if-no-files-found: warn
 
       - name: Build production image
