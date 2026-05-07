@@ -8,10 +8,19 @@ import {
 import { Redis as IORedis } from "ioredis";
 
 import { env } from "./env.js";
-import { sweepUnconfirmedImages } from "./image/image.service.js";
+import {
+  type ImportImageOpts,
+  runImportImage,
+  sweepUnconfirmedImages,
+} from "./image/image.service.js";
 import { type JobContext, runWithJobCtx } from "./job-context.js";
 import { getLog, logger } from "./logger.js";
 import { getRequestContext } from "./request-context.js";
+import {
+  type ImportStravaActivityOpts,
+  runImportStravaActivity,
+} from "./strava/import.js";
+import { type ImportTrackOpts, runImportTrack } from "./track/imports.js";
 import {
   populateDemElevation,
   populatePreviewImages,
@@ -76,6 +85,24 @@ export const jobRegistry = {
     queue: defaultQueue,
     handler: async (_data: Record<string, never>) => {
       await sweepUnconfirmedImages();
+    },
+  },
+  "image.import": {
+    queue: defaultQueue,
+    handler: async (data: ImportImageOpts) => {
+      await runImportImage(data);
+    },
+  },
+  "track.import": {
+    queue: defaultQueue,
+    handler: async (data: ImportTrackOpts) => {
+      await runImportTrack(data);
+    },
+  },
+  "strava.importActivity": {
+    queue: defaultQueue,
+    handler: async (data: ImportStravaActivityOpts) => {
+      await runImportStravaActivity(data);
     },
   },
 } as const;

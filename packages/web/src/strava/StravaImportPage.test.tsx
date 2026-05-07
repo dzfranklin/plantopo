@@ -1,57 +1,13 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { TRPCError } from "@trpc/server";
+import { describe, expect, it } from "vitest";
 import { userEvent } from "vitest/browser";
 
-import type { ActivityListPage } from "@pt/api";
-
 import StravaImportPage from "./StravaImportPage";
-import { makeActivityListPage } from "@/test/handlers";
 import { server } from "@/test/msw-server";
 import { renderWithProviders } from "@/test/render";
 import { trpc } from "@/test/trpc";
 
-function makeActivity(id: number, name: string) {
-  return {
-    id,
-    name,
-    manual: false as const,
-    distance: 5000,
-    moving_time: 1800,
-    elapsed_time: 1900,
-    total_elevation_gain: 50,
-    sport_type: "Run",
-    start_date: "2024-01-01T10:00:00Z",
-    start_date_local: "2024-01-01T10:00:00Z",
-    timezone: "UTC",
-    trainer: false,
-    commute: false,
-    private: false,
-    average_speed: 3,
-    start_latlng: null,
-    end_latlng: null,
-    map: { id: `map${id}`, summary_polyline: null },
-    max_speed: 5,
-  };
-}
-
-const PAGE_1: ActivityListPage = makeActivityListPage({
-  activities: [makeActivity(1, "Morning Run"), makeActivity(2, "Evening Jog")],
-  nextCursor: "1700000000",
-});
-
-const PAGE_2: ActivityListPage = makeActivityListPage({
-  activities: [makeActivity(3, "Long Run"), makeActivity(4, "Recovery Run")],
-  nextCursor: null,
-});
-
 describe("StravaImportPage", () => {
-  beforeEach(() => {
-    server.use(
-      trpc.strava.listActivities(({ cursor }) =>
-        cursor === PAGE_1.nextCursor ? PAGE_2 : PAGE_1,
-      ),
-    );
-  });
-
   it("shows the first page of activities", async () => {
     const screen = await renderWithProviders(<StravaImportPage />);
 
@@ -80,7 +36,7 @@ describe("StravaImportPage", () => {
 
   it("Next button is disabled on the last page", async () => {
     const screen = await renderWithProviders(<StravaImportPage />, {
-      initialPath: `/strava/import?cursor=${PAGE_1.nextCursor}`,
+      initialPath: `/strava/import?cursor=1700000000`,
     });
 
     await expect.element(screen.getByText("Long Run")).toBeInTheDocument();
@@ -110,5 +66,89 @@ describe("StravaImportPage", () => {
     await userEvent.click(screen.getByRole("button", { name: /next/i }));
     await expect.element(screen.getByText("Long Run")).toBeInTheDocument();
     await expect.element(screen.getByText(/selected/)).not.toBeInTheDocument();
+  });
+
+  it("import button not shown when nothing selected", async () => {
+    const screen = await renderWithProviders(<StravaImportPage />);
+
+    await expect.element(screen.getByText("Morning Run")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /import selected/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("happy path: enqueues selected activities and shows queued count", async () => {
+    server.use(trpc.strava.importActivities(async () => {}));
+
+    const screen = await renderWithProviders(<StravaImportPage />);
+    await expect.element(screen.getByText("Morning Run")).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: /Morning Run/ }),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: /Evening Jog/ }),
+    );
+    await expect.element(screen.getByText("2 selected")).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /import selected/i }),
+    );
+
+    await expect
+      .element(screen.getByText("2 activities queued for import"))
+      .toBeInTheDocument();
+    expect(trpc.strava.importActivities.mock.calls[0]![0]).toEqual({
+      activityIds: expect.arrayContaining([1, 2]),
+    });
+  });
+
+  it("imported rows are dimmed and deselected after import", async () => {
+    server.use(trpc.strava.importActivities(async () => {}));
+
+    const screen = await renderWithProviders(<StravaImportPage />);
+    await expect.element(screen.getByText("Morning Run")).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: /Morning Run/ }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /import selected/i }),
+    );
+
+    await expect
+      .element(screen.getByText("1 activity queued for import"))
+      .toBeInTheDocument();
+
+    const morningRunRow = screen
+      .getByText("Morning Run")
+      .element()
+      .closest("li")!;
+    expect(morningRunRow.className).toMatch(/opacity-50/);
+
+    const eveningJogRow = screen
+      .getByText("Evening Jog")
+      .element()
+      .closest("li")!;
+    expect(eveningJogRow.className).not.toMatch(/opacity-50/);
+  });
+
+  it("import failure shows an error via throwOnError", async () => {
+    server.use(
+      trpc.strava.importActivities(() => {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      }),
+    );
+
+    const screen = await renderWithProviders(<StravaImportPage />);
+    await expect.element(screen.getByText("Morning Run")).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: /Morning Run/ }),
+    );
+
+    await expect
+      .element(screen.getByRole("button", { name: /import selected/i }))
+      .toBeInTheDocument();
   });
 });

@@ -20,18 +20,20 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { type AppUseQueryResult, useTRPC } from "@/trpc";
 import { cn } from "@/util/cn";
 
+function pageTitle(track: RecordedTrack | null | undefined): string {
+  if (!track) return "Track";
+  if (track.name) return `Track: ${track.name}`;
+  if (track.startTime)
+    return "Track recorded on " + formatInstant(track.startTime, "date");
+  return "Track";
+}
+
 export default function TrackDetailPage() {
   const id = useParams().trackId!;
   const query = useTrackDetailQuery(id);
   const navigate = useNavigate();
 
-  usePageTitle(
-    query.data
-      ? query.data.name
-        ? `Track: ${query.data.name}`
-        : `Track on ${formatInstant(query.data.startTime, "date")}`
-      : "Track",
-  );
+  usePageTitle(pageTitle(query.data));
 
   const [hoveredPoint, setHoveredPoint] =
     useAnimationThrottledState<Point2 | null>(null);

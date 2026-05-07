@@ -22,36 +22,36 @@ const PreviewSchema = z.object({
 
 export const RecordedTrackSummarySchema = z.object({
   id: z.string(),
-  name: z.string().nullable(),
+  name: z.string().optional(),
   description: z.string().optional(),
-  startTime: z.number(), // epoch ms
-  endTime: z.number(), // epoch ms
+  startTime: z.number().optional(), // epoch ms
+  endTime: z.number().optional(), // epoch ms
   createdAt: z.number(), // epoch ms
   distanceM: z.number(),
   durationMs: z.number(),
-  preview: PreviewSchema.nullable(),
-  previewSmall: PreviewSchema.nullable(),
+  preview: PreviewSchema.optional(),
+  previewSmall: PreviewSchema.optional(),
 });
 
 export type RecordedTrackSummary = z.infer<typeof RecordedTrackSummarySchema>;
 
 export const RecordedTrackSchema = RecordedTrackSummarySchema.extend({
   polyline: z.string(), // full resolution, for map/detail view
-  pointTimestamps: z.array(z.number()),
-  pointSpeed: z.array(z.number().nullable()).nullable(),
-  pointDemElevation: z.array(z.number().nullable()).nullable(),
+  pointTimestamps: z.array(z.number().nullable()).optional(),
+  pointSpeed: z.array(z.number().nullable()).optional(),
+  pointDemElevation: z.array(z.number().nullable()).optional(),
   images: z.array(ImageSchema),
 });
 
 export type RecordedTrack = z.infer<typeof RecordedTrackSchema>;
 
 export const RecordedTrackWithPointDetailSchema = RecordedTrackSchema.extend({
-  pointSpeedAccuracy: z.array(z.number().nullable()).nullable(),
-  pointGpsElevation: z.array(z.number().nullable()).nullable(),
-  pointHorizontalAccuracy: z.array(z.number().nullable()).nullable(),
-  pointVerticalAccuracy: z.array(z.number().nullable()).nullable(),
-  pointBearing: z.array(z.number().nullable()).nullable(),
-  pointBearingAccuracy: z.array(z.number().nullable()).nullable(),
+  pointSpeedAccuracy: z.array(z.number().nullable()).optional(),
+  pointGpsElevation: z.array(z.number().nullable()).optional(),
+  pointHorizontalAccuracy: z.array(z.number().nullable()).optional(),
+  pointVerticalAccuracy: z.array(z.number().nullable()).optional(),
+  pointBearing: z.array(z.number().nullable()).optional(),
+  pointBearingAccuracy: z.array(z.number().nullable()).optional(),
 });
 
 export type RecordedTrackWithPointDetail = z.infer<
@@ -293,9 +293,9 @@ export async function getRecordedTrack(
   return {
     ...toSummary(row),
     polyline: row.polyline!,
-    pointTimestamps: row.pointTimestamps,
-    pointSpeed: row.pointSpeed,
-    pointDemElevation: row.pointDemElevation,
+    pointTimestamps: row.pointTimestamps ?? undefined,
+    pointSpeed: row.pointSpeed ?? undefined,
+    pointDemElevation: row.pointDemElevation ?? undefined,
     images,
   };
 }
@@ -363,15 +363,15 @@ export async function getRecordedTrackWithPointDetail(
   return {
     ...toSummary(row),
     polyline: row.polyline!,
-    pointTimestamps: row.pointTimestamps,
-    pointSpeed: row.pointSpeed,
-    pointSpeedAccuracy: row.pointSpeedAccuracy,
-    pointDemElevation: row.pointDemElevation,
-    pointGpsElevation: row.pointGpsElevation,
-    pointHorizontalAccuracy: row.pointHorizontalAccuracy,
-    pointVerticalAccuracy: row.pointVerticalAccuracy,
-    pointBearing: row.pointBearing,
-    pointBearingAccuracy: row.pointBearingAccuracy,
+    pointTimestamps: row.pointTimestamps ?? undefined,
+    pointSpeed: row.pointSpeed ?? undefined,
+    pointSpeedAccuracy: row.pointSpeedAccuracy ?? undefined,
+    pointDemElevation: row.pointDemElevation ?? undefined,
+    pointGpsElevation: row.pointGpsElevation ?? undefined,
+    pointHorizontalAccuracy: row.pointHorizontalAccuracy ?? undefined,
+    pointVerticalAccuracy: row.pointVerticalAccuracy ?? undefined,
+    pointBearing: row.pointBearing ?? undefined,
+    pointBearingAccuracy: row.pointBearingAccuracy ?? undefined,
     images,
   };
 }
@@ -380,8 +380,8 @@ function toSummary(row: {
   id: string;
   name: string | null;
   description: string | null;
-  startTime: Date;
-  endTime: Date;
+  startTime: Date | null;
+  endTime: Date | null;
   createdAt: Date;
   distanceM: number;
   durationMs: number;
@@ -401,13 +401,13 @@ function toSummary(row: {
           width,
           height,
         }
-      : null;
+      : undefined;
 
   return {
     id: row.id,
-    name: row.name,
-    startTime: row.startTime.getTime(),
-    endTime: row.endTime.getTime(),
+    name: row.name ?? undefined,
+    startTime: row.startTime?.getTime(),
+    endTime: row.endTime?.getTime(),
     createdAt: row.createdAt.getTime(),
     distanceM: row.distanceM,
     durationMs: row.durationMs,

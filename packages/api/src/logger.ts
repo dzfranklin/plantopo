@@ -13,6 +13,25 @@ export const logger = pino({
     }
     return {};
   },
+  serializers: {
+    err: err => {
+      const base = pino.stdSerializers.err(err);
+      for (const key in base) {
+        const value = base[key]!;
+
+        if (key === "message" || key === "stack") {
+          if (typeof value === "string") {
+            base[key] = truncateString(value, 500);
+          }
+        } else if (typeof value === "string") {
+          base[key] = truncateString(value, 100);
+        } else {
+          base[key] = truncateString(String(value), 200);
+        }
+      }
+      return base;
+    },
+  },
   formatters: {
     level(label) {
       return { level: label };
@@ -31,6 +50,16 @@ export const logger = pino({
 
 export function getLog() {
   return getRequestContext()?.logger ?? getJobContext()?.logger ?? logger;
+}
+
+function truncateString(str: string, max: number): string {
+  if (str.length <= max) return str;
+  const half = Math.floor(max / 2);
+  return (
+    str.slice(0, half) +
+    ` ... [${str.length - max} chars truncated] ... ` +
+    str.slice(-half)
+  );
 }
 
 function getNonLogCallerStack(maxDepth: number = 6): string[] | undefined {

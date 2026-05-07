@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { authedProcedure, router } from "../trpc.js";
+import { importStravaActivity } from "./import.js";
 import { ActivityListPageSchema, stravaApi } from "./strava.api.js";
 import {
   StravaAccountSchema,
@@ -35,5 +36,16 @@ export const stravaRouter = router({
     .output(ActivityListPageSchema)
     .query(async ({ ctx, input }) => {
       return stravaApi.listActivitiesPage(ctx.user.id, input.cursor);
+    }),
+
+  importActivities: authedProcedure
+    .input(z.object({ activityIds: z.array(z.number()) }))
+    .output(z.void())
+    .mutation(async ({ ctx, input }) => {
+      await Promise.all(
+        input.activityIds.map(activityId =>
+          importStravaActivity({ userId: ctx.user.id, activityId }),
+        ),
+      );
     }),
 });

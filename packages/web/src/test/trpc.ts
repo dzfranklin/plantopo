@@ -36,7 +36,7 @@ type TRPCProxy<TInputs, TOutputs> = {
           fn: (
             input: TInputs[K],
             opts: { user: User | null },
-          ) => TOutputs[K] | Promise<TOutputs[K]>,
+          ) => TOutputs[K] | Promise<TOutputs[K]> | void | Promise<void>,
         ) => RequestHandler
       >;
 };

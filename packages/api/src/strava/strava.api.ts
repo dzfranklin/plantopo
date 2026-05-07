@@ -18,6 +18,7 @@ export class StravaApiError extends Error {
   body?: string;
   constructor(status: number, body?: string, cause?: unknown) {
     super(`Strava API error: ${status} ${body ?? ""}`, { cause });
+    this.name = "StravaApiError";
     this.status = status;
     this.body = body;
   }
@@ -121,6 +122,10 @@ const ActivityPhotoSchema = z.looseObject({
 
 export type ActivityPhoto = z.infer<typeof ActivityPhotoSchema>;
 
+export const ActivityPhotosSchema = z.array(ActivityPhotoSchema);
+
+export type ActivityPhotos = z.infer<typeof ActivityPhotosSchema>;
+
 const StreamBaseSchema = z.looseObject({
   original_size: z.number(),
   resolution: z.enum(["low", "medium", "high"]),
@@ -161,7 +166,7 @@ const TemperatureStreamSchema = StreamBaseSchema.extend({
   data: z.array(z.number()), // in celsius
 });
 
-const StreamResponseSchema = z.object({
+export const StreamResponseSchema = z.object({
   time: TimeStreamSchema.optional(),
   distance: DistanceStreamSchema.optional(),
   latlng: LatLngStreamSchema.optional(),

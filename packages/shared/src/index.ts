@@ -193,6 +193,31 @@ export const ClientLogsPostBodySchema = z.object({
 
 export type ClientLogsPostBody = z.infer<typeof ClientLogsPostBodySchema>;
 
+/** Clean output of exifr.parse for storing in the db */
+export function normalizeExifDate(raw: string): string | null {
+  const m = raw.match(/^(\d{4}):(\d{2}):(\d{2})\s(\d{2}:\d{2}:\d{2})$/);
+  if (!m) return null;
+  return `${m[1]}-${m[2]}-${m[3]}T${m[4]}`;
+}
+
+export function cleanExifRecord(
+  parsed: Record<string, unknown>,
+): Record<string, unknown> {
+  const clean: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(parsed)) {
+    if (k === "ExifVersion") {
+      clean[k] = String.fromCharCode(...(v as Uint8Array));
+    } else if (
+      typeof v === "string" ||
+      typeof v === "number" ||
+      typeof v === "boolean"
+    ) {
+      clean[k] = v;
+    }
+  }
+  return clean;
+}
+
 export function createSeededRandom(seed: number) {
   return function () {
     seed |= 0;

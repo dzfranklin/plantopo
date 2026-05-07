@@ -199,7 +199,7 @@ describe("getRecordedTrack", () => {
     expect(track).not.toBeNull();
     expect(track!.polyline).toBeTruthy();
     expect(track!.pointTimestamps).toHaveLength(3);
-    expect(track!.pointTimestamps[0]).toBe(BASE_TRACK.points[0]!.timestamp);
+    expect(track!.pointTimestamps![0]).toBe(BASE_TRACK.points[0]!.timestamp);
     expect(track!.pointSpeed).toHaveLength(3);
     expect(track!.pointSpeed![0]).toBeCloseTo(2.5);
   });

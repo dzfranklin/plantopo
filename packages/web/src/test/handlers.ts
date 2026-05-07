@@ -50,8 +50,49 @@ export function makeActivityListPage(
   };
 }
 
+export function makeActivity(
+  id: number,
+  name: string,
+): ActivityListPage["activities"][number] {
+  return {
+    id,
+    name,
+    manual: false,
+    distance: 5000,
+    moving_time: 1800,
+    elapsed_time: 1900,
+    total_elevation_gain: 50,
+    sport_type: "Run",
+    start_date: "2024-01-01T10:00:00Z",
+    start_date_local: "2024-01-01T10:00:00Z",
+    timezone: "UTC",
+    trainer: false,
+    commute: false,
+    private: false,
+    average_speed: 3,
+    start_latlng: null,
+    end_latlng: null,
+    map: { id: `map${id}`, summary_polyline: null },
+    max_speed: 5,
+  };
+}
+
+export const DEFAULT_ACTIVITY_PAGE_1 = makeActivityListPage({
+  activities: [makeActivity(1, "Morning Run"), makeActivity(2, "Evening Jog")],
+  nextCursor: "1700000000",
+});
+
+export const DEFAULT_ACTIVITY_PAGE_2 = makeActivityListPage({
+  activities: [makeActivity(3, "Long Run"), makeActivity(4, "Recovery Run")],
+  nextCursor: null,
+});
+
 export const defaultHandlers: RequestHandler[] = [
   trpc.image.requestUpload(() => makeRequestUploadResponse()),
   trpc.image.confirmUpload(() => makeImageInfo()),
-  trpc.strava.listActivities(() => makeActivityListPage()),
+  trpc.strava.listActivities(({ cursor }) =>
+    cursor === DEFAULT_ACTIVITY_PAGE_1.nextCursor
+      ? DEFAULT_ACTIVITY_PAGE_2
+      : DEFAULT_ACTIVITY_PAGE_1,
+  ),
 ];

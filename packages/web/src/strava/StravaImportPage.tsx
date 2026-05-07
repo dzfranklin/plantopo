@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
@@ -29,6 +29,16 @@ function ActivityPage({ cursor }: { cursor: string | undefined }) {
   const nextCursor = query.data?.nextCursor ?? null;
 
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [imported, setImported] = useState<Set<number>>(new Set());
+
+  const importMutation = useMutation(
+    trpc.strava.importActivities.mutationOptions({
+      onSuccess: () => {
+        setImported(prev => new Set([...prev, ...selected]));
+        setSelected(new Set());
+      },
+    }),
+  );
 
   const allIds = useMemo(() => activities?.map(a => a.id) ?? [], [activities]);
 
@@ -73,6 +83,11 @@ function ActivityPage({ cursor }: { cursor: string | undefined }) {
             allSelected={allSelected}
             someSelected={someSelected}
             onToggleAll={toggleAll}
+            importedIds={imported}
+            onImport={() =>
+              importMutation.mutate({ activityIds: [...selected] })
+            }
+            isImporting={importMutation.isPending}
           />
           {query.isLoading && (
             <p className="text-sm text-gray-500">Loading...</p>
@@ -95,6 +110,7 @@ function ActivityPage({ cursor }: { cursor: string | undefined }) {
                   key={activity.id}
                   activity={activity}
                   selected={selected.has(activity.id)}
+                  imported={imported.has(activity.id)}
                   onToggle={toggleOne}
                 />
               ))}
@@ -126,11 +142,17 @@ function BulkToolbar({
   allSelected,
   someSelected,
   onToggleAll,
+  importedIds,
+  onImport,
+  isImporting,
 }: {
   selectedCount: number;
   allSelected: boolean;
   someSelected: boolean;
   onToggleAll: () => void;
+  importedIds: Set<number>;
+  onImport: () => void;
+  isImporting: boolean;
 }) {
   return (
     <div className="sticky top-0 z-10 flex items-center gap-3 border-gray-200 bg-white px-4 py-2">
@@ -146,6 +168,20 @@ function BulkToolbar({
             : "Select activities to import"}
         </span>
       </label>
+      {selectedCount > 0 && (
+        <button
+          className="ml-auto rounded bg-orange-500 px-3 py-1 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
+          disabled={isImporting}
+          onClick={onImport}>
+          {isImporting ? "Importing…" : "Import selected"}
+        </button>
+      )}
+      {importedIds.size > 0 && selectedCount === 0 && (
+        <span className="text-sm text-green-600">
+          {importedIds.size}{" "}
+          {importedIds.size === 1 ? "activity" : "activities"} queued for import
+        </span>
+      )}
     </div>
   );
 }
@@ -153,10 +189,12 @@ function BulkToolbar({
 function ActivityRow({
   activity,
   selected,
+  imported,
   onToggle,
 }: {
   activity: SummaryActivity;
   selected: boolean;
+  imported: boolean;
   onToggle: (id: number) => void;
 }) {
   return (
@@ -164,6 +202,7 @@ function ActivityRow({
       className={cn(
         "flex cursor-pointer items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50",
         selected && "bg-blue-50 hover:bg-blue-50",
+        imported && "opacity-50",
       )}
       onClick={() => onToggle(activity.id)}>
       <Checkbox

@@ -113,6 +113,34 @@
       "when": 1777998400694,
       "tag": "0015_fix-references",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1778141319653,
+      "tag": "0016_add-track-description",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1778182519179,
+      "tag": "0017_nullable-point-timestamps",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1778182728075,
+      "tag": "0018_nullable-start-end-time",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1778182921280,
+      "tag": "0019_track-source-columns",
+      "breakpoints": true
     }
   ]
 }

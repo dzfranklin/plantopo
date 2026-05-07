@@ -1,0 +1,1 @@
+ALTER TABLE "recorded_track" ALTER COLUMN "point_timestamps" DROP NOT NULL;

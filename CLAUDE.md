@@ -13,11 +13,17 @@ relate to
 
 ## Testing
 
+Run tests via `npm test -w @pt/{api,web,shared} -- -t <filter>` so that
+environment variables are set properly
+
 packages/web uses vitest browser mode. Use await expect.element(locator)... so
 vitest polls for the locator.
 
 export private functions for testing under
 `export const exportedForTesting = { ... }`
+
+in packages/api files named `*.itest.ts` will run under the integration testing
+configuration. postgres/redis/minio are reset beforeEach.
 
 ## packages/web
 

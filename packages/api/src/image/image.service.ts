@@ -6,12 +6,17 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, lt } from "drizzle-orm";
+import exifr from "exifr";
 import { nanoid } from "nanoid";
+import sharp from "sharp";
 import z from "zod";
+
+import { cleanExifRecord, normalizeExifDate, sha256 } from "@pt/shared";
 
 import { db } from "../db.js";
 import { env } from "../env.js";
 import { type ImageSrc, ImageSrcSchema } from "../index.js";
+import { enqueueJob } from "../jobs.js";
 import { getLog } from "../logger.js";
 import { recordedTrackImage } from "../track/track-image.schema.js";
 import { image } from "./image.schema.js";
@@ -110,7 +115,7 @@ export async function requestUpload(
   userId: string,
   opts: RequestUpload,
 ): Promise<RequestUploadResponse> {
-  const takenAt = opts.takenAt ? normalizeExifDate(opts.takenAt) : null;
+  const takenAt = opts.takenAt ?? null;
 
   const { s3Key, uploaded: alreadyUploaded } = await db
     .insert(image)
@@ -253,6 +258,130 @@ export async function sweepUnconfirmedImages(cutoff?: Date): Promise<number> {
   return orphans.length;
 }
 
+export interface ImportImageOpts {
+  userId: string;
+  url: string;
+  takenAt?: string;
+  filename?: string;
+  linkedTrackId?: string;
+}
+
+export async function importImage(opts: ImportImageOpts): Promise<void> {
+  await enqueueJob("image.import", opts);
+}
+
+export async function runImportImage(
+  opts: ImportImageOpts,
+): Promise<ImageInfo> {
+  const log = getLog().child({ runImportImageURL: opts.url });
+  const response = await fetch(opts.url);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch image: ${response.status} ${response.statusText}`,
+    );
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const size = buffer.byteLength;
+
+  const sharpMeta = await sharp(buffer).metadata();
+
+  const mimeType =
+    response.headers.get("content-type")?.split(";")[0]?.trim() ||
+    (sharpMeta.format
+      ? `image/${sharpMeta.format}`
+      : "application/octet-stream");
+
+  const filename = opts.filename ?? deriveFilename(opts.url, mimeType);
+
+  if (!sharpMeta.width || !sharpMeta.height) {
+    throw new Error("Could not determine image dimensions");
+  }
+  const width = sharpMeta.width;
+  const height = sharpMeta.height;
+
+  const hash = await sha256(filename, buffer.buffer as ArrayBuffer);
+
+  let takenAt = opts.takenAt;
+  let location: { lat: number; lng: number } | undefined;
+  let exifData: Record<string, unknown> | undefined;
+  try {
+    const parsed = await exifr.parse(buffer, { reviveValues: false });
+    if (parsed) {
+      if (!takenAt && parsed.DateTimeOriginal) {
+        takenAt = normalizeExifDate(parsed.DateTimeOriginal) ?? undefined;
+      }
+      if (
+        typeof parsed.latitude === "number" &&
+        typeof parsed.longitude === "number"
+      ) {
+        location = { lat: parsed.latitude, lng: parsed.longitude };
+      }
+      exifData = cleanExifRecord(parsed);
+    }
+  } catch (err) {
+    log.warn({ err }, "Failed to parse EXIF data during import");
+  }
+
+  log.info(
+    { filename, mimeType, size, width, height, takenAt, location },
+    "Parsed image metadata",
+  );
+  const uploadResponse = await requestUpload(opts.userId, {
+    linkedTrackId: opts.linkedTrackId,
+    filename,
+    sha256: hash,
+    mimeType,
+    size,
+    width,
+    height,
+    takenAt,
+    location,
+    exif: exifData,
+  });
+
+  const { s3Key, uploadUrl } = uploadResponse;
+  log.info({ alreadyExists: !uploadUrl }, "Requested upload");
+
+  if (uploadUrl) {
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: env.S3_IMAGE_BUCKET,
+        Key: s3Key,
+        Body: buffer,
+        ContentType: mimeType,
+        ContentLength: size,
+      }),
+    );
+  }
+
+  const result = confirmUpload(s3Key);
+  log.info("Upload complete");
+  return result;
+}
+
+function deriveFilename(url: string, mimeType: string): string {
+  let name = new URL(url).pathname.split("/").pop() ?? "image";
+  if (!name) name = "image";
+
+  const extByMime: Record<string, string> = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/gif": ".gif",
+    "image/webp": ".webp",
+    "image/heic": ".heic",
+    "image/heif": ".heif",
+    "image/tiff": ".tiff",
+    "image/avif": ".avif",
+  };
+  const expectedExt = extByMime[mimeType];
+  if (expectedExt && !name.toLowerCase().endsWith(expectedExt)) {
+    name = name.replace(/\.[^.]*$/, "") || name;
+    name += expectedExt;
+  }
+  return name;
+}
+
 function toImageInfo({
   createdAt,
   s3Key,
@@ -304,11 +433,4 @@ function imageURI(s3Key: string): string {
   } else {
     return `s3://${env.S3_IMAGE_BUCKET}/${s3Key}`;
   }
-}
-
-// Parse EXIF date "YYYY:MM:DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SS"
-function normalizeExifDate(raw: string): string | null {
-  const m = raw.match(/^(\d{4}):(\d{2}):(\d{2})\s(\d{2}:\d{2}:\d{2})$/);
-  if (!m) return null;
-  return `${m[1]}-${m[2]}-${m[3]}T${m[4]}`;
 }

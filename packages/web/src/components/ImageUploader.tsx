@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 
 import type { ImageInfo, RequestUploadResponse } from "@pt/api";
-import { sha256 } from "@pt/shared";
+import { cleanExifRecord, normalizeExifDate, sha256 } from "@pt/shared";
 
 import { Button } from "./ui/button";
 import { Dialog } from "./ui/dialog";
@@ -316,7 +316,7 @@ async function parseExif(file: File): Promise<ExifInfo> {
         );
       }
 
-      takenAt = parsed.DateTimeOriginal;
+      takenAt = normalizeExifDate(parsed.DateTimeOriginal) ?? undefined;
 
       if (
         typeof parsed.latitude === "number" &&
@@ -325,20 +325,7 @@ async function parseExif(file: File): Promise<ExifInfo> {
         location = { lat: parsed.latitude, lng: parsed.longitude };
       }
 
-      // Strip any binary/buffer fields before sending
-      const clean: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(parsed)) {
-        if (k === "ExifVersion") {
-          clean[k] = String.fromCharCode(...(v as Uint8Array));
-        } else if (
-          typeof v === "string" ||
-          typeof v === "number" ||
-          typeof v === "boolean"
-        ) {
-          clean[k] = v;
-        }
-      }
-      exif = clean;
+      exif = cleanExifRecord(parsed);
     }
   } catch (err) {
     // EXIF is optional

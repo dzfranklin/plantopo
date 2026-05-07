@@ -25,7 +25,7 @@
     "redis-cli": "NODE_ENV=development tsx scripts/with-api-env.ts bash -c 'exec redis-cli -u \"$REDIS_URL\"'",
     "jobs:studio": "NODE_ENV=development tsx scripts/with-api-env.ts bash -c 'docker run --name=bullstudio --rm -d --network=host -e PORT=4010 -e REDIS_URL=$REDIS_URL emirce/bullstudio && trap \"docker stop bullstudio\" INT TERM && echo \"bullstudio running at http://localhost:4010\" && sleep infinity'",
     "local-prod": "./scripts/local-prod.sh",
-    "check": "npm --workspaces check",
+    "check": "npm run --workspaces check",
     "test": "npm --workspaces test --",
     "prepare": "[ \"$npm_command\" = \"ci\" ] || husky",
     "cloc": "tokei --type TSX,Typescript --sort code .",

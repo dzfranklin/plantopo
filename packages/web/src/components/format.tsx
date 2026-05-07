@@ -114,9 +114,10 @@ export function InstantView({
   variant,
   ...forwardedProps
 }: {
-  date: DateInput;
+  date?: DateInput;
   variant?: InstantVariant;
 } & Omit<React.ComponentPropsWithoutRef<"time">, "dateTime" | "children">) {
+  if (!date) return null;
   const d = toDate(date);
   return (
     <time

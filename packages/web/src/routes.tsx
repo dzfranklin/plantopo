@@ -17,6 +17,7 @@ import SettingsAccountPage from "./settings/SettingsAccountPage.tsx";
 import SettingsInterfacePage from "./settings/SettingsInterfacePage.tsx";
 import SettingsPage from "./settings/SettingsPage.tsx";
 import StravaImportPage from "./strava/StravaImportPage.tsx";
+import ToolsPage from "./tools/ToolsPage.tsx";
 import MyTracksPage from "./track/MyTracksPage.tsx";
 import RecordTrackPage from "./track/RecordTrackPage.tsx";
 import TrackDetailPage from "./track/TrackDetailPage.tsx";
@@ -75,6 +76,7 @@ export function AppRoutes() {
               <Route path="/track/:trackId" element={<TrackDetailPage />} />
               <Route path="/track/:trackId/edit" element={<TrackEditPage />} />
               <Route path="/pictures" element={<MyPicturesPage />} />
+              <Route path="/tools" element={<ToolsPage />} />
             </Route>
 
             <Route path="/dev/*" element={<DevRoutes />} />
