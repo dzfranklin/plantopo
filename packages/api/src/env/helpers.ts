@@ -30,10 +30,13 @@ export const EnvSchema = z.object({
   S3_IMAGE_BUCKET: z.string(),
   S3_IMAGE_ACCESS_KEY_ID: z.string(),
   S3_IMAGE_SECRET_ACCESS_KEY: z.string(),
+  S3_FORCE_PATH_STYLE: z.coerce.boolean().default(false),
   IMGPROXY_BASE_URL: z.url().default("https://imgproxy.plantopo.com"),
   IMGPROXY_KEY: z.string(),
   IMGPROXY_SALT: z.string(),
 });
+
+export type Env = z.infer<typeof EnvSchema>;
 
 interface EnvResult {
   envName: string;
@@ -179,18 +182,22 @@ function parseFileContents(lines: string) {
   return obj;
 }
 
-export function sanitizeEnvForLogging(
-  input: Record<string, string | number | undefined>,
-) {
-  const sanitized: Record<string, string | number | undefined> = {};
+export function sanitizeEnvForLogging<
+  T extends Record<string, string | number | boolean | undefined>,
+>(input: T): T {
+  const sanitized: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(input)) {
-    if (key === "DATABASE_URL" || key === "REDIS_URL") {
-      sanitized[key] = (value as string).replace(/[^@:]+(?=@)/, "<redacted>");
-    } else if (key.match(/SECRET|KEY|TOKEN|PASS/)) {
-      sanitized[key] = "<redacted>";
+    if (typeof value === "string") {
+      if (key === "DATABASE_URL" || key === "REDIS_URL") {
+        sanitized[key] = (value as string).replace(/[^@:]+(?=@)/, "<redacted>");
+      } else if (key.match(/SECRET|KEY|TOKEN|PASS/)) {
+        sanitized[key] = "<redacted>";
+      } else {
+        sanitized[key] = value;
+      }
     } else {
       sanitized[key] = value;
     }
   }
-  return sanitized;
+  return sanitized as T;
 }

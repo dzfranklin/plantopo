@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { Redis } from "ioredis";
 
 import { session, user } from "../auth/auth.schema.js";
 import { db } from "../db.js";
@@ -101,14 +100,4 @@ export async function setupDb(databaseUrl: string) {
   await migrate(client, { migrationsFolder: "../../drizzle" });
   await upsertFixtures(client);
   await client.$client.end();
-}
-
-export async function resetRedis(redisUrl?: string) {
-  redisUrl ??= process.env.REDIS_URL;
-  if (!redisUrl) {
-    throw new Error("REDIS_URL is not set");
-  }
-  const client = new Redis(redisUrl);
-  await client.flushdb();
-  await client.quit();
 }

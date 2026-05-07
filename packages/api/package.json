@@ -39,6 +39,7 @@
   },
   "devDependencies": {
     "@pt/web": "*",
+    "@testcontainers/minio": "^11.14.0",
     "@testcontainers/postgresql": "^11.14.0",
     "@testcontainers/redis": "^11.14.0",
     "@trpc/client": "^11.15.0",
