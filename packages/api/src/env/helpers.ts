@@ -2,8 +2,6 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import z from "zod";
 
-import { by } from "@pt/shared";
-
 export const EnvSchema = z.object({
   // LOG_LEVEL is read directly in logger.ts
   PORT: z.coerce.number().default(4000),
@@ -65,7 +63,7 @@ function printLoadEnvFilesAtStartupResult(result: EnvResult) {
   if (result.envName === "development") {
     msg.push(
       ...Object.entries(process.env)
-        .sort(by(([k]) => k))
+        .sort(([k1], [k2]) => k1.localeCompare(k2))
         .filter(([k]) => relevantKeys.has(k))
         .map(([k, v]) => `  ${k}=${v} (${result.sources[k] || "process.env"})`),
     );
@@ -83,7 +81,7 @@ export function parseProcessEnvAtStartup() {
       [
         ...formErrors,
         ...Object.entries(fieldErrors)
-          .sort(by(([k]) => k))
+          .sort(([k1], [k2]) => k1.localeCompare(k2))
           .map(([k, err]) => `${k}: ${err}`),
       ].join("; ");
     process.stderr.write("\n" + msg + "\n\n");
