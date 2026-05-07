@@ -93,10 +93,10 @@ export function parseProcessEnvAtStartup() {
 export function parseEnvFiles(target: typeof process.env): EnvResult {
   const envName = process.env.NODE_ENV || "production";
   const sourceCandidates = [
-    `.env.${envName}.local`,
-    `.env.${envName}`,
-    ".env.local",
     ".env",
+    ".env.local",
+    `.env.${envName}`,
+    `.env.${envName}.local`,
   ];
 
   const preexistingKeys = new Set(Object.keys(target));
