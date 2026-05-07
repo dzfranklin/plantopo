@@ -29,6 +29,7 @@ export const recordedTrack = pgTable("recorded_track", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   name: text("name"),
+  description: text("description"),
   startTime: timestamp("start_time", { withTimezone: true }).notNull(),
   endTime: timestamp("end_time", { withTimezone: true }).notNull(),
   path: lineString("path").notNull(),

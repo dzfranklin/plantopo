@@ -23,6 +23,7 @@ const PreviewSchema = z.object({
 export const RecordedTrackSummarySchema = z.object({
   id: z.string(),
   name: z.string().nullable(),
+  description: z.string().optional(),
   startTime: z.number(), // epoch ms
   endTime: z.number(), // epoch ms
   createdAt: z.number(), // epoch ms
@@ -237,6 +238,7 @@ export async function populatePreviewImages(
 const summaryColumns = {
   id: recordedTrack.id,
   name: recordedTrack.name,
+  description: recordedTrack.description,
   startTime: recordedTrack.startTime,
   endTime: recordedTrack.endTime,
   createdAt: recordedTrack.createdAt,
@@ -377,6 +379,7 @@ export async function getRecordedTrackWithPointDetail(
 function toSummary(row: {
   id: string;
   name: string | null;
+  description: string | null;
   startTime: Date;
   endTime: Date;
   createdAt: Date;
@@ -414,5 +417,6 @@ function toSummary(row: {
       row.previewSmallWidth,
       row.previewSmallHeight,
     ),
+    description: row.description ?? undefined,
   };
 }
