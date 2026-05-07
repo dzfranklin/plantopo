@@ -9,7 +9,8 @@
     "postbuild": "tar -czf dist/native-assets.tar.gz -C dist $(ls dist | grep -v native-assets.tar.gz)",
     "lint": "eslint .",
     "clean": "rm -rf ./dist node_modules",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check": "tsc --noEmit -p tsconfig.json && prettier --write --log-level warn . && eslint --fix ."
   },
   "exports": {
     "./util/dev": "./src/util/dev.ts"

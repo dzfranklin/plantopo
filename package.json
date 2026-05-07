@@ -24,7 +24,7 @@
     "db:seed-from-export": "NODE_ENV=development LOG_LEVEL=info tsx scripts/with-api-env.ts tsx scripts/seed-from-export.ts",
     "jobs:studio": "NODE_ENV=development tsx scripts/with-api-env.ts bash -c 'docker run --name=bullstudio --rm -d --network=host -e PORT=4010 -e REDIS_URL=$REDIS_URL emirce/bullstudio && trap \"docker stop bullstudio\" INT TERM && echo \"bullstudio running at http://localhost:4010\" && sleep infinity'",
     "local-prod": "./scripts/local-prod.sh",
-    "check": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/api/tsconfig.json && tsc --noEmit -p packages/web/tsconfig.json && prettier --write --log-level warn . && eslint --fix .",
+    "check": "npm --workspaces check",
     "test": "npm --workspaces test --",
     "prepare": "[ \"$npm_command\" = \"ci\" ] || husky",
     "cloc": "tokei --type TSX,Typescript --sort code .",

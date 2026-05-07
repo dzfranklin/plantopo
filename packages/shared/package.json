@@ -13,7 +13,8 @@
   "scripts": {
     "build": "tsc --build",
     "clean": "rm -rf ./dist node_modules",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check": "tsc --noEmit -p tsconfig.json && prettier --write --log-level warn . && eslint --fix ."
   },
   "peerDependencies": {
     "zod": "4.x"
