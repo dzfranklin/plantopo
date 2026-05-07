@@ -61,7 +61,7 @@ export class CircuitBreaker {
   private isTripped = false;
   private isProbing = false;
   private openedAt = 0;
-  private failureCount = 0;
+  private failureWeight = 0;
 
   constructor(
     name: string,
@@ -74,14 +74,14 @@ export class CircuitBreaker {
     this.maxDelayMs = options.maxDelayMs ?? 600_000;
   }
 
-  private getBackoffDelayMs(): number {
+  getBackoffDelayMs(): number {
     return Math.min(
-      this.baseDelayMs * 2 ** (this.failureCount - 1),
+      this.baseDelayMs * 2 ** (this.failureWeight - 1),
       this.maxDelayMs,
     );
   }
 
-  private checkOpen(): boolean {
+  checkOpen(): boolean {
     if (!this.isTripped) return false;
     if (Date.now() - this.openedAt >= this.getBackoffDelayMs()) {
       if (this.isProbing) return true;
@@ -91,31 +91,49 @@ export class CircuitBreaker {
     return true;
   }
 
-  private trip(): void {
-    this.failureCount++;
-    this.isTripped = true;
-    this.isProbing = false;
-    this.openedAt = Date.now();
-    const backoffSecs = this.getBackoffDelayMs() / 1000;
-    getLog().warn(
-      { failureCount: this.failureCount, retryInSecs: backoffSecs },
-      "Circuit breaker opened",
-    );
-    stateGauge.set({ circuit: this.name }, 1);
-    backoffDurationHistogram.observe({ circuit: this.name }, backoffSecs);
-    activeBackoffDuration.set({ circuit: this.name }, backoffSecs);
-    activeBackoffStartTime.set({ circuit: this.name }, this.openedAt / 1000);
-  }
-
-  private reset(): void {
-    if (this.failureCount > 0) {
-      this.failureCount = 0;
-      this.isTripped = false;
-      this.isProbing = false;
+  private updateMetrics(): void {
+    if (this.isTripped) {
+      const backoffSecs = this.getBackoffDelayMs() / 1000;
+      stateGauge.set({ circuit: this.name }, 1);
+      backoffDurationHistogram.observe({ circuit: this.name }, backoffSecs);
+      activeBackoffDuration.set({ circuit: this.name }, backoffSecs);
+      activeBackoffStartTime.set({ circuit: this.name }, this.openedAt / 1000);
+    } else {
       stateGauge.set({ circuit: this.name }, 0);
       activeBackoffDuration.set({ circuit: this.name }, 0);
       activeBackoffStartTime.set({ circuit: this.name }, 0);
     }
+  }
+
+  trip(): void {
+    this.failureWeight++;
+    this.isTripped = true;
+    this.isProbing = false;
+    this.openedAt = Date.now();
+    getLog().warn(
+      {
+        failureWeight: this.failureWeight,
+        retryInSecs: this.getBackoffDelayMs() / 1000,
+      },
+      "Circuit breaker opened",
+    );
+    this.updateMetrics();
+  }
+
+  recover(): void {
+    if (this.failureWeight > 0) {
+      this.failureWeight = this.failureWeight / 2;
+      this.isTripped = false;
+      this.isProbing = false;
+      this.updateMetrics();
+    }
+  }
+
+  reset(): void {
+    this.failureWeight = 0;
+    this.isTripped = false;
+    this.isProbing = false;
+    this.updateMetrics();
   }
 
   async fetch(
@@ -132,7 +150,7 @@ export class CircuitBreaker {
       this.trip();
     } else {
       requestsTotal.inc({ circuit: this.name, result: "success" });
-      this.reset();
+      this.recover();
     }
     return response;
   }
