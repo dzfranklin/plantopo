@@ -7,27 +7,27 @@
     "connection": "keep-alive",
     "content-encoding": "gzip",
     "content-type": "application/json; charset=utf-8",
-    "date": "Thu, 07 May 2026 03:57:11 GMT",
-    "etag": "W/\"608783421130449905d8de20ef8cec8f\"",
+    "date": "Thu, 07 May 2026 06:32:10 GMT",
+    "etag": "W/\"3dbd93f0edff5f3540bd5ef398e7220b\"",
     "referrer-policy": "strict-origin-when-cross-origin",
     "server": "istio-envoy",
     "status": "200 OK",
     "transfer-encoding": "chunked",
     "vary": "Accept, Origin",
-    "via": "1.1 75e0fbd228777058c683bbe0f9e553f0.cloudfront.net (CloudFront)",
-    "x-amz-cf-id": "rlFZGQbpj6ZlB3kgMKVQhoA5VVtZxzzrmHHq7Fj0QBPRkVTozLzgYg==",
+    "via": "1.1 6f348d610065e2c8eb4f3a0d2f7caa8e.cloudfront.net (CloudFront)",
+    "x-amz-cf-id": "1HTP1Gk1IbLHhzGKrfsq3cpYjAmNdyQEvmMAHd6j-2IsOnexBdnZ9A==",
     "x-amz-cf-pop": "AMS58-P6",
     "x-cache": "Miss from cloudfront",
     "x-content-type-options": "nosniff",
     "x-download-options": "noopen",
-    "x-envoy-upstream-service-time": "215",
+    "x-envoy-upstream-service-time": "332",
     "x-frame-options": "DENY",
     "x-permitted-cross-domain-policies": "none",
     "x-ratelimit-limit": "200,2000",
-    "x-ratelimit-usage": "8,14",
+    "x-ratelimit-usage": "1,21",
     "x-readratelimit-limit": "100,1000",
-    "x-readratelimit-usage": "8,14",
-    "x-request-id": "ea9fc88a-29ac-4abb-86cc-2119de369e78",
+    "x-readratelimit-usage": "1,21",
+    "x-request-id": "e63c5dfd-8f2c-443b-96eb-e6509c74f2b5",
     "x-xss-protection": "1; mode=block"
   },
   "body": {
@@ -41,9 +41,8 @@
     "moving_time": 14087,
     "elapsed_time": 24922,
     "total_elevation_gain": 1068.8,
-    "type": "Workout",
-    "sport_type": "Workout",
-    "workout_type": null,
+    "type": "Hike",
+    "sport_type": "Hike",
     "id": 18376823649,
     "start_date": "2026-04-08T10:07:22Z",
     "start_date_local": "2026-04-08T11:07:22Z",
@@ -90,7 +89,104 @@
     "calories": 0,
     "perceived_exertion": null,
     "prefer_perceived_exertion": null,
-    "segment_efforts": [],
+    "segment_efforts": [
+      {
+        "id": 3487357076174059000,
+        "resource_state": 2,
+        "name": "Stob Binnein from Inverlochlarig",
+        "activity": {
+          "id": 18376823649,
+          "visibility": "everyone",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 195438071,
+          "resource_state": 1
+        },
+        "elapsed_time": 11575,
+        "moving_time": 6079,
+        "start_date": "2026-04-08T10:11:11Z",
+        "start_date_local": "2026-04-08T11:11:11Z",
+        "distance": 5049,
+        "start_index": 87,
+        "end_index": 1813,
+        "device_watts": false,
+        "segment": {
+          "id": 26039759,
+          "resource_state": 2,
+          "name": "Stob Binnein from Inverlochlarig",
+          "activity_type": "Hike",
+          "distance": 5049,
+          "average_grade": 19.3,
+          "maximum_grade": 50,
+          "elevation_high": 1116.8,
+          "elevation_low": 140.4,
+          "start_latlng": [56.333129, -4.515736],
+          "end_latlng": [56.370708, -4.535806],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 5,
+          "city": "Lochearnhead",
+          "state": "Scotland",
+          "country": "United Kingdom",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "everyone",
+        "hidden": false
+      },
+      {
+        "id": 3487357076175796700,
+        "resource_state": 2,
+        "name": "A85 Climb",
+        "activity": {
+          "id": 18376823649,
+          "visibility": "everyone",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 195438071,
+          "resource_state": 1
+        },
+        "elapsed_time": 1120,
+        "moving_time": 697,
+        "start_date": "2026-04-08T13:06:37Z",
+        "start_date_local": "2026-04-08T14:06:37Z",
+        "distance": 545.209,
+        "start_index": 1648,
+        "end_index": 1836,
+        "device_watts": false,
+        "segment": {
+          "id": 2282565,
+          "resource_state": 2,
+          "name": "A85 Climb",
+          "activity_type": "Hike",
+          "distance": 545.209,
+          "average_grade": 19.9,
+          "maximum_grade": 42.3,
+          "elevation_high": 1128.6,
+          "elevation_low": 1020.1,
+          "start_latlng": [56.36735796, -4.5324832946],
+          "end_latlng": [56.3713097759, -4.5355814975],
+          "elevation_profile": null,
+          "elevation_profiles": null,
+          "climb_category": 1,
+          "city": "Crianlarich",
+          "state": "Stirling",
+          "country": "United Kingdom",
+          "private": false,
+          "hazardous": false,
+          "starred": false
+        },
+        "pr_rank": null,
+        "achievements": [],
+        "visibility": "everyone",
+        "hidden": false
+      }
+    ],
     "splits_metric": [
       {
         "distance": 1017.1,
@@ -98,8 +194,8 @@
         "elevation_difference": 267.5,
         "moving_time": 1239,
         "split": 1,
-        "average_speed": 0.36,
-        "average_grade_adjusted_speed": 1.04,
+        "average_speed": 0.82,
+        "average_grade_adjusted_speed": 2.37,
         "pace_zone": 0
       },
       {
@@ -108,8 +204,8 @@
         "elevation_difference": 296.3,
         "moving_time": 1476,
         "split": 2,
-        "average_speed": 0.28,
-        "average_grade_adjusted_speed": 0.88,
+        "average_speed": 0.67,
+        "average_grade_adjusted_speed": 2.09,
         "pace_zone": 0
       },
       {
@@ -118,8 +214,8 @@
         "elevation_difference": 188.1,
         "moving_time": 1361,
         "split": 3,
-        "average_speed": 0.46,
-        "average_grade_adjusted_speed": 1,
+        "average_speed": 0.73,
+        "average_grade_adjusted_speed": 1.61,
         "pace_zone": 0
       },
       {
@@ -128,8 +224,8 @@
         "elevation_difference": 79.2,
         "moving_time": 1102,
         "split": 4,
-        "average_speed": 0.87,
-        "average_grade_adjusted_speed": 1.31,
+        "average_speed": 0.91,
+        "average_grade_adjusted_speed": 1.37,
         "pace_zone": 0
       },
       {
@@ -138,8 +234,8 @@
         "elevation_difference": 69.7,
         "moving_time": 1006,
         "split": 5,
-        "average_speed": 0.94,
-        "average_grade_adjusted_speed": 1.32,
+        "average_speed": 0.99,
+        "average_grade_adjusted_speed": 1.39,
         "pace_zone": 0
       },
       {
@@ -148,8 +244,8 @@
         "elevation_difference": 4.1,
         "moving_time": 1102,
         "split": 6,
-        "average_speed": 0.32,
-        "average_grade_adjusted_speed": 0.69,
+        "average_speed": 0.94,
+        "average_grade_adjusted_speed": 2,
         "pace_zone": 0
       },
       {
@@ -158,8 +254,8 @@
         "elevation_difference": -311.6,
         "moving_time": 1433,
         "split": 7,
-        "average_speed": 0.35,
-        "average_grade_adjusted_speed": 0.57,
+        "average_speed": 0.68,
+        "average_grade_adjusted_speed": 1.1,
         "pace_zone": 0
       },
       {
@@ -168,8 +264,8 @@
         "elevation_difference": -233.2,
         "moving_time": 1294,
         "split": 8,
-        "average_speed": 0.44,
-        "average_grade_adjusted_speed": 0.6,
+        "average_speed": 0.77,
+        "average_grade_adjusted_speed": 1.05,
         "pace_zone": 0
       },
       {
@@ -178,8 +274,8 @@
         "elevation_difference": -42,
         "moving_time": 942,
         "split": 9,
-        "average_speed": 0.95,
-        "average_grade_adjusted_speed": 0.94,
+        "average_speed": 1.06,
+        "average_grade_adjusted_speed": 1.05,
         "pace_zone": 0
       },
       {
@@ -188,8 +284,8 @@
         "elevation_difference": -97.3,
         "moving_time": 976,
         "split": 10,
-        "average_speed": 0.73,
-        "average_grade_adjusted_speed": 0.7,
+        "average_speed": 1.03,
+        "average_grade_adjusted_speed": 0.98,
         "pace_zone": 0
       },
       {
@@ -198,8 +294,8 @@
         "elevation_difference": -78.4,
         "moving_time": 763,
         "split": 11,
-        "average_speed": 1.24,
-        "average_grade_adjusted_speed": 1.13,
+        "average_speed": 1.31,
+        "average_grade_adjusted_speed": 1.19,
         "pace_zone": 0
       },
       {
@@ -208,8 +304,8 @@
         "elevation_difference": -74.5,
         "moving_time": 3,
         "split": 12,
-        "average_speed": 1.28,
-        "average_grade_adjusted_speed": 1.14,
+        "average_speed": 440.93,
+        "average_grade_adjusted_speed": 394.47,
         "pace_zone": 0
       },
       {
@@ -218,8 +314,8 @@
         "elevation_difference": -56.5,
         "moving_time": 509,
         "split": 13,
-        "average_speed": 1.28,
-        "average_grade_adjusted_speed": 1.15,
+        "average_speed": 1.33,
+        "average_grade_adjusted_speed": 1.19,
         "pace_zone": 0
       },
       {
@@ -228,8 +324,8 @@
         "elevation_difference": -11.4,
         "moving_time": 766,
         "split": 14,
-        "average_speed": 1.21,
-        "average_grade_adjusted_speed": 1.21,
+        "average_speed": 1.31,
+        "average_grade_adjusted_speed": 1.3,
         "pace_zone": 0
       },
       {
@@ -238,8 +334,8 @@
         "elevation_difference": 1,
         "moving_time": 115,
         "split": 15,
-        "average_speed": 0.43,
-        "average_grade_adjusted_speed": 0.44,
+        "average_speed": 1.33,
+        "average_grade_adjusted_speed": 1.35,
         "pace_zone": 0
       }
     ],
@@ -250,8 +346,8 @@
         "elevation_difference": 478.8,
         "moving_time": 2164,
         "split": 1,
-        "average_speed": 0.31,
-        "average_grade_adjusted_speed": 0.97,
+        "average_speed": 0.74,
+        "average_grade_adjusted_speed": 2.34,
         "pace_zone": 0
       },
       {
@@ -260,8 +356,8 @@
         "elevation_difference": 263.9,
         "moving_time": 2097,
         "split": 2,
-        "average_speed": 0.46,
-        "average_grade_adjusted_speed": 0.96,
+        "average_speed": 0.77,
+        "average_grade_adjusted_speed": 1.6,
         "pace_zone": 0
       },
       {
@@ -270,8 +366,8 @@
         "elevation_difference": 155.6,
         "moving_time": 1775,
         "split": 3,
-        "average_speed": 0.85,
-        "average_grade_adjusted_speed": 1.33,
+        "average_speed": 0.91,
+        "average_grade_adjusted_speed": 1.42,
         "pace_zone": 0
       },
       {
@@ -280,8 +376,8 @@
         "elevation_difference": -132.7,
         "moving_time": 1863,
         "split": 4,
-        "average_speed": 0.32,
-        "average_grade_adjusted_speed": 0.61,
+        "average_speed": 0.87,
+        "average_grade_adjusted_speed": 1.65,
         "pace_zone": 0
       },
       {
@@ -290,8 +386,8 @@
         "elevation_difference": -408.9,
         "moving_time": 2152,
         "split": 5,
-        "average_speed": 0.47,
-        "average_grade_adjusted_speed": 0.68,
+        "average_speed": 0.75,
+        "average_grade_adjusted_speed": 1.07,
         "pace_zone": 0
       },
       {
@@ -300,8 +396,8 @@
         "elevation_difference": -114.1,
         "moving_time": 1607,
         "split": 6,
-        "average_speed": 0.77,
-        "average_grade_adjusted_speed": 0.77,
+        "average_speed": 1,
+        "average_grade_adjusted_speed": 0.99,
         "pace_zone": 0
       },
       {
@@ -310,8 +406,8 @@
         "elevation_difference": -174.7,
         "moving_time": 1039,
         "split": 7,
-        "average_speed": 1.25,
-        "average_grade_adjusted_speed": 1.13,
+        "average_speed": 2.57,
+        "average_grade_adjusted_speed": 2.31,
         "pace_zone": 0
       },
       {
@@ -320,8 +416,8 @@
         "elevation_difference": -46.7,
         "moving_time": 400,
         "split": 8,
-        "average_speed": 1.32,
-        "average_grade_adjusted_speed": 1.18,
+        "average_speed": 1.38,
+        "average_grade_adjusted_speed": 1.23,
         "pace_zone": 0
       },
       {
@@ -330,8 +426,8 @@
         "elevation_difference": -20.2,
         "moving_time": 990,
         "split": 9,
-        "average_speed": 0.99,
-        "average_grade_adjusted_speed": 0.99,
+        "average_speed": 1.29,
+        "average_grade_adjusted_speed": 1.28,
         "pace_zone": 0
       }
     ],
@@ -354,7 +450,7 @@
         "start_date": "2026-04-08T10:07:22Z",
         "start_date_local": "2026-04-08T11:07:22Z",
         "distance": 14154.6,
-        "average_speed": 0.57,
+        "average_speed": 1,
         "max_speed": 5.26667,
         "lap_index": 1,
         "split": 1,
