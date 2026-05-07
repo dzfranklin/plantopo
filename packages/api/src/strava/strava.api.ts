@@ -394,6 +394,7 @@ export class StravaApi {
     appUserId: string,
     activityId: number,
   ): Promise<ActivityPhoto[]> {
+    // See <https://communityhub.strava.com/developers-api-7/download-all-photos-of-my-own-activities-3061>
     const accessToken = await this.getAccessToken(appUserId);
     const url = `https://www.strava.com/api/v3/activities/${activityId}/photos?size=2048`;
     getLog().info(
