@@ -1,0 +1,82 @@
+{
+  "url": "https://photon.komoot.io/api?q=Edinburgh&limit=3&lang=en",
+  "method": "GET",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=3600",
+    "connection": "keep-alive",
+    "content-encoding": "gzip",
+    "content-type": "application/json",
+    "date": "Thu, 07 May 2026 03:44:45 GMT",
+    "expires": "Thu, 07 May 2026 04:44:45 GMT",
+    "server": "nginx",
+    "transfer-encoding": "chunked"
+  },
+  "body": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 1920901,
+          "osm_key": "place",
+          "osm_value": "city",
+          "type": "city",
+          "name": "Edinburgh",
+          "state": "Scotland",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extent": [-3.4495326, 56.0040837, -3.0749528, 55.8187919]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-3.1883749, 55.9533456]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 127349,
+          "osm_key": "place",
+          "osm_value": "town",
+          "type": "city",
+          "name": "Edinburgh",
+          "county": "Johnson",
+          "state": "Indiana",
+          "country": "United States",
+          "countrycode": "US",
+          "extent": [-85.9860022, 39.3690882, -85.9428073, 39.3321505]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-85.9666577, 39.3542176]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 7149998196,
+          "osm_key": "railway",
+          "osm_value": "station",
+          "type": "house",
+          "name": "Edinburgh Waverley",
+          "street": "South Ramp",
+          "locality": "Abbeyhill",
+          "district": "Old Town",
+          "city": "Edinburgh",
+          "state": "Scotland",
+          "country": "United Kingdom",
+          "postcode": "EH1 1QB",
+          "countrycode": "GB"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-3.1904199, 55.9519018]
+        }
+      }
+    ]
+  }
+}

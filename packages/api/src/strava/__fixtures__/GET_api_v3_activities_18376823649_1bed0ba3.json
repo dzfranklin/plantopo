@@ -1,0 +1,407 @@
+{
+  "url": "https://www.strava.com/api/v3/activities/18376823649?include_all_efforts=true",
+  "method": "GET",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=0, private, must-revalidate",
+    "connection": "keep-alive",
+    "content-encoding": "gzip",
+    "content-type": "application/json; charset=utf-8",
+    "date": "Thu, 07 May 2026 03:57:11 GMT",
+    "etag": "W/\"608783421130449905d8de20ef8cec8f\"",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "server": "istio-envoy",
+    "status": "200 OK",
+    "transfer-encoding": "chunked",
+    "vary": "Accept, Origin",
+    "via": "1.1 75e0fbd228777058c683bbe0f9e553f0.cloudfront.net (CloudFront)",
+    "x-amz-cf-id": "rlFZGQbpj6ZlB3kgMKVQhoA5VVtZxzzrmHHq7Fj0QBPRkVTozLzgYg==",
+    "x-amz-cf-pop": "AMS58-P6",
+    "x-cache": "Miss from cloudfront",
+    "x-content-type-options": "nosniff",
+    "x-download-options": "noopen",
+    "x-envoy-upstream-service-time": "215",
+    "x-frame-options": "DENY",
+    "x-permitted-cross-domain-policies": "none",
+    "x-ratelimit-limit": "200,2000",
+    "x-ratelimit-usage": "8,14",
+    "x-readratelimit-limit": "100,1000",
+    "x-readratelimit-usage": "8,14",
+    "x-request-id": "ea9fc88a-29ac-4abb-86cc-2119de369e78",
+    "x-xss-protection": "1; mode=block"
+  },
+  "body": {
+    "resource_state": 3,
+    "athlete": {
+      "id": 195438071,
+      "resource_state": 1
+    },
+    "name": "Stob Binnein with Jane and Dexter",
+    "distance": 14154.6,
+    "moving_time": 14087,
+    "elapsed_time": 24922,
+    "total_elevation_gain": 1068.8,
+    "type": "Workout",
+    "sport_type": "Workout",
+    "workout_type": null,
+    "id": 18376823649,
+    "start_date": "2026-04-08T10:07:22Z",
+    "start_date_local": "2026-04-08T11:07:22Z",
+    "timezone": "(GMT+00:00) Europe/London",
+    "utc_offset": 3600,
+    "location_city": null,
+    "location_state": null,
+    "location_country": null,
+    "achievement_count": 0,
+    "kudos_count": 0,
+    "comment_count": 0,
+    "athlete_count": 1,
+    "photo_count": 0,
+    "map": {
+      "id": "a18376823649",
+      "polyline": "apyvIjjqZIABSCFEOCw@@u@Dq@A{@Do@Eq@Mi@@]BUCwABq@C[EEEJ?\\Gn@@fAEZAd@EDGDE@CEI?CCC@CFU@CBBDGLOTOHIJOZM@GKCDOEMBADSJI?KDQh@OFECE@QLIAOEMBCCE@EAGFG@CDMIKCYf@Ml@KLE?MRIBIIK?MLE?AFIDKNE?AEAQQHADI?CBMKI?K]S]?NIHANIGGFG`@GGC@AHCDI?GGCFECCBAGEVEBMGC@ID@HGBIAE@GGGBENGHE@GGEDCNEEAFE@?IMSMj@SGIDCEqC`@FGADEBCACMCDEAEKCVOCCDC?IPGKCBE??GCDCCAGEJCE@GCCICE@GCAFO\\CBAFIDKVE@AF@FCDCAEJBHD@E?KOC?EL@FBEGJ?I@D?GEOQR@NCGCBAVAQG[C??JEAIACMIFGLCEE@QJ?FAQICCFE?IFCAI@CGC@AHGHMd@C?CDCCSHAFGMAj@ADE@Cj@?PIH@\\AZKt@?HBBM@OLEACNSDI`@QLE@@IGI?IBEEWMGY]C@IIEO?QAF@FDTFJEMI]QUODCDIWID?FCC?HICGFCGAOAg@BHECASGKCOECC[Qa@c@q@CQECIWOIKQKG?SKGIUGHIACBEB?HC@?HCBEAQPE@K`@E@IEC?GTIJKBCPE?GGE@CAI?ORKQIF?HGLKJIAOBQEMIOBWLCDCPC@SQICO?IDEAMHI?EJOGMAE@WEIGODOCYOM@KDADEAMDMHEAYLEAK@OFK@QHI?IEOBMFKCMM[OS?EPUJCA]VCAOFICEDIEEBWBKBGJICYHQTAFMDGJI@Ia@a@DCCIAIDECO@ENE?GM[XI@CDCAIDIAMFGJK@GHGEOAECEBE?MGE@KAMFMc@CAEDGGI?GKC@IGM?CDCEM@IECBE?UPOUIDIEIVGKCOMHMEQ`@IDOXGFI@KRYFCDIp@MNOXWr@SPQ\\KZW`@EP]r@a@bAIHAF_@n@Y^SPk@`A{@t@w@V[\\QHWVIFC?IHYNMBOJC?KDgA~@YLCFOJQ^YNKZIDORSFGLq@f@UXIDQXc@P_An@ARIVYXg@jAGFGVSRWLm@t@_@r@MNGJc@b@KAQMG@IFIACDKACOMAKNOB]^OVE@IHEAQRAFYRIB[BYNSDIHYLURcAl@OBOLOBg@ZYJOJQDUTSLI@CDECIDCAMFCA]PI@ICOFOE_@?SDICS@i@N]@QCIECCEAg@BKHG@IACCO?CCCBa@DEBCCIWGBCDICq@CYFSRIEQPOCq@`@g@RaAh@UDo@?e@L]h@Yn@eBpBW`@OJ[`@GBOXQTE@IL[~@Op@O^Wl@QV[~@_@p@YrAMHAFOPELURYRSJMLE?MHYFc@@[\\GJ_@f@EAGHCCOCQLCDCCGHKMICE@MKADMHCCQLCCIHG_@KLI@CLI?QESOOAOBUGSAISKBB?C?GHKRIBEMBF?PAf@ENE?CBAFMF?NCDKCDBEBCXCDDM@YHQXIHGJOHUFw@LGTDJJ`@Fl@TR@nChR@IKJAHGL@FEN@HHMEBHFH?CDD@HPD@HVB?@PLVFIHBDCFHJIHDHELLHC?XEBDD?FIXAN@NDLAN?RCXEJHTBZHNHC@FCNBBHR?I@FBBGLFVGHNPAHBC@FEVLb@BI?LBPDI?UKHAF@LLd@BBJ`AAz@Hh@AJCDECEOK?YPE?IJITIDKRC@[j@AZGXBLB@@FCN@PGTBFAFDJLLDJHBPRBFHJPd@Pp@GLI?GJ?b@BPEJAHBc@?LDBGJAFDLKTBZEh@DCDDFXB\\HRBDDPM`A?b@BF?JATDh@FRDVDB@JDA?FIHBDIBGLOPE?ELAPKRAj@INCNc@b@C?EKK?CDIDCHSLIRDb@OT?HCBE?BBEACNGHCPIFGIEA?PSR?HIDCCMHAFBP?XJR?HBDBPN\\IT@NBDGJDSCB@ENXAn@@DBXAFBL?n@B\\JZ@ZH~@@\\E@?F@j@BHD@FLKVK@?PBDFDD\\EBBFAFIAED?HDPBf@HVB\\?PCF@PJJDZL`@BZHTF`@?FDACFBb@@DJGFHBPD@AZFTEB@FETBFCPDLCDE?BFCFDB@f@BRFLHHPAND^B~@OTMd@JHDBAD@HHFJLHNTVLN?DGB?D@RMd@EFMRKP@`@HN?BBN^HV?JXn@@GDAPLD@TCZPBDRHJ@PDb@BPIH?HC\\YNKNGTCLKB?BEJC@E^ILMNCFa@FMFy@HWf@[RALMNC`@HHED@POFKBACMEq@@SLl@FHL`@HFB?DCJQHEHBHK@ZVHNEBDH@LGDAHGREf@WD?BA@GD?DGGJDFF@AJDAP]TEPUPEPIBO?QFOJ?NELUPWFFDAJKNCDQC]B_@CET]LCDDFANEHENQHABBBFLHHSD?LHLNLOFABDB@b@EFLPJLZJA@DBRNBFHX@VSHDDAHKVUVQJAFUD@EBDALWHGBE?[DSBGLI@GLKPIPUHCROF?HIJCL@?GRMD@BCZCBC@GFGAIFOJBDCDCHYLIBGDAN}@JKJSNKFUHIBWFMDi@CG@s@Lo@FMCc@BSJc@ASXWHAJEb@w@BDHABNDSADDPHk@FKNMVc@R_AJu@f@aAJARYNKFKJEEn@Bv@BNHFDqANg@@SDSPQNCb@]RUPc@ZWTg@DQBCD@NYRSJSLGTAf@SVUBELETW?KBABDB@Tq@LB?GRKLYXSd@c@LILYRm@r@u@h@iBJa@Xs@HI\\kAt@iAf@UNEr@d@BJADDDNJF?JFFKBUj@}@Xo@X[~@_@V@XWdAuAJEFIRCb@WDEDARMt@i@LEZLd@?b@Eb@@FBV?h@WJIPE~dAuj@?LCEP]JGFOPGDGFMDCFMBACED@B?F]N[B@BIJHHKB@LELCBC`@m@X}@JUPi@FIHKDAR@HBXSFMVeAJw@HmANw@Ti@HYN_@@IPSDM^k@PSTKHEV@HIJBHJLFb@^N?NLBC@GESDCL[DWVm@Lu@Ay@@e@BQHWHKEBCAAHK^CE?SJuA@m@F_@Dm@BGAEEE?u@N[Fy@La@p@gATQRIBQEOOAD?UOEBILQAGHIF[ZGLMFQTIDK?YeAIaAGWCIQOIOKGSm@Yk@Ws@Kw@?UE[Wi@Gu@Au@WuAQsAEw@Io@@IDEBg@Sw@E_@AeBHaBXiEPiAFu@Gs@?mDCuBBqDIaB?[@INETh@BCBB?HEAE@",
+      "resource_state": 3,
+      "summary_polyline": "apyvIjjqZEUIGCw@JsES{AD}DIa@MxAKnC}@HaA~Aw@Ek@VQh@sCLg@tA_@`@_@Ek@j@IWa@RWK_@{@Kh@Y`@s@@KZy@D{@p@M]Mj@sDZWWCVa@R_Aa@s@pAM^HJUOGZC[Yv@Im@WEm@d@KUi@HWx@i@DWzBG|B{@b@[n@My@u@m@Ea@Lp@a@aASJIW_@VCu@]sAiAaC}@uA_@d@a@TK`@SCa@v@}@E]j@iAIc@f@]U}@X_Cc@oE`AiAa@}@r@cC^i@n@I@Ia@cBDkBbAwAGMc@q@UmAPc@UIVK[[Bk@`A{@j@Ip@eEtIeCtD{JrGkA~AyCpCcB`AKj@qAdCk@`@gChD{AUmCdCsA\\{HlEqA^}JXM[gA@uFbCkBRw@xAcFdG{@pCeBvDYrA{@dAoAv@}@HcApAcAXi@[s@^G_@c@\\oB]IS_@`@OI@`Ac@x@KCGf@Py@n@a@PmALGdCp@pC~QWdAVAn@|AvA?O|D`@|@AVRXGn@PVC^Tx@D_@K^\\jBDpB{@BiAhBIt@?nAFZ|@dAb@vAYXCjABc@DPOv@AdAJ@^bBKnC`@jBs@`A]pBy@Ve@b@Cv@k@pAWCSn@]RBj@b@rAKv@BUNXDtCZtCArAPXWXPz@S`@RpA@hAz@bD?j@^ZDp@M~AHt@Xb@dEGlAdAtBs@bAJv@vBjDn@zEwB`@aChAk@`A@\\]GsAl@`Br@c@@Zt@JpBaAGJPRP]jAk@Jq@ZEhAw@@uAT]nA_@TTj@D`AOr@r@\\f@`AMjBgBHu@RYnA_AdBg@Rm@P?f@q@N}@x@kAJe@BeBT}@HoBn@_@b@w@PRDSBVHk@n@}@^uBf@aAbAy@AfBLVDqAVoAdAs@vCoEtB_ATc@JDTq@LBnBoB`@gAr@u@vBuGt@iAv@[r@d@j@j@jBkDvA]~AmB`DkBvDFfAg@~dAgj@Lc@jAmAVy@`AU`BuDl@G`@a@|@cGp@mBv@mArAm@jB`AC[~@{C?_BVu@[d@^mFGaAd@wBp@gAl@m@e@a@mCnBk@_Dk@q@eAmCQiBWi@IkBi@iDOgBJw@YwAAeB|@kLQgSPO\\h@KH"
+    },
+    "trainer": false,
+    "commute": false,
+    "manual": false,
+    "private": false,
+    "visibility": "everyone",
+    "flagged": false,
+    "gear_id": null,
+    "start_latlng": [56.332974, -4.517652],
+    "end_latlng": [56.332871, -4.515901],
+    "average_speed": 1.005,
+    "max_speed": 5.267,
+    "has_heartrate": false,
+    "heartrate_opt_out": false,
+    "display_hide_heartrate_option": false,
+    "elev_high": 1153.7,
+    "elev_low": 133.5,
+    "upload_id": 19481173669,
+    "upload_id_str": "19481173669",
+    "external_id": "Stob_Binnein_with_Jane_and_Dexter.gpx",
+    "from_accepted_tag": false,
+    "pr_count": 0,
+    "total_photo_count": 2,
+    "has_kudoed": false,
+    "description": "We planned to continue to Ben More, but there was a slippy snow patch on the ridge and we didn't bring winter kit so we decided to go check out the head of the valley. Dexter did plenty of terrier investigation.\r\n\r\n",
+    "calories": 0,
+    "perceived_exertion": null,
+    "prefer_perceived_exertion": null,
+    "segment_efforts": [],
+    "splits_metric": [
+      {
+        "distance": 1017.1,
+        "elapsed_time": 2830,
+        "elevation_difference": 267.5,
+        "moving_time": 1239,
+        "split": 1,
+        "average_speed": 0.36,
+        "average_grade_adjusted_speed": 1.04,
+        "pace_zone": 0
+      },
+      {
+        "distance": 983.9,
+        "elapsed_time": 3518,
+        "elevation_difference": 296.3,
+        "moving_time": 1476,
+        "split": 2,
+        "average_speed": 0.28,
+        "average_grade_adjusted_speed": 0.88,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.2,
+        "elapsed_time": 2189,
+        "elevation_difference": 188.1,
+        "moving_time": 1361,
+        "split": 3,
+        "average_speed": 0.46,
+        "average_grade_adjusted_speed": 1,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1001.7,
+        "elapsed_time": 1158,
+        "elevation_difference": 79.2,
+        "moving_time": 1102,
+        "split": 4,
+        "average_speed": 0.87,
+        "average_grade_adjusted_speed": 1.31,
+        "pace_zone": 0
+      },
+      {
+        "distance": 997.8,
+        "elapsed_time": 1064,
+        "elevation_difference": 69.7,
+        "moving_time": 1006,
+        "split": 5,
+        "average_speed": 0.94,
+        "average_grade_adjusted_speed": 1.32,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1030.8,
+        "elapsed_time": 3196,
+        "elevation_difference": 4.1,
+        "moving_time": 1102,
+        "split": 6,
+        "average_speed": 0.32,
+        "average_grade_adjusted_speed": 0.69,
+        "pace_zone": 0
+      },
+      {
+        "distance": 970.3,
+        "elapsed_time": 2750,
+        "elevation_difference": -311.6,
+        "moving_time": 1433,
+        "split": 7,
+        "average_speed": 0.35,
+        "average_grade_adjusted_speed": 0.57,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.7,
+        "elapsed_time": 2252,
+        "elevation_difference": -233.2,
+        "moving_time": 1294,
+        "split": 8,
+        "average_speed": 0.44,
+        "average_grade_adjusted_speed": 0.6,
+        "pace_zone": 0
+      },
+      {
+        "distance": 998.9,
+        "elapsed_time": 1051,
+        "elevation_difference": -42,
+        "moving_time": 942,
+        "split": 9,
+        "average_speed": 0.95,
+        "average_grade_adjusted_speed": 0.94,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.4,
+        "elapsed_time": 1368,
+        "elevation_difference": -97.3,
+        "moving_time": 976,
+        "split": 10,
+        "average_speed": 0.73,
+        "average_grade_adjusted_speed": 0.7,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.3,
+        "elapsed_time": 805,
+        "elevation_difference": -78.4,
+        "moving_time": 763,
+        "split": 11,
+        "average_speed": 1.24,
+        "average_grade_adjusted_speed": 1.13,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1322.8,
+        "elapsed_time": 1035,
+        "elevation_difference": -74.5,
+        "moving_time": 3,
+        "split": 12,
+        "average_speed": 1.28,
+        "average_grade_adjusted_speed": 1.14,
+        "pace_zone": 0
+      },
+      {
+        "distance": 676.7,
+        "elapsed_time": 527,
+        "elevation_difference": -56.5,
+        "moving_time": 509,
+        "split": 13,
+        "average_speed": 1.28,
+        "average_grade_adjusted_speed": 1.15,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1000.4,
+        "elapsed_time": 827,
+        "elevation_difference": -11.4,
+        "moving_time": 766,
+        "split": 14,
+        "average_speed": 1.21,
+        "average_grade_adjusted_speed": 1.21,
+        "pace_zone": 0
+      },
+      {
+        "distance": 152.6,
+        "elapsed_time": 352,
+        "elevation_difference": 1,
+        "moving_time": 115,
+        "split": 15,
+        "average_speed": 0.43,
+        "average_grade_adjusted_speed": 0.44,
+        "pace_zone": 0
+      }
+    ],
+    "splits_standard": [
+      {
+        "distance": 1609.9,
+        "elapsed_time": 5233,
+        "elevation_difference": 478.8,
+        "moving_time": 2164,
+        "split": 1,
+        "average_speed": 0.31,
+        "average_grade_adjusted_speed": 0.97,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1611.2,
+        "elapsed_time": 3489,
+        "elevation_difference": 263.9,
+        "moving_time": 2097,
+        "split": 2,
+        "average_speed": 0.46,
+        "average_grade_adjusted_speed": 0.96,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1607.2,
+        "elapsed_time": 1889,
+        "elevation_difference": 155.6,
+        "moving_time": 1775,
+        "split": 3,
+        "average_speed": 0.85,
+        "average_grade_adjusted_speed": 1.33,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1612.4,
+        "elapsed_time": 5001,
+        "elevation_difference": -132.7,
+        "moving_time": 1863,
+        "split": 4,
+        "average_speed": 0.32,
+        "average_grade_adjusted_speed": 0.61,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1606.4,
+        "elapsed_time": 3383,
+        "elevation_difference": -408.9,
+        "moving_time": 2152,
+        "split": 5,
+        "average_speed": 0.47,
+        "average_grade_adjusted_speed": 0.68,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1611.4,
+        "elapsed_time": 2088,
+        "elevation_difference": -114.1,
+        "moving_time": 1607,
+        "split": 6,
+        "average_speed": 0.77,
+        "average_grade_adjusted_speed": 0.77,
+        "pace_zone": 0
+      },
+      {
+        "distance": 2666.4,
+        "elapsed_time": 2133,
+        "elevation_difference": -174.7,
+        "moving_time": 1039,
+        "split": 7,
+        "average_speed": 1.25,
+        "average_grade_adjusted_speed": 1.13,
+        "pace_zone": 0
+      },
+      {
+        "distance": 551.5,
+        "elapsed_time": 418,
+        "elevation_difference": -46.7,
+        "moving_time": 400,
+        "split": 8,
+        "average_speed": 1.32,
+        "average_grade_adjusted_speed": 1.18,
+        "pace_zone": 0
+      },
+      {
+        "distance": 1278.2,
+        "elapsed_time": 1288,
+        "elevation_difference": -20.2,
+        "moving_time": 990,
+        "split": 9,
+        "average_speed": 0.99,
+        "average_grade_adjusted_speed": 0.99,
+        "pace_zone": 0
+      }
+    ],
+    "laps": [
+      {
+        "id": 65746276916,
+        "resource_state": 2,
+        "name": "Lap 1",
+        "activity": {
+          "id": 18376823649,
+          "visibility": "everyone",
+          "resource_state": 1
+        },
+        "athlete": {
+          "id": 195438071,
+          "resource_state": 1
+        },
+        "elapsed_time": 24922,
+        "moving_time": 14143,
+        "start_date": "2026-04-08T10:07:22Z",
+        "start_date_local": "2026-04-08T11:07:22Z",
+        "distance": 14154.6,
+        "average_speed": 0.57,
+        "max_speed": 5.26667,
+        "lap_index": 1,
+        "split": 1,
+        "start_index": 0,
+        "end_index": 4138,
+        "total_elevation_gain": 1068.8,
+        "device_watts": false
+      }
+    ],
+    "photos": {
+      "primary": {
+        "unique_id": "ef285153-167b-462a-a9c2-f5631b729b22",
+        "urls": {
+          "100": "https://dgtzuqphqg23d.cloudfront.net/9b0t2pptWAPoLYzkj7104GZbowRELcJKxgLNzAkPOK4-128x96.jpg",
+          "600": "https://dgtzuqphqg23d.cloudfront.net/9b0t2pptWAPoLYzkj7104GZbowRELcJKxgLNzAkPOK4-768x576.jpg"
+        },
+        "source": 1,
+        "media_type": 1
+      },
+      "use_primary_photo": true,
+      "count": 2
+    },
+    "stats_visibility": [
+      {
+        "type": "heart_rate",
+        "visibility": "everyone"
+      },
+      {
+        "type": "pace",
+        "visibility": "everyone"
+      },
+      {
+        "type": "power",
+        "visibility": "everyone"
+      },
+      {
+        "type": "speed",
+        "visibility": "everyone"
+      },
+      {
+        "type": "calories",
+        "visibility": "everyone"
+      }
+    ],
+    "hide_from_home": false,
+    "embed_token": "5ed9c851789b166b85731ac91fa5f52a4ea2dcf1",
+    "private_note": "",
+    "available_zones": []
+  }
+}

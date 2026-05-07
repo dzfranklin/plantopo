@@ -6,10 +6,10 @@ import { getLog } from "../logger.js";
 import {
   STRAVA_AUTH_URL,
   STRAVA_SCOPE,
+  StravaApi,
   type StravaAthlete,
   StravaAthleteSchema,
-  exchangeCodeForTokens,
-  revokeToken,
+  type StravaTokenResponse,
 } from "./strava.api.js";
 import { stravaConnection, stravaOauthState } from "./strava.schema.js";
 
@@ -44,7 +44,7 @@ export async function verifyStravaState(
 
 export async function upsertStravaConnection(
   userId: string,
-  tokenData: Awaited<ReturnType<typeof exchangeCodeForTokens>>,
+  tokenData: StravaTokenResponse,
 ) {
   const { athlete, access_token, refresh_token, expires_at } = tokenData;
   getLog().info(
@@ -107,11 +107,9 @@ export async function deleteStravaConnection(userId: string): Promise<boolean> {
 
   getLog().info({ userId }, "Strava connection deleted, revoking token");
   // Best-effort — revoke the token on Strava's side, don't block on failure.
-  revokeToken(deleted.accessToken)
+  await StravaApi.revokeToken(deleted.accessToken)
     .then(() => getLog().info({ userId }, "Strava token revoked"))
     .catch(err => getLog().error({ err }, "Strava token revocation failed"));
 
   return true;
 }
-
-export { exchangeCodeForTokens };

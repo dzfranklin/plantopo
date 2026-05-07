@@ -2,6 +2,7 @@ import { createServer } from "http";
 
 import { exportPrometheusMetrics } from "./jobs.js";
 import { logger } from "./logger.js";
+import { registry } from "./metrics-registry.js";
 
 export function createMetricsServer() {
   return createServer(async (req, res) => {
@@ -26,5 +27,9 @@ export function createMetricsServer() {
 }
 
 async function getMetrics(): Promise<string> {
-  return exportPrometheusMetrics();
+  const [bullmq, app] = await Promise.all([
+    exportPrometheusMetrics(),
+    registry.metrics(),
+  ]);
+  return [bullmq, app].filter(Boolean).join("\n");
 }

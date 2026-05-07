@@ -1,10 +1,32 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { CircuitBreaker, CircuitOpenError } from "../circuit-breaker.js";
 import { db } from "../db.js";
 import { env } from "../env.js";
 import { getLog } from "../logger.js";
 import { stravaConnection } from "./strava.schema.js";
+
+export class StravaApiError extends Error {
+  status: number;
+  body?: string;
+  constructor(status: number, body?: string, cause?: unknown) {
+    super(`Strava API error: ${status} ${body ?? ""}`, { cause });
+    this.status = status;
+    this.body = body;
+  }
+
+  static async fromResponse(response: Response): Promise<StravaApiError> {
+    let body: string | undefined;
+    try {
+      body = await response.text();
+      if (body.length > 100) body = body.slice(0, 100) + "...";
+    } catch {
+      body = undefined;
+    }
+    return new StravaApiError(response.status, body);
+  }
+}
 
 // -- Zod schemas --
 
@@ -23,6 +45,8 @@ export const StravaTokenResponseSchema = z.object({
   expires_at: z.number(),
   athlete: StravaAthleteSchema,
 });
+
+export type StravaTokenResponse = z.infer<typeof StravaTokenResponseSchema>;
 
 const LatLngSchema = z.tuple([z.number(), z.number()]).nullable();
 
@@ -73,112 +97,55 @@ export const SummaryActivitySchema = z.discriminatedUnion("manual", [
 
 export type SummaryActivity = z.infer<typeof SummaryActivitySchema>;
 
+const ActivityPhotoSchema = z.looseObject({
+  unique_id: z.string(),
+  uploaded_at: z.string(),
+  created_at: z.iso.datetime(),
+  // Strava appends Z but the value is already local time, not UTC
+  created_at_local: z.iso.datetime().transform(s => s.replace(/Z$/, "")),
+  urls: z.looseObject({
+    "2048": z.url(), // The largest size available
+  }),
+  sizes: z.looseObject({
+    // [width, height] indicating aspect ratio, not actual dimensions
+    "2048": z.tuple([z.number(), z.number()]),
+  }),
+  default_photo: z.boolean(),
+});
+
+export type ActivityPhoto = z.infer<typeof ActivityPhotoSchema>;
+
 // -- OAuth helpers --
 
 export const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
 export const STRAVA_SCOPE = "read,activity:read_all,activity:write";
 
-async function refreshAccessToken(
-  userId: string,
-  refreshToken: string,
-): Promise<string> {
-  getLog().info({ userId }, "Refreshing Strava access token");
-  const response = await fetch("https://www.strava.com/oauth/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: env.STRAVA_CLIENT_ID,
-      client_secret: env.STRAVA_CLIENT_SECRET,
-      grant_type: "refresh_token",
-      refresh_token: refreshToken,
-    }),
-  });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Strava token refresh failed: ${response.status} ${body}`);
+// Trip the circuit open at 95% usage on either window, or on 429.
+function shouldTripCircuitBreaker(response: Response): boolean {
+  if (response.status === 429) return true;
+  for (const [usageHeader, limitHeader] of [
+    ["x-ratelimit-usage", "x-ratelimit-limit"],
+    ["x-readratelimit-usage", "x-readratelimit-limit"],
+  ] as const) {
+    const usage = response.headers.get(usageHeader);
+    const limit = response.headers.get(limitHeader);
+    if (!usage || !limit) continue;
+    const usageParts = usage.split(",").map(Number);
+    const limitParts = limit.split(",").map(Number);
+    for (let i = 0; i < usageParts.length; i++) {
+      const u = usageParts[i]!;
+      const l = limitParts[i];
+      if (l && u / l >= 0.95) return true;
+    }
   }
-  const data = z
-    .object({
-      access_token: z.string(),
-      refresh_token: z.string(),
-      expires_at: z.number(),
-    })
-    .parse(await response.json());
-
-  await db
-    .update(stravaConnection)
-    .set({
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      accessTokenExpiresAt: new Date(data.expires_at * 1000),
-      updatedAt: new Date(),
-    })
-    .where(eq(stravaConnection.userId, userId));
-
-  getLog().info({ userId }, "Strava access token refreshed");
-  return data.access_token;
+  return false;
 }
 
-async function getAccessToken(appUserId: string): Promise<string> {
-  const [row] = await db
-    .select({
-      accessToken: stravaConnection.accessToken,
-      refreshToken: stravaConnection.refreshToken,
-      accessTokenExpiresAt: stravaConnection.accessTokenExpiresAt,
-    })
-    .from(stravaConnection)
-    .where(eq(stravaConnection.userId, appUserId))
-    .limit(1);
-
-  if (!row) throw new Error(`No Strava connection for user ${appUserId}`);
-
-  // Refresh if expiring within 5 minutes.
-  if (row.accessTokenExpiresAt.getTime() - Date.now() < 5 * 60 * 1000) {
-    return refreshAccessToken(appUserId, row.refreshToken);
-  }
-  return row.accessToken;
-}
-
-// -- API calls --
-
-export async function exchangeCodeForTokens(
-  code: string,
-): Promise<z.infer<typeof StravaTokenResponseSchema>> {
-  getLog().info("Exchanging Strava authorization code for tokens");
-  const response = await fetch("https://www.strava.com/oauth/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: env.STRAVA_CLIENT_ID,
-      client_secret: env.STRAVA_CLIENT_SECRET,
-      code,
-      grant_type: "authorization_code",
-    }),
-  });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Strava token exchange failed: ${response.status} ${body}`);
-  }
-  const data = StravaTokenResponseSchema.parse(await response.json());
-  getLog().info(
-    { athleteId: data.athlete.id },
-    "Strava token exchange succeeded",
-  );
-  return data;
-}
-
-export async function revokeToken(accessToken: string): Promise<void> {
-  const response = await fetch(
-    `https://www.strava.com/oauth/deauthorize?access_token=${encodeURIComponent(accessToken)}`,
-    { method: "POST" },
-  );
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(
-      `Strava token revocation failed: ${response.status} ${body}`,
-    );
-  }
-}
+const stravaCircuitBreaker = new CircuitBreaker(
+  "strava",
+  shouldTripCircuitBreaker,
+  { baseDelayMs: 10_000, maxDelayMs: 1000 * 60 * 60 },
+);
 
 const DetailedSegmentEffortSchema = z.looseObject({
   id: z.number(),
@@ -216,23 +183,6 @@ export const DetailedActivitySchema = z.discriminatedUnion("manual", [
 
 export type DetailedActivity = z.infer<typeof DetailedActivitySchema>;
 
-export async function getActivity(
-  appUserId: string,
-  activityId: number,
-): Promise<DetailedActivity> {
-  const accessToken = await getAccessToken(appUserId);
-  getLog().info({ userId: appUserId, activityId }, "Fetching Strava activity");
-  const response = await fetch(
-    `https://www.strava.com/api/v3/activities/${activityId}?include_all_efforts=true`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
-  );
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Strava activity fetch failed: ${response.status} ${body}`);
-  }
-  return DetailedActivitySchema.parse(await response.json());
-}
-
 export const ListActivitiesInputSchema = z.object({
   before: z.int().optional(),
   after: z.int().optional(),
@@ -240,36 +190,222 @@ export const ListActivitiesInputSchema = z.object({
   perPage: z.int().min(1).optional(),
 });
 
-export async function listActivities(
-  appUserId: string,
-  params: z.infer<typeof ListActivitiesInputSchema>,
-): Promise<SummaryActivity[]> {
-  const accessToken = await getAccessToken(appUserId);
-  const url = new URL("https://www.strava.com/api/v3/athlete/activities");
-  if (params.before !== undefined)
-    url.searchParams.set("before", String(params.before));
-  if (params.after !== undefined)
-    url.searchParams.set("after", String(params.after));
-  if (params.page !== undefined)
-    url.searchParams.set("page", String(params.page));
-  if (params.perPage !== undefined)
-    url.searchParams.set("per_page", String(params.perPage));
+// -- Token store --
 
-  getLog().info({ userId: appUserId, params }, "Fetching Strava activities");
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!response.ok) {
-    const body = (await response.text()).slice(0, 100);
-    throw new Error(
-      `Strava activities fetch failed: ${response.status} ${body}`,
+export interface TokenStore {
+  getTokens(userId: string): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    accessTokenExpiresAt: Date;
+  } | null>;
+  updateTokens(
+    userId: string,
+    tokens: {
+      accessToken: string;
+      refreshToken: string;
+      accessTokenExpiresAt: Date;
+    },
+  ): Promise<void>;
+}
+
+export const dbTokenStore: TokenStore = {
+  async getTokens(userId) {
+    const [row] = await db
+      .select({
+        accessToken: stravaConnection.accessToken,
+        refreshToken: stravaConnection.refreshToken,
+        accessTokenExpiresAt: stravaConnection.accessTokenExpiresAt,
+      })
+      .from(stravaConnection)
+      .where(eq(stravaConnection.userId, userId))
+      .limit(1);
+    return row ?? null;
+  },
+
+  async updateTokens(userId, tokens) {
+    await db
+      .update(stravaConnection)
+      .set({
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        accessTokenExpiresAt: tokens.accessTokenExpiresAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(stravaConnection.userId, userId));
+  },
+};
+
+export class StravaApi {
+  private tokenStore: TokenStore;
+
+  constructor(tokenStore: TokenStore) {
+    this.tokenStore = tokenStore;
+  }
+
+  private static async stravaFetch(
+    input: string | URL | Request,
+    init?: RequestInit,
+  ): Promise<Response> {
+    let response: Response;
+    try {
+      response = await stravaCircuitBreaker.fetch(input, init);
+    } catch (err) {
+      if (err instanceof CircuitOpenError) {
+        throw new StravaApiError(429, "Circuit breaker open", err);
+      }
+      throw err;
+    }
+    if (!response.ok) throw await StravaApiError.fromResponse(response);
+    return response;
+  }
+
+  static async exchangeCodeForTokens(
+    code: string,
+  ): Promise<z.infer<typeof StravaTokenResponseSchema>> {
+    getLog().info("Exchanging Strava authorization code for tokens");
+    const response = await StravaApi.stravaFetch(
+      "https://www.strava.com/oauth/token",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: env.STRAVA_CLIENT_ID,
+          client_secret: env.STRAVA_CLIENT_SECRET,
+          code,
+          grant_type: "authorization_code",
+        }),
+      },
+    );
+
+    const data = StravaTokenResponseSchema.parse(await response.json());
+    getLog().info(
+      { athleteId: data.athlete.id },
+      "Strava token exchange succeeded",
+    );
+    return data;
+  }
+
+  static async revokeToken(accessToken: string): Promise<void> {
+    await StravaApi.stravaFetch(
+      `https://www.strava.com/oauth/deauthorize?access_token=${encodeURIComponent(accessToken)}`,
+      { method: "POST" },
     );
   }
-  const rawData = await response.json();
-  const data = z.array(SummaryActivitySchema).parse(rawData);
-  getLog().info(
-    { userId: appUserId, count: data.length },
-    "Fetched Strava activities",
-  );
-  return data;
+
+  async refreshAccessToken(
+    userId: string,
+    refreshToken?: string,
+  ): Promise<string> {
+    getLog().info({ userId }, "Refreshing Strava access token");
+
+    refreshToken ??= (await this.tokenStore.getTokens(userId))?.refreshToken;
+    if (!refreshToken) {
+      throw new Error(`No refresh token available for user ${userId}`);
+    }
+
+    const response = await StravaApi.stravaFetch(
+      "https://www.strava.com/oauth/token",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: env.STRAVA_CLIENT_ID,
+          client_secret: env.STRAVA_CLIENT_SECRET,
+          grant_type: "refresh_token",
+          refresh_token: refreshToken,
+        }),
+      },
+    );
+
+    const data = z
+      .object({
+        access_token: z.string(),
+        refresh_token: z.string(),
+        expires_at: z.number(),
+      })
+      .parse(await response.json());
+
+    await this.tokenStore.updateTokens(userId, {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      accessTokenExpiresAt: new Date(data.expires_at * 1000),
+    });
+
+    getLog().info({ userId }, "Strava access token refreshed");
+    return data.access_token;
+  }
+
+  private async getAccessToken(appUserId: string): Promise<string> {
+    const row = await this.tokenStore.getTokens(appUserId);
+    if (!row) throw new Error(`No Strava connection for user ${appUserId}`);
+
+    // Refresh if expiring within 5 minutes.
+    if (row.accessTokenExpiresAt.getTime() - Date.now() < 5 * 60 * 1000) {
+      return this.refreshAccessToken(appUserId, row.refreshToken);
+    }
+    return row.accessToken;
+  }
+
+  async getActivity(
+    appUserId: string,
+    activityId: number,
+  ): Promise<DetailedActivity> {
+    const accessToken = await this.getAccessToken(appUserId);
+    getLog().info(
+      { userId: appUserId, activityId },
+      "Fetching Strava activity",
+    );
+    const response = await StravaApi.stravaFetch(
+      `https://www.strava.com/api/v3/activities/${activityId}?include_all_efforts=true`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    );
+    return DetailedActivitySchema.parse(await response.json());
+  }
+
+  async listActivities(
+    appUserId: string,
+    params: z.infer<typeof ListActivitiesInputSchema>,
+  ): Promise<SummaryActivity[]> {
+    const accessToken = await this.getAccessToken(appUserId);
+    const url = new URL("https://www.strava.com/api/v3/athlete/activities");
+    if (params.before !== undefined)
+      url.searchParams.set("before", String(params.before));
+    if (params.after !== undefined)
+      url.searchParams.set("after", String(params.after));
+    if (params.page !== undefined)
+      url.searchParams.set("page", String(params.page));
+    if (params.perPage !== undefined)
+      url.searchParams.set("per_page", String(params.perPage));
+
+    getLog().info({ userId: appUserId, params }, "Fetching Strava activities");
+    const response = await StravaApi.stravaFetch(url.toString(), {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const rawData = await response.json();
+    const data = z.array(SummaryActivitySchema).parse(rawData);
+    getLog().info(
+      { userId: appUserId, count: data.length },
+      "Fetched Strava activities",
+    );
+    return data;
+  }
+
+  async getActivityPhotos(
+    appUserId: string,
+    activityId: number,
+  ): Promise<ActivityPhoto[]> {
+    const accessToken = await this.getAccessToken(appUserId);
+    const url = `https://www.strava.com/api/v3/activities/${activityId}/photos?size=2048`;
+    getLog().info(
+      { userId: appUserId, activityId },
+      "Fetching Strava activity photos",
+    );
+    const response = await StravaApi.stravaFetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const rawData = await response.json();
+    return z.array(ActivityPhotoSchema).parse(rawData);
+  }
 }
+
+export const stravaApi = new StravaApi(dbTokenStore);

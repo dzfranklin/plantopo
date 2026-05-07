@@ -1,0 +1,336 @@
+{
+  "url": "https://photon.komoot.io/api?q=Edinburgh&lang=en",
+  "method": "GET",
+  "status": 200,
+  "headers": {
+    "cache-control": "max-age=3600",
+    "connection": "keep-alive",
+    "content-encoding": "gzip",
+    "content-length": "1395",
+    "content-type": "application/json",
+    "date": "Thu, 07 May 2026 03:44:45 GMT",
+    "expires": "Thu, 07 May 2026 04:44:45 GMT",
+    "server": "nginx"
+  },
+  "body": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 1920901,
+          "osm_key": "place",
+          "osm_value": "city",
+          "type": "city",
+          "name": "Edinburgh",
+          "state": "Scotland",
+          "country": "United Kingdom",
+          "countrycode": "GB",
+          "extent": [-3.4495326, 56.0040837, -3.0749528, 55.8187919]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-3.1883749, 55.9533456]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 127349,
+          "osm_key": "place",
+          "osm_value": "town",
+          "type": "city",
+          "name": "Edinburgh",
+          "county": "Johnson",
+          "state": "Indiana",
+          "country": "United States",
+          "countrycode": "US",
+          "extent": [-85.9860022, 39.3690882, -85.9428073, 39.3321505]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-85.9666577, 39.3542176]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 7149998196,
+          "osm_key": "railway",
+          "osm_value": "station",
+          "type": "house",
+          "name": "Edinburgh Waverley",
+          "street": "South Ramp",
+          "locality": "Abbeyhill",
+          "district": "Old Town",
+          "city": "Edinburgh",
+          "state": "Scotland",
+          "country": "United Kingdom",
+          "postcode": "EH1 1QB",
+          "countrycode": "GB"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-3.1904199, 55.9519018]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "R",
+          "osm_id": 7379419,
+          "osm_key": "place",
+          "osm_value": "suburb",
+          "type": "district",
+          "name": "Edinburgh",
+          "state": "South Australia",
+          "country": "Australia",
+          "postcode": "5111",
+          "countrycode": "AU",
+          "extent": [138.604325, -34.6922233, 138.6668668, -34.7506929]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [138.6350042, -34.7191379]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 8987808514,
+          "osm_key": "natural",
+          "osm_value": "peak",
+          "type": "other",
+          "name": "Edinburgh",
+          "country": "Greenland",
+          "countrycode": "GL"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-25.2329471, 71.7272857]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 154048580,
+          "osm_key": "place",
+          "osm_value": "hamlet",
+          "type": "district",
+          "name": "Edinburgh",
+          "city": "Apple Creek",
+          "county": "Wayne",
+          "state": "Ohio",
+          "country": "United States",
+          "postcode": "44606",
+          "countrycode": "US"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-81.8440264, 40.7553341]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 158238008,
+          "osm_key": "place",
+          "osm_value": "hamlet",
+          "type": "district",
+          "name": "Edinburgh",
+          "county": "Hoke",
+          "state": "North Carolina",
+          "country": "United States",
+          "countrycode": "US"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-79.3100377, 34.9057191]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 1824462532,
+          "osm_key": "place",
+          "osm_value": "quarter",
+          "type": "locality",
+          "name": "Edinburgh",
+          "district": "Lendore",
+          "city": "Chaguanas",
+          "country": "Trinidad and Tobago",
+          "postcode": "500125",
+          "countrycode": "TT"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-61.3996517, 10.5057903]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 4135961531,
+          "osm_key": "place",
+          "osm_value": "hamlet",
+          "type": "district",
+          "name": "Edinburgh",
+          "city": "Stewartville",
+          "county": "Stewartville - Cornelia Ida",
+          "state": "Essequibo Islands",
+          "country": "Guyana",
+          "countrycode": "GY"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-58.2809403, 6.8670102]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 154210110,
+          "osm_key": "place",
+          "osm_value": "hamlet",
+          "type": "district",
+          "name": "Edinburgh",
+          "county": "Richland",
+          "state": "South Carolina",
+          "country": "United States",
+          "postcode": "29223",
+          "countrycode": "US"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-80.9484225, 34.0851529]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 403150963,
+          "osm_key": "aeroway",
+          "osm_value": "aerodrome",
+          "type": "house",
+          "name": "Edinburgh Airport",
+          "street": "Crawford Green",
+          "city": "Kirkliston",
+          "state": "Scotland",
+          "country": "United Kingdom",
+          "postcode": "EH29 9LD",
+          "countrycode": "GB",
+          "extent": [-3.3991191, 55.959483, -3.3238111, 55.940682]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-3.359508, 55.9501289]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 4301292,
+          "osm_key": "historic",
+          "osm_value": "castle",
+          "type": "house",
+          "name": "Edinburgh Castle",
+          "street": "Castlehill",
+          "locality": "Abbeyhill",
+          "district": "Old Town",
+          "city": "Edinburgh",
+          "state": "Scotland",
+          "country": "United Kingdom",
+          "postcode": "EH1 2NG",
+          "countrycode": "GB",
+          "extent": [-3.2025402, 55.9494453, -3.1982586, 55.9479055]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-3.2004175, 55.9486867]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 27279873,
+          "osm_key": "building",
+          "osm_value": "university",
+          "type": "house",
+          "name": "Edinburgh College of Art",
+          "street": "Keir Street",
+          "locality": "Lauriston",
+          "district": "Tollcross",
+          "city": "Edinburgh",
+          "state": "Scotland",
+          "country": "United Kingdom",
+          "postcode": "EH1 2HU",
+          "countrycode": "GB",
+          "extent": [-3.1999312, 55.9464325, -3.1974806, 55.9456475]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-3.1986337, 55.9460296]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "N",
+          "osm_id": 5353113956,
+          "osm_key": "railway",
+          "osm_value": "station",
+          "type": "house",
+          "name": "Edinburgh Gateway",
+          "street": "Glasgow Road",
+          "locality": "Maybury",
+          "city": "Edinburgh",
+          "state": "Scotland",
+          "country": "United Kingdom",
+          "postcode": "EH12 9GF",
+          "countrycode": "GB"
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-3.3201335, 55.9409388]
+        }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "osm_type": "W",
+          "osm_id": 320954869,
+          "osm_key": "amenity",
+          "osm_value": "theatre",
+          "type": "house",
+          "housenumber": "18-22",
+          "name": "Edinburgh Playhouse",
+          "street": "Picardy Place",
+          "locality": "Greenside",
+          "district": "New Town/Broughton",
+          "city": "Edinburgh",
+          "state": "Scotland",
+          "country": "United Kingdom",
+          "postcode": "EH1 3AA",
+          "countrycode": "GB",
+          "extent": [-3.1855855, 55.9570606, -3.1843244, 55.9563884]
+        },
+        "geometry": {
+          "type": "Point",
+          "coordinates": [-3.1849634, 55.9567521]
+        }
+      }
+    ]
+  }
+}

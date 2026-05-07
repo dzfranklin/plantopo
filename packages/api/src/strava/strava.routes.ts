@@ -4,11 +4,11 @@ import type { Router } from "express";
 import { auth } from "../auth/auth.js";
 import { env } from "../env.js";
 import { getLog } from "../logger.js";
+import { StravaApi } from "./strava.api.js";
 import {
   STRAVA_AUTH_URL,
   STRAVA_SCOPE,
   createStravaState,
-  exchangeCodeForTokens,
   upsertStravaConnection,
   verifyStravaState,
 } from "./strava.service.js";
@@ -71,7 +71,7 @@ export function registerStravaRoutes(app: Router) {
 
     let tokenData;
     try {
-      tokenData = await exchangeCodeForTokens(code);
+      tokenData = await StravaApi.exchangeCodeForTokens(code);
     } catch (err) {
       log.error({ err }, "Strava token exchange failed");
       res.redirect("/settings/account?strava=error");

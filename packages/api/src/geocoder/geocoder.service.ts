@@ -3,6 +3,7 @@ import z from "zod";
 
 import { PointSchema } from "@pt/shared";
 
+import { CircuitBreaker, CircuitOpenError } from "../circuit-breaker.js";
 import { env } from "../env.js";
 import { getLog } from "../logger.js";
 
@@ -14,69 +15,23 @@ if (env.PHOTON) {
   photonEndpoint = "https://photon.komoot.io";
 }
 
-// Circuit breaker state for Photon 503 responses
-const circuitBreaker = {
-  isOpen: false,
-  openedAt: 0,
-  failureCount: 0,
-  baseDelayMs: 1_000,
-  maxDelayMs: 600_000,
-};
-
-function getBackoffDelayMs(): number {
-  return Math.min(
-    circuitBreaker.baseDelayMs * 2 ** (circuitBreaker.failureCount - 1),
-    circuitBreaker.maxDelayMs,
-  );
-}
-
-function isCircuitOpen(): boolean {
-  if (!circuitBreaker.isOpen) return false;
-  if (Date.now() - circuitBreaker.openedAt >= getBackoffDelayMs()) {
-    // Allow a probe request through (half-open)
-    circuitBreaker.isOpen = false;
-    return false;
-  }
-  return true;
-}
-
-function recordFailure(): void {
-  circuitBreaker.failureCount++;
-  circuitBreaker.isOpen = true;
-  circuitBreaker.openedAt = Date.now();
-  getLog().warn(
-    {
-      failureCount: circuitBreaker.failureCount,
-      retryInMs: getBackoffDelayMs(),
-    },
-    "Photon circuit breaker opened",
-  );
-}
-
-function recordSuccess(): void {
-  if (circuitBreaker.failureCount > 0) {
-    circuitBreaker.failureCount = 0;
-    circuitBreaker.isOpen = false;
-  }
-}
+const photonCircuitBreaker = new CircuitBreaker(
+  "photon",
+  response => response.status === 503,
+);
 
 async function photonFetch(url: string, init?: RequestInit): Promise<Response> {
-  if (isCircuitOpen()) {
-    throw new TRPCError({
-      code: "SERVICE_UNAVAILABLE",
-      message: "Geocoding service is temporarily unavailable",
-    });
+  try {
+    return await photonCircuitBreaker.fetch(url, init);
+  } catch (err) {
+    if (err instanceof CircuitOpenError) {
+      throw new TRPCError({
+        code: "SERVICE_UNAVAILABLE",
+        message: "Geocoding service is temporarily unavailable",
+      });
+    }
+    throw err;
   }
-  const response = await fetch(url, init);
-  if (response.status === 503) {
-    recordFailure();
-    throw new TRPCError({
-      code: "SERVICE_UNAVAILABLE",
-      message: "Geocoding service is temporarily unavailable",
-    });
-  }
-  recordSuccess();
-  return response;
 }
 
 const TypeSchema = z.enum([
