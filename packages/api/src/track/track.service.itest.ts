@@ -83,36 +83,32 @@ const nullTileProvider = async () => null;
 describe("uploadRecordedTrack", () => {
   it("enqueues elevation population job", async () => {
     await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
-    expect(getEnqueuedJobs()).toContainEqual(
-      expect.objectContaining({ name: "recordedTrack.populateDemElevation" }),
-    );
+    expect(
+      await getEnqueuedJobs("recordedTrack.populateDemElevation"),
+    ).toHaveLength(1);
   });
 
   it("enqueues preview images job", async () => {
     await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
-    expect(getEnqueuedJobs()).toContainEqual(
-      expect.objectContaining({ name: "recordedTrack.populatePreviewImages" }),
-    );
+    expect(
+      await getEnqueuedJobs("recordedTrack.populatePreviewImages"),
+    ).toHaveLength(1);
   });
 
   it("does not enqueue elevation population job if already exists", async () => {
     await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
     await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
     expect(
-      getEnqueuedJobs().filter(
-        j => j.name === "recordedTrack.populateDemElevation",
-      ).length,
-    ).toEqual(1);
+      await getEnqueuedJobs("recordedTrack.populateDemElevation"),
+    ).toHaveLength(1);
   });
 
   it("does not enqueue preview images job if already exists", async () => {
     await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
     await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
     expect(
-      getEnqueuedJobs().filter(
-        j => j.name === "recordedTrack.populatePreviewImages",
-      ).length,
-    ).toEqual(1);
+      await getEnqueuedJobs("recordedTrack.populatePreviewImages"),
+    ).toHaveLength(1);
   });
 
   it("is idempotent on re-upload", async () => {

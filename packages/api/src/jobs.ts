@@ -1,4 +1,10 @@
-import { type Job, type JobsOptions, Queue, Worker } from "bullmq";
+import {
+  type JobType,
+  type JobsOptions,
+  Queue,
+  type Job as RawJob,
+  Worker,
+} from "bullmq";
 import { Redis as IORedis } from "ioredis";
 
 import { env } from "./env.js";
@@ -11,23 +17,23 @@ import {
   populatePreviewImages,
 } from "./track/track.service.js";
 
-type JobName = keyof typeof jobRegistry;
-type JobData<Name extends JobName = JobName> = Parameters<
-  (typeof jobRegistry)[Name]["handler"]
->[0];
-
 export interface JobMeta {
   enqueuedByReqId?: string;
   enqueuedByReqUserId?: string;
 }
 
-type QueueJobData<TData = unknown> = { data: TData; meta: JobMeta };
-type AppQueue = Queue<QueueJobData>;
-type AppWorker = Worker<QueueJobData>;
+export type JobName = keyof typeof jobRegistry;
+export type JobData<Name extends JobName = JobName> = Parameters<
+  (typeof jobRegistry)[Name]["handler"]
+>[0];
 
-let redisConnection: IORedis;
-let cpuQueue: AppQueue;
-let defaultQueue: AppQueue;
+export type JobPayload<Name extends JobName = JobName> = {
+  data: JobData<Name>;
+  meta: JobMeta;
+};
+export type Job<Name extends JobName = JobName> = RawJob<JobPayload<Name>>;
+
+type AppWorker = Worker<JobPayload>;
 
 const defaultJobOptions = {
   attempts: 3,
@@ -36,26 +42,22 @@ const defaultJobOptions = {
   removeOnFail: { count: 500 },
 };
 
-if (process.env.NODE_ENV === "test") {
-  const { testQueue } = await import("./test/helpers.js");
-  cpuQueue = testQueue("plantopo.cpu");
-  defaultQueue = testQueue("plantopo.default");
-} else {
-  redisConnection = new IORedis(env.REDIS_URL, { maxRetriesPerRequest: null });
-  redisConnection.on("error", (err: unknown) => {
-    logger.error({ err }, "Redis connection error");
-  });
+const redisConnection = new IORedis(env.REDIS_URL, {
+  maxRetriesPerRequest: null,
+});
+redisConnection.on("error", (err: unknown) => {
+  logger.error({ err }, "Redis connection error");
+});
 
-  cpuQueue = new Queue("plantopo.cpu", {
-    connection: redisConnection,
-    defaultJobOptions,
-  });
+const cpuQueue = new Queue("plantopo.cpu", {
+  connection: redisConnection,
+  defaultJobOptions,
+});
 
-  defaultQueue = new Queue("plantopo.default", {
-    connection: redisConnection,
-    defaultJobOptions,
-  });
-}
+const defaultQueue = new Queue("plantopo.default", {
+  connection: redisConnection,
+  defaultJobOptions,
+});
 
 export const jobRegistry = {
   "recordedTrack.populateDemElevation": {
@@ -82,7 +84,7 @@ export async function enqueueJob<Name extends JobName>(
   name: Name,
   data: JobData<Name>,
   opts?: JobsOptions,
-): Promise<Job<QueueJobData<JobData<Name>>>> {
+): Promise<Job> {
   const def = jobRegistry[name];
   if (!def) throw new Error(`Unknown job: ${name}`);
 
@@ -99,7 +101,7 @@ export async function enqueueJob<Name extends JobName>(
     "Job enqueued",
   );
 
-  return job as Job<QueueJobData<JobData<Name>>>;
+  return job as Job<Name>;
 }
 
 export async function resetJobsByName<Name extends JobName>(
@@ -132,7 +134,7 @@ function startQueueWorker(queueName: string, concurrency: number): AppWorker {
   const worker: AppWorker = new Worker(
     queueName,
     async job => {
-      const { meta, data } = job.data as QueueJobData<JobData>;
+      const { meta, data } = job.data as JobPayload;
 
       const jobCtx: JobContext = {
         id: job.id!,
@@ -202,4 +204,18 @@ export async function exportPrometheusMetrics() {
       defaultQueue.exportPrometheusMetrics(),
     ])
   ).join("\n");
+}
+
+export async function listJobs<Name extends JobName>(
+  name: Name,
+  types?: JobType | JobType[],
+  start?: number,
+  end?: number,
+): Promise<Job<Name>[]> {
+  const def = jobRegistry[name];
+  if (!def) throw new Error(`Unknown job: ${name}`);
+
+  const queue = def.queue;
+  const jobs = await queue.getJobs(types, start, end);
+  return jobs.filter(job => job.name === name) as Job[];
 }
