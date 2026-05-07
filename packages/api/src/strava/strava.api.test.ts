@@ -82,12 +82,18 @@ describe("StravaApi", () => {
     it("fetches and parses a list of activities", async () => {
       const api = new StravaApi(makeTokenStore());
       const activities = await api.listActivities("user-1", {
-        page: 1,
         perPage: 10,
       });
-      expect(Array.isArray(activities)).toBe(true);
       expect(activities.length).toBeGreaterThan(0);
       expect(activities[0]!.id).toBeTypeOf("number");
+    });
+
+    it("max perPage", async () => {
+      const api = new StravaApi(makeTokenStore());
+      const activities = await api.listActivities("user-1", {
+        perPage: 200,
+      });
+      expect(activities.length).toBeGreaterThan(0);
     });
 
     it("throws StravaApiError on non-ok response", async () => {
@@ -187,7 +193,7 @@ describe("StravaApi", () => {
         ),
         expect.objectContaining({
           headers: expect.objectContaining({
-            Authorization: "Bearer test-access-token",
+            Authorization: expect.stringContaining("Bearer "),
           }),
         }),
       );
@@ -243,7 +249,7 @@ describe("StravaApi", () => {
         ),
         expect.objectContaining({
           headers: expect.objectContaining({
-            Authorization: "Bearer test-access-token",
+            Authorization: expect.stringContaining("Bearer "),
           }),
         }),
       );

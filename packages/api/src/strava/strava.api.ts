@@ -244,8 +244,7 @@ export type DetailedActivity = z.infer<typeof DetailedActivitySchema>;
 export const ListActivitiesInputSchema = z.object({
   before: z.int().optional(),
   after: z.int().optional(),
-  page: z.int().min(1).optional(),
-  perPage: z.int().min(1).optional(),
+  perPage: z.int().min(1).max(200).optional(),
 });
 
 // -- Token store --
@@ -306,7 +305,7 @@ export class StravaApi {
   ): Promise<Response> {
     let response: Response;
     try {
-      response = await stravaCircuitBreaker.fetch(input, init);
+      response = await stravaCircuitBreaker.fetch(input.toString(), init);
     } catch (err) {
       if (err instanceof CircuitOpenError) {
         throw new StravaApiError(429, "Circuit breaker open", err);
@@ -430,13 +429,11 @@ export class StravaApi {
       url.searchParams.set("before", String(params.before));
     if (params.after !== undefined)
       url.searchParams.set("after", String(params.after));
-    if (params.page !== undefined)
-      url.searchParams.set("page", String(params.page));
     if (params.perPage !== undefined)
       url.searchParams.set("per_page", String(params.perPage));
 
     getLog().info({ userId: appUserId, params }, "Fetching Strava activities");
-    const response = await StravaApi.stravaFetch(url.toString(), {
+    const response = await StravaApi.stravaFetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const rawData = await response.json();
@@ -483,7 +480,7 @@ export class StravaApi {
       { userId: appUserId, activityId, types },
       "Fetching Strava activity streams",
     );
-    const response = await StravaApi.stravaFetch(url.toString(), {
+    const response = await StravaApi.stravaFetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const rawData = await response.json();
