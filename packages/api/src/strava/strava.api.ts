@@ -115,6 +115,64 @@ const ActivityPhotoSchema = z.looseObject({
 
 export type ActivityPhoto = z.infer<typeof ActivityPhotoSchema>;
 
+const StreamBaseSchema = z.looseObject({
+  original_size: z.number(),
+  resolution: z.enum(["low", "medium", "high"]),
+  series_type: z.enum(["distance", "time"]),
+});
+
+const TimeStreamSchema = StreamBaseSchema.extend({
+  data: z.array(z.int()), // in seconds
+});
+const DistanceStreamSchema = StreamBaseSchema.extend({
+  data: z.array(z.number()), // in meters
+});
+const LatLngStreamSchema = StreamBaseSchema.extend({
+  data: z.array(z.tuple([z.number(), z.number()])), // [lat, lng]
+});
+const AltitudeStreamSchema = StreamBaseSchema.extend({
+  data: z.array(z.number()), // in meters
+});
+const SmoothVelocityStreamSchema = StreamBaseSchema.extend({
+  data: z.array(z.number()), // in m/s
+});
+const MovingStreamSchema = StreamBaseSchema.extend({
+  data: z.array(z.boolean()),
+});
+const SmoothGradeStreamSchema = StreamBaseSchema.extend({
+  data: z.array(z.number()), // in percent
+});
+const HeartrateStreamSchema = StreamBaseSchema.extend({
+  data: z.array(z.number()), // in bpm
+});
+const CadenceStreamSchema = StreamBaseSchema.extend({
+  data: z.array(z.number()), // in rpm
+});
+const PowerStreamSchema = StreamBaseSchema.extend({
+  data: z.array(z.number()), // in watts
+});
+const TemperatureStreamSchema = StreamBaseSchema.extend({
+  data: z.array(z.number()), // in celsius
+});
+
+const StreamResponseSchema = z.object({
+  time: TimeStreamSchema.optional(),
+  distance: DistanceStreamSchema.optional(),
+  latlng: LatLngStreamSchema.optional(),
+  altitude: AltitudeStreamSchema.optional(),
+  velocity_smooth: SmoothVelocityStreamSchema.optional(),
+  moving: MovingStreamSchema.optional(),
+  grade_smooth: SmoothGradeStreamSchema.optional(),
+  heartrate: HeartrateStreamSchema.optional(),
+  cadence: CadenceStreamSchema.optional(),
+  watts: PowerStreamSchema.optional(),
+  temp: TemperatureStreamSchema.optional(),
+});
+
+export type StreamResponse = z.infer<typeof StreamResponseSchema>;
+
+export type StreamType = keyof StreamResponse;
+
 // -- OAuth helpers --
 
 export const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
@@ -406,6 +464,30 @@ export class StravaApi {
     });
     const rawData = await response.json();
     return z.array(ActivityPhotoSchema).parse(rawData);
+  }
+
+  async getActivityStreams(
+    appUserId: string,
+    activityId: number,
+    types: StreamType[],
+  ): Promise<StreamResponse> {
+    const accessToken = await this.getAccessToken(appUserId);
+
+    const url = new URL(
+      `https://www.strava.com/api/v3/activities/${activityId}/streams`,
+    );
+    url.searchParams.set("keys", types.join(","));
+    url.searchParams.set("key_by_type", "true");
+
+    getLog().info(
+      { userId: appUserId, activityId, types },
+      "Fetching Strava activity streams",
+    );
+    const response = await StravaApi.stravaFetch(url.toString(), {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const rawData = await response.json();
+    return StreamResponseSchema.parse(rawData);
   }
 }
 

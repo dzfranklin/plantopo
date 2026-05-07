@@ -139,6 +139,34 @@ describe("StravaApi", () => {
     });
   });
 
+  describe("getActivityStreams", () => {
+    it("returns some streams for gpx upload", async () => {
+      const api = new StravaApi(makeTokenStore());
+      const streams = await api.getActivityStreams("user-1", 18376823649, [
+        "time",
+        "distance",
+        "latlng",
+        "altitude",
+        "velocity_smooth",
+        "heartrate",
+        "cadence",
+        "watts",
+        "temp",
+        "moving",
+        "grade_smooth",
+      ]);
+
+      expect(streams.time).toBeDefined();
+      expect(streams.time?.data.length).toBeGreaterThan(0);
+
+      expect(streams.latlng).toBeDefined();
+      expect(streams.latlng?.data.length).toBeGreaterThan(0);
+      expect(streams.latlng?.data[0]).toEqual(
+        expect.arrayContaining([expect.any(Number), expect.any(Number)]),
+      );
+    });
+  });
+
   describe("token handling", () => {
     it("uses the access token from the store", async () => {
       const mockFetch = vi
