@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTRPC } from "@/trpc";
 
 export default function MyPicturesPage() {
+  usePageTitle("My Pictures");
   const trpc = useTRPC();
   const { data: images } = useQuery(trpc.image.list.queryOptions());
 
