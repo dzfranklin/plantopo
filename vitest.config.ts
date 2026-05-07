@@ -39,7 +39,7 @@ export default defineConfig({
         test: {
           name: "api-integration",
           include: ["packages/api/src/**/*.itest.ts"],
-          globalSetup: ["packages/api/src/test/globalSetup.ts"],
+          globalSetup: ["packages/api/src/test/global-setup.integration.ts"],
           setupFiles: ["packages/api/src/test/setup.integration.ts"],
           environment: "node",
           fileParallelism: false,

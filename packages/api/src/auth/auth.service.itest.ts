@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
 import { db } from "../db.js";
-import { TEST_USER } from "../test/setupDb.js";
+import { TEST_USER } from "../test/setup-db.js";
 import { user } from "./auth.schema.js";
 import { authorizeTileRequest } from "./auth.service.js";
 

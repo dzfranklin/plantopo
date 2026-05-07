@@ -4,7 +4,7 @@ import { type LocalRecordedTrack, decodePolyline } from "@pt/shared";
 
 import db from "../db.js";
 import { getEnqueuedJobs } from "../test/helpers.js";
-import { TEST_USER } from "../test/setupDb.js";
+import { TEST_USER } from "../test/setup-db.js";
 import { recordedTrack } from "./track.schema.js";
 import {
   getRecordedTrack,

@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { expect, it } from "vitest";
 
-import { TEST_USER } from "../test/setupDb.js";
+import { TEST_USER } from "../test/setup-db.js";
 import { generateExport } from "./export.service.js";
 
 it("generates zip with expected files", async () => {

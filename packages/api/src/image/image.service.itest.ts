@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import db from "../db.js";
-import { TEST_TRACK, TEST_USER2 } from "../test/setupDb.js";
+import { TEST_TRACK, TEST_USER2 } from "../test/setup-db.js";
 import { recordedTrack } from "../track/track.schema.js";
 import {
   type RequestUpload,
