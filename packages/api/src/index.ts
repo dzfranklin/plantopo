@@ -1,6 +1,7 @@
 import z from "zod";
 
 export type { AppRouter } from "./router.js";
+export type { ActivityListPage, SummaryActivity } from "./strava/strava.api.js";
 export type { auth } from "./auth/auth.js";
 export type { GeocodingFeature } from "./geocoder/geocoder.service.js";
 export type {

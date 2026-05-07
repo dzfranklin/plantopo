@@ -1,5 +1,5 @@
 {
-  "url": "https://www.strava.com/api/v3/activities/18376823649/streams?keys=time%2Cdistance%2Clatlng%2Caltitude%2Cvelocity_smooth%2Cheartrate%2Ccadence%2Cwatts%2Ctemp%2Cmoving%2Cgrade_smooth&key_by_type=true",
+  "url": "https://www.strava.com/api/v3/activities/18376823649/streams?keys=time%2Cdistance%2Clatlng%2Caltitude%2Cvelocity_smooth%2Cheartrate%2Ccadence%2Cwatts%2Ctemp%2Cmoving%2Cgrade_smooth&key_by_type=true&resolution=high",
   "method": "GET",
   "status": 200,
   "headers": {
@@ -7,14 +7,14 @@
     "content-encoding": "gzip",
     "content-length": "67990",
     "content-type": "application/json; charset=utf-8",
-    "date": "Thu, 07 May 2026 04:49:31 GMT",
+    "date": "Thu, 07 May 2026 06:42:33 GMT",
     "server": "istio-envoy",
     "vary": "Origin",
-    "via": "1.1 215e4a16b9afcb599baed4231992f516.cloudfront.net (CloudFront)",
-    "x-amz-cf-id": "Jn9jouRoaXAm4BKV-epiljELnEqHxurh4u44hOWnPlR-1eU2s69zQg==",
-    "x-amz-cf-pop": "AMS58-P6",
+    "via": "1.1 bc7c353da4431a6dd3688d01f8a48b98.cloudfront.net (CloudFront)",
+    "x-amz-cf-id": "bteCND3nrWlPPqNBWuOHtbzFnNGXj9ycMTGcuB8rOJsjAxpO5TZYVg==",
+    "x-amz-cf-pop": "FRA56-P13",
     "x-cache": "Miss from cloudfront",
-    "x-envoy-upstream-service-time": "58"
+    "x-envoy-upstream-service-time": "39"
   },
   "body": {
     "altitude": {

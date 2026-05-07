@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { Redis } from "ioredis";
 import { z } from "zod";
 
 import { CircuitBreaker, CircuitOpenError } from "../circuit-breaker.js";
@@ -6,6 +7,11 @@ import { db } from "../db.js";
 import { env } from "../env.js";
 import { getLog } from "../logger.js";
 import { stravaConnection } from "./strava.schema.js";
+
+export interface Cache {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, opts: { ex: number }): Promise<void>;
+}
 
 export class StravaApiError extends Error {
   status: number;
@@ -199,7 +205,7 @@ function shouldTripCircuitBreaker(response: Response): boolean {
   return false;
 }
 
-const stravaCircuitBreaker = new CircuitBreaker(
+export const stravaCircuitBreaker = new CircuitBreaker(
   "strava",
   shouldTripCircuitBreaker,
   { baseDelayMs: 10_000, maxDelayMs: 1000 * 60 * 60 },
@@ -207,7 +213,6 @@ const stravaCircuitBreaker = new CircuitBreaker(
 
 const DetailedSegmentEffortSchema = z.looseObject({
   id: z.number(),
-  activity_id: z.number(),
   elapsed_time: z.number(),
   moving_time: z.number(),
   start_date: z.string(),
@@ -247,56 +252,30 @@ export const ListActivitiesInputSchema = z.object({
   perPage: z.int().min(1).max(200).optional(),
 });
 
-// -- Token store --
+const ActivitiesCacheEntrySchema = z.object({
+  activities: z.array(SummaryActivitySchema),
+  fetchedAt: z.number(),
+});
 
-export interface TokenStore {
-  getTokens(userId: string): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    accessTokenExpiresAt: Date;
-  } | null>;
-  updateTokens(
-    userId: string,
-    tokens: {
-      accessToken: string;
-      refreshToken: string;
-      accessTokenExpiresAt: Date;
-    },
-  ): Promise<void>;
-}
+export const ActivityListPageSchema = z.object({
+  activities: z.array(SummaryActivitySchema),
+  nextCursor: z.string().nullable(),
+});
 
-export const dbTokenStore: TokenStore = {
-  async getTokens(userId) {
-    const [row] = await db
-      .select({
-        accessToken: stravaConnection.accessToken,
-        refreshToken: stravaConnection.refreshToken,
-        accessTokenExpiresAt: stravaConnection.accessTokenExpiresAt,
-      })
-      .from(stravaConnection)
-      .where(eq(stravaConnection.userId, userId))
-      .limit(1);
-    return row ?? null;
-  },
+export type ActivityListPage = z.infer<typeof ActivityListPageSchema>;
 
-  async updateTokens(userId, tokens) {
-    await db
-      .update(stravaConnection)
-      .set({
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        accessTokenExpiresAt: tokens.accessTokenExpiresAt,
-        updatedAt: new Date(),
-      })
-      .where(eq(stravaConnection.userId, userId));
-  },
-};
+const ACTIVITIES_PAGE_SIZE = 200;
+const LATEST_PAGE_FRESH_MS = 5 * 60 * 1000;
+const OLDER_PAGE_FRESH_MS = 24 * 60 * 60 * 1000;
+const CACHE_TTL_S = 7 * 24 * 60 * 60;
 
 export class StravaApi {
   private tokenStore: TokenStore;
+  private cache: Cache;
 
-  constructor(tokenStore: TokenStore) {
+  constructor(tokenStore: TokenStore, cache: Cache) {
     this.tokenStore = tokenStore;
+    this.cache = cache;
   }
 
   private static async stravaFetch(
@@ -419,7 +398,7 @@ export class StravaApi {
     return DetailedActivitySchema.parse(await response.json());
   }
 
-  async listActivities(
+  async listActivitiesUncached(
     appUserId: string,
     params: z.infer<typeof ListActivitiesInputSchema>,
   ): Promise<SummaryActivity[]> {
@@ -443,6 +422,56 @@ export class StravaApi {
       "Fetched Strava activities",
     );
     return data;
+  }
+
+  async listActivitiesPage(
+    appUserId: string,
+    cursor?: string,
+  ): Promise<ActivityListPage> {
+    const before = cursor ? parseInt(cursor, 10) : 0;
+    const cacheKey = `strava:activities:v1:${appUserId}:${before}`;
+    const freshMs = before === 0 ? LATEST_PAGE_FRESH_MS : OLDER_PAGE_FRESH_MS;
+
+    const cached = await this.cache.get(cacheKey);
+    const cachedEntry = cached
+      ? ActivitiesCacheEntrySchema.parse(JSON.parse(cached))
+      : null;
+
+    if (cachedEntry && Date.now() - cachedEntry.fetchedAt < freshMs) {
+      getLog().info(
+        {
+          userId: appUserId,
+          before,
+          cacheAgeMs: Date.now() - cachedEntry.fetchedAt,
+        },
+        "Returning cached Strava activities",
+      );
+      return toPage(cachedEntry.activities);
+    }
+
+    let activities: SummaryActivity[];
+    try {
+      activities = await this.listActivitiesUncached(appUserId, {
+        before: before || undefined,
+        perPage: ACTIVITIES_PAGE_SIZE,
+      });
+    } catch (err) {
+      if (cachedEntry) {
+        getLog().warn(
+          { err, userId: appUserId },
+          "Strava fetch failed, returning stale activities cache",
+        );
+        return toPage(cachedEntry.activities);
+      }
+      throw err;
+    }
+
+    await this.cache.set(
+      cacheKey,
+      JSON.stringify({ activities, fetchedAt: Date.now() }),
+      { ex: CACHE_TTL_S },
+    );
+    return toPage(activities);
   }
 
   async getActivityPhotos(
@@ -475,6 +504,7 @@ export class StravaApi {
     );
     url.searchParams.set("keys", types.join(","));
     url.searchParams.set("key_by_type", "true");
+    url.searchParams.set("resolution", "high"); // deprecated, may have no effect
 
     getLog().info(
       { userId: appUserId, activityId, types },
@@ -488,4 +518,78 @@ export class StravaApi {
   }
 }
 
-export const stravaApi = new StravaApi(dbTokenStore);
+function toPage(activities: SummaryActivity[]): ActivityListPage {
+  const nextCursor =
+    activities.length === ACTIVITIES_PAGE_SIZE
+      ? String(
+          Math.floor(new Date(activities.at(-1)!.start_date).getTime() / 1000),
+        )
+      : null;
+  return { activities, nextCursor };
+}
+
+export interface TokenStore {
+  getTokens(userId: string): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    accessTokenExpiresAt: Date;
+  } | null>;
+  updateTokens(
+    userId: string,
+    tokens: {
+      accessToken: string;
+      refreshToken: string;
+      accessTokenExpiresAt: Date;
+    },
+  ): Promise<void>;
+}
+
+export const dbTokenStore: TokenStore = {
+  async getTokens(userId) {
+    const [row] = await db
+      .select({
+        accessToken: stravaConnection.accessToken,
+        refreshToken: stravaConnection.refreshToken,
+        accessTokenExpiresAt: stravaConnection.accessTokenExpiresAt,
+      })
+      .from(stravaConnection)
+      .where(eq(stravaConnection.userId, userId))
+      .limit(1);
+    return row ?? null;
+  },
+
+  async updateTokens(userId, tokens) {
+    await db
+      .update(stravaConnection)
+      .set({
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        accessTokenExpiresAt: tokens.accessTokenExpiresAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(stravaConnection.userId, userId));
+  },
+};
+
+class RedisCache implements Cache {
+  private redis: Redis;
+
+  constructor(redis: Redis) {
+    this.redis = redis;
+  }
+
+  async get(key: string): Promise<string | null> {
+    return this.redis.get(key);
+  }
+
+  async set(key: string, value: string, opts: { ex: number }): Promise<void> {
+    await this.redis.set(key, value, "EX", opts.ex);
+  }
+}
+
+const redis = new Redis(env.REDIS_URL);
+redis.on("error", (err: unknown) => {
+  getLog().error({ err }, "Strava Redis connection error");
+});
+
+export const stravaApi = new StravaApi(dbTokenStore, new RedisCache(redis));

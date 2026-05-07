@@ -1,5 +1,6 @@
 import { and, eq, gt } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
+import { z } from "zod";
 
 import { db } from "../db.js";
 import { getLog } from "../logger.js";
@@ -78,9 +79,15 @@ export async function upsertStravaConnection(
     });
 }
 
+export const StravaAccountSchema = z.object({
+  athlete: StravaAthleteSchema,
+});
+
+export type StravaAccount = z.infer<typeof StravaAccountSchema>;
+
 export async function getStravaAccount(
   userId: string,
-): Promise<{ athlete: StravaAthlete } | null> {
+): Promise<StravaAccount | null> {
   const [row] = await db
     .select({ athlete: stravaConnection.athlete })
     .from(stravaConnection)

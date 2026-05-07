@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { TRPCError } from "@trpc/server";
-import { TRPC_ERROR_CODES_BY_KEY } from "@trpc/server/unstable-core-do-not-import";
+import {
+  TRPC_ERROR_CODES_BY_KEY,
+  type inferRouterInputs,
+  type inferRouterOutputs,
+} from "@trpc/server/unstable-core-do-not-import";
 import { HttpResponse, type RequestHandler, http } from "msw";
 
 import type { AppRouter } from "@pt/api";
@@ -14,17 +18,27 @@ interface MockState {
 
 type WithMock<T> = T & { mock: MockState };
 
-type TRPCProxy<T> = {
-  [K in keyof T]: T[K] extends (...args: any[]) => any
-    ? WithMock<
+// A router namespace's inputs are a record whose values are all void | object (sub-inputs).
+// A procedure's input is an object whose values include primitives (string, number, boolean, etc).
+type IsRouterNamespace<TInputs> = TInputs extends void | undefined
+  ? false
+  : [TInputs] extends [Record<string, void | Record<string, unknown>>]
+    ? true
+    : false;
+
+type TRPCProxy<TInputs, TOutputs> = {
+  [K in keyof TInputs & keyof TOutputs]: IsRouterNamespace<
+    TInputs[K]
+  > extends true
+    ? TRPCProxy<TInputs[K], TOutputs[K]>
+    : WithMock<
         (
           fn: (
-            input: Parameters<T[K]>[0],
+            input: TInputs[K],
             opts: { user: User | null },
-          ) => Awaited<ReturnType<T[K]>> | Promise<Awaited<ReturnType<T[K]>>>,
+          ) => TOutputs[K] | Promise<TOutputs[K]>,
         ) => RequestHandler
-      >
-    : TRPCProxy<T[K]>;
+      >;
 };
 
 const TRPC_BASE_URL = "http://localhost/api/v1/trpc";
@@ -92,7 +106,10 @@ function makeProxy(path: string[]): unknown {
   });
 }
 
-export const trpc = makeProxy([]) as TRPCProxy<AppRouter>;
+export const trpc = makeProxy([]) as TRPCProxy<
+  inferRouterInputs<AppRouter>,
+  inferRouterOutputs<AppRouter>
+>;
 
 export function resetTrpcMocks() {
   for (const mock of mocksByPath.values()) {

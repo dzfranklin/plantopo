@@ -1,6 +1,10 @@
 import type { RequestHandler } from "msw";
 
-import type { ImageInfo, RequestUploadResponse } from "@pt/api";
+import type {
+  ActivityListPage,
+  ImageInfo,
+  RequestUploadResponse,
+} from "@pt/api";
 
 import { type DeepPartial, deepMerge } from "./helpers";
 import { trpc } from "./trpc";
@@ -36,7 +40,18 @@ export function makeRequestUploadResponse(
   return deepMerge(base, overrides);
 }
 
+export function makeActivityListPage(
+  overrides: Partial<ActivityListPage> = {},
+): ActivityListPage {
+  return {
+    activities: [],
+    nextCursor: null,
+    ...overrides,
+  };
+}
+
 export const defaultHandlers: RequestHandler[] = [
   trpc.image.requestUpload(() => makeRequestUploadResponse()),
   trpc.image.confirmUpload(() => makeImageInfo()),
+  trpc.strava.listActivities(() => makeActivityListPage()),
 ];

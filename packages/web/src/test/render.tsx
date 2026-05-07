@@ -45,6 +45,7 @@ export async function renderWithProviders(
       httpLink({
         url: TRPC_BASE_URL,
         headers: user ? { "x-test-user": JSON.stringify(user) } : {},
+        methodOverride: "POST",
       }),
     ],
   });

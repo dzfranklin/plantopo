@@ -16,6 +16,7 @@ import PlanPage from "./plan/PlanPage.tsx";
 import SettingsAccountPage from "./settings/SettingsAccountPage.tsx";
 import SettingsInterfacePage from "./settings/SettingsInterfacePage.tsx";
 import SettingsPage from "./settings/SettingsPage.tsx";
+import StravaImportPage from "./strava/StravaImportPage.tsx";
 import MyTracksPage from "./track/MyTracksPage.tsx";
 import RecordTrackPage from "./track/RecordTrackPage.tsx";
 import TrackDetailPage from "./track/TrackDetailPage.tsx";
@@ -69,6 +70,7 @@ export function AppRoutes() {
                 <Route path="account" element={<SettingsAccountPage />} />
                 <Route path="interface" element={<SettingsInterfacePage />} />
               </Route>
+              <Route path="/strava/import" element={<StravaImportPage />} />
               <Route path="/tracks" element={<MyTracksPage />} />
               <Route path="/track/:trackId" element={<TrackDetailPage />} />
               <Route path="/track/:trackId/edit" element={<TrackEditPage />} />

@@ -22,6 +22,7 @@
     "db:studio": "NODE_ENV=development tsx scripts/with-api-env.ts drizzle-kit studio",
     "db:psql": "NODE_ENV=development tsx scripts/with-api-env.ts bash -c 'exec psql $DATABASE_URL'",
     "db:seed-from-export": "NODE_ENV=development LOG_LEVEL=info tsx scripts/with-api-env.ts tsx scripts/seed-from-export.ts",
+    "redis-cli": "NODE_ENV=development tsx scripts/with-api-env.ts bash -c 'exec redis-cli -u \"$REDIS_URL\"'",
     "jobs:studio": "NODE_ENV=development tsx scripts/with-api-env.ts bash -c 'docker run --name=bullstudio --rm -d --network=host -e PORT=4010 -e REDIS_URL=$REDIS_URL emirce/bullstudio && trap \"docker stop bullstudio\" INT TERM && echo \"bullstudio running at http://localhost:4010\" && sleep infinity'",
     "local-prod": "./scripts/local-prod.sh",
     "check": "npm --workspaces check",
