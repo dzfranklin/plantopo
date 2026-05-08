@@ -4,43 +4,43 @@ import { LocalRecordedTrackSchema } from "@pt/shared";
 
 import { authedProcedure, router } from "../trpc.js";
 import {
-  getRecordedTrack,
-  getRecordedTrackWithPointDetail,
-  listRecordedTracks,
-  updateRecordedTrack,
-  uploadRecordedTrack,
+  getTrack,
+  getTrackWithPointDetail,
+  listTracks,
+  updateTrack,
+  uploadTrack,
 } from "./track.service.js";
 
 export const trackRouter = router({
-  updateRecordedTrack: authedProcedure
+  updateTrack: authedProcedure
     .input(z.object({ id: z.string(), name: z.string().nullable() }))
     .mutation(async ({ input, ctx }) => {
-      await updateRecordedTrack(ctx.user.id, input.id, { name: input.name });
+      await updateTrack(ctx.user.id, input.id, { name: input.name });
     }),
 
-  uploadRecordedTrack: authedProcedure
+  uploadTrack: authedProcedure
     .input(
       LocalRecordedTrackSchema.omit({ status: true }).extend({
         endTime: z.number(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      await uploadRecordedTrack(ctx.user.id, input);
+      await uploadTrack(ctx.user.id, input);
     }),
 
-  listRecordedTracks: authedProcedure.query(async ({ ctx }) => {
-    return listRecordedTracks(ctx.user.id);
+  listTracks: authedProcedure.query(async ({ ctx }) => {
+    return listTracks(ctx.user.id);
   }),
 
-  getRecordedTrack: authedProcedure
+  getTrack: authedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-      return getRecordedTrack(ctx.user.id, input.id);
+      return getTrack(ctx.user.id, input.id);
     }),
 
-  getRecordedTrackWithPointDetail: authedProcedure
+  getTrackWithPointDetail: authedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
-      return getRecordedTrackWithPointDetail(ctx.user.id, input.id);
+      return getTrackWithPointDetail(ctx.user.id, input.id);
     }),
 });

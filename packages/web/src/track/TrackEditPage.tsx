@@ -27,7 +27,7 @@ export default function TrackEditPage() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
 
-  const query = useQuery(trpc.track.getRecordedTrack.queryOptions({ id }));
+  const query = useQuery(trpc.track.getTrack.queryOptions({ id }));
 
   usePageTitle(query.data?.name ? `Edit: ${query.data.name}` : "Edit Track");
 
@@ -35,7 +35,7 @@ export default function TrackEditPage() {
   const displayName = name ?? query.data?.name ?? "";
 
   const updateMutation = useMutation(
-    trpc.track.updateRecordedTrack.mutationOptions({
+    trpc.track.updateTrack.mutationOptions({
       onSuccess: () => {
         queryClient.invalidateQueries(trpc.track.pathFilter());
       },
@@ -91,10 +91,7 @@ function TrackImageEditer({ id }: { id: string }) {
   const [pending, setPending] = useState<DeleteConfirmState | null>(null);
 
   const { data: images } = useQuery(
-    trpc.track.getRecordedTrack.queryOptions(
-      { id },
-      { select: d => d?.images },
-    ),
+    trpc.track.getTrack.queryOptions({ id }, { select: d => d?.images }),
   );
 
   const deleteMutation = useMutation(

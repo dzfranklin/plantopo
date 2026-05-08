@@ -25,8 +25,8 @@ const nullableDoublePrecisionArray = customType<{
   dataType: () => "double precision[]",
 });
 
-export const recordedTrack = pgTable(
-  "recorded_track",
+export const track = pgTable(
+  "track",
   {
     id: text("id").primaryKey(),
     userId: text("user_id")
@@ -63,15 +63,15 @@ export const recordedTrack = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   t => [
-    uniqueIndex("recorded_track_source_idx")
+    uniqueIndex("track_source_idx")
       .on(t.userId, t.sourceType, t.sourceId)
       .where(sql`${t.sourceType} IS NOT NULL`),
   ],
 );
 
-export const recordedTrackRelations = relations(recordedTrack, ({ one }) => ({
+export const trackRelations = relations(track, ({ one }) => ({
   user: one(user, {
-    fields: [recordedTrack.userId],
+    fields: [track.userId],
     references: [user.id],
   }),
 }));
@@ -86,7 +86,7 @@ export const trackImport = pgTable(
     sourceId: text("source_id").notNull(),
     rawData: bytea("raw_data"),
     importData: jsonb("import_data"),
-    trackId: text("track_id").references(() => recordedTrack.id, {
+    trackId: text("track_id").references(() => track.id, {
       onDelete: "set null",
     }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -96,8 +96,8 @@ export const trackImport = pgTable(
 
 export const trackImportRelations = relations(trackImport, ({ one }) => ({
   user: one(user, { fields: [trackImport.userId], references: [user.id] }),
-  track: one(recordedTrack, {
+  track: one(track, {
     fields: [trackImport.trackId],
-    references: [recordedTrack.id],
+    references: [track.id],
   }),
 }));

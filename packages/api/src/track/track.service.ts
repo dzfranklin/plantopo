@@ -12,7 +12,7 @@ import { enqueueJob, resetJobsByName } from "../jobs.js";
 import { getLog } from "../logger.js";
 import { lineStringFromDriver } from "../postgis.js";
 import { renderStaticMap } from "../staticmap/staticmap.js";
-import { recordedTrack } from "./track.schema.js";
+import { track } from "./track.schema.js";
 
 const PreviewSchema = z.object({
   src: z.string(),
@@ -20,7 +20,7 @@ const PreviewSchema = z.object({
   height: z.number(),
 });
 
-export const RecordedTrackSummarySchema = z.object({
+export const TrackSummarySchema = z.object({
   id: z.string(),
   name: z.string().optional(),
   description: z.string().optional(),
@@ -33,9 +33,9 @@ export const RecordedTrackSummarySchema = z.object({
   previewSmall: PreviewSchema.optional(),
 });
 
-export type RecordedTrackSummary = z.infer<typeof RecordedTrackSummarySchema>;
+export type TrackSummary = z.infer<typeof TrackSummarySchema>;
 
-export const RecordedTrackSchema = RecordedTrackSummarySchema.extend({
+export const TrackSchema = TrackSummarySchema.extend({
   polyline: z.string(), // full resolution, for map/detail view
   pointTimestamps: z.array(z.number().nullable()).optional(),
   pointSpeed: z.array(z.number().nullable()).optional(),
@@ -52,9 +52,9 @@ export const RecordedTrackSchema = RecordedTrackSummarySchema.extend({
     .optional(),
 });
 
-export type RecordedTrack = z.infer<typeof RecordedTrackSchema>;
+export type Track = z.infer<typeof TrackSchema>;
 
-export const RecordedTrackWithPointDetailSchema = RecordedTrackSchema.extend({
+export const TrackWithPointDetailSchema = TrackSchema.extend({
   pointSpeedAccuracy: z.array(z.number().nullable()).optional(),
   pointGpsElevation: z.array(z.number().nullable()).optional(),
   pointHorizontalAccuracy: z.array(z.number().nullable()).optional(),
@@ -63,24 +63,20 @@ export const RecordedTrackWithPointDetailSchema = RecordedTrackSchema.extend({
   pointBearingAccuracy: z.array(z.number().nullable()).optional(),
 });
 
-export type RecordedTrackWithPointDetail = z.infer<
-  typeof RecordedTrackWithPointDetailSchema
->;
+export type TrackWithPointDetail = z.infer<typeof TrackWithPointDetailSchema>;
 
-export async function updateRecordedTrack(
+export async function updateTrack(
   userId: string,
   trackId: string,
   fields: { name?: string | null },
 ): Promise<void> {
   await db
-    .update(recordedTrack)
+    .update(track)
     .set({ name: fields.name })
-    .where(
-      and(eq(recordedTrack.id, trackId), eq(recordedTrack.userId, userId)),
-    );
+    .where(and(eq(track.id, trackId), eq(track.userId, userId)));
 }
 
-export async function uploadRecordedTrack(
+export async function uploadTrack(
   userId: string,
   payload: Omit<LocalRecordedTrack, "status"> & { endTime: number },
 ) {
@@ -104,7 +100,7 @@ export async function uploadRecordedTrack(
     arr.every(v => v === null) ? null : (arr as T[]);
 
   await db
-    .insert(recordedTrack)
+    .insert(track)
     .values({
       id,
       userId,
@@ -128,25 +124,20 @@ export async function uploadRecordedTrack(
   await enqueuePopulateDemElevationJob(id);
   await enqueuePopulatePreviewImagesJob(id);
 
-  log.info("uploadedRecordedTrack");
+  log.info("uploadedTrack");
 }
 
 export async function enqueuePopulateDemElevationJob(trackId: string) {
-  return await enqueueJob("recordedTrack.populateDemElevation", { trackId });
+  return await enqueueJob("track.populateDemElevation", { trackId });
 }
 
 export async function populateDemElevation(trackId: string): Promise<void> {
   const log = getLog().child({ trackId });
 
   const [row] = await db
-    .select({ path: recordedTrack.path })
-    .from(recordedTrack)
-    .where(
-      and(
-        eq(recordedTrack.id, trackId),
-        isNull(recordedTrack.pointDemElevation),
-      ),
-    );
+    .select({ path: track.path })
+    .from(track)
+    .where(and(eq(track.id, trackId), isNull(track.pointDemElevation)));
 
   if (!row) {
     log.info("populateDemElevation: track not found or already populated");
@@ -156,19 +147,19 @@ export async function populateDemElevation(trackId: string): Promise<void> {
   const { data } = await getElevations(row.path, []);
 
   await db
-    .update(recordedTrack)
+    .update(track)
     .set({ pointDemElevation: data })
-    .where(eq(recordedTrack.id, trackId));
+    .where(eq(track.id, trackId));
 
   log.info("populateDemElevation: done");
 }
 
 export async function enqueuePopulatePreviewImagesJob(trackId: string) {
-  return await enqueueJob("recordedTrack.populatePreviewImages", { trackId });
+  return await enqueueJob("track.populatePreviewImages", { trackId });
 }
 
 export async function resetPopulatePreviewImagesJobs() {
-  return await resetJobsByName("recordedTrack.populatePreviewImages");
+  return await resetJobsByName("track.populatePreviewImages");
 }
 
 export async function populatePreviewImages(
@@ -179,12 +170,10 @@ export async function populatePreviewImages(
 
   const [row] = await db
     .select({
-      path: sql`ST_Simplify(${recordedTrack.path}, 0.00001)`.as("path"),
+      path: sql`ST_Simplify(${track.path}, 0.00001)`.as("path"),
     })
-    .from(recordedTrack)
-    .where(
-      and(eq(recordedTrack.id, trackId), isNull(recordedTrack.previewLargeSrc)),
-    );
+    .from(track)
+    .where(and(eq(track.id, trackId), isNull(track.previewLargeSrc)));
 
   if (!row) {
     log.info("populatePreviewImages: track not found or already populated");
@@ -222,7 +211,7 @@ export async function populatePreviewImages(
   ]);
 
   await db
-    .update(recordedTrack)
+    .update(track)
     .set({
       previewLargeSrc: largeBuf,
       previewLargeWidth: width,
@@ -231,63 +220,59 @@ export async function populatePreviewImages(
       previewSmallWidth: smallWidth,
       previewSmallHeight: smallHeight,
     })
-    .where(eq(recordedTrack.id, trackId));
+    .where(eq(track.id, trackId));
 
   log.info("populatePreviewImages: done");
 }
 
 const summaryColumns = {
-  id: recordedTrack.id,
-  name: recordedTrack.name,
-  description: recordedTrack.description,
-  startTime: recordedTrack.startTime,
-  endTime: recordedTrack.endTime,
-  createdAt: recordedTrack.createdAt,
-  distanceM: sql<number>`ST_Length(${recordedTrack.path}::geography)`.as(
-    "distance_m",
-  ),
+  id: track.id,
+  name: track.name,
+  description: track.description,
+  startTime: track.startTime,
+  endTime: track.endTime,
+  createdAt: track.createdAt,
+  distanceM: sql<number>`ST_Length(${track.path}::geography)`.as("distance_m"),
   durationMs:
-    sql<number>`(EXTRACT(EPOCH FROM (${recordedTrack.endTime} - ${recordedTrack.startTime})) * 1000)::float8`.as(
+    sql<number>`(EXTRACT(EPOCH FROM (${track.endTime} - ${track.startTime})) * 1000)::float8`.as(
       "duration_ms",
     ),
-  previewLargeWidth: recordedTrack.previewLargeWidth,
-  previewLargeHeight: recordedTrack.previewLargeHeight,
-  previewSmallWidth: recordedTrack.previewSmallWidth,
-  previewSmallHeight: recordedTrack.previewSmallHeight,
+  previewLargeWidth: track.previewLargeWidth,
+  previewLargeHeight: track.previewLargeHeight,
+  previewSmallWidth: track.previewSmallWidth,
+  previewSmallHeight: track.previewSmallHeight,
 };
 
 const trackColumns = {
   ...summaryColumns,
-  polyline: sql<
-    string | null
-  >`ST_AsEncodedPolyline(${recordedTrack.path}, 6)`.as("polyline"),
-  pointTimestamps: recordedTrack.pointTimestamps,
-  pointSpeed: recordedTrack.pointSpeed,
-  pointDemElevation: recordedTrack.pointDemElevation,
-  sourceType: recordedTrack.sourceType,
-  sourceId: recordedTrack.sourceId,
+  polyline: sql<string | null>`ST_AsEncodedPolyline(${track.path}, 6)`.as(
+    "polyline",
+  ),
+  pointTimestamps: track.pointTimestamps,
+  pointSpeed: track.pointSpeed,
+  pointDemElevation: track.pointDemElevation,
+  sourceType: track.sourceType,
+  sourceId: track.sourceId,
 };
 
-export async function listRecordedTracks(
-  userId: string,
-): Promise<RecordedTrackSummary[]> {
+export async function listTracks(userId: string): Promise<TrackSummary[]> {
   const rows = await db
     .select(summaryColumns)
-    .from(recordedTrack)
-    .where(eq(recordedTrack.userId, userId))
-    .orderBy(sql`${recordedTrack.startTime} DESC`);
+    .from(track)
+    .where(eq(track.userId, userId))
+    .orderBy(sql`${track.startTime} DESC`);
 
   return rows.map(toSummary);
 }
 
-export async function getRecordedTrack(
+export async function getTrack(
   userId: string,
   trackId: string,
-): Promise<RecordedTrack | null> {
+): Promise<Track | null> {
   const request = await db
     .select(trackColumns)
-    .from(recordedTrack)
-    .where(and(eq(recordedTrack.id, trackId), eq(recordedTrack.userId, userId)))
+    .from(track)
+    .where(and(eq(track.id, trackId), eq(track.userId, userId)))
     .then(rows => rows[0]);
 
   const [row, images] = await Promise.all([
@@ -297,12 +282,12 @@ export async function getRecordedTrack(
   if (!row) return null;
 
   return {
-    ...toTrack(row),
+    ...toTrackObj(row),
     images,
   };
 }
 
-export async function getRecordedTrackPreview(
+export async function getTrackPreview(
   userId: string,
   trackId: string,
   size: "large" | "small",
@@ -310,22 +295,20 @@ export async function getRecordedTrackPreview(
   const selectCols =
     size === "large"
       ? {
-          buf: recordedTrack.previewLargeSrc,
-          width: recordedTrack.previewLargeWidth,
-          height: recordedTrack.previewLargeHeight,
+          buf: track.previewLargeSrc,
+          width: track.previewLargeWidth,
+          height: track.previewLargeHeight,
         }
       : {
-          buf: recordedTrack.previewSmallSrc,
-          width: recordedTrack.previewSmallWidth,
-          height: recordedTrack.previewSmallHeight,
+          buf: track.previewSmallSrc,
+          width: track.previewSmallWidth,
+          height: track.previewSmallHeight,
         };
 
   const [row] = await db
     .select(selectCols)
-    .from(recordedTrack)
-    .where(
-      and(eq(recordedTrack.id, trackId), eq(recordedTrack.userId, userId)),
-    );
+    .from(track)
+    .where(and(eq(track.id, trackId), eq(track.userId, userId)));
   if (!row) return null;
 
   const { buf, width, height } = row;
@@ -333,31 +316,29 @@ export async function getRecordedTrackPreview(
   return { buf, width, height };
 }
 
-export async function getRecordedTrackWithPointDetail(
+export async function getTrackWithPointDetail(
   userId: string,
   trackId: string,
-): Promise<RecordedTrackWithPointDetail | null> {
+): Promise<TrackWithPointDetail | null> {
   const [row] = await db
     .select({
       ...trackColumns,
-      pointSpeedAccuracy: recordedTrack.pointSpeedAccuracy,
-      pointGpsElevation: recordedTrack.pointGpsElevation,
-      pointHorizontalAccuracy: recordedTrack.pointHorizontalAccuracy,
-      pointVerticalAccuracy: recordedTrack.pointVerticalAccuracy,
-      pointBearing: recordedTrack.pointBearing,
-      pointBearingAccuracy: recordedTrack.pointBearingAccuracy,
+      pointSpeedAccuracy: track.pointSpeedAccuracy,
+      pointGpsElevation: track.pointGpsElevation,
+      pointHorizontalAccuracy: track.pointHorizontalAccuracy,
+      pointVerticalAccuracy: track.pointVerticalAccuracy,
+      pointBearing: track.pointBearing,
+      pointBearingAccuracy: track.pointBearingAccuracy,
     })
-    .from(recordedTrack)
-    .where(
-      and(eq(recordedTrack.id, trackId), eq(recordedTrack.userId, userId)),
-    );
+    .from(track)
+    .where(and(eq(track.id, trackId), eq(track.userId, userId)));
 
   if (!row) return null;
 
   const images = await listImagesByTrack(trackId);
 
   return {
-    ...toTrack(row),
+    ...toTrackObj(row),
     pointSpeedAccuracy: row.pointSpeedAccuracy ?? undefined,
     pointGpsElevation: row.pointGpsElevation ?? undefined,
     pointHorizontalAccuracy: row.pointHorizontalAccuracy ?? undefined,
@@ -392,7 +373,7 @@ interface TrackRow extends SummaryRow {
   sourceId: string | null;
 }
 
-function toSummary(row: SummaryRow): RecordedTrackSummary {
+function toSummary(row: SummaryRow): TrackSummary {
   const preview = (
     size: string,
     width: number | null,
@@ -422,7 +403,7 @@ function toSummary(row: SummaryRow): RecordedTrackSummary {
   };
 }
 
-function toTrack(row: TrackRow): Omit<RecordedTrack, "images"> {
+function toTrackObj(row: TrackRow): Omit<Track, "images"> {
   return {
     ...toSummary(row),
     polyline: row.polyline!,
@@ -439,7 +420,7 @@ function toSource({
 }: {
   sourceType: string | null;
   sourceId: string | null;
-}): RecordedTrack["source"] {
+}): Track["source"] {
   if (!type || !id) return undefined;
   let label: string;
   let color = "gray";

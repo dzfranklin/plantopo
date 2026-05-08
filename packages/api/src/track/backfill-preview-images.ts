@@ -2,7 +2,7 @@ import { isNull } from "drizzle-orm";
 
 import { db } from "../db.js";
 import { logger } from "../logger.js";
-import { recordedTrack } from "./track.schema.js";
+import { track } from "./track.schema.js";
 import {
   enqueuePopulatePreviewImagesJob,
   resetPopulatePreviewImagesJobs,
@@ -12,9 +12,9 @@ export default async function backfillPreviewImages({
   resetExisting = false,
 }: { resetExisting?: boolean } = {}) {
   const rows = await db
-    .select({ id: recordedTrack.id })
-    .from(recordedTrack)
-    .where(isNull(recordedTrack.previewLargeSrc));
+    .select({ id: track.id })
+    .from(track)
+    .where(isNull(track.previewLargeSrc));
 
   if (resetExisting) {
     logger.info("Removing existing preview image data");

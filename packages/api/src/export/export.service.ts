@@ -7,7 +7,7 @@ import path from "node:path";
 
 import { user } from "../auth/auth.schema.js";
 import db from "../db.js";
-import { recordedTrack } from "../track/track.schema.js";
+import { track } from "../track/track.schema.js";
 
 interface Run {
   userId: string;
@@ -23,7 +23,7 @@ export async function generateExport(userId: string) {
   const run: Run = { userId, scratch };
 
   await exportUserTable(run);
-  await exportRecordedTrackTable(run);
+  await exportTrackTable(run);
 
   const zipPath = path.join(os.tmpdir(), id + ".zip");
   await new Promise<void>((resolve, reject) => {
@@ -65,14 +65,14 @@ async function exportUserTable({ userId, scratch }: Run) {
   );
 }
 
-async function exportRecordedTrackTable({ scratch, userId }: Run) {
+async function exportTrackTable({ scratch, userId }: Run) {
   const outDir = path.join(scratch, "recorded_track");
   await fs.mkdir(outDir);
 
   const list = await db
-    .select({ id: recordedTrack.id })
-    .from(recordedTrack)
-    .where(eq(recordedTrack.userId, userId));
+    .select({ id: track.id })
+    .from(track)
+    .where(eq(track.userId, userId));
 
   for (const { id } of list) {
     const {
@@ -83,12 +83,12 @@ async function exportRecordedTrackTable({ scratch, userId }: Run) {
       previewSmallWidth: _previewSmallWidth,
       previewSmallHeight: _previewSmallHeight,
       ...cols
-    } = getTableColumns(recordedTrack);
+    } = getTableColumns(track);
 
     const row = await db
       .select(cols)
-      .from(recordedTrack)
-      .where(eq(recordedTrack.id, id))
+      .from(track)
+      .where(eq(track.id, id))
       .then(rows => rows[0]);
 
     await fs.writeFile(

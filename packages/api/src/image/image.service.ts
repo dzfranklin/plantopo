@@ -18,7 +18,7 @@ import { env } from "../env.js";
 import { type ImageSrc, ImageSrcSchema } from "../index.js";
 import { enqueueJob } from "../jobs.js";
 import { getLog } from "../logger.js";
-import { recordedTrackImage } from "../track/track-image.schema.js";
+import { trackImage } from "../track/track-image.schema.js";
 import { image } from "./image.schema.js";
 import { generateImgproxyRawUrl, imgproxy } from "./imgproxy.js";
 
@@ -58,12 +58,10 @@ const infoColumns = {
 export async function listImagesByTrack(trackId: string): Promise<ImageInfo[]> {
   const rows = await db
     .select(infoColumns)
-    .from(recordedTrackImage)
-    .innerJoin(image, eq(recordedTrackImage.imageS3Key, image.s3Key))
-    .where(
-      and(eq(recordedTrackImage.trackId, trackId), eq(image.uploaded, true)),
-    )
-    .orderBy(asc(recordedTrackImage.createdAt));
+    .from(trackImage)
+    .innerJoin(image, eq(trackImage.imageS3Key, image.s3Key))
+    .where(and(eq(trackImage.trackId, trackId), eq(image.uploaded, true)))
+    .orderBy(asc(trackImage.createdAt));
 
   return rows.map(toImageInfo);
 }
@@ -207,7 +205,7 @@ export async function linkImageToTrack(
   trackId: string,
 ): Promise<void> {
   await db
-    .insert(recordedTrackImage)
+    .insert(trackImage)
     .values({ trackId, imageS3Key: s3Key })
     .onConflictDoNothing();
 }
@@ -217,12 +215,9 @@ export async function unlinkImageFromTrack(
   trackId: string,
 ): Promise<void> {
   await db
-    .delete(recordedTrackImage)
+    .delete(trackImage)
     .where(
-      and(
-        eq(recordedTrackImage.imageS3Key, s3Key),
-        eq(recordedTrackImage.trackId, trackId),
-      ),
+      and(eq(trackImage.imageS3Key, s3Key), eq(trackImage.trackId, trackId)),
     );
 }
 

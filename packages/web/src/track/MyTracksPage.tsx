@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRef } from "react";
 import { Link } from "react-router-dom";
 
-import type { RecordedTrackSummary } from "../../../api/src/track/track.service";
+import type { TrackSummary } from "../../../api/src/track/track.service";
 import { DistanceView, DurationView, InstantView } from "@/components/format";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import useResizeObserver from "@/hooks/useResizeObserver";
@@ -11,7 +11,7 @@ import { useTRPC } from "@/trpc";
 export default function MyTracksPage() {
   usePageTitle("My Tracks");
   const trpc = useTRPC();
-  const query = useQuery(trpc.track.listRecordedTracks.queryOptions());
+  const query = useQuery(trpc.track.listTracks.queryOptions());
 
   return (
     <div className="mx-auto w-full max-w-2xl p-8">
@@ -30,7 +30,7 @@ export default function MyTracksPage() {
   );
 }
 
-function TrackCard({ track }: { track: RecordedTrackSummary }) {
+function TrackCard({ track }: { track: TrackSummary }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sizing = useResizeObserver(containerRef);
 

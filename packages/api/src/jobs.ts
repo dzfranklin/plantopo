@@ -84,13 +84,13 @@ const defaultQueue = new Queue("plantopo.default", {
 });
 
 export const jobRegistry = {
-  "recordedTrack.populateDemElevation": {
+  "track.populateDemElevation": {
     queue: cpuQueue,
     handler: async (data: { trackId: string }) => {
       await populateDemElevation(data.trackId);
     },
   },
-  "recordedTrack.populatePreviewImages": {
+  "track.populatePreviewImages": {
     queue: cpuQueue,
     handler: async (data: { trackId: string }) => {
       await populatePreviewImages(data.trackId);

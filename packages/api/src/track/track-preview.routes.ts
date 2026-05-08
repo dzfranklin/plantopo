@@ -1,7 +1,7 @@
 import { type Request, type Response, Router } from "express";
 
 import { requestContext } from "../request-context.js";
-import { getRecordedTrackPreview } from "./track.service.js";
+import { getTrackPreview } from "./track.service.js";
 
 export function registerTrackPreviewRoutes(app: Router) {
   app.get(
@@ -20,7 +20,7 @@ export function registerTrackPreviewRoutes(app: Router) {
         return;
       }
 
-      const data = await getRecordedTrackPreview(user.id, id, size);
+      const data = await getTrackPreview(user.id, id, size);
 
       if (!data) {
         res.status(404).json({ error: "Not found" });

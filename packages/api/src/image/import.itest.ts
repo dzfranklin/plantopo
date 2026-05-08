@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import db from "../db.js";
 import { getEnqueuedJobs } from "../test/helpers.js";
 import { TEST_TRACK, TEST_USER } from "../test/setup-db.js";
-import { recordedTrack } from "../track/track.schema.js";
+import { track } from "../track/track.schema.js";
 import { image } from "./image.schema.js";
 import {
   getImage,
@@ -38,8 +38,8 @@ describe("runImportImage", () => {
   });
 
   it("imports and stores image with correct metadata", async () => {
-    const track = await db
-      .insert(recordedTrack)
+    const trackRow = await db
+      .insert(track)
       .values({ ...TEST_TRACK, id: "import-track" })
       .returning()
       .then(r => r[0]!);
@@ -47,7 +47,7 @@ describe("runImportImage", () => {
     const result = await runImportImage({
       userId: TEST_USER.id,
       url: serverUrl,
-      linkedTrackId: track.id,
+      linkedTrackId: trackRow.id,
     });
 
     // stored and retrievable
@@ -81,7 +81,7 @@ describe("runImportImage", () => {
     });
 
     // linked to track
-    expect(await listImagesByTrack(track.id)).toHaveLength(1);
+    expect(await listImagesByTrack(trackRow.id)).toHaveLength(1);
 
     // deduplicates on re-import
     const second = await runImportImage({

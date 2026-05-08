@@ -5,8 +5,8 @@ import db from "../db.js";
 import { getEnqueuedJobs } from "../test/helpers.js";
 import { TEST_USER } from "../test/setup-db.js";
 import { type TrackImport, importTrack, runImportTrack } from "./imports.js";
-import { recordedTrack, trackImport } from "./track.schema.js";
-import { getRecordedTrack } from "./track.service.js";
+import { track, trackImport } from "./track.schema.js";
+import { getTrack } from "./track.service.js";
 
 const BASE_IMPORT: TrackImport = {
   type: "Feature",
@@ -76,24 +76,24 @@ describe("runImportTrack", () => {
 
     const [row] = await db
       .select({
-        sourceType: recordedTrack.sourceType,
-        sourceId: recordedTrack.sourceId,
+        sourceType: track.sourceType,
+        sourceId: track.sourceId,
       })
-      .from(recordedTrack)
-      .where(eq(recordedTrack.id, id));
+      .from(track)
+      .where(eq(track.id, id));
     expect(row!.sourceType).toBe("strava");
     expect(row!.sourceId).toBe("123456");
 
-    const track = await getRecordedTrack(TEST_USER.id, id);
-    expect(track!.name).toBe("Morning run");
-    expect(track!.description).toBe("A nice run");
-    expect(track!.startTime).toBe(BASE_IMPORT.properties.startTime);
-    expect(track!.endTime).toBe(BASE_IMPORT.properties.endTime);
-    expect(track!.distanceM).toBeGreaterThan(0);
-    expect(track!.pointTimestamps).toEqual(
+    const trackData = await getTrack(TEST_USER.id, id);
+    expect(trackData!.name).toBe("Morning run");
+    expect(trackData!.description).toBe("A nice run");
+    expect(trackData!.startTime).toBe(BASE_IMPORT.properties.startTime);
+    expect(trackData!.endTime).toBe(BASE_IMPORT.properties.endTime);
+    expect(trackData!.distanceM).toBeGreaterThan(0);
+    expect(trackData!.pointTimestamps).toEqual(
       BASE_IMPORT.properties.coordinateProperties.times,
     );
-    expect(track!.pointSpeed).toEqual(
+    expect(trackData!.pointSpeed).toEqual(
       BASE_IMPORT.properties.coordinateProperties.speeds,
     );
   });
@@ -136,16 +136,16 @@ describe("runImportTrack", () => {
     });
     expect(updatedId).toBe(id);
 
-    const track = await getRecordedTrack(TEST_USER.id, id);
-    expect(track!.name).toBe("Updated run");
+    const trackData = await getTrack(TEST_USER.id, id);
+    expect(trackData!.name).toBe("Updated run");
 
     const [row] = await db
       .select({
-        pointDemElevation: recordedTrack.pointDemElevation,
-        previewLargeSrc: recordedTrack.previewLargeSrc,
+        pointDemElevation: track.pointDemElevation,
+        previewLargeSrc: track.previewLargeSrc,
       })
-      .from(recordedTrack)
-      .where(eq(recordedTrack.id, id));
+      .from(track)
+      .where(eq(track.id, id));
     expect(row!.pointDemElevation).toBeNull();
     expect(row!.previewLargeSrc).toBeNull();
   });
@@ -153,12 +153,10 @@ describe("runImportTrack", () => {
   it("enqueues dem elevation and preview jobs", async () => {
     const key = await seedTrackImport(BASE_IMPORT, { sourceId: "dem-preview" });
     await runImportTrack({ key });
-    expect(
-      await getEnqueuedJobs("recordedTrack.populateDemElevation"),
-    ).toHaveLength(1);
-    expect(
-      await getEnqueuedJobs("recordedTrack.populatePreviewImages"),
-    ).toHaveLength(1);
+    expect(await getEnqueuedJobs("track.populateDemElevation")).toHaveLength(1);
+    expect(await getEnqueuedJobs("track.populatePreviewImages")).toHaveLength(
+      1,
+    );
   });
 
   it("enqueues image.import jobs for photos", async () => {
@@ -216,10 +214,10 @@ describe("runImportTrack", () => {
     const key = await seedTrackImport(minimal, { sourceId: "minimal" });
     const id = await runImportTrack({ key });
 
-    const track = await getRecordedTrack(TEST_USER.id, id);
-    expect(track!.name).toBeUndefined();
-    expect(track!.startTime).toBeUndefined();
-    expect(track!.endTime).toBeUndefined();
+    const trackData = await getTrack(TEST_USER.id, id);
+    expect(trackData!.name).toBeUndefined();
+    expect(trackData!.startTime).toBeUndefined();
+    expect(trackData!.endTime).toBeUndefined();
   });
 });
 

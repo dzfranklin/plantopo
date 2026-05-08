@@ -8,7 +8,7 @@ import { user } from "../packages/api/src/auth/auth.schema.js";
 import db from "../packages/api/src/db.js";
 import { closeJobQueues } from "../packages/api/src/jobs.js";
 import backfillPreviewImages from "../packages/api/src/track/backfill-preview-images.js";
-import { recordedTrack } from "../packages/api/src/track/track.schema.js";
+import { track } from "../packages/api/src/track/track.schema.js";
 
 const [, , ...args] = process.argv;
 
@@ -60,15 +60,15 @@ for (const trackFile of trackFiles) {
   data.endTime = new Date(data.endTime);
   data.createdAt = new Date(data.createdAt);
 
-  await db.insert(recordedTrack).values(data).onConflictDoUpdate({
-    target: recordedTrack.id,
+  await db.insert(track).values(data).onConflictDoUpdate({
+    target: track.id,
     set: data,
   });
   console.log(`Inserted track ${data.id} (${data.name})`);
 }
 
 await backfillPreviewImages({ resetExisting: true });
-console.log("Enqueued preview image backfill jobs");
+console.log("Enqueued preview images backfill jobs");
 
 await db.$client.end();
 await closeJobQueues();

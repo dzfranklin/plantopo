@@ -4,7 +4,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 import { session, user } from "../auth/auth.schema.js";
 import { db } from "../db.js";
-import { recordedTrack } from "../track/track.schema.js";
+import { track } from "../track/track.schema.js";
 
 export const TEST_USER = {
   id: "test",
@@ -42,7 +42,7 @@ export const TEST_SESSION = {
 
 const TEST_SESSION_ROW: typeof session.$inferInsert = TEST_SESSION.session;
 
-export const TEST_TRACK: typeof recordedTrack.$inferInsert = {
+export const TEST_TRACK: typeof track.$inferInsert = {
   id: "test-track",
   userId: TEST_USER.id,
   name: "Test Track",
@@ -89,9 +89,9 @@ async function upsertFixtures(client?: typeof db) {
     .onConflictDoUpdate({ target: session.id, set: TEST_SESSION_ROW });
 
   await client
-    .insert(recordedTrack)
+    .insert(track)
     .values(TEST_TRACK)
-    .onConflictDoUpdate({ target: recordedTrack.id, set: TEST_TRACK });
+    .onConflictDoUpdate({ target: track.id, set: TEST_TRACK });
 }
 
 export async function setupDb(databaseUrl: string) {

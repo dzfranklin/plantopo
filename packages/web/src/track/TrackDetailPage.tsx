@@ -7,7 +7,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import type { ImageInfo } from "@pt/api";
 import type { Point2 } from "@pt/shared";
 
-import type { RecordedTrack } from "../../../api/src/track/track.service";
+import type { Track } from "../../../api/src/track/track.service";
 import { decodePolyline } from "../../../shared/src/polyline";
 import ElevationChart from "@/components/ElevationChart";
 import { formatInstant } from "@/components/format";
@@ -20,7 +20,7 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { type AppUseQueryResult, useTRPC } from "@/trpc";
 import { cn } from "@/util/cn";
 
-function pageTitle(track: RecordedTrack | null | undefined): string {
+function pageTitle(track: Track | null | undefined): string {
   if (!track) return "Track";
   if (track.name) return `Track: ${track.name}`;
   if (track.startTime)
@@ -103,27 +103,25 @@ export default function TrackDetailPage() {
   );
 }
 
-type HydratedRecordedTrack = RecordedTrack & {
+type HydratedTrack = Track & {
   coordinates: Point2[];
 };
 
 function useTrackDetailQuery(
   id: string,
-): AppUseQueryResult<HydratedRecordedTrack | null> {
+): AppUseQueryResult<HydratedTrack | null> {
   const trpc = useTRPC();
   return useQuery(
-    trpc.track.getRecordedTrack.queryOptions(
+    trpc.track.getTrack.queryOptions(
       { id },
       {
-        select: selectHydratedRecordedTrack,
+        select: selectHydratedTrack,
       },
     ),
   );
 }
 
-function selectHydratedRecordedTrack(
-  data: RecordedTrack | null,
-): HydratedRecordedTrack | null {
+function selectHydratedTrack(data: Track | null): HydratedTrack | null {
   if (!data) return null;
   return {
     ...data,
@@ -238,7 +236,7 @@ function TrackImage({ image: img }: { image: ImageInfo }) {
   );
 }
 
-function SourceBadge({ source }: Pick<RecordedTrack, "source">) {
+function SourceBadge({ source }: Pick<Track, "source">) {
   if (!source) return null;
   return (
     <div className="text-muted-foreground bg-muted my-1 inline-block rounded-lg px-3 py-1.5 text-sm font-medium">

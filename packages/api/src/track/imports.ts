@@ -8,7 +8,7 @@ import { sha256 } from "@pt/shared";
 import { db } from "../db.js";
 import { enqueueJob } from "../jobs.js";
 import { getLog } from "../logger.js";
-import { recordedTrack, trackImport } from "./track.schema.js";
+import { track, trackImport } from "./track.schema.js";
 import {
   enqueuePopulateDemElevationJob,
   enqueuePopulatePreviewImagesJob,
@@ -165,18 +165,14 @@ export async function runImportTrack({
   };
 
   const trackRow = await db
-    .insert(recordedTrack)
+    .insert(track)
     .values({ id: nanoid(), userId, ...upsertData })
     .onConflictDoUpdate({
-      target: [
-        recordedTrack.userId,
-        recordedTrack.sourceType,
-        recordedTrack.sourceId,
-      ],
-      targetWhere: isNotNull(recordedTrack.sourceType),
+      target: [track.userId, track.sourceType, track.sourceId],
+      targetWhere: isNotNull(track.sourceType),
       set: upsertData,
     })
-    .returning({ id: recordedTrack.id })
+    .returning({ id: track.id })
     .then(([r]) => r!);
 
   const trackId = trackRow.id;

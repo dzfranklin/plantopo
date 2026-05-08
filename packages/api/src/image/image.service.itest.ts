@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import db from "../db.js";
 import { TEST_TRACK, TEST_USER2 } from "../test/setup-db.js";
-import { recordedTrack } from "../track/track.schema.js";
+import { track as trackTable } from "../track/track.schema.js";
 import {
   type RequestUpload,
   confirmUpload,
@@ -43,10 +43,10 @@ async function uploadAndConfirm(
   return s3Key;
 }
 
-let track: typeof recordedTrack.$inferSelect;
+let track: typeof trackTable.$inferSelect;
 beforeEach(async () => {
   track = await db
-    .insert(recordedTrack)
+    .insert(trackTable)
     .values({
       ...TEST_TRACK,
       id: "track",
