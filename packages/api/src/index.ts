@@ -9,6 +9,8 @@ export type {
   ImageInfo,
 } from "./image/image.service.js";
 export type { ActivityWithStatus } from "./strava/strava.router.js";
+export type { ClientErrorCode } from "./errors.js";
+export type { StravaConnectionResult } from "./strava/strava.routes.js";
 
 export const ImageSrcSchema = z.object({
   src: z.url(),

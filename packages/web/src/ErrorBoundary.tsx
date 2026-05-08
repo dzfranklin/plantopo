@@ -25,7 +25,7 @@ function trpcMessage(error: TRPCClientError<AppRouter>): string | null {
     case "NOT_FOUND":
       return "Not found";
     case "TOO_MANY_REQUESTS":
-      return "Too many requests, slow down";
+      return "Too many requests";
     default:
       return null;
   }
@@ -97,11 +97,19 @@ export class ErrorBoundary extends Component<Props, State> {
                 "Something went wrong. Please try refreshing the page."}
             </h1>
             <p className="text-sm text-gray-500">{errorMessage}</p>
-            {reqId && (
-              <p className="mt-4 rounded bg-gray-100 px-3 py-2 font-mono text-xs text-gray-400">
-                ref: {reqId}
-              </p>
-            )}
+            <p className="mt-4 rounded bg-gray-100 px-3 py-2 text-left font-mono text-xs leading-relaxed text-gray-400">
+              {err instanceof Error && (
+                <p>
+                  {err.name}: {err.message}
+                </p>
+              )}
+              {err instanceof TRPCClientError && (
+                <p>
+                  {err.data.code}: {err.data.clientError}
+                </p>
+              )}
+              Request ID: {reqId ?? "N/A"}
+            </p>
             <button
               onClick={() => this.navigate(window.location.href)}
               className="mt-6 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">

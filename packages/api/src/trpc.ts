@@ -1,18 +1,18 @@
 import { TRPCError, initTRPC } from "@trpc/server";
-import type { DefaultErrorShape } from "@trpc/server/unstable-core-do-not-import";
 
+import { ClientError } from "./errors.js";
 import { getLog } from "./logger.js";
 import type { RequestContext } from "./request-context.js";
 
 const t = initTRPC.context<RequestContext>().create({
-  errorFormatter({ shape }): DefaultErrorShape & {
-    data: DefaultErrorShape["data"] & { reqId?: string | undefined };
-  } {
+  errorFormatter({ shape, error }) {
     return {
       ...shape,
       data: {
         ...shape.data,
         reqId: getLog().bindings().reqId as string | undefined,
+        clientError:
+          error instanceof ClientError ? error.clientError : undefined,
       },
     };
   },

@@ -14,6 +14,7 @@ import { NavbarLayout } from "./layout/NavbarLayout.tsx";
 import MapPage from "./map/MapPage.tsx";
 import PlanPage from "./plan/PlanPage.tsx";
 import SettingsAccountPage from "./settings/SettingsAccountPage.tsx";
+import SettingsIntegrationsPage from "./settings/SettingsIntegrationsPage.tsx";
 import SettingsInterfacePage from "./settings/SettingsInterfacePage.tsx";
 import SettingsPage from "./settings/SettingsPage.tsx";
 import StravaImportPage from "./strava/StravaImportPage.tsx";
@@ -69,6 +70,10 @@ export function AppRoutes() {
                   element={<Navigate to="/settings/account" replace />}
                 />
                 <Route path="account" element={<SettingsAccountPage />} />
+                <Route
+                  path="integrations"
+                  element={<SettingsIntegrationsPage />}
+                />
                 <Route path="interface" element={<SettingsInterfacePage />} />
               </Route>
               <Route path="/strava/import" element={<StravaImportPage />} />

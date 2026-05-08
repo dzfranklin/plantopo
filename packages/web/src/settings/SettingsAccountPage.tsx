@@ -1,9 +1,8 @@
 import { RiAddLine, RiDeleteBinLine, RiPencilLine } from "@remixicon/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useState } from "react";
 
-import { Section } from "./Section";
+import { SettingsSection } from "./SettingsSection";
 import { PasskeyIcon } from "@/auth/PasskeyIcon";
 import {
   authClient,
@@ -25,32 +24,10 @@ export default function SettingsAccountPage() {
   const user = useRequiredUser();
   const currentSession = useSession();
   const queryClient = useQueryClient();
-  const trpc = useTRPC();
-  const [searchParams, setSearchParams] = useSearchParams();
 
   const [name, setName] = useState(user.name ?? "");
   const [editingPasskeyId, setEditingPasskeyId] = useState<string | null>(null);
   const [editingPasskeyName, setEditingPasskeyName] = useState("");
-
-  const [stravaStatus, setStravaStatus] = useState(() =>
-    searchParams.get("strava"),
-  );
-  useEffect(() => {
-    if (stravaStatus) {
-      setSearchParams(
-        p => {
-          p.delete("strava");
-          return p;
-        },
-        { replace: true },
-      );
-      if (stravaStatus === "connected") {
-        queryClient.invalidateQueries({
-          queryKey: trpc.strava.account.queryOptions().queryKey,
-        });
-      }
-    }
-  }, [stravaStatus, setSearchParams, queryClient, trpc]);
 
   const { data: accounts } = useQuery({
     queryKey: authKeys.accounts(),
@@ -109,19 +86,6 @@ export default function SettingsAccountPage() {
     },
   });
 
-  const { data: stravaAccount } = useQuery(trpc.strava.account.queryOptions());
-
-  const disconnectStrava = useMutation({
-    ...trpc.strava.disconnect.mutationOptions(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: authKeys.accounts() });
-      queryClient.invalidateQueries({
-        queryKey: trpc.strava.account.queryOptions().queryKey,
-      });
-      setStravaStatus(null);
-    },
-  });
-
   const addPasskey = useMutation({
     mutationFn: async () => {
       const { error } = await authClient.passkey.addPasskey();
@@ -158,7 +122,7 @@ export default function SettingsAccountPage() {
 
   return (
     <div className="flex min-w-0 flex-col gap-10">
-      <Section title="Display name">
+      <SettingsSection title="Display name">
         <form
           onSubmit={e => {
             e.preventDefault();
@@ -179,59 +143,9 @@ export default function SettingsAccountPage() {
             {updateName.error?.message ?? "Failed to update name"}
           </p>
         )}
-      </Section>
+      </SettingsSection>
 
-      <Section title="Integrations">
-        {stravaAccount ? (
-          <div className="flex items-center justify-between gap-4 text-sm text-gray-600">
-            <span>
-              <img
-                src={stravaAccount.athlete.profile}
-                className="mr-4 inline-block h-8 w-8"
-              />{" "}
-              Connected to Strava ({stravaAccount.athlete.firstname}{" "}
-              {stravaAccount.athlete.lastname})
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => disconnectStrava.mutate()}
-              disabled={disconnectStrava.isPending}>
-              Disconnect
-            </Button>
-          </div>
-        ) : (
-          <a href="/api/v1/strava/connect">
-            <img
-              src="/btn_strava_connect_with_orange.svg"
-              alt="Connect with Strava"
-              className="h-[48px]"
-            />
-          </a>
-        )}
-        {stravaStatus === "connected" && (
-          <p className="mt-2 text-sm text-green-600">
-            Strava connected successfully.
-          </p>
-        )}
-        {stravaStatus === "denied" && (
-          <p className="mt-2 text-sm text-gray-500">
-            Strava connection cancelled.
-          </p>
-        )}
-        {stravaStatus === "error" && (
-          <p className="text-destructive mt-2 text-sm">
-            Failed to connect Strava. Please try again.
-          </p>
-        )}
-        {disconnectStrava.isError && (
-          <p className="text-destructive mt-2 text-xs">
-            {disconnectStrava.error?.message ?? "Failed to disconnect Strava"}
-          </p>
-        )}
-      </Section>
-
-      <Section
+      <SettingsSection
         title="Connected social accounts"
         description="The social accounts you use to sign in.">
         <ul className="flex flex-col gap-2">
@@ -269,9 +183,9 @@ export default function SettingsAccountPage() {
           different social account that uses the same email address (
           {user.email}).
         </p>
-      </Section>
+      </SettingsSection>
 
-      <Section
+      <SettingsSection
         title="Passkeys"
         description="Passkeys enable you to securely sign in using your device. Don't create passkeys on shared devices.">
         <ul className="flex flex-col gap-2">
@@ -361,9 +275,9 @@ export default function SettingsAccountPage() {
           // Note: The error.message contains no information for security
           <p className="text-destructive mt-2 text-xs">Failed to add passkey</p>
         )}
-      </Section>
+      </SettingsSection>
 
-      <Section title="Sessions">
+      <SettingsSection title="Sessions">
         <ul className="flex flex-col gap-2">
           {sessions?.map(session => {
             const isCurrent =
@@ -424,9 +338,9 @@ export default function SettingsAccountPage() {
             );
           })}
         </ul>
-      </Section>
+      </SettingsSection>
 
-      <Section title="Download your data">
+      <SettingsSection title="Download your data">
         <p className="text-sm">
           The export does not yet include all your data. Please email me at{" "}
           <a href="mailto:daniel@plantopo.com" className="link">
@@ -436,9 +350,9 @@ export default function SettingsAccountPage() {
         </p>
 
         <GenerateExportButton />
-      </Section>
+      </SettingsSection>
 
-      <Section
+      <SettingsSection
         title="Danger zone"
         description="Permanently delete your account and all associated data. This cannot be undone.">
         <p className="text-sm">
@@ -449,7 +363,7 @@ export default function SettingsAccountPage() {
           </a>{" "}
           to request manual account deletion.
         </p>
-      </Section>
+      </SettingsSection>
     </div>
   );
 }

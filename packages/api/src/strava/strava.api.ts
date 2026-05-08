@@ -6,6 +6,7 @@ import { z } from "zod";
 import { CircuitBreaker, CircuitOpenError } from "../circuit-breaker.js";
 import { db } from "../db.js";
 import { env } from "../env.js";
+import { ClientError } from "../errors.js";
 import { getLog } from "../logger.js";
 import { registry } from "../metrics-registry.js";
 import { stravaConnection } from "./strava.schema.js";
@@ -393,7 +394,7 @@ export class StravaApi {
 
   private async getAccessToken(appUserId: string): Promise<string> {
     const row = await this.tokenStore.getTokens(appUserId);
-    if (!row) throw new Error(`No Strava connection for user ${appUserId}`);
+    if (!row) throw new ClientError("STRAVA_INTEGRATION_REQUIRED");
 
     // Refresh if expiring within 5 minutes.
     if (row.accessTokenExpiresAt.getTime() - Date.now() < 5 * 60 * 1000) {

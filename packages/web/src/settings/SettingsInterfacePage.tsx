@@ -1,4 +1,4 @@
-import { Section } from "./Section";
+import { SettingsSection } from "./SettingsSection";
 import { useUserPrefs, useUserPrefsMutation } from "@/auth/auth-client";
 import {
   Select,
@@ -17,7 +17,7 @@ export default function SettingsInterfacePage() {
 
   return (
     <div className="flex min-w-0 flex-col gap-10">
-      <Section title="Units">
+      <SettingsSection title="Units">
         <div className="flex items-center gap-4">
           <label className="text-sm" htmlFor="distance-unit">
             Distance
@@ -44,7 +44,7 @@ export default function SettingsInterfacePage() {
             {mutation.error?.message ?? "Failed to save preferences"}
           </p>
         )}
-      </Section>
+      </SettingsSection>
     </div>
   );
 }

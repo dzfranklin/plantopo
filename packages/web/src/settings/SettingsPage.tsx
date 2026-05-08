@@ -1,4 +1,4 @@
-import { RiBrushLine, RiUserLine } from "@remixicon/react";
+import { RiBrushLine, RiLinksLine, RiUserLine } from "@remixicon/react";
 import { NavLink, Outlet } from "react-router-dom";
 
 import { UserAvatar } from "@/auth/UserAvatar";
@@ -7,6 +7,7 @@ import { cn } from "@/util/cn";
 
 const navItems = [
   { to: "/settings/account", label: "Account", icon: RiUserLine },
+  { to: "/settings/integrations", label: "Integrations", icon: RiLinksLine },
   { to: "/settings/interface", label: "Interface", icon: RiBrushLine },
 ];
 

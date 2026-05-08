@@ -13,6 +13,8 @@ import {
   verifyStravaState,
 } from "./strava.service.js";
 
+export type StravaConnectionResult = "connected" | "denied" | "error";
+
 export function registerStravaRoutes(app: Router) {
   if (!env.STRAVA_CLIENT_ID || !env.STRAVA_CLIENT_SECRET) {
     getLog().info("Skipping Strava routes (no credentials configured)");
@@ -52,9 +54,12 @@ export function registerStravaRoutes(app: Router) {
       error: stravaError,
     } = req.query as Record<string, string | undefined>;
 
+    const redirectResult = (result: StravaConnectionResult) =>
+      res.redirect(`/settings/integrations?strava_result=${result}`);
+
     if (stravaError) {
       log.info({ stravaError }, "Strava OAuth denied by user");
-      res.redirect("/settings/account?strava=denied");
+      redirectResult("denied");
       return;
     }
 
@@ -74,7 +79,7 @@ export function registerStravaRoutes(app: Router) {
       tokenData = await StravaApi.exchangeCodeForTokens(code);
     } catch (err) {
       log.error({ err }, "Strava token exchange failed");
-      res.redirect("/settings/account?strava=error");
+      redirectResult("error");
       return;
     }
 
@@ -84,6 +89,6 @@ export function registerStravaRoutes(app: Router) {
       { userId: verified.userId, athleteId: tokenData.athlete.id },
       "Strava account linked",
     );
-    res.redirect("/settings/account?strava=connected");
+    redirectResult("connected");
   });
 }

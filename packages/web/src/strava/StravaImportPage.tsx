@@ -7,6 +7,7 @@ import type { ActivityWithStatus } from "@pt/api";
 import { DistanceView, DurationView, InstantView } from "@/components/format";
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { ConnectWithStravaButton } from "@/settings/SettingsIntegrationsPage";
 import { useTRPC } from "@/trpc";
 import { cn } from "@/util/cn";
 
@@ -35,6 +36,13 @@ function ActivityPage({ cursor }: { cursor: string | undefined }) {
       query.state.data?.activities.some(a => a.importStatus === "pending")
         ? 3000
         : false,
+    throwOnError: false,
+    retry: (failureCount, error) => {
+      if (error.data?.clientError === "STRAVA_INTEGRATION_REQUIRED") {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 
   const activities = query.data?.activities;
@@ -43,7 +51,7 @@ function ActivityPage({ cursor }: { cursor: string | undefined }) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
   const selectableIds =
-    activities?.filter(a => a.importStatus !== "pending").map(a => a.id) ?? [];
+    activities?.filter(activityIsSelectable).map(a => a.id) ?? [];
 
   const allSelected =
     selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
@@ -59,7 +67,7 @@ function ActivityPage({ cursor }: { cursor: string | undefined }) {
   };
 
   const toggleOne = (a: ActivityWithStatus) => {
-    if (a.importStatus === "pending") return;
+    if (!activityIsSelectable(a)) return;
     setSelected(prev => {
       const next = new Set(prev);
       if (next.has(a.id)) next.delete(a.id);
@@ -103,10 +111,27 @@ function ActivityPage({ cursor }: { cursor: string | undefined }) {
     setSearchParams(c ? { cursor: c } : {}, { replace: false });
   };
 
+  if (query.error) {
+    if (query.error.data?.clientError === "STRAVA_INTEGRATION_REQUIRED") {
+      return (
+        <div className="mx-auto w-full max-w-3xl px-4 py-8">
+          <h1 className="mb-4 text-2xl font-bold">Import from Strava</h1>
+          <p className="text-sm text-gray-800">
+            You need to connect your Strava account before you can import
+            activities.
+          </p>
+          <p className="mt-4">
+            <ConnectWithStravaButton />
+          </p>
+        </div>
+      );
+    }
+  }
+
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <div className="mx-auto w-full max-w-3xl select-none">
       <div className="px-4 pb-8">
-        <h1 className="mb-4 pt-6 text-2xl font-bold">Import from Strava</h1>
+        <h1 className="mt-8 mb-2 text-2xl font-bold">Import from Strava</h1>
 
         <div>
           <BulkToolbar
@@ -186,8 +211,9 @@ function BulkToolbar({
   forceRefetch: boolean | undefined;
   setForceRefetch: (force: boolean) => void;
 }) {
+  const hideImport = selectedCount === 0 || isImporting;
   return (
-    <div className="sticky top-0 z-10 flex min-h-12 items-end gap-3 border-gray-200 bg-white px-4 py-2">
+    <div className="sticky top-0 z-10 flex min-h-12 items-end gap-3 border-gray-200 bg-white py-3 pr-1 pl-4">
       <label className="flex min-w-48 items-center gap-2 select-none">
         <Checkbox
           checked={allSelected ? true : someSelected ? "indeterminate" : false}
@@ -201,10 +227,10 @@ function BulkToolbar({
         </span>
       </label>
       <div
-        aria-hidden={selectedCount === 0}
+        aria-hidden={hideImport}
         className={cn(
           "ml-auto flex items-end gap-4 transition-opacity",
-          selectedCount === 0 && "opacity-0",
+          hideImport && "opacity-0",
         )}>
         <label
           className={cn(
@@ -220,7 +246,6 @@ function BulkToolbar({
 
         <button
           className="ml-auto rounded bg-orange-500 px-3 py-1 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
-          disabled={isImporting}
           onClick={onImport}>
           {isImporting ? "Importing…" : "Import selected"}
         </button>
@@ -235,19 +260,31 @@ const STATUS_BADGE: Record<Exclude<ImportStatus, "none">, string> = {
   track_deleted: "Track deleted",
 };
 
+function activityIsSelectable(activity: ActivityWithStatus) {
+  return activity.importStatus !== "pending" && !activity.manual;
+}
+
 function ActivityRow({
   activity,
   selected,
-  onToggle,
+  onToggle: updateToggle,
 }: {
   activity: ActivityWithStatus;
   selected: boolean;
   onToggle: (a: ActivityWithStatus) => void;
 }) {
   const { importStatus } = activity;
-  const isBlocked = importStatus === "pending";
+  const isBlocked = !activityIsSelectable(activity);
   const isMuted = importStatus === "done" || importStatus === "track_deleted";
-  const badge = importStatus !== "none" ? STATUS_BADGE[importStatus] : null;
+
+  let badge: string | null = null;
+  if (importStatus !== "none") badge = STATUS_BADGE[importStatus];
+  if (activity.manual) badge = "Manual entry";
+
+  const toggle = () => {
+    if (isBlocked) return;
+    updateToggle(activity);
+  };
 
   return (
     <li
@@ -259,11 +296,11 @@ function ActivityRow({
         isMuted && "opacity-50",
         selected && "bg-blue-50 hover:bg-blue-50",
       )}
-      onClick={() => onToggle(activity)}>
+      onClick={toggle}>
       <Checkbox
         checked={selected}
         disabled={isBlocked}
-        onCheckedChange={() => onToggle(activity)}
+        onCheckedChange={toggle}
         onClick={e => e.stopPropagation()}
         aria-label={`Select ${activity.name}`}
       />
@@ -285,7 +322,11 @@ function ActivityRow({
           )}
         </p>
       </div>
-      {badge && <span className="shrink-0 text-xs text-gray-400">{badge}</span>}
+      {badge && (
+        <span className="shrink-0 text-xs font-medium tracking-wide text-gray-900">
+          {badge}
+        </span>
+      )}
     </li>
   );
 }

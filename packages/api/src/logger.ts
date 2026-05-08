@@ -1,6 +1,8 @@
+import { TRPCError } from "@trpc/server";
 import { inspect } from "node:util";
 import pino, { type LoggerOptions } from "pino";
 
+import { ClientError } from "./errors.js";
 import { getJobContext } from "./job-context.js";
 import { getRequestContext } from "./request-context.js";
 
@@ -67,6 +69,8 @@ function formatLogObject(
         stack: val.stack ? truncateString(val.stack) : undefined,
         cause: val.cause ? inspect(val.cause, formatOpts) : undefined,
       };
+      if (val instanceof TRPCError) out["err.code"] = val.code;
+      if (val instanceof ClientError) out["err.clientError"] = val.clientError;
     } else if (outputObjectDepth > 0 && isPlainObject(val)) {
       out[key] = formatLogObject(
         val as Record<string, unknown>,

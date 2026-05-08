@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { ClientError } from "../errors.js";
 import { makeFixtureFetch } from "../test/fixture-fetch.js";
 import {
   type Cache,
@@ -589,7 +590,7 @@ describe("StravaApi", () => {
       });
       const api = new StravaApi(tokenStore, makeNullCache());
       await expect(api.listActivitiesUncached("user-1", {})).rejects.toThrow(
-        "No Strava connection",
+        ClientError,
       );
     });
   });

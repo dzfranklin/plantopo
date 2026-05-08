@@ -19,6 +19,8 @@ function makeTRPCError(
           code: code as any,
           httpStatus: 500,
           path: "test",
+          clientError: undefined,
+          reqId: "request-id",
           ...extra,
         },
       },
@@ -102,9 +104,7 @@ describe("ErrorBoundary", () => {
           />
         </ErrorBoundary>,
       );
-      await expect
-        .element(screen.getByText("ref: abc-123"))
-        .toBeInTheDocument();
+      await expect.element(screen.getByText("abc-123")).toBeInTheDocument();
     });
 
     it("omits reqId section when absent", async () => {
