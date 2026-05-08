@@ -71,9 +71,10 @@ export default function TrackDetailPage() {
       {query.data && (
         <div className="rounded border p-4">
           <p className="font-semibold">{query.data.name}</p>
-          <p className="text-sm text-gray-600">
+          <p className="mb-3 text-sm text-gray-600">
             Recorded at {new Date(query.data.createdAt).toLocaleString()}
           </p>
+          <SourceBadge source={query.data.source} />
         </div>
       )}
 
@@ -234,5 +235,25 @@ function TrackImage({ image: img }: { image: ImageInfo }) {
         </ContextMenu.Item>
       </ContextMenu.Content>
     </ContextMenu>
+  );
+}
+
+function SourceBadge({ source }: Pick<RecordedTrack, "source">) {
+  if (!source) return null;
+  return (
+    <div className="text-muted-foreground bg-muted my-1 inline-block rounded-lg px-3 py-1.5 text-sm font-medium">
+      <span style={{ color: source.color }}>{source.label}</span>{" "}
+      {source.url ? (
+        <a
+          className="hover-only-link text-xs"
+          href={source.url}
+          target="_blank"
+          rel="noopener noreferrer">
+          {source.id}
+        </a>
+      ) : (
+        <span className="text-xs">{source.id}</span>
+      )}
+    </div>
   );
 }

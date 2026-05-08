@@ -41,6 +41,15 @@ export const RecordedTrackSchema = RecordedTrackSummarySchema.extend({
   pointSpeed: z.array(z.number().nullable()).optional(),
   pointDemElevation: z.array(z.number().nullable()).optional(),
   images: z.array(ImageSchema),
+  source: z
+    .object({
+      type: z.string(),
+      id: z.string(),
+      label: z.string(),
+      color: z.string(),
+      url: z.string().optional(),
+    })
+    .optional(),
 });
 
 export type RecordedTrack = z.infer<typeof RecordedTrackSchema>;
@@ -247,6 +256,18 @@ const summaryColumns = {
   previewSmallHeight: recordedTrack.previewSmallHeight,
 };
 
+const trackColumns = {
+  ...summaryColumns,
+  polyline: sql<
+    string | null
+  >`ST_AsEncodedPolyline(${recordedTrack.path}, 6)`.as("polyline"),
+  pointTimestamps: recordedTrack.pointTimestamps,
+  pointSpeed: recordedTrack.pointSpeed,
+  pointDemElevation: recordedTrack.pointDemElevation,
+  sourceType: recordedTrack.sourceType,
+  sourceId: recordedTrack.sourceId,
+};
+
 export async function listRecordedTracks(
   userId: string,
 ): Promise<RecordedTrackSummary[]> {
@@ -263,31 +284,20 @@ export async function getRecordedTrack(
   userId: string,
   trackId: string,
 ): Promise<RecordedTrack | null> {
-  const [row] = await db
-    .select({
-      ...summaryColumns,
-      polyline: sql<
-        string | null
-      >`ST_AsEncodedPolyline(${recordedTrack.path}, 6)`.as("polyline"),
-      pointTimestamps: recordedTrack.pointTimestamps,
-      pointSpeed: recordedTrack.pointSpeed,
-      pointDemElevation: recordedTrack.pointDemElevation,
-    })
+  const request = await db
+    .select(trackColumns)
     .from(recordedTrack)
-    .where(
-      and(eq(recordedTrack.id, trackId), eq(recordedTrack.userId, userId)),
-    );
+    .where(and(eq(recordedTrack.id, trackId), eq(recordedTrack.userId, userId)))
+    .then(rows => rows[0]);
 
+  const [row, images] = await Promise.all([
+    request,
+    await listImagesByTrack(trackId),
+  ]);
   if (!row) return null;
 
-  const images = await listImagesByTrack(trackId);
-
   return {
-    ...toSummary(row),
-    polyline: row.polyline!,
-    pointTimestamps: row.pointTimestamps ?? undefined,
-    pointSpeed: row.pointSpeed ?? undefined,
-    pointDemElevation: row.pointDemElevation ?? undefined,
+    ...toTrack(row),
     images,
   };
 }
@@ -329,14 +339,8 @@ export async function getRecordedTrackWithPointDetail(
 ): Promise<RecordedTrackWithPointDetail | null> {
   const [row] = await db
     .select({
-      ...summaryColumns,
-      polyline: sql<
-        string | null
-      >`ST_AsEncodedPolyline(${recordedTrack.path})`.as("polyline"),
-      pointTimestamps: recordedTrack.pointTimestamps,
-      pointSpeed: recordedTrack.pointSpeed,
+      ...trackColumns,
       pointSpeedAccuracy: recordedTrack.pointSpeedAccuracy,
-      pointDemElevation: recordedTrack.pointDemElevation,
       pointGpsElevation: recordedTrack.pointGpsElevation,
       pointHorizontalAccuracy: recordedTrack.pointHorizontalAccuracy,
       pointVerticalAccuracy: recordedTrack.pointVerticalAccuracy,
@@ -353,12 +357,8 @@ export async function getRecordedTrackWithPointDetail(
   const images = await listImagesByTrack(trackId);
 
   return {
-    ...toSummary(row),
-    polyline: row.polyline!,
-    pointTimestamps: row.pointTimestamps ?? undefined,
-    pointSpeed: row.pointSpeed ?? undefined,
+    ...toTrack(row),
     pointSpeedAccuracy: row.pointSpeedAccuracy ?? undefined,
-    pointDemElevation: row.pointDemElevation ?? undefined,
     pointGpsElevation: row.pointGpsElevation ?? undefined,
     pointHorizontalAccuracy: row.pointHorizontalAccuracy ?? undefined,
     pointVerticalAccuracy: row.pointVerticalAccuracy ?? undefined,
@@ -368,7 +368,7 @@ export async function getRecordedTrackWithPointDetail(
   };
 }
 
-function toSummary(row: {
+interface SummaryRow {
   id: string;
   name: string | null;
   description: string | null;
@@ -381,7 +381,18 @@ function toSummary(row: {
   previewLargeHeight: number | null;
   previewSmallWidth: number | null;
   previewSmallHeight: number | null;
-}): RecordedTrackSummary {
+}
+
+interface TrackRow extends SummaryRow {
+  polyline: string | null;
+  pointTimestamps: (number | null)[] | null;
+  pointSpeed: (number | null)[] | null;
+  pointDemElevation: (number | null)[] | null;
+  sourceType: string | null;
+  sourceId: string | null;
+}
+
+function toSummary(row: SummaryRow): RecordedTrackSummary {
   const preview = (
     size: string,
     width: number | null,
@@ -396,13 +407,11 @@ function toSummary(row: {
       : undefined;
 
   return {
-    id: row.id,
+    ...row,
     name: row.name ?? undefined,
     startTime: row.startTime?.getTime(),
     endTime: row.endTime?.getTime(),
     createdAt: row.createdAt.getTime(),
-    distanceM: row.distanceM,
-    durationMs: row.durationMs,
     preview: preview("large", row.previewLargeWidth, row.previewLargeHeight),
     previewSmall: preview(
       "small",
@@ -411,4 +420,39 @@ function toSummary(row: {
     ),
     description: row.description ?? undefined,
   };
+}
+
+function toTrack(row: TrackRow): Omit<RecordedTrack, "images"> {
+  return {
+    ...toSummary(row),
+    polyline: row.polyline!,
+    pointTimestamps: row.pointTimestamps ?? undefined,
+    pointSpeed: row.pointSpeed ?? undefined,
+    pointDemElevation: row.pointDemElevation ?? undefined,
+    source: toSource(row),
+  };
+}
+
+function toSource({
+  sourceType: type,
+  sourceId: id,
+}: {
+  sourceType: string | null;
+  sourceId: string | null;
+}): RecordedTrack["source"] {
+  if (!type || !id) return undefined;
+  let label: string;
+  let color = "gray";
+  let url;
+  switch (type) {
+    case "strava":
+      label = "Strava";
+      color = "#d03f01";
+      url = "https://www.strava.com/activities/" + id;
+      break;
+    default:
+      label = type;
+      color = "gray";
+  }
+  return { type: type, id, label, color, url };
 }
