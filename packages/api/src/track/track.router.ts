@@ -2,7 +2,6 @@ import z from "zod";
 
 import { LocalRecordedTrackSchema } from "@pt/shared";
 
-import { getLog } from "../logger.js";
 import { authedProcedure, router } from "../trpc.js";
 import {
   getRecordedTrack,
@@ -26,7 +25,6 @@ export const trackRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      getLog().info({ input: JSON.stringify(input) }, "TODO: record");
       await uploadRecordedTrack(ctx.user.id, input);
     }),
 
