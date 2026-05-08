@@ -125,7 +125,7 @@ describe("ErrorBoundary", () => {
         </ErrorBoundary>,
       );
       await expect
-        .element(screen.getByText("Error: it go boom"))
+        .element(screen.getByText("Error: it go boom").first())
         .toBeInTheDocument();
     });
 
