@@ -1,13 +1,13 @@
+import type { inferRouterOutputs } from "@trpc/server";
 import type { RequestHandler } from "msw";
 
-import type {
-  ActivityListPage,
-  ImageInfo,
-  RequestUploadResponse,
-} from "@pt/api";
+import type { AppRouter, ImageInfo, RequestUploadResponse } from "@pt/api";
 
 import { type DeepPartial, deepMerge } from "./helpers";
 import { trpc } from "./trpc";
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type ActivityListPageWithStatus = RouterOutputs["strava"]["listActivities"];
 
 export function makeImageInfo(
   overrides: DeepPartial<ImageInfo> = {},
@@ -40,9 +40,9 @@ export function makeRequestUploadResponse(
   return deepMerge(base, overrides);
 }
 
-export function makeActivityListPage(
-  overrides: Partial<ActivityListPage> = {},
-): ActivityListPage {
+export function makeActivityListPageWithStatus(
+  overrides: Partial<ActivityListPageWithStatus> = {},
+): ActivityListPageWithStatus {
   return {
     activities: [],
     nextCursor: null,
@@ -53,7 +53,7 @@ export function makeActivityListPage(
 export function makeActivity(
   id: number,
   name: string,
-): ActivityListPage["activities"][number] {
+): ActivityListPageWithStatus["activities"][number] {
   return {
     id,
     name,
@@ -74,15 +74,16 @@ export function makeActivity(
     end_latlng: null,
     map: { id: `map${id}`, summary_polyline: null },
     max_speed: 5,
+    importStatus: "none" as const,
   };
 }
 
-export const DEFAULT_ACTIVITY_PAGE_1 = makeActivityListPage({
+export const DEFAULT_ACTIVITY_PAGE_1 = makeActivityListPageWithStatus({
   activities: [makeActivity(1, "Morning Run"), makeActivity(2, "Evening Jog")],
   nextCursor: "1700000000",
 });
 
-export const DEFAULT_ACTIVITY_PAGE_2 = makeActivityListPage({
+export const DEFAULT_ACTIVITY_PAGE_2 = makeActivityListPageWithStatus({
   activities: [makeActivity(3, "Long Run"), makeActivity(4, "Recovery Run")],
   nextCursor: null,
 });

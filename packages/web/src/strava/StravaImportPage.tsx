@@ -1,13 +1,16 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import type { SummaryActivity } from "../../../api/src/strava/strava.api";
+import type { ActivityWithStatus } from "@pt/api";
+
 import { DistanceView, DurationView, InstantView } from "@/components/format";
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTRPC } from "@/trpc";
 import { cn } from "@/util/cn";
+
+type ImportStatus = ActivityWithStatus["importStatus"];
 
 export default function StravaImportPage() {
   usePageTitle("Import from Strava");
@@ -20,57 +23,85 @@ export default function StravaImportPage() {
 
 function ActivityPage({ cursor }: { cursor: string | undefined }) {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [, setSearchParams] = useSearchParams();
 
-  const query = useQuery(trpc.strava.listActivities.queryOptions({ cursor }));
+  const queryOptions = trpc.strava.listActivities.queryOptions({ cursor });
+
+  const query = useQuery({
+    ...queryOptions,
+    refetchInterval: query =>
+      query.state.data?.activities.some(a => a.importStatus === "pending")
+        ? 3000
+        : false,
+  });
+
   const activities = query.data?.activities;
 
   const nextCursor = query.data?.nextCursor ?? null;
-
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [imported, setImported] = useState<Set<number>>(new Set());
+
+  const selectableIds =
+    activities?.filter(a => a.importStatus !== "pending").map(a => a.id) ?? [];
+
+  const allSelected =
+    selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
+  const someSelected =
+    !allSelected && selectableIds.some(id => selected.has(id));
+
+  const toggleAll = () => {
+    if (allSelected || someSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(selectableIds));
+    }
+  };
+
+  const toggleOne = (a: ActivityWithStatus) => {
+    if (a.importStatus === "pending") return;
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(a.id)) next.delete(a.id);
+      else next.add(a.id);
+      return next;
+    });
+  };
+
+  const hasPreexisting = activities?.some(
+    a => selected.has(a.id) && a.importStatus !== "none",
+  );
+  const [forceRefetchState, setForceRefetch] = useState<boolean>(false);
+  const forceRefetch = hasPreexisting ? forceRefetchState : undefined;
 
   const importMutation = useMutation(
     trpc.strava.importActivities.mutationOptions({
-      onSuccess: () => {
-        setImported(prev => new Set([...prev, ...selected]));
+      onSuccess: (_data, vars) => {
+        const ids = new Set(vars.activityIds);
+        queryClient.setQueryData(queryOptions.queryKey, data =>
+          data
+            ? {
+                ...data,
+                activities: data.activities.map(a =>
+                  ids.has(a.id)
+                    ? { ...a, importStatus: "pending" as const }
+                    : a,
+                ),
+              }
+            : data,
+        );
         setSelected(new Set());
       },
     }),
   );
 
-  const allIds = useMemo(() => activities?.map(a => a.id) ?? [], [activities]);
+  const handleImport = () => {
+    importMutation.mutate({ activityIds: [...selected], forceRefetch });
+  };
 
-  const allSelected = allIds.length > 0 && allIds.every(id => selected.has(id));
-  const someSelected = !allSelected && allIds.some(id => selected.has(id));
-
-  const toggleAll = useCallback(() => {
-    if (allSelected || someSelected) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(allIds));
-    }
-  }, [allSelected, someSelected, allIds]);
-
-  const toggleOne = useCallback((id: number) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  }, []);
-
-  const goToPage = useCallback(
-    (c: string | null) => {
-      setSearchParams(c ? { cursor: c } : {}, { replace: false });
-    },
-    [setSearchParams],
-  );
+  const goToPage = (c: string | null) => {
+    setSearchParams(c ? { cursor: c } : {}, { replace: false });
+  };
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -83,12 +114,12 @@ function ActivityPage({ cursor }: { cursor: string | undefined }) {
             allSelected={allSelected}
             someSelected={someSelected}
             onToggleAll={toggleAll}
-            importedIds={imported}
-            onImport={() =>
-              importMutation.mutate({ activityIds: [...selected] })
-            }
+            onImport={handleImport}
             isImporting={importMutation.isPending}
+            forceRefetch={forceRefetch}
+            setForceRefetch={setForceRefetch}
           />
+
           {query.isLoading && (
             <p className="text-sm text-gray-500">Loading...</p>
           )}
@@ -110,7 +141,6 @@ function ActivityPage({ cursor }: { cursor: string | undefined }) {
                   key={activity.id}
                   activity={activity}
                   selected={selected.has(activity.id)}
-                  imported={imported.has(activity.id)}
                   onToggle={toggleOne}
                 />
               ))}
@@ -142,20 +172,22 @@ function BulkToolbar({
   allSelected,
   someSelected,
   onToggleAll,
-  importedIds,
   onImport,
   isImporting,
+  forceRefetch,
+  setForceRefetch,
 }: {
   selectedCount: number;
   allSelected: boolean;
   someSelected: boolean;
   onToggleAll: () => void;
-  importedIds: Set<number>;
   onImport: () => void;
   isImporting: boolean;
+  forceRefetch: boolean | undefined;
+  setForceRefetch: (force: boolean) => void;
 }) {
   return (
-    <div className="sticky top-0 z-10 flex items-center gap-3 border-gray-200 bg-white px-4 py-2">
+    <div className="sticky top-0 z-10 flex min-h-12 items-end gap-3 border-gray-200 bg-white px-4 py-2">
       <label className="flex min-w-48 items-center gap-2 select-none">
         <Checkbox
           checked={allSelected ? true : someSelected ? "indeterminate" : false}
@@ -168,46 +200,70 @@ function BulkToolbar({
             : "Select activities to import"}
         </span>
       </label>
-      {selectedCount > 0 && (
+      <div
+        aria-hidden={selectedCount === 0}
+        className={cn(
+          "ml-auto flex items-end gap-4 transition-opacity",
+          selectedCount === 0 && "opacity-0",
+        )}>
+        <label
+          className={cn(
+            "text-muted-foreground flex cursor-pointer items-center gap-2 text-sm transition-opacity select-none",
+            forceRefetch === undefined && "opacity-0",
+          )}>
+          <Checkbox
+            checked={forceRefetch ?? false}
+            onCheckedChange={setForceRefetch}
+          />{" "}
+          Force re-import existing
+        </label>
+
         <button
           className="ml-auto rounded bg-orange-500 px-3 py-1 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
           disabled={isImporting}
           onClick={onImport}>
           {isImporting ? "Importing…" : "Import selected"}
         </button>
-      )}
-      {importedIds.size > 0 && selectedCount === 0 && (
-        <span className="text-sm text-green-600">
-          {importedIds.size}{" "}
-          {importedIds.size === 1 ? "activity" : "activities"} queued for import
-        </span>
-      )}
+      </div>
     </div>
   );
 }
 
+const STATUS_BADGE: Record<Exclude<ImportStatus, "none">, string> = {
+  pending: "Importing…",
+  done: "Imported",
+  track_deleted: "Track deleted",
+};
+
 function ActivityRow({
   activity,
   selected,
-  imported,
   onToggle,
 }: {
-  activity: SummaryActivity;
+  activity: ActivityWithStatus;
   selected: boolean;
-  imported: boolean;
-  onToggle: (id: number) => void;
+  onToggle: (a: ActivityWithStatus) => void;
 }) {
+  const { importStatus } = activity;
+  const isBlocked = importStatus === "pending";
+  const isMuted = importStatus === "done" || importStatus === "track_deleted";
+  const badge = importStatus !== "none" ? STATUS_BADGE[importStatus] : null;
+
   return (
     <li
       className={cn(
-        "flex cursor-pointer items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50",
+        "flex items-center gap-3 px-4 py-3 text-sm transition-all",
+        isBlocked
+          ? "cursor-default opacity-50"
+          : "cursor-pointer hover:bg-gray-50",
+        isMuted && "opacity-50",
         selected && "bg-blue-50 hover:bg-blue-50",
-        imported && "opacity-50",
       )}
-      onClick={() => onToggle(activity.id)}>
+      onClick={() => onToggle(activity)}>
       <Checkbox
         checked={selected}
-        onCheckedChange={() => onToggle(activity.id)}
+        disabled={isBlocked}
+        onCheckedChange={() => onToggle(activity)}
         onClick={e => e.stopPropagation()}
         aria-label={`Select ${activity.name}`}
       />
@@ -229,6 +285,7 @@ function ActivityRow({
           )}
         </p>
       </div>
+      {badge && <span className="shrink-0 text-xs text-gray-400">{badge}</span>}
     </li>
   );
 }

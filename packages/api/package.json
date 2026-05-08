@@ -12,7 +12,8 @@
     "build": "tsc --build",
     "clean": "rm -rf ./dist node_modules",
     "test": "vitest run",
-    "check": "tsc --noEmit -p tsconfig.json && prettier --write --log-level warn . && eslint --fix ."
+    "check": "tsc --noEmit -p tsconfig.json && prettier --write --log-level warn . && eslint --fix .",
+    "node": "cd src && NODE_ENV=development DEV_LIVE_RELOAD_WEB=1 node --conditions=development --import tsx/esm"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1042.0",

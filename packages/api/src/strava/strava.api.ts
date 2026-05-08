@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { Redis } from "ioredis";
+import { Gauge } from "prom-client";
 import { z } from "zod";
 
 import { CircuitBreaker, CircuitOpenError } from "../circuit-breaker.js";
 import { db } from "../db.js";
 import { env } from "../env.js";
 import { getLog } from "../logger.js";
+import { registry } from "../metrics-registry.js";
 import { stravaConnection } from "./strava.schema.js";
 
 export interface Cache {
@@ -189,25 +191,38 @@ export type StreamType = keyof StreamResponse;
 export const STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize";
 export const STRAVA_SCOPE = "read,activity:read_all,activity:write";
 
+const rateLimitGauge = new Gauge({
+  name: "strava_api_rate_limit",
+  help: "Strava API rate limit and usage",
+  labelNames: ["window", "type", "metric"] as const,
+  registers: [registry],
+});
+
 // Trip the circuit open at 95% usage on either window, or on 429.
 function shouldTripCircuitBreaker(response: Response): boolean {
   if (response.status === 429) return true;
-  for (const [usageHeader, limitHeader] of [
-    ["x-ratelimit-usage", "x-ratelimit-limit"],
-    ["x-readratelimit-usage", "x-readratelimit-limit"],
+  const headers = parseHeaders(response.headers);
+  if (!headers) return false;
+  const { ratelimit, readratelimit } = headers;
+
+  for (const [window, type, limit, usage] of [
+    ["15min", "overall", ratelimit.limit[0], ratelimit.usage[0]],
+    ["day", "overall", ratelimit.limit[1], ratelimit.usage[1]],
+    ["15min", "read", readratelimit.limit[0], readratelimit.usage[0]],
+    ["day", "read", readratelimit.limit[1], readratelimit.usage[1]],
   ] as const) {
-    const usage = response.headers.get(usageHeader);
-    const limit = response.headers.get(limitHeader);
-    if (!usage || !limit) continue;
-    const usageParts = usage.split(",").map(Number);
-    const limitParts = limit.split(",").map(Number);
-    for (let i = 0; i < usageParts.length; i++) {
-      const u = usageParts[i]!;
-      const l = limitParts[i];
-      if (l && u / l >= 0.95) return true;
-    }
+    rateLimitGauge.set({ window, type, metric: "limit" }, limit);
+    rateLimitGauge.set({ window, type, metric: "usage" }, usage);
   }
-  return false;
+
+  const usagePercents = [
+    ratelimit.usage[0] / ratelimit.limit[0],
+    ratelimit.usage[1] / ratelimit.limit[1],
+    readratelimit.usage[0] / readratelimit.limit[0],
+    readratelimit.usage[1] / readratelimit.limit[1],
+  ];
+  const maxUsage = Math.max(...usagePercents);
+  return maxUsage >= 0.95;
 }
 
 export const stravaCircuitBreaker = new CircuitBreaker(
@@ -531,6 +546,45 @@ function toPage(activities: SummaryActivity[]): ActivityListPage {
         )
       : null;
   return { activities, nextCursor };
+}
+
+interface RateLimitStatus {
+  limit: [number, number]; // [15min, day]
+  usage: [number, number]; // [15min, day]
+}
+
+interface StravaHeaders {
+  ratelimit: RateLimitStatus;
+  readratelimit: RateLimitStatus;
+}
+
+function parseHeaders(headers: Headers): StravaHeaders | null {
+  // eg "x-ratelimit-limit": "200,2000"
+  const parseRateLimit = (
+    usageHeader: string,
+    limitHeader: string,
+  ): RateLimitStatus | undefined => {
+    const usage = headers.get(usageHeader);
+    const limit = headers.get(limitHeader);
+    if (!usage || !limit) return undefined;
+    const usageParts = usage.split(",").map(Number);
+    const limitParts = limit.split(",").map(Number);
+    if (usageParts.length !== 2 || limitParts.length !== 2) return undefined;
+    return {
+      usage: [usageParts[0]!, usageParts[1]!],
+      limit: [limitParts[0]!, limitParts[1]!],
+    };
+  };
+  const ratelimit = parseRateLimit("x-ratelimit-usage", "x-ratelimit-limit");
+  const readratelimit = parseRateLimit(
+    "x-readratelimit-usage",
+    "x-readratelimit-limit",
+  );
+  if (!ratelimit || !readratelimit) {
+    getLog().warn({ headers }, "Missing Strava rate limit headers");
+    return null;
+  }
+  return { ratelimit, readratelimit };
 }
 
 export interface TokenStore {

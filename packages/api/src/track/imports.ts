@@ -1,35 +1,146 @@
-import { sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import z from "zod";
 
 import type { Point2 } from "@pt/shared";
+import { sha256 } from "@pt/shared";
 
 import { db } from "../db.js";
 import { enqueueJob } from "../jobs.js";
 import { getLog } from "../logger.js";
-import { recordedTrack } from "./track.schema.js";
+import { recordedTrack, trackImport } from "./track.schema.js";
 import {
   enqueuePopulateDemElevationJob,
   enqueuePopulatePreviewImagesJob,
 } from "./track.service.js";
 
-export interface ImportTrackOpts {
+export interface TrackImportKey {
   userId: string;
-  trackImport: TrackImport;
+  sourceType: string;
+  sourceId: string;
 }
 
-export async function importTrack(opts: ImportTrackOpts): Promise<void> {
-  await enqueueJob("track.import", opts);
+export async function createTrackImport(key: TrackImportKey): Promise<void> {
+  await db.insert(trackImport).values(key).onConflictDoNothing();
 }
 
-export async function runImportTrack(opts: ImportTrackOpts): Promise<string> {
-  const { userId, trackImport } = opts;
-  const { properties, geometry } = trackImport;
+export async function setRawData(
+  key: TrackImportKey,
+  raw: Buffer,
+): Promise<void> {
+  await db
+    .update(trackImport)
+    .set({ rawData: raw })
+    .where(
+      and(
+        eq(trackImport.userId, key.userId),
+        eq(trackImport.sourceType, key.sourceType),
+        eq(trackImport.sourceId, key.sourceId),
+      ),
+    );
+}
+
+export type ConversionInput =
+  | { status: "already_converted" }
+  | { status: "has_raw"; data: Buffer }
+  | { status: "needs_fetch" };
+
+export async function getConversionInput(
+  key: TrackImportKey,
+): Promise<ConversionInput> {
+  const row = await db
+    .select({
+      rawData: trackImport.rawData,
+      importData: trackImport.importData,
+    })
+    .from(trackImport)
+    .where(
+      and(
+        eq(trackImport.userId, key.userId),
+        eq(trackImport.sourceType, key.sourceType),
+        eq(trackImport.sourceId, key.sourceId),
+      ),
+    )
+    .then(r => r[0] ?? null);
+
+  if (!row)
+    throw new Error(
+      `track_import row not found for ${key.sourceType}/${key.sourceId}`,
+    );
+  if (row.importData) return { status: "already_converted" };
+  if (row.rawData) return { status: "has_raw", data: row.rawData as Buffer };
+  return { status: "needs_fetch" };
+}
+
+export interface TrackImportOptions {
+  force?: boolean;
+}
+
+export async function importTrack(
+  key: TrackImportKey,
+  data: TrackImport,
+  options: TrackImportOptions = {},
+): Promise<void> {
+  await db
+    .update(trackImport)
+    .set({ importData: data as unknown as Record<string, unknown> })
+    .where(
+      and(
+        eq(trackImport.userId, key.userId),
+        eq(trackImport.sourceType, key.sourceType),
+        eq(trackImport.sourceId, key.sourceId),
+      ),
+    );
+  await enqueueJob("track.import", { key, options });
+}
+
+export async function runImportTrack({
+  key,
+  options,
+}: {
+  key: TrackImportKey;
+  options?: TrackImportOptions;
+}): Promise<string> {
+  const { userId, sourceType, sourceId } = key;
   let log = getLog().child({
     runImportTrackUserId: userId,
-    runImportTrackSourceType: properties.sourceType,
-    runImportTrackSourceId: properties.sourceId,
+    sourceType,
+    sourceId,
   });
+
+  const row = await db
+    .select()
+    .from(trackImport)
+    .where(
+      and(
+        eq(trackImport.userId, userId),
+        eq(trackImport.sourceType, sourceType),
+        eq(trackImport.sourceId, sourceId),
+      ),
+    )
+    .then(r => r[0] ?? null);
+
+  if (!row) {
+    throw new Error(`track_import row not found for ${sourceType}/${sourceId}`);
+  }
+
+  if (row.trackId) {
+    if (options?.force) {
+      log.info("force re-importing track");
+    } else {
+      log.info("Track already imported, skipping");
+      return row.trackId;
+    }
+  }
+
+  if (!row.importData) {
+    throw new Error(
+      `track_import.importData is null for ${sourceType}/${sourceId}`,
+    );
+  }
+
+  const trackImportData = TrackImportSchema.parse(row.importData);
+  const { properties, geometry } = trackImportData;
 
   const pointTimestamps = properties.coordinateProperties.times ?? null;
   const pointSpeed = properties.coordinateProperties.speeds ?? null;
@@ -53,7 +164,7 @@ export async function runImportTrack(opts: ImportTrackOpts): Promise<string> {
     previewSmallHeight: null,
   };
 
-  const row = await db
+  const trackRow = await db
     .insert(recordedTrack)
     .values({ id: nanoid(), userId, ...upsertData })
     .onConflictDoUpdate({
@@ -62,28 +173,40 @@ export async function runImportTrack(opts: ImportTrackOpts): Promise<string> {
         recordedTrack.sourceType,
         recordedTrack.sourceId,
       ],
-      targetWhere: sql`${recordedTrack.sourceType} IS NOT NULL`,
+      targetWhere: isNotNull(recordedTrack.sourceType),
       set: upsertData,
     })
     .returning({ id: recordedTrack.id })
-    .then(([row]) => row!);
-  const trackId = row.id;
+    .then(([r]) => r!);
 
+  const trackId = trackRow.id;
   log = log.child({ trackId });
   log.info("Track inserted");
+
+  await db
+    .update(trackImport)
+    .set({ trackId })
+    .where(
+      and(
+        eq(trackImport.userId, userId),
+        eq(trackImport.sourceType, sourceType),
+        eq(trackImport.sourceId, sourceId),
+      ),
+    );
 
   await enqueuePopulateDemElevationJob(trackId);
   await enqueuePopulatePreviewImagesJob(trackId);
 
   const photos = properties.photos ?? [];
-  const { enqueueJob } = await import("../jobs.js");
   for (const photo of photos) {
+    const photoSha256 = await sha256(photo.url);
     enqueueJob("image.import", {
       userId,
       url: photo.url,
       takenAt: photo.taken_at,
       filename: photo.filename,
       linkedTrackId: trackId,
+      sha256: photoSha256,
     }).catch(err => {
       log.error({ err, photoUrl: photo.url }, "Failed to enqueue image import");
     });
@@ -91,6 +214,85 @@ export async function runImportTrack(opts: ImportTrackOpts): Promise<string> {
 
   log.info({ photoCount: photos.length }, "Track import complete");
   return trackId;
+}
+
+export type ImportStatus = "none" | "pending" | "done" | "track_deleted";
+
+export async function getImportStatus(
+  userId: string,
+  sourceType: string,
+  sourceId: string,
+): Promise<ImportStatus> {
+  const row = await db
+    .select({
+      importData: trackImport.importData,
+      trackId: trackImport.trackId,
+    })
+    .from(trackImport)
+    .where(
+      and(
+        eq(trackImport.userId, userId),
+        eq(trackImport.sourceType, sourceType),
+        eq(trackImport.sourceId, sourceId),
+      ),
+    )
+    .then(r => r[0] ?? null);
+
+  return deriveStatus(row);
+}
+
+export async function getImportStatuses(
+  userId: string,
+  sourceType: string,
+  sourceIds: string[],
+): Promise<Map<string, ImportStatus>> {
+  if (sourceIds.length === 0) return new Map();
+
+  const rows = await db
+    .select({
+      sourceId: trackImport.sourceId,
+      importData: trackImport.importData,
+      trackId: trackImport.trackId,
+    })
+    .from(trackImport)
+    .where(
+      and(
+        eq(trackImport.userId, userId),
+        eq(trackImport.sourceType, sourceType),
+        inArray(trackImport.sourceId, sourceIds),
+      ),
+    );
+
+  const result = new Map<string, ImportStatus>();
+  for (const row of rows) {
+    result.set(row.sourceId, deriveStatus(row));
+  }
+  return result;
+}
+
+export async function deleteTrackImport(
+  userId: string,
+  sourceType: string,
+  sourceId: string,
+): Promise<void> {
+  await db
+    .delete(trackImport)
+    .where(
+      and(
+        eq(trackImport.userId, userId),
+        eq(trackImport.sourceType, sourceType),
+        eq(trackImport.sourceId, sourceId),
+      ),
+    );
+}
+
+function deriveStatus(
+  row: { importData: unknown; trackId: string | null } | null,
+): ImportStatus {
+  if (!row) return "none";
+  if (row.trackId) return "done";
+  if (row.importData) return "track_deleted";
+  return "pending";
 }
 
 export class ImportError extends Error {
@@ -117,8 +319,8 @@ export const PhotoSchema = z.object({
 });
 
 export const PropertiesSchema = z.object({
-  sourceType: z.string(), // e.g. "strava", "gpx"
-  sourceId: z.string(), // e.g. strava activity id, or filename
+  sourceType: z.string(),
+  sourceId: z.string(),
   name: z.string().optional(),
   startTime: z.number().optional(),
   endTime: z.number().optional(),

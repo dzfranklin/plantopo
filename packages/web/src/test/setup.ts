@@ -1,4 +1,6 @@
-import { afterAll, afterEach, beforeAll } from "vitest";
+import "@/index.css";
+
+import { afterAll, afterEach, beforeAll, vi } from "vitest";
 
 import { server } from "./msw-server";
 import { resetTrpcMocks } from "./trpc";
@@ -19,6 +21,7 @@ beforeAll(async () => {
 afterEach(() => {
   server.resetHandlers();
   resetTrpcMocks();
+  vi.useRealTimers();
 });
 
 afterAll(() => server.stop());

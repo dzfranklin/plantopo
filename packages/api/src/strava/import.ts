@@ -6,9 +6,13 @@ import {
   ImportError,
   type Properties,
   type TrackImport,
+  type TrackImportKey,
+  createTrackImport,
   fileExtension,
+  getConversionInput,
   importTrack,
   normalizeFilenameComponent,
+  setRawData,
 } from "../track/imports.js";
 import type {
   ActivityPhotos,
@@ -20,34 +24,85 @@ import { stravaApi } from "./strava.api.js";
 export interface ImportStravaActivityOpts {
   userId: string;
   activityId: number;
+  force?: boolean;
 }
 
 export async function importStravaActivity(
   opts: ImportStravaActivityOpts,
 ): Promise<void> {
+  const key = stravaImportKey(opts);
+  await createTrackImport(key);
   await enqueueJob("strava.importActivity", opts);
 }
 
-export async function runImportStravaActivity(
-  opts: ImportStravaActivityOpts,
-): Promise<void> {
-  const { userId, activityId } = opts;
-  const log = getLog().child({ userId, stravaActivityId: activityId });
+function stravaImportKey({
+  userId,
+  activityId,
+}: Pick<ImportStravaActivityOpts, "userId" | "activityId">): TrackImportKey {
+  return {
+    userId,
+    sourceType: "strava",
+    sourceId: activityId.toString(),
+  };
+}
 
-  log.info("Fetching Strava activity data");
-  const [activity, streams, photos] = await Promise.all([
-    stravaApi.getActivity(userId, activityId),
-    stravaApi.getActivityStreams(userId, activityId, [
-      "latlng",
-      "time",
-      "velocity_smooth",
-    ]),
-    stravaApi.getActivityPhotos(userId, activityId),
-  ]);
+export async function runImportStravaActivity({
+  userId,
+  activityId,
+  force,
+}: ImportStravaActivityOpts): Promise<void> {
+  const key = stravaImportKey({ userId, activityId });
 
-  const trackImport = stravaToTrackImport(activity, streams, photos);
-  await importTrack({ userId, trackImport });
-  log.info("Enqueued track.import for Strava activity");
+  const rawResult = await getConversionInput(key);
+
+  const log = getLog().child({
+    userId,
+    activityId,
+    force,
+    conversionInputStatus: rawResult.status,
+  });
+
+  if (rawResult.status === "already_converted") {
+    if (force) {
+      log.info("force refetching Strava activity");
+    } else {
+      log.info("skipping Strava activity import");
+      await enqueueJob("track.import", { key });
+      return;
+    }
+  }
+
+  let rawData: StravaRawData;
+  if (rawResult.status === "has_raw") {
+    rawData = JSON.parse(rawResult.data.toString("utf8")) as StravaRawData;
+  } else {
+    log.info("Fetching Strava activity data");
+    const [activity, streams, photos] = await Promise.all([
+      stravaApi.getActivity(userId, activityId),
+      stravaApi.getActivityStreams(userId, activityId, [
+        "latlng",
+        "time",
+        "velocity_smooth",
+      ]),
+      stravaApi.getActivityPhotos(userId, activityId),
+    ]);
+    rawData = { activity, streams, photos };
+    await setRawData(key, Buffer.from(JSON.stringify(rawData), "utf8"));
+  }
+
+  const data = stravaToTrackImport(
+    rawData.activity,
+    rawData.streams,
+    rawData.photos,
+  );
+  await importTrack(key, data, { force });
+  log.info("Converted and enqueued track.import");
+}
+
+interface StravaRawData {
+  activity: DetailedActivity;
+  streams: StreamResponse;
+  photos: ActivityPhotos;
 }
 
 export function stravaToTrackImport(
@@ -101,29 +156,25 @@ export function stravaToTrackImport(
       continue;
     }
     const ext = fileExtension(url);
-    const filename =
-      normalizeFilenameComponent(activity.name) + ` ${i + 1}.${ext}`;
     photosProp.push({
-      url: photo.urls["2048"],
+      url,
       taken_at: photo.created_at_local,
-      filename: filename,
+      filename: normalizeFilenameComponent(activity.name) + ` ${i + 1}.${ext}`,
     });
   }
-
-  const properties = {
-    sourceType: "strava",
-    sourceId: activity.id.toString(),
-    name: activity.name,
-    startTime: start.getTime(),
-    endTime: start.getTime() + activity.elapsed_time * 1000,
-    description: activity.description ?? undefined,
-    photos: photosProp,
-    coordinateProperties,
-  } satisfies Properties;
 
   return {
     type: "Feature",
     geometry,
-    properties,
+    properties: {
+      sourceType: "strava",
+      sourceId: activity.id.toString(),
+      name: activity.name,
+      startTime: start.getTime(),
+      endTime: start.getTime() + activity.elapsed_time * 1000,
+      description: activity.description ?? undefined,
+      photos: photosProp,
+      coordinateProperties,
+    } satisfies Properties,
   };
 }

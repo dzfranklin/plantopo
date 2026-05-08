@@ -2,7 +2,9 @@ import { relations, sql } from "drizzle-orm";
 import {
   customType,
   integer,
+  jsonb,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -71,5 +73,31 @@ export const recordedTrackRelations = relations(recordedTrack, ({ one }) => ({
   user: one(user, {
     fields: [recordedTrack.userId],
     references: [user.id],
+  }),
+}));
+
+export const trackImport = pgTable(
+  "track_import",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    sourceType: text("source_type").notNull(),
+    sourceId: text("source_id").notNull(),
+    rawData: bytea("raw_data"),
+    importData: jsonb("import_data"),
+    trackId: text("track_id").references(() => recordedTrack.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  t => [primaryKey({ columns: [t.userId, t.sourceType, t.sourceId] })],
+);
+
+export const trackImportRelations = relations(trackImport, ({ one }) => ({
+  user: one(user, { fields: [trackImport.userId], references: [user.id] }),
+  track: one(recordedTrack, {
+    fields: [trackImport.trackId],
+    references: [recordedTrack.id],
   }),
 }));

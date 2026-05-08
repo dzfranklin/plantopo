@@ -5,7 +5,7 @@ import db from "../db.js";
 import { getEnqueuedJobs } from "../test/helpers.js";
 import { TEST_USER } from "../test/setup-db.js";
 import { type TrackImport, importTrack, runImportTrack } from "./imports.js";
-import { recordedTrack } from "./track.schema.js";
+import { recordedTrack, trackImport } from "./track.schema.js";
 import { getRecordedTrack } from "./track.service.js";
 
 const BASE_IMPORT: TrackImport = {
@@ -36,12 +36,43 @@ const BASE_IMPORT: TrackImport = {
   },
 };
 
+async function seedTrackImport(
+  importData: TrackImport,
+  overrides: { sourceId?: string } = {},
+) {
+  const sourceId = overrides.sourceId ?? importData.properties.sourceId;
+  const data = overrides.sourceId
+    ? { ...importData, properties: { ...importData.properties, sourceId } }
+    : importData;
+
+  await db
+    .insert(trackImport)
+    .values({
+      userId: TEST_USER.id,
+      sourceType: data.properties.sourceType,
+      sourceId,
+      importData: data as unknown as Record<string, unknown>,
+    })
+    .onConflictDoUpdate({
+      target: [
+        trackImport.userId,
+        trackImport.sourceType,
+        trackImport.sourceId,
+      ],
+      set: { importData: data as unknown as Record<string, unknown> },
+    });
+
+  return {
+    userId: TEST_USER.id,
+    sourceType: data.properties.sourceType,
+    sourceId,
+  };
+}
+
 describe("runImportTrack", () => {
   it("inserts a track with correct fields", async () => {
-    const id = await runImportTrack({
-      userId: TEST_USER.id,
-      trackImport: BASE_IMPORT,
-    });
+    const key = await seedTrackImport(BASE_IMPORT);
+    const id = await runImportTrack({ key });
 
     const [row] = await db
       .select({
@@ -67,20 +98,42 @@ describe("runImportTrack", () => {
     );
   });
 
-  it("upserts on re-import and resets populated fields", async () => {
-    const id = await runImportTrack({
-      userId: TEST_USER.id,
-      trackImport: BASE_IMPORT,
+  it("sets trackId on track_import row after insert", async () => {
+    const key = await seedTrackImport(BASE_IMPORT, {
+      sourceId: "set-track-id",
     });
+    const id = await runImportTrack({ key });
+
+    const [row] = await db
+      .select({ trackId: trackImport.trackId })
+      .from(trackImport)
+      .where(eq(trackImport.userId, TEST_USER.id));
+    expect(row!.trackId).toBe(id);
+  });
+
+  it("skips if trackId already set (idempotent)", async () => {
+    const key = await seedTrackImport(BASE_IMPORT, {
+      sourceId: "already-done",
+    });
+    const id1 = await runImportTrack({ key });
+    const id2 = await runImportTrack({ key });
+    expect(id2).toBe(id1);
+  });
+
+  it("upserts on re-import and resets populated fields", async () => {
+    const key = await seedTrackImport(BASE_IMPORT);
+    const id = await runImportTrack({ key });
+
     const updated: TrackImport = {
       ...BASE_IMPORT,
       properties: { ...BASE_IMPORT.properties, name: "Updated run" },
     };
-    const updatedId = await runImportTrack({
-      userId: TEST_USER.id,
-      trackImport: updated,
-    });
 
+    const key2 = await seedTrackImport(updated);
+    const updatedId = await runImportTrack({
+      key: key2,
+      options: { force: true },
+    });
     expect(updatedId).toBe(id);
 
     const track = await getRecordedTrack(TEST_USER.id, id);
@@ -98,7 +151,8 @@ describe("runImportTrack", () => {
   });
 
   it("enqueues dem elevation and preview jobs", async () => {
-    await runImportTrack({ userId: TEST_USER.id, trackImport: BASE_IMPORT });
+    const key = await seedTrackImport(BASE_IMPORT, { sourceId: "dem-preview" });
+    await runImportTrack({ key });
     expect(
       await getEnqueuedJobs("recordedTrack.populateDemElevation"),
     ).toHaveLength(1);
@@ -123,7 +177,8 @@ describe("runImportTrack", () => {
         ],
       },
     };
-    await runImportTrack({ userId: TEST_USER.id, trackImport: withPhotos });
+    const key = await seedTrackImport(withPhotos, { sourceId: "with-photos" });
+    await runImportTrack({ key });
 
     const jobs = await getEnqueuedJobs("image.import");
     expect(jobs).toHaveLength(2);
@@ -158,21 +213,25 @@ describe("runImportTrack", () => {
         coordinateProperties: {},
       },
     };
-    const id = await runImportTrack({
-      userId: TEST_USER.id,
-      trackImport: minimal,
-    });
+    const key = await seedTrackImport(minimal, { sourceId: "minimal" });
+    const id = await runImportTrack({ key });
 
     const track = await getRecordedTrack(TEST_USER.id, id);
-    expect(track!.name).toBeNull();
-    expect(track!.startTime).toBeNull();
-    expect(track!.endTime).toBeNull();
+    expect(track!.name).toBeUndefined();
+    expect(track!.startTime).toBeUndefined();
+    expect(track!.endTime).toBeUndefined();
   });
 });
 
 it("importTrack enqueues a track.import job", async () => {
-  await importTrack({ userId: TEST_USER.id, trackImport: BASE_IMPORT });
+  const key = {
+    userId: TEST_USER.id,
+    sourceType: "strava",
+    sourceId: "enqueue-test",
+  };
+  await db.insert(trackImport).values(key);
+  await importTrack(key, BASE_IMPORT);
   const jobs = await getEnqueuedJobs("track.import");
   expect(jobs).toHaveLength(1);
-  expect(jobs[0]).toMatchObject({ userId: TEST_USER.id });
+  expect(jobs[0]).toMatchObject({ key, options: {} });
 });

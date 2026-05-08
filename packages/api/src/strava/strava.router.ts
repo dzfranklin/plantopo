@@ -1,14 +1,32 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
+import { type ImportStatus, getImportStatuses } from "../track/imports.js";
 import { authedProcedure, router } from "../trpc.js";
 import { importStravaActivity } from "./import.js";
-import { ActivityListPageSchema, stravaApi } from "./strava.api.js";
+import {
+  ActivityListPageSchema,
+  SummaryActivitySchema,
+  stravaApi,
+} from "./strava.api.js";
 import {
   StravaAccountSchema,
   deleteStravaConnection,
   getStravaAccount,
 } from "./strava.service.js";
+
+const ImportStatusSchema = z.enum(["none", "pending", "done", "track_deleted"]);
+
+const ActivityWithStatusSchema = SummaryActivitySchema.and(
+  z.object({ importStatus: ImportStatusSchema }),
+);
+
+export type ActivityWithStatus = z.infer<typeof ActivityWithStatusSchema>;
+
+const ActivityListPageWithStatusSchema = z.object({
+  activities: z.array(ActivityWithStatusSchema),
+  nextCursor: ActivityListPageSchema.shape.nextCursor,
+});
 
 export const stravaRouter = router({
   account: authedProcedure
@@ -33,18 +51,44 @@ export const stravaRouter = router({
 
   listActivities: authedProcedure
     .input(z.object({ cursor: z.string().optional() }))
-    .output(ActivityListPageSchema)
+    .output(ActivityListPageWithStatusSchema)
     .query(async ({ ctx, input }) => {
-      return stravaApi.listActivitiesPage(ctx.user.id, input.cursor);
+      const page = await stravaApi.listActivitiesPage(
+        ctx.user.id,
+        input.cursor,
+      );
+      const sourceIds = page.activities.map(a => a.id.toString());
+      const statuses = await getImportStatuses(
+        ctx.user.id,
+        "strava",
+        sourceIds,
+      );
+      return {
+        ...page,
+        activities: page.activities.map(a => ({
+          ...a,
+          importStatus: (statuses.get(a.id.toString()) ??
+            "none") satisfies ImportStatus,
+        })),
+      };
     }),
 
   importActivities: authedProcedure
-    .input(z.object({ activityIds: z.array(z.number()) }))
+    .input(
+      z.object({
+        activityIds: z.array(z.number()),
+        forceRefetch: z.boolean().optional(),
+      }),
+    )
     .output(z.void())
     .mutation(async ({ ctx, input }) => {
       await Promise.all(
         input.activityIds.map(activityId =>
-          importStravaActivity({ userId: ctx.user.id, activityId }),
+          importStravaActivity({
+            userId: ctx.user.id,
+            activityId,
+            force: input.forceRefetch,
+          }),
         ),
       );
     }),

@@ -95,22 +95,6 @@ describe("uploadRecordedTrack", () => {
     ).toHaveLength(1);
   });
 
-  it("does not enqueue elevation population job if already exists", async () => {
-    await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
-    await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
-    expect(
-      await getEnqueuedJobs("recordedTrack.populateDemElevation"),
-    ).toHaveLength(1);
-  });
-
-  it("does not enqueue preview images job if already exists", async () => {
-    await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
-    await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
-    expect(
-      await getEnqueuedJobs("recordedTrack.populatePreviewImages"),
-    ).toHaveLength(1);
-  });
-
   it("is idempotent on re-upload", async () => {
     await db.delete(recordedTrack);
     await uploadRecordedTrack(TEST_USER.id, BASE_TRACK);
@@ -130,14 +114,14 @@ describe("uploadRecordedTrack", () => {
     );
     expect(result).not.toBeNull();
     expect(result!.id).toBe("dd5e15d0-c30c-4846-935b-134328027c74");
-    expect(result!.name).toBeNull();
+    expect(result!.name).toBeUndefined();
     expect(result!.startTime).toBe(1776935344352);
     expect(result!.endTime).toBe(1776935351363);
     expect(result!.pointTimestamps).toEqual([
       1776935348691, 1776935349690, 1776935350690,
     ]);
     expect(result!.pointSpeed).toEqual([0.98773247, 0.98773277, 0.9877347]);
-    expect(result!.pointDemElevation).toBeNull();
+    expect(result!.pointDemElevation).toBeUndefined();
     expect(result!.distanceM).toBeGreaterThan(0);
     expect(decodePolyline(result!.polyline!)).toHaveLength(3);
   });
@@ -168,8 +152,8 @@ describe("listRecordedTracks", () => {
     expect(summary!.endTime).toBe(BASE_TRACK.endTime);
     expect(summary!.durationMs).toBe(3600_000);
     expect(summary!.distanceM).toBeGreaterThan(0);
-    expect(summary!.preview).toBeNull();
-    expect(summary!.previewSmall).toBeNull();
+    expect(summary!.preview).toBeUndefined();
+    expect(summary!.previewSmall).toBeUndefined();
   });
 
   it("does not return other users' tracks", async () => {
@@ -237,17 +221,17 @@ describe("getRecordedTrackWithPointDetail", () => {
     expect(track!.pointBearingAccuracy).toHaveLength(3);
   });
 
-  it("returns null sensor arrays when device lacks sensors", async () => {
+  it("returns undefined sensor arrays when device lacks sensors", async () => {
     await uploadRecordedTrack(TEST_USER.id, MINIMAL_TRACK);
     const track = await getRecordedTrackWithPointDetail(
       TEST_USER.id,
       MINIMAL_TRACK.id,
     );
-    expect(track!.pointGpsElevation).toBeNull();
-    expect(track!.pointHorizontalAccuracy).toBeNull();
-    expect(track!.pointVerticalAccuracy).toBeNull();
-    expect(track!.pointBearing).toBeNull();
-    expect(track!.pointBearingAccuracy).toBeNull();
+    expect(track!.pointGpsElevation).toBeUndefined();
+    expect(track!.pointHorizontalAccuracy).toBeUndefined();
+    expect(track!.pointVerticalAccuracy).toBeUndefined();
+    expect(track!.pointBearing).toBeUndefined();
+    expect(track!.pointBearingAccuracy).toBeUndefined();
   });
 
   it("extends RecordedTrack fields", async () => {

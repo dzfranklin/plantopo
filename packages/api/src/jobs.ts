@@ -20,8 +20,15 @@ import {
 } from "./job-context.js";
 import { getLog, logger } from "./logger.js";
 import { getRequestContext } from "./request-context.js";
-import { runImportStravaActivity } from "./strava/import.js";
-import { runImportTrack } from "./track/imports.js";
+import {
+  type ImportStravaActivityOpts,
+  runImportStravaActivity,
+} from "./strava/import.js";
+import {
+  type TrackImportKey,
+  type TrackImportOptions,
+  runImportTrack,
+} from "./track/imports.js";
 import {
   populateDemElevation,
   populatePreviewImages,
@@ -104,20 +111,15 @@ export const jobRegistry = {
   "track.import": {
     queue: defaultQueue,
     handler: async (data: {
-      userId: string;
-      sourceType: string;
-      sourceId: string;
+      key: TrackImportKey;
+      options?: TrackImportOptions;
     }) => {
       await runImportTrack(data);
     },
   },
   "strava.importActivity": {
     queue: defaultQueue,
-    handler: async (data: {
-      userId: string;
-      sourceType: string;
-      sourceId: string;
-    }) => {
+    handler: async (data: ImportStravaActivityOpts) => {
       await runImportStravaActivity(data);
     },
   },

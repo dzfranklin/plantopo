@@ -8,6 +8,7 @@ export type {
   RequestUploadResponse,
   ImageInfo,
 } from "./image/image.service.js";
+export type { ActivityWithStatus } from "./strava/strava.router.js";
 
 export const ImageSrcSchema = z.object({
   src: z.url(),

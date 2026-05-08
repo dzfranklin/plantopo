@@ -1,7 +1,7 @@
 Key scripts:
 
 - npm run dev
-- npm run db:generate
+- npm run db:generate -- --name <name>
 - npm run db:migrate
 - npm run check (typecheck + lint)
 - npm run test
@@ -16,8 +16,20 @@ relate to
 Run tests via `npm test -w @pt/{api,web,shared} -- -t <filter>` so that
 environment variables are set properly
 
-packages/web uses vitest browser mode. Use await expect.element(locator)... so
-vitest polls for the locator.
+packages/web uses vitest browser mode.
+
+```
+import { describe, expect, it } from "vitest";
+import { userEvent } from "vitest/browser";
+
+import { renderWithProviders } from "@/test/render";
+
+it("hides selected when import is clicked", () => {
+  const screen = await renderWithProviders(<MyComponent/>);
+  await userEvent.click(screen.getByRole("button", { name: /import/i }));
+  await expect.element(screen.getByText(/selected/)).not.toBeInTheDocument();
+})
+```
 
 export private functions for testing under
 `export const exportedForTesting = { ... }`

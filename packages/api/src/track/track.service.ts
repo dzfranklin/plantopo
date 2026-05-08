@@ -123,11 +123,7 @@ export async function uploadRecordedTrack(
 }
 
 export async function enqueuePopulateDemElevationJob(trackId: string) {
-  return await enqueueJob(
-    "recordedTrack.populateDemElevation",
-    { trackId },
-    { jobId: "recordedTrack.populateDemElevation." + trackId },
-  );
+  return await enqueueJob("recordedTrack.populateDemElevation", { trackId });
 }
 
 export async function populateDemElevation(trackId: string): Promise<void> {
@@ -159,11 +155,7 @@ export async function populateDemElevation(trackId: string): Promise<void> {
 }
 
 export async function enqueuePopulatePreviewImagesJob(trackId: string) {
-  return await enqueueJob(
-    "recordedTrack.populatePreviewImages",
-    { trackId },
-    { jobId: "recordedTrack.populatePreviewImages." + trackId },
-  );
+  return await enqueueJob("recordedTrack.populatePreviewImages", { trackId });
 }
 
 export async function resetPopulatePreviewImagesJobs() {

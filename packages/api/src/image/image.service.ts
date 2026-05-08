@@ -264,6 +264,7 @@ export interface ImportImageOpts {
   takenAt?: string;
   filename?: string;
   linkedTrackId?: string;
+  sha256?: string;
 }
 
 export async function importImage(opts: ImportImageOpts): Promise<void> {
@@ -274,6 +275,30 @@ export async function runImportImage(
   opts: ImportImageOpts,
 ): Promise<ImageInfo> {
   const log = getLog().child({ runImportImageURL: opts.url });
+
+  // If caller provides a sha256, check if we already have this image and skip the fetch
+  if (opts.sha256) {
+    const existing = await db
+      .select(infoColumns)
+      .from(image)
+      .where(
+        and(
+          eq(image.userId, opts.userId),
+          eq(image.sha256, opts.sha256),
+          eq(image.uploaded, true),
+        ),
+      )
+      .then(r => r[0] ?? null);
+
+    if (existing) {
+      log.info("Image already exists, skipping fetch");
+      if (opts.linkedTrackId) {
+        await linkImageToTrack(existing.s3Key, opts.linkedTrackId);
+      }
+      return toImageInfo(existing);
+    }
+  }
+
   const response = await fetch(opts.url);
   if (!response.ok) {
     throw new Error(
@@ -300,7 +325,7 @@ export async function runImportImage(
   const width = sharpMeta.width;
   const height = sharpMeta.height;
 
-  const hash = await sha256(filename, buffer.buffer as ArrayBuffer);
+  const hash = opts.sha256 ?? (await sha256(filename, buffer.buffer));
 
   let takenAt = opts.takenAt;
   let location: { lat: number; lng: number } | undefined;

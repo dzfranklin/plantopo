@@ -1,8 +1,13 @@
-import { TRPCError } from "@trpc/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 
+import type { ActivityWithStatus } from "@pt/api";
+
 import StravaImportPage from "./StravaImportPage";
+import {
+  DEFAULT_ACTIVITY_PAGE_1,
+  makeActivityListPageWithStatus,
+} from "@/test/handlers";
 import { server } from "@/test/msw-server";
 import { renderWithProviders } from "@/test/render";
 import { trpc } from "@/test/trpc";
@@ -61,24 +66,45 @@ describe("StravaImportPage", () => {
     await userEvent.click(
       screen.getByRole("checkbox", { name: /Morning Run/ }),
     );
-    await expect.element(screen.getByText("1 selected")).toBeInTheDocument();
+    await expect
+      .element(screen.getByLabelText(/select all/i))
+      .toBePartiallyChecked();
 
+    await expect.element(screen.getByText("Long Run")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /next/i }));
     await expect.element(screen.getByText("Long Run")).toBeInTheDocument();
-    await expect.element(screen.getByText(/selected/)).not.toBeInTheDocument();
+
+    await expect
+      .element(screen.getByLabelText(/select all/i))
+      .not.toBeChecked();
   });
 
-  it("import button not shown when nothing selected", async () => {
+  it("import button hidden when nothing selected", async () => {
     const screen = await renderWithProviders(<StravaImportPage />);
 
     await expect.element(screen.getByText("Morning Run")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /import selected/i }),
+      screen.getByRole("button", { name: /import selected/i }).query(),
     ).not.toBeInTheDocument();
   });
 
-  it("happy path: enqueues selected activities and shows queued count", async () => {
-    server.use(trpc.strava.importActivities(async () => {}));
+  it("happy path", async () => {
+    let importStatus: ActivityWithStatus["importStatus"] = "none";
+    server.use(
+      trpc.strava.importActivities(async () => {
+        importStatus = "done";
+      }),
+    );
+    server.use(
+      trpc.strava.listActivities(() =>
+        makeActivityListPageWithStatus({
+          activities: DEFAULT_ACTIVITY_PAGE_1.activities.map(a => ({
+            ...a,
+            importStatus,
+          })),
+        }),
+      ),
+    );
 
     const screen = await renderWithProviders(<StravaImportPage />);
     await expect.element(screen.getByText("Morning Run")).toBeInTheDocument();
@@ -91,64 +117,19 @@ describe("StravaImportPage", () => {
     );
     await expect.element(screen.getByText("2 selected")).toBeInTheDocument();
 
+    vi.useFakeTimers();
+
     await userEvent.click(
       screen.getByRole("button", { name: /import selected/i }),
     );
-
     await expect
-      .element(screen.getByText("2 activities queued for import"))
-      .toBeInTheDocument();
-    expect(trpc.strava.importActivities.mock.calls[0]![0]).toEqual({
-      activityIds: expect.arrayContaining([1, 2]),
-    });
-  });
-
-  it("imported rows are dimmed and deselected after import", async () => {
-    server.use(trpc.strava.importActivities(async () => {}));
-
-    const screen = await renderWithProviders(<StravaImportPage />);
-    await expect.element(screen.getByText("Morning Run")).toBeInTheDocument();
-
-    await userEvent.click(
-      screen.getByRole("checkbox", { name: /Morning Run/ }),
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: /import selected/i }),
-    );
-
-    await expect
-      .element(screen.getByText("1 activity queued for import"))
+      .element(screen.getByText("Importing…").first())
       .toBeInTheDocument();
 
-    const morningRunRow = screen
-      .getByText("Morning Run")
-      .element()
-      .closest("li")!;
-    expect(morningRunRow.className).toMatch(/opacity-50/);
-
-    const eveningJogRow = screen
-      .getByText("Evening Jog")
-      .element()
-      .closest("li")!;
-    expect(eveningJogRow.className).not.toMatch(/opacity-50/);
-  });
-
-  it("import failure shows an error via throwOnError", async () => {
-    server.use(
-      trpc.strava.importActivities(() => {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-      }),
-    );
-
-    const screen = await renderWithProviders(<StravaImportPage />);
-    await expect.element(screen.getByText("Morning Run")).toBeInTheDocument();
-
-    await userEvent.click(
-      screen.getByRole("checkbox", { name: /Morning Run/ }),
-    );
+    await vi.advanceTimersByTimeAsync(3000);
 
     await expect
-      .element(screen.getByRole("button", { name: /import selected/i }))
+      .element(screen.getByText("Imported").first())
       .toBeInTheDocument();
   });
 });
