@@ -13,23 +13,31 @@ import {
   runImportImage,
   sweepUnconfirmedImages,
 } from "./image/image.service.js";
-import { type JobContext, runWithJobCtx } from "./job-context.js";
+import {
+  type JobContext,
+  getJobContext,
+  runWithJobCtx,
+} from "./job-context.js";
 import { getLog, logger } from "./logger.js";
 import { getRequestContext } from "./request-context.js";
-import {
-  type ImportStravaActivityOpts,
-  runImportStravaActivity,
-} from "./strava/import.js";
-import { type ImportTrackOpts, runImportTrack } from "./track/imports.js";
+import { runImportStravaActivity } from "./strava/import.js";
+import { runImportTrack } from "./track/imports.js";
 import {
   populateDemElevation,
   populatePreviewImages,
 } from "./track/track.service.js";
 
-export interface JobMeta {
+interface ThisJobMeta {
   enqueuedByReqId?: string;
   enqueuedByReqUserId?: string;
 }
+
+interface ParentJobMeta extends ThisJobMeta {
+  jobId: string;
+  jobName: string;
+}
+
+export type JobMeta = ThisJobMeta & { parent?: ParentJobMeta };
 
 export type JobName = keyof typeof jobRegistry;
 export type JobData<Name extends JobName = JobName> = Parameters<
@@ -95,13 +103,21 @@ export const jobRegistry = {
   },
   "track.import": {
     queue: defaultQueue,
-    handler: async (data: ImportTrackOpts) => {
+    handler: async (data: {
+      userId: string;
+      sourceType: string;
+      sourceId: string;
+    }) => {
       await runImportTrack(data);
     },
   },
   "strava.importActivity": {
     queue: defaultQueue,
-    handler: async (data: ImportStravaActivityOpts) => {
+    handler: async (data: {
+      userId: string;
+      sourceType: string;
+      sourceId: string;
+    }) => {
       await runImportStravaActivity(data);
     },
   },
@@ -115,11 +131,23 @@ export async function enqueueJob<Name extends JobName>(
   const def = jobRegistry[name];
   if (!def) throw new Error(`Unknown job: ${name}`);
 
+  let meta: JobMeta = {};
+  const parentJobContext = getJobContext();
   const requestContext = getRequestContext();
-  const meta: JobMeta = {
-    enqueuedByReqId: requestContext?.reqId,
-    enqueuedByReqUserId: requestContext?.user?.id,
-  };
+  if (parentJobContext) {
+    meta = {
+      ...parentJobContext.meta,
+      parent: {
+        jobId: parentJobContext.id,
+        jobName: parentJobContext.name,
+      },
+    };
+  } else if (requestContext) {
+    meta = {
+      enqueuedByReqId: requestContext.reqId,
+      enqueuedByReqUserId: requestContext.user?.id,
+    };
+  }
 
   const job = await def.queue.add(name, { meta, data }, opts);
 
@@ -166,6 +194,7 @@ function startQueueWorker(queueName: string, concurrency: number): AppWorker {
       const jobCtx: JobContext = {
         id: job.id!,
         name: job.name,
+        meta,
         logger: logger.child({
           jobId: job.id,
           jobName: job.name,

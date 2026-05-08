@@ -1,9 +1,12 @@
 import { AsyncLocalStorage } from "async_hooks";
 import type pino from "pino";
 
+import type { JobMeta } from "./jobs.js";
+
 export interface JobContext {
   id: string;
   name: string;
+  meta: JobMeta;
   logger: pino.Logger;
 }
 
