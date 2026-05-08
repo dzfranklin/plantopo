@@ -28,7 +28,7 @@
     "check": "npm run --workspaces check",
     "test": "npm --workspaces test --",
     "prepare": "[ \"$npm_command\" = \"ci\" ] || husky",
-    "cloc": "tokei --type TSX,Typescript --sort code .",
+    "cloc": "tokei --types TSX,Typescript --sort code .",
     "download-fonts": "./scripts/download-fonts.sh",
     "clean": "npm run --workspaces clean --"
   },
