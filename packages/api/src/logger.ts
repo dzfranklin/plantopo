@@ -1,64 +1,95 @@
-import pino from "pino";
+import { inspect } from "node:util";
+import pino, { type LoggerOptions } from "pino";
 
 import { getJobContext } from "./job-context.js";
 import { getRequestContext } from "./request-context.js";
 
 const isDev = process.env.NODE_ENV !== "production";
 
+let transport: LoggerOptions["transport"] = {
+  target: "pino/file",
+  options: { destination: 1 },
+};
+if (isDev) {
+  transport = {
+    target: "pino-pretty",
+    options: { colorize: true, ignore: "pid,hostname,isDev,env,extra,client" },
+  };
+}
+
 export const logger = pino({
   level: process.env.LOG_LEVEL ?? (isDev ? "debug" : "info"),
+  base: undefined,
+  timestamp: pino.stdTimeFunctions.isoTime,
   mixin(_mergeObject, level, _logger) {
     if (level >= pino.levels.values.warn!) {
       return { stack: getNonLogCallerStack() };
     }
     return {};
   },
-  serializers: {
-    err: err => {
-      const base = pino.stdSerializers.err(err);
-      for (const key in base) {
-        const value = base[key]!;
-
-        if (key === "message" || key === "stack") {
-          if (typeof value === "string") {
-            base[key] = truncateString(value, 500);
-          }
-        } else if (typeof value === "string") {
-          base[key] = truncateString(value, 100);
-        } else {
-          base[key] = truncateString(String(value), 200);
-        }
-      }
-      return base;
-    },
-  },
+  serializers: {}, // formatter expects unserialized err
   formatters: {
     level(label) {
       return { level: label };
     },
+    log: formatLogObject,
   },
-  transport: isDev
-    ? {
-        target: "pino-pretty",
-        options: {
-          colorize: true,
-          ignore: "pid,hostname,isDev,env,extra,client",
-        },
-      }
-    : { target: "pino/file", options: { destination: 1 } },
+  transport: transport,
 });
 
 export function getLog() {
   return getRequestContext()?.logger ?? getJobContext()?.logger ?? logger;
 }
 
-function truncateString(str: string, max: number): string {
-  if (str.length <= max) return str;
-  const half = Math.floor(max / 2);
+const formatOpts = {
+  maxStringLength: isDev ? 150 : 1_000,
+  maxArrayLength: 10,
+  depth: 2,
+};
+
+function formatLogObject(
+  obj: Record<string, unknown>,
+  outputObjectDepth = 1,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key in obj) {
+    const val = obj[key];
+    if (typeof val === "number" || typeof val === "boolean" || val === null) {
+      out[key] = val;
+    } else if (typeof val === "string") {
+      out[key] = truncateString(val);
+    } else if (key === "err" && val instanceof Error) {
+      out["err.inspect"] = inspect(val, formatOpts);
+      out["err"] = {
+        constructor: val.constructor,
+        name: val.name,
+        message: truncateString(val.message),
+        stack: val.stack ? truncateString(val.stack) : undefined,
+        cause: val.cause ? inspect(val.cause, formatOpts) : undefined,
+      };
+    } else if (outputObjectDepth > 0 && isPlainObject(val)) {
+      out[key] = formatLogObject(
+        val as Record<string, unknown>,
+        outputObjectDepth - 1,
+      );
+    } else {
+      out[key] = inspect(val, formatOpts);
+    }
+  }
+  return out;
+}
+
+function truncateString(str: string): string {
+  if (str.length <= formatOpts.maxStringLength) return str;
+  return inspect(str, formatOpts).slice(1, -1); // remove quotes added by inspect
+}
+
+function isPlainObject(val: unknown): val is Record<string, unknown> {
   return (
-    str.slice(0, half) +
-    ` ... [${str.length - max} chars truncated] ... ` +
-    str.slice(-half)
+    typeof val === "object" &&
+    val !== null &&
+    !Array.isArray(val) &&
+    (val.constructor === Object || Object.getPrototypeOf(val) === null)
   );
 }
 
@@ -87,3 +118,5 @@ function getNonLogCallerStack(maxDepth: number = 6): string[] | undefined {
   }
   return out;
 }
+
+export default logger;
