@@ -5,6 +5,7 @@ See [plantopo.com/about](https://plantopo.com/about).
 ## My related repositories
 
 - [dzfranklin/plantopo-android](https://github.com/dzfranklin/plantopo-android) Android app wrapping plantopo.com in a WebView with native track recording
+- [dzfranklin/staticmap](https://github.com/dzfranklin/staticmap) Renders static maps (with support for British National Grid) with an interface inspired by imgproxy
 - [dzfranklin/plantopo-osm-db](https://github.com/dzfranklin/plantopo-osm-db) A containerised OpenStreetMap PostGIS database with daily updates and tile functions.
 - [dzfranklin/os-leisure-reprojector](https://github.com/dzfranklin/os-leisure-reprojector) A containerised configuration of mapproxy to reproject OS Leisure maps to web mercator
 - [dzfranklin/slope-server](https://github.com/dzfranklin/slope-server) A simple server that turns Terrain DEM tiles into slope angle tiles
