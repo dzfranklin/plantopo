@@ -16,7 +16,8 @@ const S3_IMAGE_BUCKET = "plantopo-images-test";
 
 export async function setup() {
   const [pg, redis, minio] = await Promise.all([
-    new PostgreSqlContainer("postgis/postgis:18-3.6")
+    new PostgreSqlContainer("docker.io/postgis/postgis:18-3.6")
+      .withPlatform("linux/amd64")
       .withUsername("postgres")
       .withPassword("postgres")
       .withDatabase("plantopo_test")
@@ -31,8 +32,8 @@ export async function setup() {
         ]),
       )
       .start(),
-    new RedisContainer("redis:7-alpine").withReuse().start(),
-    new MinioContainer("minio/minio:RELEASE.2025-09-07T16-13-09Z")
+    new RedisContainer("docker.io/redis:7-alpine").withReuse().start(),
+    new MinioContainer("docker.io/minio/minio:RELEASE.2025-09-07T16-13-09Z")
       .withReuse()
       .start(),
   ]);
