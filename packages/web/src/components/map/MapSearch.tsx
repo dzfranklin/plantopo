@@ -11,7 +11,7 @@ import { useTRPC } from "@/trpc";
 import { cn } from "@/util/cn";
 import { useDebounce } from "@/util/useDebounce";
 
-export function MapSearch() {
+export function MapSearch({ fullBleed = false }: { fullBleed?: boolean }) {
   const trpc = useTRPC();
   const manager = useMapManager();
 
@@ -102,15 +102,34 @@ export function MapSearch() {
 
   return (
     <>
-      <div ref={containerRef} className="absolute top-2 left-2 z-10">
+      <div
+        ref={containerRef}
+        className={cn(
+          "absolute top-2 z-10",
+          fullBleed ? "left-20 sm:left-2" : "left-2",
+        )}>
         <div
           className={cn(
-            "flex items-center gap-1 rounded-[4px] bg-white px-2",
+            "flex items-center rounded-[4px] bg-white",
             "transition-[width] duration-200",
-            isExpanded ? "w-[320px]" : "w-[220px]",
+            isExpanded ? "w-[320px]" : "w-10 sm:w-[220px]",
+            isExpanded ? "max-sm:gap-1 max-sm:px-2" : "px-0 sm:gap-1 sm:px-2",
           )}
           style={{ boxShadow: "0 0 0 2px rgba(0,0,0,0.1)" }}>
-          <RiSearchLine size={14} className="shrink-0 text-gray-400" />
+          <button
+            aria-label="Search for a place"
+            onClick={() => {
+              setIsExpanded(true);
+              setTimeout(() => inputRef.current?.focus(), 0);
+            }}
+            className={cn(
+              "shrink-0 text-gray-400",
+              isExpanded
+                ? "max-sm:size-5"
+                : "max-sm:flex max-sm:size-10 max-sm:items-center max-sm:justify-center",
+            )}>
+            <RiSearchLine className="size-3.5 max-sm:size-5" />
+          </button>
           <input
             ref={inputRef}
             type="search"
@@ -131,9 +150,12 @@ export function MapSearch() {
             }}
             onKeyDown={handleKeyDown}
             className={cn(
-              "h-[29px] flex-1 bg-transparent text-sm outline-none",
+              "flex-1 bg-transparent outline-none",
               "placeholder:text-gray-400",
               "[&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden",
+              isExpanded
+                ? "h-10 text-base max-sm:h-10 max-sm:opacity-100 max-sm:transition-opacity max-sm:duration-200 sm:h-[29px] sm:text-sm"
+                : "h-[29px] text-sm max-sm:pointer-events-none max-sm:opacity-0 max-sm:transition-opacity max-sm:duration-200",
             )}
           />
           {inputValue && (
@@ -146,7 +168,10 @@ export function MapSearch() {
                 setSelectedLngLat(null);
                 inputRef.current?.focus();
               }}
-              className="shrink-0 text-gray-400 hover:text-gray-600">
+              className={cn(
+                "shrink-0 text-gray-400 hover:text-gray-600",
+                !isExpanded && "max-sm:hidden",
+              )}>
               <RiCloseLine size={14} />
             </button>
           )}

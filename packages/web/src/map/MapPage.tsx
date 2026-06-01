@@ -5,7 +5,7 @@ export default function MapPage() {
   return (
     <div className="h-full">
       <AppMap hash={true}>
-        <MapSearch />
+        <MapSearch fullBleed />
       </AppMap>
     </div>
   );
